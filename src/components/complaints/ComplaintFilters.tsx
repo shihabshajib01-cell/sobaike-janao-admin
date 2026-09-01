@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useLanguage } from '@/context/LanguageContext';
 import { ComplaintFilterState } from '@/types/Complaint';
+import { complaintApi } from '@/services/api';
 import { RotateCcw, X, Filter } from 'lucide-react';
 
 export interface ComplaintFiltersProps {
@@ -11,6 +12,8 @@ export interface ComplaintFiltersProps {
   onFilterChange: (key: keyof ComplaintFilterState, value: string) => void;
   onResetFilters: () => void;
   hasActiveFilters: boolean;
+  categories?: { id: string; name_en: string; name_bn: string }[];
+  locations?: string[];
 }
 
 export const ComplaintFilters: React.FC<ComplaintFiltersProps> = ({
@@ -18,31 +21,63 @@ export const ComplaintFilters: React.FC<ComplaintFiltersProps> = ({
   onFilterChange,
   onResetFilters,
   hasActiveFilters,
+  categories: propCategories,
+  locations: propLocations,
 }) => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
 
+  const [availableSegments, setAvailableSegments] = useState<{ id: string; name_en: string; name_bn: string }[]>(
+    propCategories || []
+  );
+  const [availableDistricts, setAvailableDistricts] = useState<string[]>(
+    propLocations || []
+  );
+
+  useEffect(() => {
+    if (propCategories && propCategories.length > 0) {
+      setAvailableSegments(propCategories);
+    } else {
+      complaintApi
+        .getSegments()
+        .then((segs) => {
+          if (segs && segs.length > 0) {
+            setAvailableSegments(segs);
+          }
+        })
+        .catch((err) => console.warn('Failed to load taxonomy segments for filter:', err));
+    }
+  }, [propCategories]);
+
+  useEffect(() => {
+    if (propLocations && propLocations.length > 0) {
+      setAvailableDistricts(propLocations);
+    } else {
+      complaintApi
+        .getLocations()
+        .then((locs) => {
+          if (locs && locs.length > 0) {
+            setAvailableDistricts(locs);
+          }
+        })
+        .catch((err) => console.warn('Failed to load distinct locations for filter:', err));
+    }
+  }, [propLocations]);
+
   const categoryOptions = [
     { value: 'all', label: isBn ? 'সকল বিভাগ' : 'All Categories' },
-    { value: 'civic_issues', label: isBn ? 'নাগরিক সমস্যা ও ড্রেনেজ' : 'Civic Problems & Drainage' },
-    { value: 'roads_traffic', label: isBn ? 'রাস্তাঘাট ও ট্রাফিক' : 'Roads & Traffic' },
-    { value: 'waste_management', label: isBn ? 'বর্জ্য ব্যবস্থাপনা' : 'Waste Management' },
-    { value: 'extortion', label: isBn ? 'চাঁদাবাজি ও অবৈধ টোল' : 'Extortion & Illegal Tolls' },
-    { value: 'harassment', label: isBn ? 'পাবলিক হয়রানি' : 'Public Harassment' },
-    { value: 'corruption', label: isBn ? 'সরকারি দপ্তরের অনিয়ম' : 'Public Office Irregularities' },
+    ...availableSegments.map((s) => ({
+      value: s.id,
+      label: isBn ? (s.name_bn || s.name_en) : (s.name_en || s.name_bn),
+    })),
   ];
 
   const locationOptions = [
-    { value: 'all', label: isBn ? 'সকল এলাকা / ওয়ার্ড' : 'All Locations / Wards' },
-    { value: 'Ward 14', label: isBn ? 'ওয়ার্ড ১৪ (মিরপুর)' : 'Ward 14 (Mirpur)' },
-    { value: 'Ward 22', label: isBn ? 'ওয়ার্ড ২২ (ধানমন্ডি)' : 'Ward 22 (Dhanmondi)' },
-    { value: 'Ward 31', label: isBn ? 'ওয়ার্ড ৩১ (মোহাম্মদপুর)' : 'Ward 31 (Mohammadpur)' },
-    { value: 'Ward 01', label: isBn ? 'ওয়ার্ড ০১ (উত্তরা)' : 'Ward 01 (Uttara)' },
-    { value: 'Ward 18', label: isBn ? 'ওয়ার্ড ১৮ (গুলশান)' : 'Ward 18 (Gulshan)' },
-    { value: 'Ward 09', label: isBn ? 'ওয়ার্ড ০৯ (ফার্মগেট)' : 'Ward 09 (Farmgate)' },
-    { value: 'Ward 20', label: isBn ? 'ওয়ার্ড ২০ (মহাখালী)' : 'Ward 20 (Mohakhali)' },
-    { value: 'Ward 13', label: isBn ? 'ওয়ার্ড ১৩ (কাজীপাড়া)' : 'Ward 13 (Kazipara)' },
-    { value: 'Ward 48', label: isBn ? 'ওয়ার্ড ৪৮ (যাত্রাবাড়ী)' : 'Ward 48 (Jatrabari)' },
+    { value: 'all', label: isBn ? 'সকল এলাকা' : 'All Locations' },
+    ...availableDistricts.map((loc) => ({
+      value: loc,
+      label: loc,
+    })),
   ];
 
   const dateOptions = [
@@ -74,7 +109,7 @@ export const ComplaintFilters: React.FC<ComplaintFiltersProps> = ({
 
         {/* Location Select */}
         <Select
-          label={isBn ? 'এলাকা / ওয়ার্ড' : 'Location / Ward'}
+          label={isBn ? 'এলাকা' : 'Location'}
           value={filters.location}
           onChange={(e) => onFilterChange('location', e.target.value)}
           options={locationOptions}
