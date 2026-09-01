@@ -41,10 +41,10 @@ export const COMPLAINT_ACTION_DEFINITIONS: Record<ComplaintActionId, ComplaintAc
  * Returns available actions strictly based on current complaint status.
  *
  * Status Matrix:
- * - submitted: [edit, publish, reject]
- * - edited: [edit, publish, reject]
- * - published: [edit, reject]
- * - rejected: [edit, publish]
+ * - submitted: [publish, reject]
+ * - edited: []
+ * - published: []
+ * - rejected: []
  */
 export function getAvailableComplaintActions(
   status: ComplaintLifecycleStatus
@@ -52,32 +52,21 @@ export function getAvailableComplaintActions(
   switch (status) {
     case 'submitted':
       return [
-        COMPLAINT_ACTION_DEFINITIONS.edit,
         COMPLAINT_ACTION_DEFINITIONS.publish,
         COMPLAINT_ACTION_DEFINITIONS.reject,
       ];
 
     case 'edited':
-      return [
-        COMPLAINT_ACTION_DEFINITIONS.edit,
-        COMPLAINT_ACTION_DEFINITIONS.publish,
-        COMPLAINT_ACTION_DEFINITIONS.reject,
-      ];
+      return [];
 
     case 'published':
-      return [
-        COMPLAINT_ACTION_DEFINITIONS.edit,
-        COMPLAINT_ACTION_DEFINITIONS.reject,
-      ];
+      return [];
 
     case 'rejected':
-      return [
-        COMPLAINT_ACTION_DEFINITIONS.edit,
-        COMPLAINT_ACTION_DEFINITIONS.publish,
-      ];
+      return [];
 
     default:
-      return [COMPLAINT_ACTION_DEFINITIONS.edit];
+      return [];
   }
 }
 
@@ -92,20 +81,20 @@ export function getComplaintStatusGuidance(
   switch (status) {
     case 'submitted':
       return isBn
-        ? 'নতুন দাখিলকৃত অভিযোগ। বিবরণ সম্পাদনা করুন, ফিডে প্রকাশ করুন অথবা বাতিল করুন।'
-        : 'Newly submitted complaint. You can edit details, publish to public feed, or reject.';
+        ? 'নতুন দাখিলকৃত অভিযোগ। পর্যালোচনা করে প্রকাশ করুন অথবা বাতিল করুন।'
+        : 'Newly submitted complaint. Review it, then publish or reject.';
     case 'edited':
       return isBn
-        ? 'অভিযোগটি সম্পাদিত হয়েছে। সংস্করণ ইতিহাস যাচাই করুন এবং প্রকাশ বা বাতিল করুন।'
-        : 'Complaint has been edited. Inspect version history, publish to public feed, or reject.';
+        ? 'অভিযোগটি সম্পাদিত অবস্থায় রয়েছে। বর্তমানে কোনো মডারেশন অ্যাকশন সক্রিয় নেই।'
+        : 'This complaint is in Edited status. No moderation action is currently enabled.';
     case 'published':
       return isBn
-        ? 'অভিযোগটি পাবলিক ফিডে উন্মুক্ত রয়েছে। প্রয়োজনে তথ্য সম্পাদনা বা প্রত্যাহার করতে পারেন।'
-        : 'Complaint is live on the public feed. You can edit details or reject if needed.';
+        ? 'অভিযোগটি অনুমোদিত এবং প্রকাশিত হিসেবে চিহ্নিত হয়েছে।'
+        : 'This complaint has been approved and marked as Published.';
     case 'rejected':
       return isBn
-        ? 'অভিযোগটি বাতিল করা হয়েছে। প্রয়োজনে সম্পাদনা বা পুনরায় প্রকাশ করতে পারেন।'
-        : 'Complaint was rejected. You can edit details or re-publish.';
+        ? 'অভিযোগটি বাতিল করা হয়েছে।'
+        : 'This complaint has been rejected.';
     default:
       return '';
   }
