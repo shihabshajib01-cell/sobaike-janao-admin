@@ -6,6 +6,7 @@ import {
   MessageSquare,
   FolderTree,
   MapPin,
+  MapPinned,
   Users,
   BarChart3,
   ShieldCheck,
@@ -58,6 +59,12 @@ export const ADMIN_NAVIGATION_ITEMS: RouteItem[] = [
     labelKey: 'map',
     defaultLabel: 'Map Monitoring',
     icon: MapPin,
+  },
+  {
+    path: '/location-activity',
+    labelKey: 'locationActivity',
+    defaultLabel: 'Location Activity',
+    icon: MapPinned,
   },
   {
     path: '/users',

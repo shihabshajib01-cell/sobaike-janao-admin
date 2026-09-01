@@ -12,6 +12,7 @@ import {
   ResponsesPage,
   CategoriesPage,
   MapPage,
+  LocationActivityPage,
   UsersPage,
   AnalyticsPage,
   AuditLogsPage,
@@ -92,6 +93,7 @@ export const AppRoutes: React.FC = () => {
           <Route path="/responses" element={<ResponsesPage />} />
           <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/map" element={<MapPage />} />
+          <Route path="/location-activity" element={<LocationActivityPage />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/audit-logs" element={<AuditLogsPage />} />

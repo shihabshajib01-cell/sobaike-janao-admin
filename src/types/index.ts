@@ -8,4 +8,5 @@ export * from './Dashboard';
 export * from './Map';
 export * from './Analytics';
 export * from './Settings';
+export * from './LocationActivity';
 export * from './api';

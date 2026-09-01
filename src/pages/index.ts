@@ -6,6 +6,7 @@ export * from './Feed/FeedPage';
 export * from './Responses/ResponsesPage';
 export * from './Categories/CategoriesPage';
 export * from './Map/MapPage';
+export * from './LocationActivity/LocationActivityPage';
 export * from './Users/UsersPage';
 export * from './Analytics/AnalyticsPage';
 export * from './AuditLogs/AuditLogsPage';

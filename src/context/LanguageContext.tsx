@@ -10,6 +10,7 @@ export interface TranslationDictionary {
     responses: string;
     categories: string;
     map: string;
+    locationActivity: string;
     users: string;
     analytics: string;
     auditLogs: string;
@@ -50,6 +51,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       responses: 'Responses',
       categories: 'Categories',
       map: 'Map Monitoring',
+      locationActivity: 'Location Activity',
       users: 'Users',
       analytics: 'Analytics',
       auditLogs: 'Audit Logs',
@@ -88,6 +90,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       responses: 'প্রতিক্রিয়া',
       categories: 'বিভাগসমূহ',
       map: 'ম্যাপ মনিটরিং',
+      locationActivity: 'লোকেশন অ্যাক্টিভিটি',
       users: 'ব্যবহারকারী',
       analytics: 'অ্যানালিটিক্স',
       auditLogs: 'অডিট লগ',
