@@ -61,7 +61,7 @@ export const ComplaintLocationCard: React.FC<ComplaintLocationCardProps> = ({
         <div className="space-y-3">
           <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800 space-y-1">
             <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
-              {isBn ? 'বাংলা ঠিকানা' : 'Bengali Civic Address'}
+              {isBn ? 'দাখিলকৃত ঠিকানা' : 'Submitted Address'}
             </span>
             <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
               {location.addressBn || location.addressEn}
@@ -80,11 +80,11 @@ export const ComplaintLocationCard: React.FC<ComplaintLocationCardProps> = ({
           )}
         </div>
 
-        {/* Administrative Ward and Zone breakdown */}
+        {/* Administrative Area/Upazila and District breakdown */}
         <div className="grid grid-cols-2 gap-3 pt-1">
           <div className="p-3 rounded-lg border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
             <span className="text-xs text-slate-500 dark:text-slate-400 block mb-1">
-              {isBn ? 'প্রশাসনিক ওয়ার্ড' : 'Municipal Ward'}
+              {isBn ? 'এলাকা / উপজেলা বা থানা' : 'Area / Upazila'}
             </span>
             <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
               {location.ward}
@@ -93,7 +93,7 @@ export const ComplaintLocationCard: React.FC<ComplaintLocationCardProps> = ({
 
           <div className="p-3 rounded-lg border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
             <span className="text-xs text-slate-500 dark:text-slate-400 block mb-1">
-              {isBn ? 'সিটি কর্পোরেশন জোন' : 'Corporation Zone'}
+              {isBn ? 'জেলা' : 'District'}
             </span>
             <span className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate block">
               {location.zone}

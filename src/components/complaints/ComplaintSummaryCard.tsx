@@ -84,7 +84,7 @@ export const ComplaintSummaryCard: React.FC<ComplaintSummaryCardProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-              {isBn ? 'অভিযোগ ট্র্যাকিং নম্বর' : 'Tracking Reference ID'}
+              {isBn ? 'প্রতিবেদন আইডি' : 'Report ID'}
             </span>
             <div className="flex items-center gap-3">
               <span className="font-mono text-lg font-bold text-sky-700 dark:text-sky-400">
@@ -138,7 +138,7 @@ export const ComplaintSummaryCard: React.FC<ComplaintSummaryCardProps> = ({
           <div className="space-y-1">
             <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5 text-slate-400" />
-              {isBn ? 'অবস্থান ও ওয়ার্ড' : 'Location & Ward'}
+              {isBn ? 'অবস্থান' : 'Location'}
             </span>
             <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
               {complaint.location.ward}

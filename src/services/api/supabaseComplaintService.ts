@@ -15,6 +15,7 @@ import {
   ComplaintUrgency,
   TimelineEventType,
 } from '@/types/Complaint';
+import { WorkflowActionResult } from '@/services/fallback/complaintFallback';
 
 export interface SupabaseSegment {
   id: string;
@@ -628,5 +629,83 @@ export const supabaseComplaintService = {
 
     const timeline = await this.getComplaintTimeline(id);
     return { complaint, timeline };
+  },
+
+  /**
+   * Publish complaint via RPC public.admin_publish_complaint(p_complaint_id)
+   */
+  async publishComplaint(complaintId: string): Promise<WorkflowActionResult> {
+    const { data, error } = await supabase.rpc('admin_publish_complaint', {
+      p_complaint_id: complaintId,
+    });
+
+    if (error) {
+      console.error(`Error publishing complaint ${complaintId}:`, error);
+      throw new Error(error.message || 'Failed to publish complaint');
+    }
+
+    if (data && typeof data === 'object' && 'success' in data && (data as { success: boolean }).success === false) {
+      const errMsg =
+        (data as { message?: string; error?: string }).message ||
+        (data as { message?: string; error?: string }).error ||
+        'Failed to publish complaint';
+      throw new Error(errMsg);
+    }
+
+    // Re-fetch the refreshed complaint & timeline directly from Supabase
+    const refreshed = await this.getComplaintDetail(complaintId);
+    if (!refreshed) {
+      throw new Error(`Failed to reload complaint ${complaintId} after publication.`);
+    }
+
+    return {
+      success: true,
+      complaint: refreshed.complaint,
+      timeline: refreshed.timeline,
+      messageEn: 'Complaint published successfully to public feed.',
+      messageBn: 'অভিযোগটি সফলভাবে পাবলিক ফিডে প্রকাশ করা হয়েছে।',
+    };
+  },
+
+  /**
+   * Reject complaint via RPC public.admin_reject_complaint(p_complaint_id, p_reason_code, p_note)
+   */
+  async rejectComplaint(
+    complaintId: string,
+    reason: string,
+    explanation: string
+  ): Promise<WorkflowActionResult> {
+    const { data, error } = await supabase.rpc('admin_reject_complaint', {
+      p_complaint_id: complaintId,
+      p_reason_code: reason,
+      p_note: explanation,
+    });
+
+    if (error) {
+      console.error(`Error rejecting complaint ${complaintId}:`, error);
+      throw new Error(error.message || 'Failed to reject complaint');
+    }
+
+    if (data && typeof data === 'object' && 'success' in data && (data as { success: boolean }).success === false) {
+      const errMsg =
+        (data as { message?: string; error?: string }).message ||
+        (data as { message?: string; error?: string }).error ||
+        'Failed to reject complaint';
+      throw new Error(errMsg);
+    }
+
+    // Re-fetch the refreshed complaint & timeline directly from Supabase
+    const refreshed = await this.getComplaintDetail(complaintId);
+    if (!refreshed) {
+      throw new Error(`Failed to reload complaint ${complaintId} after rejection.`);
+    }
+
+    return {
+      success: true,
+      complaint: refreshed.complaint,
+      timeline: refreshed.timeline,
+      messageEn: 'Complaint rejected successfully.',
+      messageBn: 'অভিযোগটি সফলভাবে বাতিল করা হয়েছে।',
+    };
   },
 };

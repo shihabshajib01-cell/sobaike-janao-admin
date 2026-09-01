@@ -127,7 +127,7 @@ export class ComplaintApi {
   }
 
   /**
-   * Workflow Action Methods (Read-Only Phase Safeguards)
+   * Workflow Action Methods
    */
   async editComplaint(
     complaintId: string,
@@ -146,14 +146,14 @@ export class ComplaintApi {
     explanation: string
   ): Promise<WorkflowActionResult> {
     if (isSupabaseConfigured) {
-      throw new Error('Action integration is not enabled yet.');
+      return supabaseComplaintService.rejectComplaint(complaintId, reason, explanation);
     }
     return complaintFallback.rejectComplaint(complaintId, reason, explanation);
   }
 
   async publishComplaint(complaintId: string): Promise<WorkflowActionResult> {
     if (isSupabaseConfigured) {
-      throw new Error('Action integration is not enabled yet.');
+      return supabaseComplaintService.publishComplaint(complaintId);
     }
     return complaintFallback.publishComplaint(complaintId);
   }
