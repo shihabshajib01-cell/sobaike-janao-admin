@@ -15,6 +15,7 @@ import {
   ExternalLink,
   ChevronLeft,
   ChevronRight,
+  RotateCcw,
   ZoomIn,
 } from 'lucide-react';
 import { cn } from '@/utils';
@@ -22,11 +23,15 @@ import { cn } from '@/utils';
 export interface ComplaintMediaViewerProps {
   media: ComplaintMedia[];
   className?: string;
+  error?: string | null;
+  onRetry?: () => void;
 }
 
 export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
   media = [],
   className,
+  error,
+  onRetry,
 }) => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
@@ -71,8 +76,37 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
         </CardHeader>
 
         <CardContent className="pt-4 space-y-4">
-          {/* 1. Empty / No Media State */}
-          {!hasMedia ? (
+          {/* 1. Error State when evidence fails to load */}
+          {error ? (
+            <div className="flex flex-col items-center justify-center p-8 rounded-lg border border-amber-200 dark:border-amber-900/40 text-center bg-amber-50/50 dark:bg-amber-950/20 space-y-3">
+              <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+                <AlertCircle className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                  {isBn
+                    ? 'প্রমাণের ছবিগুলো লোড করা যায়নি। আবার চেষ্টা করুন।'
+                    : 'Evidence images could not be loaded. Please retry.'}
+                </p>
+                {error && error !== 'Evidence images could not be loaded. Please retry.' && (
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm">
+                    {error}
+                  </p>
+                )}
+              </div>
+              {onRetry && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={onRetry}
+                  leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+                >
+                  <span>{isBn ? 'পুনরায় চেষ্টা করুন' : 'Retry'}</span>
+                </Button>
+              )}
+            </div>
+          ) : !hasMedia ? (
+            /* 2. Empty / No Media State */
             <div className="flex flex-col items-center justify-center p-8 rounded-lg border-2 border-dashed border-slate-200 dark:border-slate-800 text-center bg-slate-50/50 dark:bg-slate-900/40">
               <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-2">
                 <ImageIcon className="w-6 h-6 text-slate-400" />
@@ -87,7 +121,7 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
               </p>
             </div>
           ) : (
-            /* 2. Media Gallery & Active Preview */
+            /* 3. Media Gallery & Active Preview */
             <div className="space-y-3">
               {/* Active Item Container */}
               <div className="relative rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-950 flex items-center justify-center min-h-[260px] max-h-[360px]">

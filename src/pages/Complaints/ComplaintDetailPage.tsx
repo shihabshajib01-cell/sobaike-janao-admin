@@ -38,12 +38,14 @@ export const ComplaintDetailPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [complaint, setComplaint] = useState<Complaint | null>(null);
   const [timeline, setTimeline] = useState<ComplaintTimelineEvent[]>([]);
+  const [evidenceError, setEvidenceError] = useState<string | null>(null);
   const [error, setError] = useState<boolean>(false);
 
   const fetchComplaintData = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     setError(false);
+    setEvidenceError(null);
     try {
       const detailRes = await complaintApi.getComplaintDetail(id);
 
@@ -52,6 +54,7 @@ export const ComplaintDetailPage: React.FC = () => {
       } else {
         setComplaint(detailRes.complaint);
         setTimeline(detailRes.timeline || []);
+        setEvidenceError(detailRes.evidenceError || null);
       }
     } catch (err) {
       console.error('Failed to fetch complaint detail:', err);
@@ -217,7 +220,11 @@ export const ComplaintDetailPage: React.FC = () => {
           <ComplaintVersionHistory complaint={complaint} />
 
           {/* Evidence Media Viewer */}
-          <ComplaintMediaViewer media={complaint.media} />
+          <ComplaintMediaViewer
+            media={complaint.media}
+            error={evidenceError}
+            onRetry={fetchComplaintData}
+          />
 
           {/* Location & Jurisdictional Area */}
           <ComplaintLocationCard location={complaint.location} />

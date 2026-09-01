@@ -10,6 +10,7 @@ import {
   ComplaintFilterState,
   ComplaintLifecycleStatus,
   ComplaintListResponse,
+  ComplaintMedia,
   ComplaintStatusTabCount,
   ComplaintTimelineEvent,
   ComplaintUrgency,
@@ -32,6 +33,19 @@ export interface SupabaseSubcategory {
   name_bn: string;
   active?: boolean;
   sort_order?: number;
+}
+
+export interface SupabaseComplaintEvidenceRow {
+  id: string;
+  complaint_id: string;
+  storage_path: string | null;
+  file_url: string | null;
+  file_name: string | null;
+  mime_type: string | null;
+  media_type: string | null;
+  file_size_bytes: number | null;
+  caption: string | null;
+  created_at: string;
 }
 
 export interface SupabaseComplaintRow {
@@ -636,16 +650,171 @@ export const supabaseComplaintService = {
   },
 
   /**
+   * Fetch complaint evidence from public.complaint_evidence and create temporary authenticated signed URLs
+   * from the private 'complaint-evidence' storage bucket.
+   */
+  async getComplaintEvidence(
+    complaintId: string
+  ): Promise<{ media: ComplaintMedia[]; error?: string | null }> {
+    try {
+      const { data: evidenceRows, error: queryError } = await supabase
+        .from('complaint_evidence')
+        .select(
+          'id, complaint_id, storage_path, file_url, file_name, mime_type, media_type, file_size_bytes, caption, created_at'
+        )
+        .eq('complaint_id', complaintId)
+        .order('created_at', { ascending: true });
+
+      if (queryError) {
+        console.error(`Error querying complaint_evidence for complaint ${complaintId}:`, queryError);
+        return {
+          media: [],
+          error: 'Evidence images could not be loaded. Please retry.',
+        };
+      }
+
+      if (!evidenceRows || evidenceRows.length === 0) {
+        return { media: [] };
+      }
+
+      // Collect storage paths to batch sign from private 'complaint-evidence' storage bucket
+      const rowsWithStoragePath = (evidenceRows as SupabaseComplaintEvidenceRow[]).filter(
+        (r) => Boolean(r.storage_path)
+      );
+      const pathsToSign = rowsWithStoragePath.map((r) => r.storage_path as string);
+
+      const signedUrlMap = new Map<string, string>();
+
+      if (pathsToSign.length > 0) {
+        try {
+          const { data: signedData, error: signError } = await supabase.storage
+            .from('complaint-evidence')
+            .createSignedUrls(pathsToSign, 3600);
+
+          if (signError) {
+            console.error(`Error generating batch signed URLs for complaint ${complaintId}:`, signError);
+            // Fallback to individual signing if batch fails
+            for (const path of pathsToSign) {
+              try {
+                const { data: singleSigned, error: singleError } = await supabase.storage
+                  .from('complaint-evidence')
+                  .createSignedUrl(path, 3600);
+                if (!singleError && singleSigned?.signedUrl) {
+                  signedUrlMap.set(path, singleSigned.signedUrl);
+                }
+              } catch (err) {
+                console.warn(`Failed to sign individual path ${path}:`, err);
+              }
+            }
+          } else if (signedData && Array.isArray(signedData)) {
+            signedData.forEach((item) => {
+              if (item.signedUrl && item.path) {
+                signedUrlMap.set(item.path, item.signedUrl);
+              }
+            });
+          }
+        } catch (signErr) {
+          console.error(`Storage signing exception for complaint ${complaintId}:`, signErr);
+        }
+      }
+
+      // Map real evidence rows to existing ComplaintMedia objects
+      const mediaList: ComplaintMedia[] = [];
+      let signingFailures = 0;
+
+      for (const row of evidenceRows as SupabaseComplaintEvidenceRow[]) {
+        let finalUrl = '';
+        if (row.storage_path && signedUrlMap.has(row.storage_path)) {
+          finalUrl = signedUrlMap.get(row.storage_path)!;
+        } else if (
+          row.file_url &&
+          (row.file_url.startsWith('http://') ||
+            row.file_url.startsWith('https://') ||
+            row.file_url.startsWith('blob:'))
+        ) {
+          finalUrl = row.file_url;
+        }
+
+        if (!finalUrl && row.storage_path) {
+          signingFailures++;
+        }
+
+        if (finalUrl) {
+          let mediaType: 'image' | 'video' | 'document' = 'image';
+          if (row.media_type === 'video' || row.mime_type?.startsWith('video/')) {
+            mediaType = 'video';
+          } else if (
+            row.media_type === 'document' ||
+            row.mime_type?.includes('pdf') ||
+            row.mime_type?.includes('document')
+          ) {
+            mediaType = 'document';
+          }
+
+          mediaList.push({
+            id: row.id,
+            type: mediaType,
+            url: finalUrl,
+            thumbnailUrl: finalUrl,
+            caption: row.caption || undefined,
+          });
+        }
+      }
+
+      if (evidenceRows.length > 0 && mediaList.length === 0 && signingFailures > 0) {
+        return {
+          media: [],
+          error: 'Evidence images could not be loaded. Please retry.',
+        };
+      }
+
+      return { media: mediaList };
+    } catch (err) {
+      console.error(`Failed to load complaint evidence for ${complaintId}:`, err);
+      return {
+        media: [],
+        error: 'Evidence images could not be loaded. Please retry.',
+      };
+    }
+  },
+
+  /**
    * Fetch complaint detail and timeline bundle
    */
   async getComplaintDetail(
     id: string
-  ): Promise<{ complaint: Complaint; timeline: ComplaintTimelineEvent[] } | null> {
-    const complaint = await this.getComplaintById(id);
-    if (!complaint) return null;
+  ): Promise<{ complaint: Complaint; timeline: ComplaintTimelineEvent[]; evidenceError?: string | null } | null> {
+    const { segments, subcategories } = await getTaxonomy();
+    const segmentsMap = new Map(segments.map((s) => [s.id, s]));
+    const subcategoriesMap = new Map(subcategories.map((s) => [s.id, s]));
 
-    const timeline = await this.getComplaintTimeline(id);
-    return { complaint, timeline };
+    const [complaintRowRes, timeline, evidenceResult] = await Promise.all([
+      supabase.from('complaints').select('*').eq('id', id).maybeSingle(),
+      this.getComplaintTimeline(id),
+      this.getComplaintEvidence(id),
+    ]);
+
+    if (complaintRowRes.error) {
+      console.error(`Error loading complaint ${id}:`, complaintRowRes.error);
+      throw new Error(`Failed to load complaint ${id}: ${complaintRowRes.error.message}`);
+    }
+
+    if (!complaintRowRes.data) return null;
+
+    const complaint = mapSupabaseRowToComplaint(
+      complaintRowRes.data as SupabaseComplaintRow,
+      segmentsMap,
+      subcategoriesMap
+    );
+
+    // Replace initial empty media array with real evidence media
+    complaint.media = evidenceResult.media || [];
+
+    return {
+      complaint,
+      timeline,
+      evidenceError: evidenceResult.error || null,
+    };
   },
 
   /**
