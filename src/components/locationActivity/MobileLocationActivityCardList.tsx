@@ -1,11 +1,12 @@
 import React from 'react';
-import { Eye, Clock, MapPin, Monitor, Smartphone, Tablet, HelpCircle, Globe, Compass } from 'lucide-react';
+import { Eye, Clock, MapPin, Monitor, Smartphone, Tablet, HelpCircle, Globe, Compass, Loader2 } from 'lucide-react';
 import { PublicVisitSession } from '@/types/LocationActivity';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { LocationPermissionBadge } from './LocationPermissionBadge';
 import { LocationActivityEmptyState } from './LocationActivityEmptyState';
 import { useLanguage } from '@/context/LanguageContext';
+import { useResolvedLocations } from '@/hooks/useReverseGeocoding';
 
 export interface MobileLocationActivityCardListProps {
   sessions: PublicVisitSession[];
@@ -26,6 +27,8 @@ export const MobileLocationActivityCardList: React.FC<MobileLocationActivityCard
 }) => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
+
+  const { getLocation, isLoadingLocation } = useResolvedLocations(sessions, isBn ? 'bn' : 'en');
 
   if (!isLoading && sessions.length === 0) {
     return <LocationActivityEmptyState hasFilters={hasFilters} onResetFilters={onResetFilters} />;
@@ -55,22 +58,17 @@ export const MobileLocationActivityCardList: React.FC<MobileLocationActivityCard
     return <HelpCircle className="w-3.5 h-3.5 text-slate-400" />;
   };
 
-  const formatLocation = (session: PublicVisitSession) => {
-    if (
-      session.permission_status === 'granted' &&
-      session.latitude !== null &&
-      session.longitude !== null
-    ) {
-      return `${session.latitude.toFixed(5)}, ${session.longitude.toFixed(5)}`;
-    }
-    return isBn ? 'শেয়ার করা হয়নি' : 'Not shared';
-  };
-
   return (
     <div className="space-y-3">
       {sessions.map((session) => {
         const isSelected = selectedSession?.id === session.id;
-        const isGranted = session.permission_status === 'granted' && session.latitude !== null;
+        const isGranted =
+          session.permission_status === 'granted' &&
+          session.latitude !== null &&
+          session.longitude !== null;
+
+        const resolved = isGranted ? getLocation(session.latitude, session.longitude) : null;
+        const isResolving = isGranted ? isLoadingLocation(session.latitude, session.longitude) : false;
 
         return (
           <Card
@@ -91,33 +89,55 @@ export const MobileLocationActivityCardList: React.FC<MobileLocationActivityCard
                 </div>
               </div>
 
-              {/* Location Row */}
-              <div className="flex items-start gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/80">
-                <MapPin
-                  className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${
-                    isGranted ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'
-                  }`}
-                />
-                <div className="min-w-0 flex-1 flex items-baseline justify-between gap-2">
-                  <span
-                    className={`text-xs font-mono truncate ${
-                      isGranted
-                        ? 'text-slate-900 dark:text-slate-100 font-semibold'
-                        : 'text-slate-500 dark:text-slate-400 italic'
+              {/* Location Row (Primary resolved name + secondary coordinates) */}
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                <div className="flex items-start gap-2">
+                  <MapPin
+                    className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${
+                      isGranted ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 opacity-60'
                     }`}
-                  >
-                    {formatLocation(session)}
-                  </span>
-                  {session.accuracy_meters !== null && session.accuracy_meters !== undefined && (
-                    <span className="text-[11px] font-mono text-slate-400 shrink-0">
-                      ±{Math.round(session.accuracy_meters)}m
-                    </span>
-                  )}
+                  />
+                  <div className="min-w-0 flex-1">
+                    {isGranted ? (
+                      <div>
+                        {isResolving ? (
+                          <div className="inline-flex items-center gap-1 text-xs text-sky-600 dark:text-sky-400">
+                            <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+                            <span>{isBn ? 'লোকেশন শনাক্ত করা হচ্ছে…' : 'Resolving location...'}</span>
+                          </div>
+                        ) : (
+                          <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
+                            {resolved?.shortLabel || (isBn ? 'লোকেশন' : 'Location available')}
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between gap-2 mt-0.5 text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                          <span>
+                            {session.latitude?.toFixed(5)}, {session.longitude?.toFixed(5)}
+                          </span>
+                          {session.accuracy_meters !== null && session.accuracy_meters !== undefined && (
+                            <span className="text-slate-400 dark:text-slate-500 shrink-0">
+                              ±{Math.round(session.accuracy_meters)}m
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-slate-500 dark:text-slate-400 italic">
+                        {session.permission_status === 'denied' || session.permission_status === 'prompt'
+                          ? isBn
+                            ? 'লোকেশন শেয়ার করা হয়নি'
+                            : 'Location not shared'
+                          : isBn
+                          ? 'লোকেশন অনুপলব্ধ'
+                          : 'Location unavailable'}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {/* Device & Browser Info */}
-              <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-850/60 p-2 rounded-md border border-slate-100 dark:border-slate-800">
+              <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-md border border-slate-200 dark:border-slate-700/60">
                 <div className="flex items-center gap-1.5 min-w-0">
                   {renderDeviceIcon(session.device_category)}
                   <span className="truncate capitalize">

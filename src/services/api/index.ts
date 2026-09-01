@@ -40,3 +40,6 @@ export { default as dashboardApi } from './dashboardApi';
 export * from './locationActivityService';
 export { default as locationActivityService } from './locationActivityService';
 
+export * from './reverseGeocodingService';
+export { default as reverseGeocodingService } from './reverseGeocodingService';
+

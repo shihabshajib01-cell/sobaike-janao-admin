@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, Clock, Monitor, Smartphone, Tablet, HelpCircle, MapPin, Globe, Compass } from 'lucide-react';
+import { Eye, Clock, Monitor, Smartphone, Tablet, HelpCircle, MapPin, Globe, Compass, Loader2 } from 'lucide-react';
 import { PublicVisitSession } from '@/types/LocationActivity';
 import {
   Table,
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/Button';
 import { LocationPermissionBadge } from './LocationPermissionBadge';
 import { LocationActivityEmptyState } from './LocationActivityEmptyState';
 import { useLanguage } from '@/context/LanguageContext';
+import { useResolvedLocations } from '@/hooks/useReverseGeocoding';
 
 export interface LocationActivityTableProps {
   sessions: PublicVisitSession[];
@@ -33,6 +34,8 @@ export const LocationActivityTable: React.FC<LocationActivityTableProps> = ({
 }) => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
+
+  const { getLocation, isLoadingLocation } = useResolvedLocations(sessions, isBn ? 'bn' : 'en');
 
   if (!isLoading && sessions.length === 0) {
     return <LocationActivityEmptyState hasFilters={hasFilters} onResetFilters={onResetFilters} />;
@@ -92,25 +95,13 @@ export const LocationActivityTable: React.FC<LocationActivityTableProps> = ({
     );
   };
 
-  // Format Location string
-  const formatLocation = (session: PublicVisitSession) => {
-    if (
-      session.permission_status === 'granted' &&
-      session.latitude !== null &&
-      session.longitude !== null
-    ) {
-      return `${session.latitude.toFixed(6)}, ${session.longitude.toFixed(6)}`;
-    }
-    return isBn ? 'শেয়ার করা হয়নি' : 'Not shared';
-  };
-
   return (
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead className="w-[180px]">{isBn ? 'সর্বশেষ সক্রিয়' : 'Last Seen'}</TableHead>
           <TableHead className="w-[130px]">{isBn ? 'অনুমতি' : 'Permission'}</TableHead>
-          <TableHead className="min-w-[170px]">{isBn ? 'লোকেশন কোঅর্ডিনেট' : 'Location'}</TableHead>
+          <TableHead className="min-w-[200px]">{isBn ? 'লোকেশন' : 'Location'}</TableHead>
           <TableHead className="w-[100px]">{isBn ? 'নির্ভুলতা' : 'Accuracy'}</TableHead>
           <TableHead className="w-[110px]">{isBn ? 'ডিভাইস' : 'Device'}</TableHead>
           <TableHead className="w-[150px]">{isBn ? 'ব্রাউজার' : 'Browser'}</TableHead>
@@ -122,15 +113,21 @@ export const LocationActivityTable: React.FC<LocationActivityTableProps> = ({
       <TableBody>
         {sessions.map((session) => {
           const isSelected = selectedSession?.id === session.id;
-          const isGranted = session.permission_status === 'granted' && session.latitude !== null;
+          const isGranted =
+            session.permission_status === 'granted' &&
+            session.latitude !== null &&
+            session.longitude !== null;
+
+          const resolved = isGranted ? getLocation(session.latitude, session.longitude) : null;
+          const isResolving = isGranted ? isLoadingLocation(session.latitude, session.longitude) : false;
 
           return (
             <TableRow
               key={session.id}
               className={`transition-colors cursor-pointer ${
                 isSelected
-                  ? 'bg-sky-50/70 dark:bg-sky-950/20'
-                  : 'hover:bg-slate-50/60 dark:hover:bg-slate-800/40'
+                  ? 'bg-sky-50/70 dark:bg-sky-950/30'
+                  : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/50'
               }`}
               onClick={() => onSelectSession(session)}
             >
@@ -147,24 +144,42 @@ export const LocationActivityTable: React.FC<LocationActivityTableProps> = ({
                 <LocationPermissionBadge status={session.permission_status} />
               </TableCell>
 
-              {/* 3. Location */}
+              {/* 3. Location (Human-Readable Primary + Coordinates Secondary) */}
               <TableCell>
-                <div className="flex items-center gap-1.5 text-xs font-mono">
-                  <MapPin
-                    className={`w-3.5 h-3.5 shrink-0 ${
-                      isGranted ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'
-                    }`}
-                  />
-                  <span
-                    className={
-                      isGranted
-                        ? 'text-slate-900 dark:text-slate-100 font-medium'
-                        : 'text-slate-500 dark:text-slate-400 italic'
-                    }
-                  >
-                    {formatLocation(session)}
-                  </span>
-                </div>
+                {isGranted ? (
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <MapPin className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      {isResolving ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-sky-600 dark:text-sky-400">
+                          <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+                          <span>{isBn ? 'লোকেশন শনাক্ত করা হচ্ছে…' : 'Resolving location...'}</span>
+                        </span>
+                      ) : (
+                        <span className="font-semibold text-slate-900 dark:text-slate-100 truncate block max-w-[220px]" title={resolved?.fullAddress || resolved?.shortLabel}>
+                          {resolved?.shortLabel || (isBn ? 'লোকেশন' : 'Location available')}
+                        </span>
+                      )}
+                    </div>
+                    {/* Secondary Raw Coordinates */}
+                    <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pl-5">
+                      {session.latitude?.toFixed(6)}, {session.longitude?.toFixed(6)}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 italic">
+                    <MapPin className="w-3.5 h-3.5 shrink-0 opacity-50" />
+                    <span>
+                      {session.permission_status === 'denied' || session.permission_status === 'prompt'
+                        ? isBn
+                          ? 'লোকেশন শেয়ার করা হয়নি'
+                          : 'Location not shared'
+                        : isBn
+                        ? 'লোকেশন অনুপলব্ধ'
+                        : 'Location unavailable'}
+                    </span>
+                  </div>
+                )}
               </TableCell>
 
               {/* 4. Accuracy */}
