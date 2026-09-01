@@ -1,4 +1,5 @@
 import { appConfig } from '@/config';
+import { supabase } from '@/lib/supabase';
 import { ApiResponse, RequestOptions, RequestInterceptor, ResponseInterceptor } from '@/types/api';
 
 export type { RequestOptions, RequestInterceptor, ResponseInterceptor };
@@ -16,11 +17,13 @@ export class ApiError extends Error {
 }
 
 /**
- * Token Provider interface for authentication mechanisms
+ * Token Provider interface for authentication mechanisms.
+ * Dynamically queries current Supabase session access_token.
  */
-let authTokenProvider: (() => string | null | Promise<string | null>) = () => {
+let authTokenProvider: (() => string | null | Promise<string | null>) = async () => {
   try {
-    return localStorage.getItem('sobaike_admin_token');
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token || null;
   } catch {
     return null;
   }

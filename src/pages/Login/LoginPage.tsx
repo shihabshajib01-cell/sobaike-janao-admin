@@ -1,45 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Shield, Lock, User, AlertCircle, ArrowRight, CheckCircle2, Moon, Sun } from 'lucide-react';
+import { Shield, Lock, Mail, AlertCircle, ArrowRight, CheckCircle2, Moon, Sun } from 'lucide-react';
 import { Button, Input, Checkbox } from '@/components/ui';
 import { authService } from '@/services/auth/authService';
+import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useTheme } from '@/themes';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { login } = useAuth();
   const { language, setLanguage } = useLanguage();
   const { resolvedTheme, toggleTheme } = useTheme();
 
-  const [userId, setUserId] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const [errors, setErrors] = useState<{ userId?: string; password?: string; general?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
 
-  // Initialize remembered user on mount if existing
+  // Initialize remembered email on mount if existing
   useEffect(() => {
     const remembered = authService.getRememberedUser();
     if (remembered) {
-      setUserId(remembered);
+      setEmail(remembered);
       setRememberMe(true);
     }
   }, []);
 
-  // Quick autofill demo credentials: ID: admin, Password: admin
-  const handleAutofillDemo = () => {
-    setUserId('admin');
-    setPassword('admin');
-    setErrors({});
-  };
-
   const validateForm = (): boolean => {
-    const newErrors: { userId?: string; password?: string; general?: string } = {};
+    const newErrors: { email?: string; password?: string; general?: string } = {};
 
-    if (!userId.trim()) {
-      newErrors.userId = language === 'bn' ? 'ব্যবহারকারী আইডি প্রয়োজন' : 'User ID is required';
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      newErrors.email = language === 'bn' ? 'ইমেল প্রয়োজন' : 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      newErrors.email = language === 'bn' ? 'একটি কার্যকর ইমেল দিন' : 'Please enter a valid email address';
     }
 
     if (!password) {
@@ -65,8 +63,8 @@ export const LoginPage: React.FC = () => {
     setErrors({});
 
     try {
-      const response = await authService.login({
-        username: userId.trim(),
+      const response = await login({
+        email: email.trim(),
         password,
         rememberMe,
       });
@@ -78,13 +76,35 @@ export const LoginPage: React.FC = () => {
           navigate(from, { replace: true });
         }, 500);
       } else {
-        setErrors({
-          general: language === 'bn' ? 'ভুল আইডি বা পাসওয়ার্ড' : 'Invalid ID or password',
-        });
+        if (response.isUnauthorizedAdmin) {
+          setErrors({
+            general:
+              language === 'bn'
+                ? 'অননুমোদিত: আপনার অ্যাকাউন্টে সক্রিয় প্রশাসনিক সুবিধা নেই।'
+                : 'Unauthorized: Your account does not have active administrative privileges.',
+          });
+        } else if (response.isUnconfigured) {
+          setErrors({
+            general:
+              language === 'bn'
+                ? 'সুপাবেস প্রমাণীকরণ এখনও কনফিগার করা হয়নি (VITE_SUPABASE_URL এবং VITE_SUPABASE_PUBLISHABLE_KEY প্রয়োজন)।'
+                : 'Supabase authentication is not configured yet. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.',
+          });
+        } else {
+          setErrors({
+            general:
+              language === 'bn'
+                ? 'ভুল ইমেল বা পাসওয়ার্ড'
+                : response.error || 'Invalid email or password',
+          });
+        }
       }
     } catch {
       setErrors({
-        general: language === 'bn' ? 'সার্ভার ত্রুটি। অনুগ্রহ করে আবার চেষ্টা করুন।' : 'Unable to connect to authentication service. Please try again.',
+        general:
+          language === 'bn'
+            ? 'সার্ভার ত্রুটি। অনুগ্রহ করে আবার চেষ্টা করুন।'
+            : 'Unable to connect to authentication service. Please try again.',
       });
     } finally {
       setIsLoading(false);
@@ -146,7 +166,7 @@ export const LoginPage: React.FC = () => {
               </p>
               <h2 className="text-sm font-medium text-slate-600 dark:text-slate-400 mt-3">
                 {language === 'bn'
-                  ? 'প্রশাসনিক প্যানেলে প্রবেশ করতে আপনার তথ্য দিন'
+                  ? 'প্রশাসনিক প্যানেলে প্রবেশ করতে আপনার ইমেল ও পাসওয়ার্ড দিন'
                   : 'Welcome back! Please enter your credentials to sign in.'}
               </h2>
             </div>
@@ -171,21 +191,21 @@ export const LoginPage: React.FC = () => {
 
             {/* Authentication Form */}
             <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-              {/* User ID / Username Field */}
+              {/* Email Field */}
               <Input
-                id="login-user-id"
-                type="text"
-                label={language === 'bn' ? 'ইউজার আইডি / ব্যবহারকারীর নাম' : 'User ID / Username'}
-                placeholder="admin"
-                value={userId}
+                id="login-email"
+                type="email"
+                label={language === 'bn' ? 'ইমেল' : 'Email'}
+                placeholder="admin@example.com"
+                value={email}
                 onChange={(e) => {
-                  setUserId(e.target.value);
-                  if (errors.userId || errors.general) setErrors((prev) => ({ ...prev, userId: undefined, general: undefined }));
+                  setEmail(e.target.value);
+                  if (errors.email || errors.general) setErrors((prev) => ({ ...prev, email: undefined, general: undefined }));
                 }}
-                error={errors.userId}
-                leftIcon={<User className="w-4 h-4" />}
+                error={errors.email}
+                leftIcon={<Mail className="w-4 h-4" />}
                 disabled={isLoading || loginSuccess}
-                autoComplete="username"
+                autoComplete="email"
                 autoFocus
               />
 
@@ -194,7 +214,7 @@ export const LoginPage: React.FC = () => {
                 id="login-password"
                 type="password"
                 label={language === 'bn' ? 'পাসওয়ার্ড' : 'Password'}
-                placeholder="admin"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
@@ -206,7 +226,7 @@ export const LoginPage: React.FC = () => {
                 autoComplete="current-password"
               />
 
-              {/* Remember Me Checkbox & Demo Helper */}
+              {/* Remember Me Checkbox */}
               <div className="flex items-center justify-between pt-1">
                 <Checkbox
                   id="remember-me"
@@ -215,15 +235,6 @@ export const LoginPage: React.FC = () => {
                   label={language === 'bn' ? 'মনে রাখুন' : 'Remember me'}
                   disabled={isLoading || loginSuccess}
                 />
-
-                {/* Demo Autofill Shortcut */}
-                <button
-                  type="button"
-                  onClick={handleAutofillDemo}
-                  className="text-xs font-semibold text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300 hover:underline transition-colors cursor-pointer"
-                >
-                  {language === 'bn' ? 'ডেমো: admin / admin' : 'Demo: admin / admin'}
-                </button>
               </div>
 
               {/* Login Button */}

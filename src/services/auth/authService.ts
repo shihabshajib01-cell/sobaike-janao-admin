@@ -1,86 +1,97 @@
-/**
- * Authentication Token Storage & State Foundation
- */
-
-export interface AuthUser {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-  avatarUrl?: string;
-}
-
-export interface AuthState {
-  isAuthenticated: boolean;
-  token: string | null;
-  user: AuthUser | null;
-}
+import { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 export interface LoginCredentials {
-  username?: string;
-  email?: string;
+  email: string;
   password: string;
   rememberMe?: boolean;
 }
 
 export interface LoginResponse {
   success: boolean;
-  token?: string;
-  user?: AuthUser;
+  user?: User;
+  session?: Session;
   error?: string;
+  isUnauthorizedAdmin?: boolean;
+  isUnconfigured?: boolean;
 }
 
-const AUTH_TOKEN_KEY = 'sobaike_admin_token';
-const AUTH_USER_KEY = 'sobaike_admin_user';
-const REMEMBERED_USER_KEY = 'sobaike_remembered_user';
+const REMEMBERED_EMAIL_KEY = 'sobaike_remembered_email';
+
+/**
+ * Verifies if the authenticated user exists in public.admin_users and is marked active.
+ */
+export async function checkAdminStatus(userId: string): Promise<boolean> {
+  if (!isSupabaseConfigured || !userId) {
+    return false;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('admin_users')
+      .select('user_id, active')
+      .eq('user_id', userId)
+      .eq('active', true)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error verifying admin_users membership:', error.message);
+      return false;
+    }
+
+    return Boolean(data && data.active);
+  } catch (err) {
+    console.error('Admin verification request failed:', err);
+    return false;
+  }
+}
 
 export const authService = {
-  getToken(): string | null {
+  isConfigured(): boolean {
+    return isSupabaseConfigured;
+  },
+
+  async getSession(): Promise<Session | null> {
+    if (!isSupabaseConfigured) return null;
     try {
-      return localStorage.getItem(AUTH_TOKEN_KEY) || sessionStorage.getItem(AUTH_TOKEN_KEY);
+      const { data } = await supabase.auth.getSession();
+      return data.session;
     } catch {
       return null;
     }
   },
 
-  setToken(token: string, remember: boolean = true): void {
+  async getAccessToken(): Promise<string | null> {
+    if (!isSupabaseConfigured) return null;
     try {
-      if (remember) {
-        localStorage.setItem(AUTH_TOKEN_KEY, token);
-      } else {
-        sessionStorage.setItem(AUTH_TOKEN_KEY, token);
-      }
+      const { data } = await supabase.auth.getSession();
+      return data.session?.access_token || null;
     } catch {
-      // Ignore storage errors
+      return null;
     }
   },
 
-  removeToken(): void {
+  async getCurrentUser(): Promise<User | null> {
+    if (!isSupabaseConfigured) return null;
     try {
-      localStorage.removeItem(AUTH_TOKEN_KEY);
-      localStorage.removeItem(AUTH_USER_KEY);
-      sessionStorage.removeItem(AUTH_TOKEN_KEY);
-      sessionStorage.removeItem(AUTH_USER_KEY);
+      const { data } = await supabase.auth.getUser();
+      return data.user;
     } catch {
-      // Ignore
+      return null;
     }
-  },
-
-  isAuthenticated(): boolean {
-    return Boolean(this.getToken());
   },
 
   getRememberedUser(): string | null {
     try {
-      return localStorage.getItem(REMEMBERED_USER_KEY);
+      return localStorage.getItem(REMEMBERED_EMAIL_KEY);
     } catch {
       return null;
     }
   },
 
-  setRememberedUser(username: string): void {
+  setRememberedUser(email: string): void {
     try {
-      localStorage.setItem(REMEMBERED_USER_KEY, username);
+      localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
     } catch {
       // Ignore
     }
@@ -88,80 +99,84 @@ export const authService = {
 
   clearRememberedUser(): void {
     try {
-      localStorage.removeItem(REMEMBERED_USER_KEY);
+      localStorage.removeItem(REMEMBERED_EMAIL_KEY);
     } catch {
       // Ignore
     }
   },
 
-  getCurrentUser(): AuthUser | null {
-    try {
-      const stored = localStorage.getItem(AUTH_USER_KEY) || sessionStorage.getItem(AUTH_USER_KEY);
-      if (stored) {
-        return JSON.parse(stored) as AuthUser;
-      }
-    } catch {
-      // Fallback
-    }
-    return {
-      id: 'usr-admin-1',
-      name: 'Tanvir Hossain',
-      email: 'admin@sobaike.gov.bd',
-      role: 'Super Administrator',
-    };
-  },
-
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
-    // Simulating asynchronous network delay for API readiness
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    const enteredId = (credentials.username || credentials.email || '').trim().toLowerCase();
-    const enteredPassword = credentials.password;
-    const isRemembered = Boolean(credentials.rememberMe);
-
-    // Validate demo credentials: ID: admin, Password: admin (or admin@sobaike.gov.bd)
-    const isValid = (enteredId === 'admin' || enteredId === 'admin@sobaike.gov.bd') && enteredPassword === 'admin';
-
-    if (!isValid) {
+    if (!isSupabaseConfigured) {
       return {
         success: false,
-        error: 'Invalid ID or password',
+        error: 'Supabase credentials are not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.',
+        isUnconfigured: true,
       };
     }
 
-    const mockToken = `sbk_jwt_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    const mockUser: AuthUser = {
-      id: 'usr-admin-1',
-      name: 'System Administrator',
-      email: enteredId.includes('@') ? enteredId : 'admin@sobaike.gov.bd',
-      role: 'Super Administrator',
-    };
+    const email = (credentials.email || '').trim();
+    const password = credentials.password;
+    const isRemembered = Boolean(credentials.rememberMe);
 
     try {
-      if (isRemembered) {
-        localStorage.setItem(AUTH_TOKEN_KEY, mockToken);
-        localStorage.setItem(AUTH_USER_KEY, JSON.stringify(mockUser));
-        localStorage.setItem(REMEMBERED_USER_KEY, enteredId);
-      } else {
-        sessionStorage.setItem(AUTH_TOKEN_KEY, mockToken);
-        sessionStorage.setItem(AUTH_USER_KEY, JSON.stringify(mockUser));
-        localStorage.removeItem(REMEMBERED_USER_KEY);
-      }
-    } catch {
-      // Ignore storage errors in restricted contexts
-    }
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    return {
-      success: true,
-      token: mockToken,
-      user: mockUser,
-    };
+      if (error || !data.user || !data.session) {
+        return {
+          success: false,
+          error: error?.message || 'Invalid email or password',
+        };
+      }
+
+      // Verify admin allowlist in public.admin_users
+      const isAdmin = await checkAdminStatus(data.user.id);
+
+      if (!isAdmin) {
+        // Immediately sign the user out
+        await supabase.auth.signOut();
+        return {
+          success: false,
+          error: 'Unauthorized: Your account does not have active administrative privileges.',
+          isUnauthorizedAdmin: true,
+        };
+      }
+
+      // Handle remembered email
+      if (isRemembered) {
+        this.setRememberedUser(email);
+      } else {
+        this.clearRememberedUser();
+      }
+
+      return {
+        success: true,
+        user: data.user,
+        session: data.session,
+      };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unable to connect to authentication service.';
+      return {
+        success: false,
+        error: message,
+      };
+    }
   },
 
   async logout(): Promise<void> {
-    this.removeToken();
+    if (!isSupabaseConfigured) return;
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error('Error during Supabase sign-out:', err);
+    }
+  },
+
+  onAuthStateChange(callback: (event: AuthChangeEvent, session: Session | null) => void) {
+    return supabase.auth.onAuthStateChange(callback);
   },
 };
 
 export default authService;
-

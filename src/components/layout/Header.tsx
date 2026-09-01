@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
 import { ADMIN_NAVIGATION_ITEMS } from '@/routes/routes.config';
-import { authService } from '@/services/auth/authService';
 import { ThemeToggle } from './ThemeToggle';
 import { LanguageToggle } from './LanguageToggle';
 import {
@@ -31,6 +31,7 @@ export const AdminHeader: React.FC<HeaderProps> = ({
   onToggleSidebar,
 }) => {
   const { t } = useLanguage();
+  const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
@@ -39,10 +40,24 @@ export const AdminHeader: React.FC<HeaderProps> = ({
   const notifRef = useRef<HTMLDivElement | null>(null);
 
   const handleSignOut = async () => {
-    await authService.logout();
+    await logout();
     setProfileOpen(false);
     navigate('/login');
   };
+
+  // Compute initials safely from email or metadata
+  const userEmail = user?.email || 'admin@sobaike.gov.bd';
+  const userDisplayName =
+    (user?.user_metadata?.full_name as string) ||
+    (user?.user_metadata?.name as string) ||
+    t.header.operator;
+  const userInitials = (
+    (user?.user_metadata?.full_name as string) ||
+    user?.email?.split('@')[0] ||
+    'SO'
+  )
+    .slice(0, 2)
+    .toUpperCase();
 
   // Determine current active page label
   const currentNav = ADMIN_NAVIGATION_ITEMS.find((item) =>
@@ -188,11 +203,11 @@ export const AdminHeader: React.FC<HeaderProps> = ({
             aria-expanded={profileOpen}
           >
             <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-sky-600 to-indigo-600 text-white flex items-center justify-center text-xs font-bold shadow-xs">
-              SO
+              {userInitials}
             </div>
             <div className="hidden md:block text-left">
-              <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-tight">
-                {t.header.operator}
+              <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-tight truncate max-w-[120px]">
+                {userDisplayName}
               </div>
               <div className="text-[10px] text-sky-600 dark:text-sky-400 font-medium leading-tight">
                 {t.header.superadmin}
@@ -205,11 +220,11 @@ export const AdminHeader: React.FC<HeaderProps> = ({
           {profileOpen && (
             <div className="absolute right-0 mt-2 w-56 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl py-2 z-50 animate-in fade-in zoom-in-95 text-left">
               <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800">
-                <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-                  {t.header.operator}
+                <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
+                  {userDisplayName}
                 </p>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                  superadmin@sobaike.gov.bd
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate" title={userEmail}>
+                  {userEmail}
                 </p>
               </div>
 
