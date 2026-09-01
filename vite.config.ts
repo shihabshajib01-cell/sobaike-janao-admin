@@ -6,7 +6,7 @@ import viteImagemin from 'vite-plugin-imagemin';
 
 export default defineConfig(() => {
   return {
-    base: '/admin-sobaike-janao/',
+    base: process.env.VITE_BASE_PATH || './',
     plugins: [
       react(),
       tailwindcss(),
