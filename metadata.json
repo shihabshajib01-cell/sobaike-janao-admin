@@ -1,0 +1,8 @@
+{
+  "name": " Sobaike Admin Panel 11",
+  "description": "Enterprise operational control system and administration foundation for the Sobaike platform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
