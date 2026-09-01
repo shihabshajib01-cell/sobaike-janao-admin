@@ -8,6 +8,7 @@ import { BadgeStatus } from '@/components/ui/Badge';
 export type ComplaintLifecycleStatus =
   | 'submitted'
   | 'published'
+  | 'unpublished'
   | 'rejected'
   | 'edited';
 

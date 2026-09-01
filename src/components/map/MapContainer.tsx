@@ -141,6 +141,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         return '#f59e0b'; // amber-500
       case 'published':
         return '#0ea5e9'; // sky-500
+      case 'unpublished':
+        return '#64748b'; // slate-500
       case 'rejected':
         return '#ef4444'; // red-500
       case 'edited':
@@ -154,6 +156,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     const map: Record<MapComplaint['status'], { badgeStatus: BadgeStatus; labelEn: string; labelBn: string }> = {
       submitted: { badgeStatus: 'pending', labelEn: 'Submitted', labelBn: 'দাখিলকৃত' },
       published: { badgeStatus: 'published', labelEn: 'Published', labelBn: 'প্রকাশিত' },
+      unpublished: { badgeStatus: 'default', labelEn: 'Unpublished', labelBn: 'অপ্রকাশিত' },
       rejected: { badgeStatus: 'rejected', labelEn: 'Rejected', labelBn: 'বাতিলকৃত' },
       edited: { badgeStatus: 'info', labelEn: 'Edited', labelBn: 'সম্পাদিত' },
     };

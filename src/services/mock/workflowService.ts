@@ -196,6 +196,46 @@ export class WorkflowService {
   }
 
   /**
+   * Unpublish Complaint Action
+   * Transitions complaint status to 'unpublished'
+   */
+  async unpublishComplaint(
+    complaintId: string,
+    actor = { name: CURRENT_ADMIN_USER.name, role: 'Moderator' }
+  ): Promise<WorkflowActionResult> {
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    const complaint = this.findComplaint(complaintId);
+    const fromStatus = complaint.status;
+    const toStatus: ComplaintLifecycleStatus = 'unpublished';
+
+    complaint.status = toStatus;
+    complaint.updatedAt = new Date().toISOString();
+
+    await mockTimelineService.addTimelineEvent({
+      complaintId: complaint.id,
+      type: 'status_change',
+      actorName: actor.name,
+      actorRole: actor.role,
+      titleEn: 'Complaint Unpublished',
+      titleBn: 'অভিযোগের প্রকাশনা বন্ধ করা হয়েছে',
+      descriptionEn: 'Complaint unpublished by admin.',
+      descriptionBn: 'অ্যাডমিন কর্তৃক অভিযোগের প্রকাশনা বন্ধ করা হয়েছে।',
+      fromStatus,
+      toStatus,
+    });
+
+    const updatedTimeline = await mockTimelineService.getComplaintTimeline(complaint.id);
+
+    return {
+      success: true,
+      complaint: { ...complaint },
+      timeline: updatedTimeline,
+      messageEn: `Complaint ${complaint.id} was unpublished.`,
+      messageBn: `অভিযোগ ${complaint.id} এর প্রকাশনা বন্ধ করা হয়েছে।`,
+    };
+  }
+
+  /**
    * Reject Complaint Action
    * Transitions complaint status to 'rejected'
    */

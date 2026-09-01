@@ -66,6 +66,7 @@ export const ComplaintTimeline: React.FC<ComplaintTimelineProps> = ({
     const badgeMap: Record<ComplaintLifecycleStatus, { status: BadgeStatus; labelEn: string; labelBn: string }> = {
       submitted: { status: 'pending', labelEn: 'Submitted', labelBn: 'দাখিলকৃত' },
       published: { status: 'published', labelEn: 'Published', labelBn: 'প্রকাশিত' },
+      unpublished: { status: 'default', labelEn: 'Unpublished', labelBn: 'অপ্রকাশিত' },
       rejected: { status: 'rejected', labelEn: 'Rejected', labelBn: 'বাতিলকৃত' },
       edited: { status: 'info', labelEn: 'Edited', labelBn: 'সম্পাদিত' },
     };

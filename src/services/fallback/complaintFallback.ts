@@ -54,6 +54,10 @@ export const complaintFallback = {
     return mockWorkflowService.publishComplaint(complaintId);
   },
 
+  unpublishComplaint(complaintId: string): Promise<WorkflowActionResult> {
+    return mockWorkflowService.unpublishComplaint(complaintId);
+  },
+
   rejectComplaint(complaintId: string, reason: string, explanation: string): Promise<WorkflowActionResult> {
     return mockWorkflowService.rejectComplaint(complaintId, reason, explanation);
   },

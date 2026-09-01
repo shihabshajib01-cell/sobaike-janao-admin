@@ -19,6 +19,7 @@ import {
   Edit,
   XCircle,
   Share2,
+  EyeOff,
   Info,
   Check,
   AlertTriangle,
@@ -250,6 +251,25 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
     }
   };
 
+  // 3. Handle Unpublish
+  const handleUnpublish = async () => {
+    setIsSubmitting(true);
+    setActionError(null);
+    try {
+      const result = await complaintApi.unpublishComplaint(complaint.id);
+      showToast(isBn ? result.messageBn : result.messageEn, 'info');
+      if (onComplaintUpdated) {
+        onComplaintUpdated(result.complaint, result.timeline);
+      }
+      closeModal();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to unpublish complaint';
+      setActionError(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Icon resolver for action buttons
   const renderActionIcon = (iconName: ComplaintActionConfig['iconName']) => {
     switch (iconName) {
@@ -257,6 +277,8 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
         return <Edit className="w-4 h-4 text-white" />;
       case 'Share2':
         return <Share2 className="w-4 h-4 text-white" />;
+      case 'EyeOff':
+        return <EyeOff className="w-4 h-4 text-slate-600 dark:text-slate-300" />;
       case 'XCircle':
         return <XCircle className="w-4 h-4 text-white" />;
       default:
@@ -655,43 +677,78 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
         </div>
       </Modal>
 
-      {/* Mobile Fixed Bottom Action Bar: Connected to page, safe-area aware, with Edit Complaint & Quick Actions */}
-      <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] shadow-lg flex items-center gap-2">
-        <Button
-          variant="primary"
-          size="md"
-          onClick={() => {
-            initEditForm(complaint);
-            setActiveModal('edit');
-          }}
-          leftIcon={<Edit className="w-4 h-4 text-white" />}
-          className="flex-1 h-10 text-xs justify-center font-medium shadow-xs"
-        >
-          <span>{isBn ? 'অভিযোগ সম্পাদনা' : 'Edit Complaint'}</span>
-        </Button>
-        {complaint.status !== 'published' && (
-          <Button
-            variant="success"
-            size="md"
-            onClick={() => setActiveModal('publish')}
-            leftIcon={<Share2 className="w-4 h-4 text-white" />}
-            className="h-10 px-3 text-xs justify-center font-medium shadow-xs bg-sky-600 hover:bg-sky-700 text-white"
-          >
-            <span>{isBn ? 'প্রকাশ' : 'Publish'}</span>
-          </Button>
-        )}
-        {complaint.status !== 'rejected' && (
-          <Button
-            variant="danger"
-            size="md"
-            onClick={() => setActiveModal('reject')}
-            leftIcon={<XCircle className="w-4 h-4 text-white" />}
-            className="h-10 px-3 text-xs justify-center font-medium shadow-xs"
-          >
-            <span>{isBn ? 'বাতিল' : 'Reject'}</span>
-          </Button>
-        )}
-      </div>
+      {/* 4. Unpublish Confirmation Modal */}
+      <Modal
+        isOpen={activeModal === 'unpublish'}
+        onClose={closeModal}
+        title={isBn ? 'অভিযোগের প্রকাশনা বন্ধ করবেন?' : 'Unpublish Complaint?'}
+        description={
+          isBn
+            ? `অভিযোগ ${complaint.id} পাবলিক ফিড থেকে প্রত্যাহার করে অপ্রকাশিত অবস্থায় সংরক্ষণ করুন।`
+            : `Remove complaint ${complaint.id} from the public feed and return it to Unpublished state.`
+        }
+        size="md"
+        footer={
+          <div className="flex items-center justify-end gap-2 w-full">
+            <Button variant="ghost" size="sm" onClick={closeModal} disabled={isSubmitting}>
+              <span>{isBn ? 'বাতিল' : 'Cancel'}</span>
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              isLoading={isSubmitting}
+              onClick={handleUnpublish}
+              leftIcon={<EyeOff className="w-3.5 h-3.5" />}
+            >
+              <span>{isBn ? 'প্রকাশনা বন্ধ করুন' : 'Unpublish'}</span>
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          {actionError && (
+            <div className="p-3 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 rounded-md text-xs text-rose-700 dark:text-rose-300">
+              {actionError}
+            </div>
+          )}
+          <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300 space-y-1">
+            <p className="font-semibold">
+              {isBn ? 'স্ট্যাটাস পরিবর্তন তথ্য:' : 'Status Transition Note:'}
+            </p>
+            <p>
+              {isBn
+                ? 'প্রকাশনা বন্ধের পর অভিযোগটি অপ্রকাশিত ট্যাবে সংরক্ষিত থাকবে। পরবর্তীতে প্রয়োজনে যে কোনো সময় পুনরায় পাবলিক ফিডে প্রকাশ করতে পারবেন।'
+                : 'After unpublishing, this report remains safely archived in the Unpublished tab. You can republish it to the public feed at any time.'}
+            </p>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Mobile Fixed Bottom Action Bar: Driven dynamically by availableActions */}
+      {availableActions.length > 0 && (
+        <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] shadow-lg flex items-center gap-2">
+          {availableActions.map((action) => (
+            <Button
+              key={action.id}
+              variant={action.variant}
+              size="md"
+              onClick={() => {
+                if (action.id === 'edit') {
+                  initEditForm(complaint);
+                }
+                setActiveModal(action.id);
+              }}
+              leftIcon={renderActionIcon(action.iconName)}
+              className={cn(
+                'flex-1 h-10 text-xs justify-center font-medium shadow-xs',
+                action.id === 'publish' && 'bg-sky-600 hover:bg-sky-700 text-white'
+              )}
+            >
+              <span>{isBn ? action.labelBn : action.labelEn}</span>
+            </Button>
+          ))}
+        </div>
+      )}
     </>
   );
 };

@@ -18,6 +18,7 @@ const STATUS_UI_MAP: Record<
 > = {
   submitted: { colorClass: 'bg-amber-500', badgeStatus: 'pending' },
   published: { colorClass: 'bg-sky-500', badgeStatus: 'published' },
+  unpublished: { colorClass: 'bg-slate-500', badgeStatus: 'default' },
   rejected: { colorClass: 'bg-red-500', badgeStatus: 'rejected' },
   edited: { colorClass: 'bg-purple-500', badgeStatus: 'info' },
 };

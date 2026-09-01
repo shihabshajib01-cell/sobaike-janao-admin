@@ -71,6 +71,7 @@ export const ComplaintDetailPage: React.FC = () => {
   > = {
     submitted: { badgeStatus: 'pending', labelEn: 'Submitted', labelBn: 'দাখিলকৃত' },
     published: { badgeStatus: 'published', labelEn: 'Published', labelBn: 'প্রকাশিত' },
+    unpublished: { badgeStatus: 'default', labelEn: 'Unpublished', labelBn: 'অপ্রকাশিত' },
     rejected: { badgeStatus: 'rejected', labelEn: 'Rejected', labelBn: 'বাতিলকৃত' },
     edited: { badgeStatus: 'info', labelEn: 'Edited', labelBn: 'সম্পাদিত' },
   };

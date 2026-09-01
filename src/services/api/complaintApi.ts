@@ -158,6 +158,13 @@ export class ComplaintApi {
     return complaintFallback.publishComplaint(complaintId);
   }
 
+  async unpublishComplaint(complaintId: string): Promise<WorkflowActionResult> {
+    if (isSupabaseConfigured) {
+      return supabaseComplaintService.unpublishComplaint(complaintId);
+    }
+    return complaintFallback.unpublishComplaint(complaintId);
+  }
+
   async addComplaintUpdate(complaintId: string, message: string): Promise<WorkflowActionResult> {
     if (isSupabaseConfigured) {
       throw new Error('Action integration is not enabled yet.');

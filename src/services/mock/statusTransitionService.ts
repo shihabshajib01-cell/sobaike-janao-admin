@@ -23,7 +23,8 @@ export interface TransitionRule {
  */
 export const ALLOWED_STATUS_TRANSITIONS: Record<ComplaintLifecycleStatus, ComplaintLifecycleStatus[]> = {
   submitted: ['published', 'rejected', 'edited'],
-  published: ['rejected', 'edited'],
+  published: ['unpublished', 'rejected', 'edited'],
+  unpublished: ['published'],
   rejected: ['submitted', 'published', 'edited'],
   edited: ['published', 'rejected', 'edited'],
 };

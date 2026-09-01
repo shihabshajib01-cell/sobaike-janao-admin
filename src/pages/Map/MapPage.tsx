@@ -198,6 +198,7 @@ export const MapPage: React.FC = () => {
     all: complaints.length,
     submitted: complaints.filter((c) => c.status === 'submitted').length,
     published: complaints.filter((c) => c.status === 'published').length,
+    unpublished: complaints.filter((c) => c.status === 'unpublished').length,
     rejected: complaints.filter((c) => c.status === 'rejected').length,
     edited: complaints.filter((c) => c.status === 'edited').length,
   };

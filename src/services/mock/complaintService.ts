@@ -476,6 +476,7 @@ export class ComplaintService {
       all: MOCK_COMPLAINTS.length,
       submitted: 0,
       published: 0,
+      unpublished: 0,
       rejected: 0,
       edited: 0,
     };
@@ -490,6 +491,7 @@ export class ComplaintService {
       { status: 'all', labelEn: 'All Complaints', labelBn: 'সকল অভিযোগ', count: counts.all, badgeStatus: 'default' },
       { status: 'submitted', labelEn: 'Submitted', labelBn: 'দাখিলকৃত', count: counts.submitted, badgeStatus: 'pending' },
       { status: 'published', labelEn: 'Published', labelBn: 'প্রকাশিত', count: counts.published, badgeStatus: 'published' },
+      { status: 'unpublished', labelEn: 'Unpublished', labelBn: 'অপ্রকাশিত', count: counts.unpublished, badgeStatus: 'default' },
       { status: 'rejected', labelEn: 'Rejected', labelBn: 'বাতিলকৃত', count: counts.rejected, badgeStatus: 'rejected' },
       { status: 'edited', labelEn: 'Edited', labelBn: 'সম্পাদিত', count: counts.edited, badgeStatus: 'info' },
     ];

@@ -92,6 +92,7 @@ let taxonomyFetchPromise: Promise<{
 const VALID_STATUSES: ComplaintLifecycleStatus[] = [
   'submitted',
   'published',
+  'unpublished',
   'rejected',
   'edited',
 ];
@@ -353,6 +354,11 @@ export function mapComplaintUpdatesToTimeline(
       titleEn = 'Complaint Approved & Published';
       titleBn = 'অভিযোগ অনুমোদিত ও প্রকাশিত';
       toStatus = 'published';
+    } else if (rawType === 'unpublished') {
+      type = 'status_change';
+      titleEn = 'Complaint Unpublished';
+      titleBn = 'অভিযোগের প্রকাশনা বন্ধ করা হয়েছে';
+      toStatus = 'unpublished';
     } else if (rawType === 'rejected') {
       type = 'status_change';
       titleEn = 'Complaint Rejected';
@@ -496,7 +502,7 @@ export const supabaseComplaintService = {
    */
   async getComplaintStats(): Promise<ComplaintStatusTabCount[]> {
     try {
-      const [allRes, submittedRes, publishedRes, rejectedRes, editedRes] =
+      const [allRes, submittedRes, publishedRes, unpublishedRes, rejectedRes, editedRes] =
         await Promise.all([
           supabase
             .from('complaints')
@@ -510,6 +516,10 @@ export const supabaseComplaintService = {
             .from('complaints')
             .select('*', { count: 'exact', head: true })
             .eq('status', 'published'),
+          supabase
+            .from('complaints')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'unpublished'),
           supabase
             .from('complaints')
             .select('*', { count: 'exact', head: true })
@@ -543,6 +553,13 @@ export const supabaseComplaintService = {
           labelBn: 'প্রকাশিত',
           count: publishedRes.count ?? 0,
           badgeStatus: 'published',
+        },
+        {
+          status: 'unpublished',
+          labelEn: 'Unpublished',
+          labelBn: 'অপ্রকাশিত',
+          count: unpublishedRes.count ?? 0,
+          badgeStatus: 'default',
         },
         {
           status: 'rejected',
@@ -664,6 +681,42 @@ export const supabaseComplaintService = {
       timeline: refreshed.timeline,
       messageEn: 'Complaint published successfully to public feed.',
       messageBn: 'অভিযোগটি সফলভাবে পাবলিক ফিডে প্রকাশ করা হয়েছে।',
+    };
+  },
+
+  /**
+   * Unpublish complaint via RPC public.admin_unpublish_complaint(p_complaint_id)
+   */
+  async unpublishComplaint(complaintId: string): Promise<WorkflowActionResult> {
+    const { data, error } = await supabase.rpc('admin_unpublish_complaint', {
+      p_complaint_id: complaintId,
+    });
+
+    if (error) {
+      console.error(`Error unpublishing complaint ${complaintId}:`, error);
+      throw new Error(error.message || 'Failed to unpublish complaint');
+    }
+
+    if (data && typeof data === 'object' && 'success' in data && (data as { success: boolean }).success === false) {
+      const errMsg =
+        (data as { message?: string; error?: string }).message ||
+        (data as { message?: string; error?: string }).error ||
+        'Failed to unpublish complaint';
+      throw new Error(errMsg);
+    }
+
+    // Re-fetch the refreshed complaint & timeline directly from Supabase
+    const refreshed = await this.getComplaintDetail(complaintId);
+    if (!refreshed) {
+      throw new Error(`Failed to reload complaint ${complaintId} after unpublishing.`);
+    }
+
+    return {
+      success: true,
+      complaint: refreshed.complaint,
+      timeline: refreshed.timeline,
+      messageEn: 'Complaint unpublished successfully.',
+      messageBn: 'অভিযোগের প্রকাশনা সফলভাবে বন্ধ করা হয়েছে।',
     };
   },
 

@@ -3,6 +3,7 @@ import { ComplaintLifecycleStatus } from '@/types/Complaint';
 export type ComplaintActionId =
   | 'edit'
   | 'publish'
+  | 'unpublish'
   | 'reject';
 
 export interface ComplaintActionConfig {
@@ -10,7 +11,7 @@ export interface ComplaintActionConfig {
   labelEn: string;
   labelBn: string;
   variant: 'primary' | 'secondary' | 'success' | 'danger';
-  iconName: 'Edit' | 'Share2' | 'XCircle';
+  iconName: 'Edit' | 'Share2' | 'EyeOff' | 'XCircle';
 }
 
 export const COMPLAINT_ACTION_DEFINITIONS: Record<ComplaintActionId, ComplaintActionConfig> = {
@@ -28,6 +29,13 @@ export const COMPLAINT_ACTION_DEFINITIONS: Record<ComplaintActionId, ComplaintAc
     variant: 'success',
     iconName: 'Share2',
   },
+  unpublish: {
+    id: 'unpublish',
+    labelEn: 'Unpublish',
+    labelBn: 'প্রকাশনা বন্ধ করুন',
+    variant: 'secondary',
+    iconName: 'EyeOff',
+  },
   reject: {
     id: 'reject',
     labelEn: 'Reject Complaint',
@@ -42,9 +50,10 @@ export const COMPLAINT_ACTION_DEFINITIONS: Record<ComplaintActionId, ComplaintAc
  *
  * Status Matrix:
  * - submitted: [publish, reject]
- * - edited: []
- * - published: []
+ * - published: [unpublish]
+ * - unpublished: [publish]
  * - rejected: []
+ * - edited: []
  */
 export function getAvailableComplaintActions(
   status: ComplaintLifecycleStatus
@@ -56,10 +65,17 @@ export function getAvailableComplaintActions(
         COMPLAINT_ACTION_DEFINITIONS.reject,
       ];
 
-    case 'edited':
-      return [];
-
     case 'published':
+      return [
+        COMPLAINT_ACTION_DEFINITIONS.unpublish,
+      ];
+
+    case 'unpublished':
+      return [
+        COMPLAINT_ACTION_DEFINITIONS.publish,
+      ];
+
+    case 'edited':
       return [];
 
     case 'rejected':
@@ -83,18 +99,22 @@ export function getComplaintStatusGuidance(
       return isBn
         ? 'নতুন দাখিলকৃত অভিযোগ। পর্যালোচনা করে প্রকাশ করুন অথবা বাতিল করুন।'
         : 'Newly submitted complaint. Review it, then publish or reject.';
-    case 'edited':
-      return isBn
-        ? 'অভিযোগটি সম্পাদিত অবস্থায় রয়েছে। বর্তমানে কোনো মডারেশন অ্যাকশন সক্রিয় নেই।'
-        : 'This complaint is in Edited status. No moderation action is currently enabled.';
     case 'published':
       return isBn
-        ? 'অভিযোগটি অনুমোদিত এবং প্রকাশিত হিসেবে চিহ্নিত হয়েছে।'
-        : 'This complaint has been approved and marked as Published.';
+        ? 'অভিযোগটি বর্তমানে পাবলিক ফিডে প্রকাশিত আছে। জনসমক্ষে আর দেখানো না হলে প্রকাশনা বন্ধ করতে পারেন।'
+        : 'This complaint is currently live on the public feed. You can unpublish it if it should no longer be publicly visible.';
+    case 'unpublished':
+      return isBn
+        ? 'অভিযোগটি বর্তমানে পাবলিক ফিডে দৃশ্যমান নয়। প্রস্তুত হলে আবার প্রকাশ করতে পারেন।'
+        : 'This complaint is not visible on the public feed. You can publish it again when ready.';
     case 'rejected':
       return isBn
         ? 'অভিযোগটি বাতিল করা হয়েছে।'
         : 'This complaint has been rejected.';
+    case 'edited':
+      return isBn
+        ? 'অভিযোগটি সম্পাদিত অবস্থায় রয়েছে। বর্তমানে কোনো মডারেশন অ্যাকশন সক্রিয় নেই।'
+        : 'This complaint is in Edited status. No moderation action is currently enabled.';
     default:
       return '';
   }
