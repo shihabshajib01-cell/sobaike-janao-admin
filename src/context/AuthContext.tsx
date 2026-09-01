@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import { authService, checkAdminStatus, LoginCredentials, LoginResponse } from '@/services/auth/authService';
 
 export interface AuthContextType {
@@ -22,61 +22,64 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Initialize and verify session
-  const verifyAndSetSession = useCallback(async (currentSession: Session | null) => {
-    if (!currentSession || !currentSession.user) {
-      setSession(null);
-      setUser(null);
-      setIsAdmin(false);
-      return false;
-    }
+  const isMountedRef = useRef<boolean>(true);
+  const userRef = useRef<User | null>(null);
+  const isAdminRef = useRef<boolean>(false);
 
-    try {
-      const activeAdmin = await checkAdminStatus(currentSession.user.id);
-      if (activeAdmin) {
-        setSession(currentSession);
-        setUser(currentSession.user);
-        setIsAdmin(true);
-        return true;
-      } else {
-        // Authenticated user is not an active admin: auto sign out
-        await supabase.auth.signOut();
-        setSession(null);
-        setUser(null);
-        setIsAdmin(false);
-        return false;
-      }
-    } catch (err) {
-      console.error('Failed to verify admin status for session:', err);
-      setSession(null);
-      setUser(null);
-      setIsAdmin(false);
-      return false;
-    }
-  }, []);
+  // Keep refs synchronized with state
+  useEffect(() => {
+    userRef.current = user;
+    isAdminRef.current = isAdmin;
+  }, [user, isAdmin]);
 
   useEffect(() => {
-    let isMounted = true;
+    isMountedRef.current = true;
 
+    if (!isSupabaseConfigured) {
+      setIsLoading(false);
+      return () => {
+        isMountedRef.current = false;
+      };
+    }
+
+    // 1. Initial session check on mount
     const initAuth = async () => {
-      if (!isSupabaseConfigured) {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-        return;
-      }
-
       try {
-        const { data } = await supabase.auth.getSession();
-        if (isMounted) {
-          if (data.session) {
-            await verifyAndSetSession(data.session);
+        const initialSession = await authService.getSession();
+        if (!isMountedRef.current) return;
+
+        if (initialSession?.user) {
+          const active = await checkAdminStatus(initialSession.user.id);
+          if (!isMountedRef.current) return;
+
+          if (active) {
+            setSession(initialSession);
+            setUser(initialSession.user);
+            setIsAdmin(true);
+            userRef.current = initialSession.user;
+            isAdminRef.current = true;
+          } else {
+            setSession(null);
+            setUser(null);
+            setIsAdmin(false);
+            userRef.current = null;
+            isAdminRef.current = false;
+            // Defer sign-out outside
+            setTimeout(() => {
+              authService.logout().catch(() => {});
+            }, 0);
           }
+        } else {
+          setSession(null);
+          setUser(null);
+          setIsAdmin(false);
+          userRef.current = null;
+          isAdminRef.current = false;
         }
-      } catch (error) {
-        console.error('Error initializing Supabase session:', error);
+      } catch (err) {
+        console.error('Error during initial auth verification:', err);
       } finally {
-        if (isMounted) {
+        if (isMountedRef.current) {
           setIsLoading(false);
         }
       }
@@ -84,37 +87,74 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initAuth();
 
-    if (!isSupabaseConfigured) {
-      return;
-    }
-
+    // 2. Auth state subscription (synchronous callback, deferred async verification)
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      if (!isMounted) return;
+    } = authService.onAuthStateChange((event, newSession) => {
+      if (!isMountedRef.current) return;
 
-      if (event === 'SIGNED_OUT') {
+      if (event === 'SIGNED_OUT' || !newSession?.user) {
         setSession(null);
         setUser(null);
         setIsAdmin(false);
+        userRef.current = null;
+        isAdminRef.current = false;
         setIsLoading(false);
-      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        if (newSession) {
-          await verifyAndSetSession(newSession);
-        } else {
+        return;
+      }
+
+      // Check if already authenticated and verified as admin for the same user
+      if (userRef.current?.id === newSession.user.id && isAdminRef.current) {
+        setSession(newSession);
+        setUser(newSession.user);
+        userRef.current = newSession.user;
+        setIsLoading(false);
+        return;
+      }
+
+      // Defer admin verification safely outside the synchronous callback
+      setTimeout(async () => {
+        if (!isMountedRef.current) return;
+        try {
+          const active = await checkAdminStatus(newSession.user.id);
+          if (!isMountedRef.current) return;
+
+          if (active) {
+            setSession(newSession);
+            setUser(newSession.user);
+            setIsAdmin(true);
+            userRef.current = newSession.user;
+            isAdminRef.current = true;
+          } else {
+            setSession(null);
+            setUser(null);
+            setIsAdmin(false);
+            userRef.current = null;
+            isAdminRef.current = false;
+            // Safely sign out non-admin user outside the callback
+            await authService.logout();
+          }
+        } catch (err) {
+          console.error('Error during deferred admin verification:', err);
+          if (!isMountedRef.current) return;
           setSession(null);
           setUser(null);
           setIsAdmin(false);
+          userRef.current = null;
+          isAdminRef.current = false;
+        } finally {
+          if (isMountedRef.current) {
+            setIsLoading(false);
+          }
         }
-        setIsLoading(false);
-      }
+      }, 0);
     });
 
     return () => {
-      isMounted = false;
+      isMountedRef.current = false;
       subscription.unsubscribe();
     };
-  }, [verifyAndSetSession]);
+  }, []);
 
   const login = async (credentials: LoginCredentials): Promise<LoginResponse> => {
     const result = await authService.login(credentials);
@@ -122,10 +162,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(result.session);
       setUser(result.user);
       setIsAdmin(true);
+      userRef.current = result.user;
+      isAdminRef.current = true;
     } else {
       setSession(null);
       setUser(null);
       setIsAdmin(false);
+      userRef.current = null;
+      isAdminRef.current = false;
     }
     return result;
   };
@@ -135,12 +179,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSession(null);
     setUser(null);
     setIsAdmin(false);
+    userRef.current = null;
+    isAdminRef.current = false;
   };
 
   const refreshAdminStatus = async (): Promise<boolean> => {
     if (!user) return false;
     const active = await checkAdminStatus(user.id);
     setIsAdmin(active);
+    isAdminRef.current = active;
     if (!active) {
       await logout();
     }
