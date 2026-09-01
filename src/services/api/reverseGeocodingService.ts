@@ -1,8 +1,13 @@
 /**
- * Reverse Geocoding Service
- * Resolves human-readable addresses from latitude/longitude coordinates
- * Uses OpenStreetMap Nominatim endpoint with in-memory caching and concurrency control.
- * Privacy safe: Only latitude and longitude coordinates are sent for resolution.
+ * Reverse Geocoding Service (Nominatim Policy Compliant)
+ * Resolves human-readable addresses from latitude/longitude coordinates.
+ * Strictly adheres to OpenStreetMap Nominatim Usage Policy:
+ * - Maximum concurrency = 1
+ * - Minimum delay between consecutive network requests = 1100ms (<= 1 req/sec)
+ * - In-memory coordinate caching to avoid duplicate requests
+ * - In-flight promise deduplication
+ * - Attribution: © OpenStreetMap contributors
+ * - Privacy-safe: Only latitude and longitude are transmitted.
  */
 
 export interface ResolvedLocation {
@@ -18,16 +23,66 @@ export interface ResolvedLocation {
   longitude: number;
 }
 
+export const OSM_ATTRIBUTION = {
+  text: '© OpenStreetMap contributors',
+  url: 'https://www.openstreetmap.org/copyright',
+};
+
 // In-memory cache keyed by normalized "lat,lng:lang"
 const locationCache = new Map<string, ResolvedLocation | null>();
 
 // In-flight active request promises to prevent duplicate network calls
 const inFlightPromises = new Map<string, Promise<ResolvedLocation | null>>();
 
-// Maximum concurrent network requests to Nominatim
-const MAX_CONCURRENT_REQUESTS = 3;
-let activeRequestCount = 0;
-const requestQueue: Array<() => void> = [];
+// Rate-limiting and single-concurrency queue enforcement
+const MIN_REQUEST_INTERVAL_MS = 1100; // >= 1100ms spacing between network requests
+let lastRequestTimestamp = 0;
+
+interface QueuedTask<T> {
+  execute: () => Promise<T>;
+  resolve: (value: T) => void;
+  reject: (error: unknown) => void;
+}
+
+const requestQueue: Array<QueuedTask<unknown>> = [];
+let isQueueProcessing = false;
+
+async function processQueue(): Promise<void> {
+  if (isQueueProcessing) return;
+  isQueueProcessing = true;
+
+  while (requestQueue.length > 0) {
+    const task = requestQueue.shift();
+    if (!task) break;
+
+    const now = Date.now();
+    const elapsed = now - lastRequestTimestamp;
+    if (elapsed < MIN_REQUEST_INTERVAL_MS) {
+      await new Promise((res) => setTimeout(res, MIN_REQUEST_INTERVAL_MS - elapsed));
+    }
+
+    try {
+      lastRequestTimestamp = Date.now();
+      const result = await task.execute();
+      task.resolve(result);
+    } catch (err) {
+      task.reject(err);
+    }
+  }
+
+  isQueueProcessing = false;
+}
+
+function enqueueRequest<T>(execute: () => Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    requestQueue.push({
+      execute: execute as () => Promise<unknown>,
+      resolve: resolve as (value: unknown) => void,
+      reject,
+    });
+    void processQueue();
+  });
+}
 
 /**
  * Normalizes coordinates into a cache key (rounded to 5 decimal places ~1.1m precision)
@@ -125,32 +180,8 @@ export function buildShortLocationLabel(address: Record<string, string | undefin
 }
 
 /**
- * Concurrency worker: queues requests when max concurrency is reached
- */
-function acquireWorkerSlot(): Promise<void> {
-  if (activeRequestCount < MAX_CONCURRENT_REQUESTS) {
-    activeRequestCount++;
-    return Promise.resolve();
-  }
-
-  return new Promise<void>((resolve) => {
-    requestQueue.push(() => {
-      activeRequestCount++;
-      resolve();
-    });
-  });
-}
-
-function releaseWorkerSlot(): void {
-  activeRequestCount--;
-  if (requestQueue.length > 0) {
-    const next = requestQueue.shift();
-    if (next) next();
-  }
-}
-
-/**
  * Reverse geocode a single coordinate pair.
+ * Strictly single concurrency and >= 1100ms interval between network calls.
  * Returns normalized ResolvedLocation or null if resolution failed.
  */
 export async function reverseGeocode(
@@ -168,20 +199,23 @@ export async function reverseGeocode(
 
   const cacheKey = getCoordinateKey(lat, lng, language);
 
-  // Check in-memory cache first
+  // 1. Check in-memory cache first
   if (locationCache.has(cacheKey)) {
     return locationCache.get(cacheKey) || null;
   }
 
-  // Check in-flight requests to avoid redundant fetches
+  // 2. Check in-flight requests to avoid duplicate queueing/fetching
   if (inFlightPromises.has(cacheKey)) {
     return inFlightPromises.get(cacheKey)!;
   }
 
-  const fetchPromise = (async (): Promise<ResolvedLocation | null> => {
-    await acquireWorkerSlot();
-
+  const fetchPromise = enqueueRequest<ResolvedLocation | null>(async (): Promise<ResolvedLocation | null> => {
     try {
+      // Re-check cache in case resolved while waiting in queue
+      if (locationCache.has(cacheKey)) {
+        return locationCache.get(cacheKey) || null;
+      }
+
       const acceptLanguage = language === 'bn' ? 'bn,en;q=0.8' : 'en,bn;q=0.8';
       const endpoint = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(
         lat
@@ -209,7 +243,11 @@ export async function reverseGeocode(
       }
 
       const address = (data.address || {}) as Record<string, string | undefined>;
-      const shortLabel = buildShortLocationLabel(address) || data.name || data.display_name?.split(',')[0] || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      const shortLabel =
+        buildShortLocationLabel(address) ||
+        data.name ||
+        data.display_name?.split(',')[0] ||
+        `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
       const fullAddress = data.display_name || shortLabel;
 
       const resolved: ResolvedLocation = {
@@ -232,10 +270,9 @@ export async function reverseGeocode(
       locationCache.set(cacheKey, null);
       return null;
     } finally {
-      releaseWorkerSlot();
       inFlightPromises.delete(cacheKey);
     }
-  })();
+  });
 
   inFlightPromises.set(cacheKey, fetchPromise);
   return fetchPromise;
@@ -261,6 +298,7 @@ export const reverseGeocodingService = {
   getCachedLocation,
   getCoordinateKey,
   buildShortLocationLabel,
+  OSM_ATTRIBUTION,
 };
 
 export default reverseGeocodingService;

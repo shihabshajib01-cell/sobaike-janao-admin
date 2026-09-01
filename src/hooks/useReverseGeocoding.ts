@@ -71,6 +71,7 @@ export interface LocatableItem {
 /**
  * Hook to resolve multiple coordinates for paginated tables/lists.
  * Resolves only visible records with permission_status === 'granted' and valid coordinates.
+ * Strictly ignores denied/prompt/unavailable sessions.
  */
 export function useResolvedLocations(
   items: LocatableItem[],
@@ -89,12 +90,20 @@ export function useResolvedLocations(
   useEffect(() => {
     let isCancelled = false;
 
-    // Filter candidate coordinates
+    // Filter candidate coordinates: strictly only 'granted' sessions with valid numbers
     const candidates: Array<{ lat: number; lng: number; key: string }> = [];
 
     items.forEach((item) => {
-      const isGranted = !item.permission_status || item.permission_status === 'granted';
-      if (isGranted && item.latitude !== null && item.longitude !== null && !isNaN(item.latitude) && !isNaN(item.longitude)) {
+      const isGranted = item.permission_status === 'granted';
+      if (
+        isGranted &&
+        item.latitude !== null &&
+        item.latitude !== undefined &&
+        item.longitude !== null &&
+        item.longitude !== undefined &&
+        !isNaN(item.latitude) &&
+        !isNaN(item.longitude)
+      ) {
         const key = getCoordinateKey(item.latitude, item.longitude, language);
         if (!candidates.some((c) => c.key === key)) {
           candidates.push({ lat: item.latitude, lng: item.longitude, key });
@@ -128,7 +137,7 @@ export function useResolvedLocations(
     });
     setLoadingKeys((prev) => ({ ...prev, ...newLoading }));
 
-    // Fetch uncached candidates in sequential / throttled promises
+    // Fetch uncached candidates via rate-limited queue
     uncached.forEach(({ lat, lng, key }) => {
       reverseGeocode(lat, lng, language).then((result) => {
         if (!isCancelled) {

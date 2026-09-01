@@ -120,6 +120,19 @@ export const MobileLocationActivityCardList: React.FC<MobileLocationActivityCard
                             </span>
                           )}
                         </div>
+                        {resolved && (
+                          <div className="pt-1">
+                            <a
+                              href="https://www.openstreetmap.org/copyright"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-[10px] text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:underline transition-colors inline-block"
+                            >
+                              © OpenStreetMap contributors
+                            </a>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="text-xs text-slate-500 dark:text-slate-400 italic">

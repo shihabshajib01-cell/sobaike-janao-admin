@@ -177,6 +177,20 @@ export const LocationActivityDetailDrawer: React.FC<LocationActivityDetailDrawer
                       </p>
                     </div>
                   )}
+
+                  {/* OpenStreetMap Attribution */}
+                  {resolvedLocation && (
+                    <div className="mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-700/40 text-right">
+                      <a
+                        href="https://www.openstreetmap.org/copyright"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:underline transition-colors inline-flex items-center gap-0.5"
+                      >
+                        © OpenStreetMap contributors
+                      </a>
+                    </div>
+                  )}
                 </div>
 
                 {/* Coordinates Grid */}

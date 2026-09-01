@@ -165,6 +165,19 @@ export const LocationActivityTable: React.FC<LocationActivityTableProps> = ({
                     <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pl-5">
                       {session.latitude?.toFixed(6)}, {session.longitude?.toFixed(6)}
                     </div>
+                    {resolved && (
+                      <div className="pl-5 pt-0.5">
+                        <a
+                          href="https://www.openstreetmap.org/copyright"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-[10px] text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:underline transition-colors inline-block"
+                        >
+                          © OpenStreetMap contributors
+                        </a>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 italic">
