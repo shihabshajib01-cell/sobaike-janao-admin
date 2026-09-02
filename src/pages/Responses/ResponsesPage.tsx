@@ -3,7 +3,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardContent } from '@/components/ui/Card';
 import { useLanguage } from '@/context/LanguageContext';
 import { RESPONSE_MANAGEMENT_CONNECTED } from '@/services/api';
-import { MessageSquare, Info, ShieldAlert } from 'lucide-react';
+import { MessageSquare, Info } from 'lucide-react';
 
 export const ResponsesPage: React.FC = () => {
   const { language } = useLanguage();
