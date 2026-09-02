@@ -674,27 +674,11 @@ export const supabaseComplaintService = {
           };
         }
 
-        // 2. Direct table fallback if RPC is not defined
-        const { data: queryRows, error: queryError } = await supabase
-          .from('complaint_evidence')
-          .select(
-            'id, complaint_id, storage_path, file_url, file_name, mime_type, media_type, file_size_bytes, caption, created_at'
-          )
-          .eq('complaint_id', complaintId)
-          .order('created_at', { ascending: true });
-
-        if (queryError) {
-          console.warn(`Error querying complaint_evidence for complaint ${complaintId}:`, queryError.message);
-          return {
-            media: [],
-            error:
-              queryError.code === '42501' || queryError.message?.includes('42501')
-                ? 'You do not have permission to view private complaint evidence.'
-                : 'Evidence images could not be loaded. Please retry.',
-          };
-        }
-
-        evidenceRows = (queryRows || []) as SupabaseComplaintEvidenceRow[];
+        console.warn(`Error loading evidence via RPC for complaint ${complaintId}:`, rpcError?.message);
+        return {
+          media: [],
+          error: 'Evidence images could not be loaded. Please retry.',
+        };
       }
 
       if (!evidenceRows || evidenceRows.length === 0) {
@@ -863,8 +847,8 @@ export const supabaseComplaintService = {
       throw new Error(errMsg);
     }
 
-    // Re-fetch the refreshed complaint & timeline directly from Supabase
-    const refreshed = await this.getComplaintDetail(complaintId);
+    // Re-fetch the refreshed complaint & timeline directly from Supabase (without re-requesting private evidence)
+    const refreshed = await this.getComplaintDetail(complaintId, { loadEvidence: false });
     if (!refreshed) {
       throw new Error(`Failed to reload complaint ${complaintId} after publication.`);
     }
@@ -879,11 +863,12 @@ export const supabaseComplaintService = {
   },
 
   /**
-   * Unpublish complaint via RPC public.admin_unpublish_complaint(p_complaint_id)
+   * Unpublish complaint via RPC public.admin_unpublish_complaint(p_complaint_id, p_reason)
    */
   async unpublishComplaint(complaintId: string): Promise<WorkflowActionResult> {
     const { data, error } = await supabase.rpc('admin_unpublish_complaint', {
       p_complaint_id: complaintId,
+      p_reason: null,
     });
 
     if (error) {
@@ -899,8 +884,8 @@ export const supabaseComplaintService = {
       throw new Error(errMsg);
     }
 
-    // Re-fetch the refreshed complaint & timeline directly from Supabase
-    const refreshed = await this.getComplaintDetail(complaintId);
+    // Re-fetch the refreshed complaint & timeline directly from Supabase (without re-requesting private evidence)
+    const refreshed = await this.getComplaintDetail(complaintId, { loadEvidence: false });
     if (!refreshed) {
       throw new Error(`Failed to reload complaint ${complaintId} after unpublishing.`);
     }
@@ -941,8 +926,8 @@ export const supabaseComplaintService = {
       throw new Error(errMsg);
     }
 
-    // Re-fetch the refreshed complaint & timeline directly from Supabase
-    const refreshed = await this.getComplaintDetail(complaintId);
+    // Re-fetch the refreshed complaint & timeline directly from Supabase (without re-requesting private evidence)
+    const refreshed = await this.getComplaintDetail(complaintId, { loadEvidence: false });
     if (!refreshed) {
       throw new Error(`Failed to reload complaint ${complaintId} after rejection.`);
     }

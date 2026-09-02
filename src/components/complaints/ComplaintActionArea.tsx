@@ -243,7 +243,13 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
       );
       showToast(isBn ? result.messageBn : result.messageEn, 'info');
       if (onComplaintUpdated) {
-        onComplaintUpdated(result.complaint, result.timeline);
+        const preservedComplaint = {
+          ...result.complaint,
+          media: (result.complaint.media && result.complaint.media.length > 0)
+            ? result.complaint.media
+            : complaint.media,
+        };
+        onComplaintUpdated(preservedComplaint, result.timeline);
       }
       closeModal();
     } catch (err: unknown) {
@@ -262,7 +268,13 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
       const result = await complaintApi.publishComplaint(complaint.id);
       showToast(isBn ? result.messageBn : result.messageEn, 'success');
       if (onComplaintUpdated) {
-        onComplaintUpdated(result.complaint, result.timeline);
+        const preservedComplaint = {
+          ...result.complaint,
+          media: (result.complaint.media && result.complaint.media.length > 0)
+            ? result.complaint.media
+            : complaint.media,
+        };
+        onComplaintUpdated(preservedComplaint, result.timeline);
       }
       closeModal();
     } catch (err: unknown) {
@@ -281,7 +293,13 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
       const result = await complaintApi.unpublishComplaint(complaint.id);
       showToast(isBn ? result.messageBn : result.messageEn, 'info');
       if (onComplaintUpdated) {
-        onComplaintUpdated(result.complaint, result.timeline);
+        const preservedComplaint = {
+          ...result.complaint,
+          media: (result.complaint.media && result.complaint.media.length > 0)
+            ? result.complaint.media
+            : complaint.media,
+        };
+        onComplaintUpdated(preservedComplaint, result.timeline);
       }
       closeModal();
     } catch (err: unknown) {

@@ -167,33 +167,21 @@ export class ComplaintApi {
     explanation: string
   ): Promise<WorkflowActionResult> {
     if (isSupabaseConfigured) {
-      try {
-        return await supabaseComplaintService.rejectComplaint(complaintId, reason, explanation);
-      } catch (err) {
-        console.warn('[AI Studio] Supabase rejectComplaint failed, falling back to mock fixtures:', err);
-      }
+      return await supabaseComplaintService.rejectComplaint(complaintId, reason, explanation);
     }
     return complaintFallback.rejectComplaint(complaintId, reason, explanation);
   }
 
   async publishComplaint(complaintId: string): Promise<WorkflowActionResult> {
     if (isSupabaseConfigured) {
-      try {
-        return await supabaseComplaintService.publishComplaint(complaintId);
-      } catch (err) {
-        console.warn('[AI Studio] Supabase publishComplaint failed, falling back to mock fixtures:', err);
-      }
+      return await supabaseComplaintService.publishComplaint(complaintId);
     }
     return complaintFallback.publishComplaint(complaintId);
   }
 
   async unpublishComplaint(complaintId: string): Promise<WorkflowActionResult> {
     if (isSupabaseConfigured) {
-      try {
-        return await supabaseComplaintService.unpublishComplaint(complaintId);
-      } catch (err) {
-        console.warn('[AI Studio] Supabase unpublishComplaint failed, falling back to mock fixtures:', err);
-      }
+      return await supabaseComplaintService.unpublishComplaint(complaintId);
     }
     return complaintFallback.unpublishComplaint(complaintId);
   }
