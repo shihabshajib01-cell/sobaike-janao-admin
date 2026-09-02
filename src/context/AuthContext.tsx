@@ -55,13 +55,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user, isAdmin, permissions]);
 
   /**
-   * Resolves role and effective permissions for the given admin user ID
+   * Resolves role and effective permissions for the currently authenticated admin caller
    */
-  const loadUserPermissions = useCallback(async (userId: string) => {
+  const loadUserPermissions = useCallback(async () => {
     setPermissionsLoading(true);
     setPermissionsError(false);
     try {
-      const profile = await permissionService.resolveUserPermissions(userId);
+      const profile = await permissionService.resolveCurrentUserAuthorization();
       if (isMountedRef.current) {
         setPermissions(profile.permissions);
         setRole(profile.role);
@@ -110,7 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!isSupabaseConfigured) {
       setIsLoading(false);
       // In unconfigured dev mode, resolve default admin permissions
-      loadUserPermissions('dev_admin');
+      loadUserPermissions();
       return () => {
         isMountedRef.current = false;
       };
@@ -134,7 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             isAdminRef.current = true;
 
             // Load permissions in parallel
-            await loadUserPermissions(initialSession.user.id);
+            await loadUserPermissions();
           } else {
             resetAuthState();
             // Defer sign-out outside
@@ -191,7 +191,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             userRef.current = newSession.user;
             isAdminRef.current = true;
 
-            await loadUserPermissions(newSession.user.id);
+            await loadUserPermissions();
           } else {
             resetAuthState();
             // Safely sign out non-admin user outside the callback
@@ -223,7 +223,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsAdmin(true);
       userRef.current = result.user;
       isAdminRef.current = true;
-      await loadUserPermissions(result.user.id);
+      await loadUserPermissions();
     } else {
       resetAuthState();
     }
@@ -243,14 +243,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!active) {
       await logout();
     } else {
-      await loadUserPermissions(user.id);
+      await loadUserPermissions();
     }
     return active;
   };
 
   const refreshPermissions = async (): Promise<string[]> => {
     if (!user) return [];
-    return loadUserPermissions(user.id);
+    return loadUserPermissions();
   };
 
   /**
