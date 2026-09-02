@@ -46,15 +46,16 @@ export const AdminHeader: React.FC<HeaderProps> = ({
   };
 
   // Compute initials safely from email or metadata
-  const userEmail = user?.email || 'admin@sobaike.gov.bd';
+  const userEmail = user?.email || '';
   const userDisplayName =
     (user?.user_metadata?.full_name as string) ||
     (user?.user_metadata?.name as string) ||
+    (user?.email ? user.email.split('@')[0] : '') ||
     t.header.operator;
   const userInitials = (
     (user?.user_metadata?.full_name as string) ||
     user?.email?.split('@')[0] ||
-    'SO'
+    'AD'
   )
     .slice(0, 2)
     .toUpperCase();

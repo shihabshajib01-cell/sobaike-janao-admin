@@ -6,7 +6,5 @@ export * from './statusTransitionService';
 export { mockStatusTransitionService, default as statusTransitionService } from './statusTransitionService';
 export * from './timelineService';
 export { mockTimelineService, default as timelineService } from './timelineService';
-export * from './permissionService';
-export { mockPermissionService, default as permissionService } from './permissionService';
 export * from './workflowService';
 export { mockWorkflowService, default as workflowService } from './workflowService';

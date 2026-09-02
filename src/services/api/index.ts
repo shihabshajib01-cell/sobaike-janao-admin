@@ -13,9 +13,6 @@ export { default as categoryApi } from './categoryApi';
 export * from './mapApi';
 export { default as mapApi } from './mapApi';
 
-export * from './permissionApi';
-export { default as permissionApi } from './permissionApi';
-
 export * from './dashboardApi';
 export { default as dashboardApi } from './dashboardApi';
 

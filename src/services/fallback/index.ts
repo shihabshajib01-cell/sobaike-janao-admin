@@ -3,4 +3,3 @@
  */
 
 export * from './complaintFallback';
-export * from './permissionFallback';

@@ -8,7 +8,6 @@ import { Complaint, ComplaintLifecycleStatus, ComplaintTimelineEvent } from '@/t
 import { MOCK_COMPLAINTS } from './complaintService';
 import { mockStatusTransitionService } from './statusTransitionService';
 import { mockTimelineService } from './timelineService';
-import { CURRENT_ADMIN_USER } from './permissionService';
 
 export interface WorkflowActionResult {
   success: boolean;
@@ -41,7 +40,7 @@ export class WorkflowService {
     complaintId: string,
     updates: Partial<Complaint>,
     notes?: string,
-    actor = { name: CURRENT_ADMIN_USER.name, role: 'Administrator' }
+    actor = { name: 'Admin', role: 'Administrator' }
   ): Promise<WorkflowActionResult> {
     await new Promise((resolve) => setTimeout(resolve, 300));
     const complaint = this.findComplaint(complaintId);
@@ -156,7 +155,7 @@ export class WorkflowService {
    */
   async publishComplaint(
     complaintId: string,
-    actor = { name: CURRENT_ADMIN_USER.name, role: 'Moderator' }
+    actor = { name: 'Admin', role: 'Moderator' }
   ): Promise<WorkflowActionResult> {
     await new Promise((resolve) => setTimeout(resolve, 350));
     const complaint = this.findComplaint(complaintId);
@@ -201,7 +200,7 @@ export class WorkflowService {
    */
   async unpublishComplaint(
     complaintId: string,
-    actor = { name: CURRENT_ADMIN_USER.name, role: 'Moderator' }
+    actor = { name: 'Admin', role: 'Moderator' }
   ): Promise<WorkflowActionResult> {
     await new Promise((resolve) => setTimeout(resolve, 350));
     const complaint = this.findComplaint(complaintId);
@@ -243,7 +242,7 @@ export class WorkflowService {
     complaintId: string,
     reason: string,
     explanation: string,
-    actor = { name: CURRENT_ADMIN_USER.name, role: 'Moderator' }
+    actor = { name: 'Admin', role: 'Moderator' }
   ): Promise<WorkflowActionResult> {
     await new Promise((resolve) => setTimeout(resolve, 350));
     const complaint = this.findComplaint(complaintId);
@@ -302,7 +301,7 @@ export class WorkflowService {
   async addComplaintUpdate(
     complaintId: string,
     message: string,
-    actor = { name: CURRENT_ADMIN_USER.name, role: 'Admin' }
+    actor = { name: 'Admin', role: 'Admin' }
   ): Promise<WorkflowActionResult> {
     await new Promise((resolve) => setTimeout(resolve, 300));
     const complaint = this.findComplaint(complaintId);

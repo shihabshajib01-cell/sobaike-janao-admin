@@ -38,7 +38,7 @@ This design system establishes a high-density, enterprise-grade, civic/governmen
   <Input
     label="Official Email"
     type="email"
-    placeholder="admin@sobaike.gov.bd"
+    placeholder="admin@example.com"
     helperText="Enter your official verified email"
     error={errors.email}
   />
