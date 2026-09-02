@@ -215,6 +215,26 @@ export const locationActivityService = {
       throw new Error(`Failed to load location statistics: ${totalRes.error.message}`);
     }
 
+    if (grantedRes.error) {
+      console.error('Failed to fetch granted sessions count:', grantedRes.error);
+      throw new Error(`Failed to load location statistics: ${grantedRes.error.message}`);
+    }
+
+    if (deniedRes.error) {
+      console.error('Failed to fetch denied sessions count:', deniedRes.error);
+      throw new Error(`Failed to load location statistics: ${deniedRes.error.message}`);
+    }
+
+    if (promptRes.error) {
+      console.error('Failed to fetch prompt sessions count:', promptRes.error);
+      throw new Error(`Failed to load location statistics: ${promptRes.error.message}`);
+    }
+
+    if (recentRes.error) {
+      console.error('Failed to fetch recent sessions count:', recentRes.error);
+      throw new Error(`Failed to load location statistics: ${recentRes.error.message}`);
+    }
+
     const total = totalRes.count ?? 0;
     const granted = grantedRes.count ?? 0;
     const denied = deniedRes.count ?? 0;
@@ -238,27 +258,31 @@ export const locationActivityService = {
       if (isDev) {
         return ['Chrome', 'Chrome Mobile', 'Safari'];
       }
+      throw new Error('Supabase location activity service is not configured in this environment.');
+    }
+
+    const { data, error } = await supabase
+      .from('public_visit_sessions')
+      .select('browser_name')
+      .not('browser_name', 'is', null)
+      .limit(100);
+
+    if (error) {
+      console.error('Failed to query distinct browsers from Supabase:', error);
+      throw new Error(`Failed to load distinct browsers: ${error.message}`);
+    }
+
+    if (!data || data.length === 0) {
       return [];
     }
 
-    try {
-      const { data, error } = await supabase
-        .from('public_visit_sessions')
-        .select('browser_name')
-        .not('browser_name', 'is', null)
-        .limit(100);
-
-      if (error || !data) return [];
-      const set = new Set<string>();
-      data.forEach((row: { browser_name: string | null }) => {
-        if (row.browser_name && row.browser_name.trim()) {
-          set.add(row.browser_name.trim());
-        }
-      });
-      return Array.from(set);
-    } catch {
-      return [];
-    }
+    const set = new Set<string>();
+    data.forEach((row: { browser_name: string | null }) => {
+      if (row.browser_name && row.browser_name.trim()) {
+        set.add(row.browser_name.trim());
+      }
+    });
+    return Array.from(set);
   },
 };
 
