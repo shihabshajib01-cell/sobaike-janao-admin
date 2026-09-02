@@ -10,7 +10,7 @@ export interface RoleMobileCardListProps {
 }
 
 export const RoleMobileCardList: React.FC<RoleMobileCardListProps> = ({ roles }) => {
-  const { language } = useLanguage();
+  const { t, language } = useLanguage();
   const isBn = language === 'bn';
 
   const formatNumber = (num: number): string => {
@@ -58,7 +58,7 @@ export const RoleMobileCardList: React.FC<RoleMobileCardListProps> = ({ roles })
                       </h4>
                       {role.is_system && (
                         <Badge size="sm" variant="subtle" status="info">
-                          {isBn ? 'সিস্টেম' : 'System'}
+                          {t.roles.system}
                         </Badge>
                       )}
                     </div>
@@ -76,13 +76,7 @@ export const RoleMobileCardList: React.FC<RoleMobileCardListProps> = ({ roles })
                   dot
                   className="shrink-0"
                 >
-                  {role.active
-                    ? isBn
-                      ? 'সক্রিয়'
-                      : 'Active'
-                    : isBn
-                    ? 'নিষ্ক্রিয়'
-                    : 'Inactive'}
+                  {role.active ? t.roles.active : t.roles.inactive}
                 </Badge>
               </div>
 
@@ -93,11 +87,9 @@ export const RoleMobileCardList: React.FC<RoleMobileCardListProps> = ({ roles })
                   <span>
                     {formatNumber(role.permission_count)}{' '}
                     <span className="text-slate-500 dark:text-slate-400">
-                      {isBn
-                        ? 'টি অনুমতি'
-                        : role.permission_count === 1
-                        ? 'permission'
-                        : 'permissions'}
+                      {role.permission_count === 1
+                        ? t.roles.permissionSingular
+                        : t.roles.permissionPlural}
                     </span>
                   </span>
                 </div>
@@ -107,11 +99,9 @@ export const RoleMobileCardList: React.FC<RoleMobileCardListProps> = ({ roles })
                   <span>
                     {formatNumber(role.assigned_user_count)}{' '}
                     <span className="text-slate-500 dark:text-slate-400">
-                      {isBn
-                        ? 'জন ব্যবহারকারী'
-                        : role.assigned_user_count === 1
-                        ? 'user'
-                        : 'users'}
+                      {role.assigned_user_count === 1
+                        ? t.roles.userSingular
+                        : t.roles.userPlural}
                     </span>
                   </span>
                 </div>
@@ -119,7 +109,7 @@ export const RoleMobileCardList: React.FC<RoleMobileCardListProps> = ({ roles })
 
               {/* Created Date */}
               <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
-                <span>{isBn ? 'তৈরির তারিখ:' : 'Created:'}</span>
+                <span>{t.roles.createdLabel}</span>
                 <span className="flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
                   {formatDate(role.created_at)}
@@ -134,3 +124,4 @@ export const RoleMobileCardList: React.FC<RoleMobileCardListProps> = ({ roles })
 };
 
 export default RoleMobileCardList;
+

@@ -17,7 +17,7 @@ export interface RoleTableProps {
 }
 
 export const RoleTable: React.FC<RoleTableProps> = ({ roles }) => {
-  const { language } = useLanguage();
+  const { t, language } = useLanguage();
   const isBn = language === 'bn';
 
   const formatNumber = (num: number): string => {
@@ -46,11 +46,11 @@ export const RoleTable: React.FC<RoleTableProps> = ({ roles }) => {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[300px]">{isBn ? 'ভূমিকার নাম' : 'Role Name'}</TableHead>
-            <TableHead className="w-[120px]">{isBn ? 'স্ট্যাটাস' : 'Status'}</TableHead>
-            <TableHead className="w-[160px]">{isBn ? 'অনুমতি' : 'Permissions'}</TableHead>
-            <TableHead className="w-[170px]">{isBn ? 'বরাদ্দকৃত ব্যবহারকারী' : 'Assigned Users'}</TableHead>
-            <TableHead className="w-[150px]">{isBn ? 'তৈরির তারিখ' : 'Created'}</TableHead>
+            <TableHead className="w-[300px]">{t.roles.roleName}</TableHead>
+            <TableHead className="w-[120px]">{t.roles.status}</TableHead>
+            <TableHead className="w-[160px]">{t.roles.permissions}</TableHead>
+            <TableHead className="w-[170px]">{t.roles.assignedUsers}</TableHead>
+            <TableHead className="w-[150px]">{t.roles.created}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -75,7 +75,7 @@ export const RoleTable: React.FC<RoleTableProps> = ({ roles }) => {
                         </span>
                         {role.is_system && (
                           <Badge size="sm" variant="subtle" status="info">
-                            {isBn ? 'সিস্টেম' : 'System'}
+                            {t.roles.system}
                           </Badge>
                         )}
                       </div>
@@ -95,13 +95,7 @@ export const RoleTable: React.FC<RoleTableProps> = ({ roles }) => {
                     status={role.active ? 'success' : 'default'}
                     dot
                   >
-                    {role.active
-                      ? isBn
-                        ? 'সক্রিয়'
-                        : 'Active'
-                      : isBn
-                      ? 'নিষ্ক্রিয়'
-                      : 'Inactive'}
+                    {role.active ? t.roles.active : t.roles.inactive}
                   </Badge>
                 </TableCell>
 
@@ -112,11 +106,9 @@ export const RoleTable: React.FC<RoleTableProps> = ({ roles }) => {
                     <span>
                       {formatNumber(role.permission_count)}{' '}
                       <span className="text-slate-500 dark:text-slate-400">
-                        {isBn
-                          ? 'টি অনুমতি'
-                          : role.permission_count === 1
-                          ? 'permission'
-                          : 'permissions'}
+                        {role.permission_count === 1
+                          ? t.roles.permissionSingular
+                          : t.roles.permissionPlural}
                       </span>
                     </span>
                   </div>
@@ -129,11 +121,9 @@ export const RoleTable: React.FC<RoleTableProps> = ({ roles }) => {
                     <span>
                       {formatNumber(role.assigned_user_count)}{' '}
                       <span className="text-slate-500 dark:text-slate-400">
-                        {isBn
-                          ? 'জন ব্যবহারকারী'
-                          : role.assigned_user_count === 1
-                          ? 'user'
-                          : 'users'}
+                        {role.assigned_user_count === 1
+                          ? t.roles.userSingular
+                          : t.roles.userPlural}
                       </span>
                     </span>
                   </div>
@@ -156,3 +146,4 @@ export const RoleTable: React.FC<RoleTableProps> = ({ roles }) => {
 };
 
 export default RoleTable;
+

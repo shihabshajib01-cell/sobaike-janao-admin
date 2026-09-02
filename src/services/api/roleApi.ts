@@ -5,15 +5,15 @@
  */
 
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { RoleListItem } from '@/types/Role';
+import { RoleListItem, RoleRpcRow, RoleApiError } from '@/types/Role';
 
 export class RoleApi {
   /**
    * Validate Supabase configuration before invoking RPC
    */
-  private checkConfig() {
+  private checkConfig(): void {
     if (!isSupabaseConfigured) {
-      throw new Error('Supabase client is not configured.');
+      throw new RoleApiError('Supabase client is not configured.');
     }
   }
 
@@ -28,18 +28,21 @@ export class RoleApi {
 
     if (error) {
       console.error('Failed to list roles via RPC admin_list_roles:', error);
-      const customErr = new Error(error.message || 'Failed to load roles');
-      (customErr as any).code = error.code;
-      (customErr as any).details = error.details;
-      (customErr as any).hint = error.hint;
-      throw customErr;
+      throw new RoleApiError(
+        error.message || 'Failed to load roles',
+        error.code,
+        error.details,
+        error.hint
+      );
     }
 
     if (!data) {
       return [];
     }
 
-    return (data as any[]).map((item) => ({
+    const rows = data as unknown as RoleRpcRow[];
+
+    return rows.map((item) => ({
       id: String(item.id),
       name_en: String(item.name_en || ''),
       name_bn: item.name_bn ? String(item.name_bn) : null,
@@ -56,3 +59,4 @@ export class RoleApi {
 
 export const roleApi = new RoleApi();
 export default roleApi;
+

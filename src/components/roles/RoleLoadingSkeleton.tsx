@@ -10,8 +10,7 @@ import {
 import { useLanguage } from '@/context/LanguageContext';
 
 export const RoleLoadingSkeleton: React.FC = () => {
-  const { language } = useLanguage();
-  const isBn = language === 'bn';
+  const { t } = useLanguage();
 
   return (
     <div className="space-y-4">
@@ -20,11 +19,11 @@ export const RoleLoadingSkeleton: React.FC = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[280px]">{isBn ? 'ভূমিকার নাম' : 'Role Name'}</TableHead>
-              <TableHead className="w-[120px]">{isBn ? 'স্ট্যাটাস' : 'Status'}</TableHead>
-              <TableHead className="w-[150px]">{isBn ? 'অনুমতি' : 'Permissions'}</TableHead>
-              <TableHead className="w-[160px]">{isBn ? 'বরাদ্দকৃত ব্যবহারকারী' : 'Assigned Users'}</TableHead>
-              <TableHead className="w-[140px]">{isBn ? 'তৈরির তারিখ' : 'Created'}</TableHead>
+              <TableHead className="w-[280px]">{t.roles.roleName}</TableHead>
+              <TableHead className="w-[120px]">{t.roles.status}</TableHead>
+              <TableHead className="w-[150px]">{t.roles.permissions}</TableHead>
+              <TableHead className="w-[160px]">{t.roles.assignedUsers}</TableHead>
+              <TableHead className="w-[140px]">{t.roles.created}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

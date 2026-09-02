@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, Plus, Lock } from 'lucide-react';
+import { Shield, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -8,8 +8,7 @@ export interface RoleEmptyStateProps {
 }
 
 export const RoleEmptyState: React.FC<RoleEmptyStateProps> = ({ className = '' }) => {
-  const { language } = useLanguage();
-  const isBn = language === 'bn';
+  const { t } = useLanguage();
 
   return (
     <div
@@ -20,16 +19,14 @@ export const RoleEmptyState: React.FC<RoleEmptyStateProps> = ({ className = '' }
       </div>
 
       <h3 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1.5">
-        {isBn ? 'এখনো কোনো ভূমিকা তৈরি করা হয়নি' : 'No roles created yet'}
+        {t.roles.emptyTitle}
       </h3>
 
       <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mb-6 leading-relaxed">
-        {isBn
-          ? 'অ্যাডমিনিস্ট্রেটররা কোন ক্ষেত্র এবং কার্যকলাপে প্রবেশ করতে পারবেন তা নির্ধারণ করতে ভূমিকা তৈরি করুন।'
-          : 'Create roles to define which areas and actions administrators can access.'}
+        {t.roles.emptyDescription}
       </p>
 
-      <div className="flex flex-col items-center gap-2">
+      <div className="flex flex-col items-center">
         <Button
           id="empty-create-role-btn"
           variant="primary"
@@ -37,24 +34,15 @@ export const RoleEmptyState: React.FC<RoleEmptyStateProps> = ({ className = '' }
           disabled
           aria-disabled="true"
           leftIcon={<Plus className="w-4 h-4" />}
-          title={
-            isBn
-              ? 'ভূমিকা তৈরি করার প্রক্রিয়া পরবর্তী ধাপে চালু হবে'
-              : 'Create Role workflow will be enabled in the upcoming phase'
-          }
+          title={t.roles.createRoleNotAvailable}
           className="cursor-not-allowed opacity-60"
         >
-          {isBn ? 'ভূমিকা তৈরি করুন' : 'Create Role'}
+          {t.roles.createRole}
         </Button>
-        <span className="text-[11px] text-slate-400 dark:text-slate-500 flex items-center gap-1">
-          <Lock className="w-3 h-3" />
-          {isBn
-            ? 'রোল ক্রিয়েশন ফ্লো পরবর্তী ফেজে উপলব্ধ হবে'
-            : 'Role creation workflow available in next phase'}
-        </span>
       </div>
     </div>
   );
 };
 
 export default RoleEmptyState;
+

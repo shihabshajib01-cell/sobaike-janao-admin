@@ -36,6 +36,35 @@ export interface TranslationDictionary {
     save: string;
     cancel: string;
   };
+  roles: {
+    title: string;
+    description: string;
+    refresh: string;
+    createRole: string;
+    createRoleNotAvailable: string;
+    roleName: string;
+    status: string;
+    permissions: string;
+    assignedUsers: string;
+    created: string;
+    active: string;
+    inactive: string;
+    system: string;
+    emptyTitle: string;
+    emptyDescription: string;
+    showingTotalSingular: string;
+    showingTotalPlural: string;
+    permissionSingular: string;
+    permissionPlural: string;
+    userSingular: string;
+    userPlural: string;
+    createdLabel: string;
+    permissionRequired: string;
+    permissionDeniedMessage: string;
+    failedToLoad: string;
+    failedToLoadMessage: string;
+    retry: string;
+  };
 }
 
 export const translations: Record<Language, TranslationDictionary> = {
@@ -73,6 +102,35 @@ export const translations: Record<Language, TranslationDictionary> = {
       save: 'Save',
       cancel: 'Cancel',
     },
+    roles: {
+      title: 'Roles & Permissions',
+      description: 'Manage administrative roles and their system permissions.',
+      refresh: 'Refresh',
+      createRole: 'Create Role',
+      createRoleNotAvailable: 'Create Role is not available yet.',
+      roleName: 'Role Name',
+      status: 'Status',
+      permissions: 'Permissions',
+      assignedUsers: 'Assigned Users',
+      created: 'Created',
+      active: 'Active',
+      inactive: 'Inactive',
+      system: 'System',
+      emptyTitle: 'No roles created yet',
+      emptyDescription: 'Create roles to define which areas and actions administrators can access.',
+      showingTotalSingular: 'Showing 1 total role',
+      showingTotalPlural: 'Showing {count} total roles',
+      permissionSingular: 'permission',
+      permissionPlural: 'permissions',
+      userSingular: 'user',
+      userPlural: 'users',
+      createdLabel: 'Created:',
+      permissionRequired: 'Permission Required',
+      permissionDeniedMessage: 'You do not have permission to access Roles & Permissions.',
+      failedToLoad: 'Failed to load roles',
+      failedToLoadMessage: 'Could not load administrative roles. Please check your connection and retry.',
+      retry: 'Retry',
+    },
   },
   bn: {
     nav: {
@@ -107,6 +165,35 @@ export const translations: Record<Language, TranslationDictionary> = {
       close: 'বন্ধ করুন',
       save: 'সংরক্ষণ',
       cancel: 'বাতিল',
+    },
+    roles: {
+      title: 'ভূমিকা ও অনুমতি',
+      description: 'প্রশাসনিক ভূমিকা এবং তাদের সিস্টেমের অনুমতি পরিচালনা করুন।',
+      refresh: 'রিফ্রেশ',
+      createRole: 'ভূমিকা তৈরি করুন',
+      createRoleNotAvailable: 'ভূমিকা তৈরি এখনো উপলভ্য নয়।',
+      roleName: 'ভূমিকার নাম',
+      status: 'স্ট্যাটাস',
+      permissions: 'অনুমতি',
+      assignedUsers: 'বরাদ্দকৃত ব্যবহারকারী',
+      created: 'তৈরির তারিখ',
+      active: 'সক্রিয়',
+      inactive: 'নিষ্ক্রিয়',
+      system: 'সিস্টেম',
+      emptyTitle: 'এখনো কোনো ভূমিকা তৈরি করা হয়নি',
+      emptyDescription: 'অ্যাডমিনিস্ট্রেটররা কোন ক্ষেত্র এবং কার্যকলাপে প্রবেশ করতে পারবেন তা নির্ধারণ করতে ভূমিকা তৈরি করুন।',
+      showingTotalSingular: 'মোট ১ টি ভূমিকা তৈরি আছে',
+      showingTotalPlural: 'মোট {count} টি ভূমিকা তৈরি আছে',
+      permissionSingular: 'টি অনুমতি',
+      permissionPlural: 'টি অনুমতি',
+      userSingular: 'জন ব্যবহারকারী',
+      userPlural: 'জন ব্যবহারকারী',
+      createdLabel: 'তৈরির তারিখ:',
+      permissionRequired: 'অনুমতি প্রয়োজন',
+      permissionDeniedMessage: 'আপনার ভূমিকা ও অনুমতি এক্সেস করার অনুমতি নেই।',
+      failedToLoad: 'তথ্য লোড করা যায়নি',
+      failedToLoadMessage: 'ভূমিকার তথ্য লোড করতে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।',
+      retry: 'আবার চেষ্টা করুন',
     },
   },
 };

@@ -3,7 +3,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { useLanguage } from '@/context/LanguageContext';
 import { roleApi } from '@/services/api';
-import { RoleListItem } from '@/types/Role';
+import { RoleListItem, RoleApiError } from '@/types/Role';
 import {
   RoleTable,
   RoleMobileCardList,
@@ -16,12 +16,11 @@ import {
   RotateCcw,
   ShieldAlert,
   AlertCircle,
-  Lock,
 } from 'lucide-react';
 import { cn } from '@/utils';
 
 export const RolesPage: React.FC = () => {
-  const { language } = useLanguage();
+  const { t, language } = useLanguage();
   const isBn = language === 'bn';
 
   // Data & loading states
@@ -44,16 +43,28 @@ export const RolesPage: React.FC = () => {
     try {
       const data = await roleApi.listRoles();
       setRoles(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching role list:', err);
+      let errorMessage = 'Failed to load roles';
+      let errorCode: string | undefined;
+
+      if (err instanceof RoleApiError || err instanceof Error) {
+        errorMessage = err.message;
+        if ('code' in err && typeof (err as { code: unknown }).code === 'string') {
+          errorCode = (err as { code: string }).code;
+        }
+      } else if (typeof err === 'object' && err !== null && 'code' in err) {
+        errorCode = String((err as { code: unknown }).code);
+      }
+
       const isPermissionDenied =
-        err?.code === '42501' ||
-        err?.message?.includes('42501') ||
-        err?.message?.includes('Access denied') ||
-        err?.message?.includes('Role management authorization required');
+        errorCode === '42501' ||
+        errorMessage.includes('42501') ||
+        errorMessage.includes('Access denied') ||
+        errorMessage.includes('Role management authorization required');
 
       setError({
-        message: err?.message || 'Failed to load roles',
+        message: errorMessage,
         isPermissionDenied: Boolean(isPermissionDenied),
       });
     } finally {
@@ -80,16 +91,19 @@ export const RolesPage: React.FC = () => {
       .join('');
   };
 
+  const getShowingCountText = (): string => {
+    if (roles.length === 1) {
+      return t.roles.showingTotalSingular;
+    }
+    return t.roles.showingTotalPlural.replace('{count}', formatNumber(roles.length));
+  };
+
   return (
     <div className="w-full max-w-full overflow-x-hidden space-y-6 min-w-0 pb-12">
       {/* 1. Page Header */}
       <PageHeader
-        title={isBn ? 'ভূমিকা ও অনুমতি' : 'Roles & Permissions'}
-        description={
-          isBn
-            ? 'প্রশাসনিক ভূমিকা এবং তাদের সিস্টেমের অনুমতি পরিচালনা করুন।'
-            : 'Manage administrative roles and their system permissions.'
-        }
+        title={t.roles.title}
+        description={t.roles.description}
         actions={
           <div className="flex items-center gap-2.5">
             <Button
@@ -105,7 +119,7 @@ export const RolesPage: React.FC = () => {
               }
               aria-label="Refresh role list"
             >
-              <span>{isBn ? 'রিফ্রেশ' : 'Refresh'}</span>
+              <span>{t.roles.refresh}</span>
             </Button>
 
             <Button
@@ -115,14 +129,10 @@ export const RolesPage: React.FC = () => {
               disabled
               aria-disabled="true"
               leftIcon={<Plus className="w-3.5 h-3.5" />}
-              title={
-                isBn
-                  ? 'ভূমিকা তৈরি করার প্রক্রিয়া পরবর্তী ধাপে চালু হবে'
-                  : 'Create Role workflow will be enabled in the upcoming phase'
-              }
+              title={t.roles.createRoleNotAvailable}
               className="cursor-not-allowed opacity-60"
             >
-              <span>{isBn ? 'ভূমিকা তৈরি করুন' : 'Create Role'}</span>
+              <span>{t.roles.createRole}</span>
             </Button>
           </div>
         }
@@ -164,12 +174,8 @@ export const RolesPage: React.FC = () => {
               )}
             >
               {error.isPermissionDenied
-                ? isBn
-                  ? 'অনুমতি প্রয়োজন'
-                  : 'Permission Required'
-                : isBn
-                ? 'তথ্য লোড করা যায়নি'
-                : 'Failed to load roles'}
+                ? t.roles.permissionRequired
+                : t.roles.failedToLoad}
             </h3>
 
             <p
@@ -181,12 +187,8 @@ export const RolesPage: React.FC = () => {
               )}
             >
               {error.isPermissionDenied
-                ? isBn
-                  ? 'আপনার ভূমিকা ও অনুমতি এক্সেস করার অনুমতি নেই।'
-                  : 'You do not have permission to access Roles & Permissions.'
-                : isBn
-                ? 'ভূমিকার তথ্য লোড করতে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।'
-                : 'Could not load administrative roles. Please check your connection and retry.'}
+                ? t.roles.permissionDeniedMessage
+                : t.roles.failedToLoadMessage}
             </p>
           </div>
 
@@ -204,7 +206,7 @@ export const RolesPage: React.FC = () => {
                   : 'border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-100 hover:bg-rose-100/50 dark:hover:bg-rose-900/40'
               )}
             >
-              <span>{isBn ? 'আবার চেষ্টা করুন' : 'Retry'}</span>
+              <span>{t.roles.retry}</span>
             </Button>
           </div>
         </div>
@@ -221,11 +223,7 @@ export const RolesPage: React.FC = () => {
         <div className="space-y-3">
           {/* Result Count Banner */}
           <div className="flex items-center justify-between px-1 text-xs text-slate-500 dark:text-slate-400">
-            <span>
-              {isBn
-                ? `মোট ${formatNumber(roles.length)} টি ভূমিকা তৈরি আছে`
-                : `Showing ${roles.length} total ${roles.length === 1 ? 'role' : 'roles'}`}
-            </span>
+            <span>{getShowingCountText()}</span>
           </div>
 
           {/* Desktop Table View */}
@@ -244,3 +242,4 @@ export const RolesPage: React.FC = () => {
 };
 
 export default RolesPage;
+
