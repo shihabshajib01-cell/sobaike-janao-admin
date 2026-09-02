@@ -15,6 +15,7 @@ export interface AuthContextType {
   role: UserAssignedRole | null;
   isBootstrapMode: boolean;
   permissionsLoading: boolean;
+  permissionsError: boolean;
   // RBAC Helpers
   hasPermission: (permissionId: string) => boolean;
   hasAnyPermission: (permissionIds: string[]) => boolean;
@@ -39,6 +40,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [role, setRole] = useState<UserAssignedRole | null>(null);
   const [isBootstrapMode, setIsBootstrapMode] = useState<boolean>(false);
   const [permissionsLoading, setPermissionsLoading] = useState<boolean>(false);
+  const [permissionsError, setPermissionsError] = useState<boolean>(false);
 
   const isMountedRef = useRef<boolean>(true);
   const userRef = useRef<User | null>(null);
@@ -57,12 +59,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    */
   const loadUserPermissions = useCallback(async (userId: string) => {
     setPermissionsLoading(true);
+    setPermissionsError(false);
     try {
       const profile = await permissionService.resolveUserPermissions(userId);
       if (isMountedRef.current) {
         setPermissions(profile.permissions);
         setRole(profile.role);
         setIsBootstrapMode(profile.isBootstrapMode);
+        setPermissionsError(false);
         permissionsRef.current = profile.permissions;
       }
       return profile.permissions;
@@ -72,6 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setPermissions([]);
         setRole(null);
         setIsBootstrapMode(false);
+        setPermissionsError(true);
         permissionsRef.current = [];
       }
       return [];
@@ -93,6 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setRole(null);
     setIsBootstrapMode(false);
     setPermissionsLoading(false);
+    setPermissionsError(false);
     userRef.current = null;
     isAdminRef.current = false;
     permissionsRef.current = [];
@@ -249,15 +255,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   /**
    * Permission checking helper:
-   * Returns true if user has the specific permission ID or is in bootstrap mode.
+   * Returns true if user is an active admin and has the specific permission ID.
    */
   const hasPermission = useCallback(
     (permissionId: string): boolean => {
       if (!isAdmin) return false;
-      if (isBootstrapMode) return true;
       return permissions.includes(permissionId);
     },
-    [isAdmin, isBootstrapMode, permissions]
+    [isAdmin, permissions]
   );
 
   /**
@@ -266,11 +271,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const hasAnyPermission = useCallback(
     (permissionIds: string[]): boolean => {
       if (!isAdmin) return false;
-      if (isBootstrapMode) return true;
       if (!permissionIds || permissionIds.length === 0) return true;
       return permissionIds.some((p) => permissions.includes(p));
     },
-    [isAdmin, isBootstrapMode, permissions]
+    [isAdmin, permissions]
   );
 
   /**
@@ -279,11 +283,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const hasAllPermissions = useCallback(
     (permissionIds: string[]): boolean => {
       if (!isAdmin) return false;
-      if (isBootstrapMode) return true;
       if (!permissionIds || permissionIds.length === 0) return true;
       return permissionIds.every((p) => permissions.includes(p));
     },
-    [isAdmin, isBootstrapMode, permissions]
+    [isAdmin, permissions]
   );
 
   return (
@@ -298,6 +301,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role,
         isBootstrapMode,
         permissionsLoading,
+        permissionsError,
         hasPermission,
         hasAnyPermission,
         hasAllPermissions,

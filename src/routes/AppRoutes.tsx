@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import { AdminLayout } from '@/layouts';
 import { LoadingState, AccessDenied } from '@/components/common';
 import { useAuth } from '@/context/AuthContext';
-import { ADMIN_NAVIGATION_ITEMS } from '@/routes/routes.config';
+import { ADMIN_NAVIGATION_ITEMS, getFirstAccessibleRoute } from '@/routes/routes.config';
 import {
   LoginPage,
   DashboardPage,
@@ -54,20 +54,32 @@ interface PermissionGuardProps {
 
 const PermissionGuard: React.FC<PermissionGuardProps> = ({
   requiredPermission,
-  fallbackPath = '/dashboard',
+  fallbackPath,
   children,
 }) => {
-  const { hasPermission, permissionsLoading, isLoading } = useAuth();
+  const { hasPermission, permissionsLoading, permissionsError, isLoading, isBootstrapMode } = useAuth();
 
   if (isLoading || permissionsLoading) {
     return <LoadingState fullHeight message="Verifying permissions..." />;
+  }
+
+  const calculatedFallback = fallbackPath || getFirstAccessibleRoute(hasPermission, isBootstrapMode);
+
+  if (permissionsError) {
+    return (
+      <AccessDenied
+        requiredPermission={requiredPermission}
+        fallbackPath={calculatedFallback}
+        isErrorState={true}
+      />
+    );
   }
 
   if (!hasPermission(requiredPermission)) {
     return (
       <AccessDenied
         requiredPermission={requiredPermission}
-        fallbackPath={fallbackPath}
+        fallbackPath={calculatedFallback}
       />
     );
   }
@@ -80,9 +92,9 @@ const PermissionGuard: React.FC<PermissionGuardProps> = ({
  * Directs user to the first accessible navigation item they have permission for.
  */
 const RootRedirect: React.FC = () => {
-  const { session, user, isAdmin, isLoading, hasPermission, isBootstrapMode } = useAuth();
+  const { session, user, isAdmin, isLoading, permissionsLoading, hasPermission, isBootstrapMode } = useAuth();
 
-  if (isLoading) {
+  if (isLoading || permissionsLoading) {
     return <LoadingState fullHeight message="Verifying session..." />;
   }
 
@@ -90,34 +102,26 @@ const RootRedirect: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  if (isBootstrapMode || hasPermission('dashboard.view')) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  for (const item of ADMIN_NAVIGATION_ITEMS) {
-    if (!item.requiredPermission || hasPermission(item.requiredPermission)) {
-      return <Navigate to={item.path} replace />;
-    }
-  }
-
-  return <Navigate to="/dashboard" replace />;
+  const targetPath = getFirstAccessibleRoute(hasPermission, isBootstrapMode);
+  return <Navigate to={targetPath} replace />;
 };
 
 /**
  * Public Authentication Route Wrapper
- * If an active authenticated admin visits /login, redirects to their home.
+ * If an active authenticated admin visits /login, redirects to their accessible home.
  */
 const PublicAuthRoute: React.FC = () => {
-  const { session, user, isAdmin, isLoading } = useAuth();
+  const { session, user, isAdmin, isLoading, permissionsLoading, hasPermission, isBootstrapMode } = useAuth();
   const location = useLocation();
 
-  if (isLoading) {
+  if (isLoading || permissionsLoading) {
     return <LoadingState fullHeight message="Verifying session..." />;
   }
 
   if (session && user && isAdmin) {
-    const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard';
-    return <Navigate to={from} replace />;
+    const from = (location.state as { from?: { pathname: string } })?.from?.pathname;
+    const target = from || getFirstAccessibleRoute(hasPermission, isBootstrapMode);
+    return <Navigate to={target} replace />;
   }
 
   return <LoginPage />;

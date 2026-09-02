@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldAlert, ArrowLeft, Lock } from 'lucide-react';
+import { ShieldAlert, ArrowLeft, Lock, RefreshCw, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -12,6 +12,7 @@ interface AccessDeniedProps {
   fallbackPath?: string;
   title?: string;
   message?: string;
+  isErrorState?: boolean;
 }
 
 export const AccessDenied: React.FC<AccessDeniedProps> = ({
@@ -19,10 +20,11 @@ export const AccessDenied: React.FC<AccessDeniedProps> = ({
   fallbackPath = '/dashboard',
   title,
   message,
+  isErrorState = false,
 }) => {
   const navigate = useNavigate();
   const { language, t } = useLanguage();
-  const { role, isBootstrapMode } = useAuth();
+  const { role, isBootstrapMode, refreshPermissions, permissionsLoading } = useAuth();
   const isBn = language === 'bn';
 
   const roleName = isBootstrapMode
@@ -37,16 +39,27 @@ export const AccessDenied: React.FC<AccessDeniedProps> = ({
     <div id="access-denied-container" className="flex items-center justify-center min-h-[60vh] p-4">
       <Card variant="default" className="max-w-md w-full border-slate-200 dark:border-slate-800 shadow-sm">
         <CardContent className="pt-8 pb-8 px-6 text-center space-y-5">
-          <div className="mx-auto w-14 h-14 rounded-full bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 flex items-center justify-center text-rose-600 dark:text-rose-400">
-            <ShieldAlert className="w-7 h-7" />
+          <div
+            className={`mx-auto w-14 h-14 rounded-full flex items-center justify-center ${
+              isErrorState
+                ? 'bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-amber-600 dark:text-amber-400'
+                : 'bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 text-rose-600 dark:text-rose-400'
+            }`}
+          >
+            {isErrorState ? <AlertCircle className="w-7 h-7" /> : <ShieldAlert className="w-7 h-7" />}
           </div>
 
           <div className="space-y-2">
             <h2 id="access-denied-title" className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-              {title || t.access.restrictedTitle}
+              {title || (isErrorState ? (isBn ? 'অনুমতি যাচাই ব্যর্থ হয়েছে' : 'Authorization Verification Failed') : t.access.restrictedTitle)}
             </h2>
             <p id="access-denied-desc" className="text-sm text-slate-500 dark:text-slate-400">
-              {message || t.access.restrictedDescription}
+              {message ||
+                (isErrorState
+                  ? isBn
+                    ? 'আপনার প্রশাসনিক অ্যাকাউন্টের অনুমতি যাচাই করার সময় সমস্যা হয়েছে। অনুগ্রহ করে পুনরায় চেষ্টা করুন।'
+                    : 'We could not securely verify your assigned administrative permissions from the server. Please retry.'
+                  : t.access.restrictedDescription)}
             </p>
           </div>
 
@@ -74,7 +87,18 @@ export const AccessDenied: React.FC<AccessDeniedProps> = ({
             </div>
           </div>
 
-          <div className="pt-2 flex justify-center">
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+            {isErrorState && (
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => refreshPermissions()}
+                isLoading={permissionsLoading}
+                leftIcon={<RefreshCw className="w-4 h-4" />}
+              >
+                <span>{isBn ? 'পুনরায় চেষ্টা' : 'Retry Verification'}</span>
+              </Button>
+            )}
             <Button
               id="access-denied-back-btn"
               variant="primary"
@@ -92,3 +116,4 @@ export const AccessDenied: React.FC<AccessDeniedProps> = ({
 };
 
 export default AccessDenied;
+

@@ -110,9 +110,12 @@ export class ComplaintApi {
   /**
    * Get complete complaint detail workspace package (complaint + timeline)
    */
-  async getComplaintDetail(id: string): Promise<ComplaintDetailData | null> {
+  async getComplaintDetail(
+    id: string,
+    options?: { loadEvidence?: boolean }
+  ): Promise<ComplaintDetailData | null> {
     if (isSupabaseConfigured) {
-      return supabaseComplaintService.getComplaintDetail(id);
+      return supabaseComplaintService.getComplaintDetail(id, options);
     }
     return complaintFallback.getComplaintDetail(id);
   }

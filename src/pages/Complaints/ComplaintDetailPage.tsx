@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Badge, BadgeStatus } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/common/EmptyState';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
 import {
   Complaint,
   ComplaintLifecycleStatus,
@@ -33,7 +34,9 @@ export const ComplaintDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { language } = useLanguage();
+  const { hasPermission } = useAuth();
   const isBn = language === 'bn';
+  const canViewEvidence = hasPermission('complaints.evidence_view');
 
   const [loading, setLoading] = useState<boolean>(true);
   const [complaint, setComplaint] = useState<Complaint | null>(null);
@@ -47,7 +50,9 @@ export const ComplaintDetailPage: React.FC = () => {
     setError(false);
     setEvidenceError(null);
     try {
-      const detailRes = await complaintApi.getComplaintDetail(id);
+      const detailRes = await complaintApi.getComplaintDetail(id, {
+        loadEvidence: canViewEvidence,
+      });
 
       if (!detailRes || !detailRes.complaint) {
         setError(true);
@@ -62,7 +67,7 @@ export const ComplaintDetailPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, canViewEvidence]);
 
   useEffect(() => {
     fetchComplaintData();

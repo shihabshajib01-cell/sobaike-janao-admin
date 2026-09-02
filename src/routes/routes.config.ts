@@ -71,3 +71,25 @@ export const ADMIN_NAVIGATION_ITEMS: RouteItem[] = [
     requiredPermission: 'roles.manage',
   },
 ];
+
+/**
+ * Calculates the first authorized navigation route for an active admin
+ */
+export const getFirstAccessibleRoute = (
+  hasPermissionFn: (permission: string) => boolean,
+  isBootstrapMode: boolean = false
+): string => {
+  if (isBootstrapMode) {
+    return '/roles';
+  }
+
+  for (const item of ADMIN_NAVIGATION_ITEMS) {
+    if (!item.requiredPermission || hasPermissionFn(item.requiredPermission)) {
+      return item.path;
+    }
+  }
+
+  // If no accessible route exists (e.g. 0 permissions assigned), return /dashboard to let PermissionGuard render AccessDenied
+  return '/dashboard';
+};
+

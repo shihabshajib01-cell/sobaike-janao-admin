@@ -259,17 +259,19 @@ export const AdminHeader: React.FC<HeaderProps> = ({
                     <span>{t.nav.roles}</span>
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setProfileOpen(false);
-                    navigate('/dashboard');
-                  }}
-                  className="w-full px-4 py-2 flex items-center gap-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left"
-                >
-                  <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-                  <span>{t.nav.dashboard}</span>
-                </button>
+                {hasPermission('dashboard.view') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfileOpen(false);
+                      navigate('/dashboard');
+                    }}
+                    className="w-full px-4 py-2 flex items-center gap-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                    <span>{t.nav.dashboard}</span>
+                  </button>
+                )}
               </div>
 
               <div className="pt-1 border-t border-slate-100 dark:border-slate-800">

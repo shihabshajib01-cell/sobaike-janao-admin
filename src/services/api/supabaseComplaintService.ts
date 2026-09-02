@@ -657,20 +657,44 @@ export const supabaseComplaintService = {
     complaintId: string
   ): Promise<{ media: ComplaintMedia[]; error?: string | null }> {
     try {
-      const { data: evidenceRows, error: queryError } = await supabase
-        .from('complaint_evidence')
-        .select(
-          'id, complaint_id, storage_path, file_url, file_name, mime_type, media_type, file_size_bytes, caption, created_at'
-        )
-        .eq('complaint_id', complaintId)
-        .order('created_at', { ascending: true });
+      let evidenceRows: SupabaseComplaintEvidenceRow[] = [];
 
-      if (queryError) {
-        console.error(`Error querying complaint_evidence for complaint ${complaintId}:`, queryError);
-        return {
-          media: [],
-          error: 'Evidence images could not be loaded. Please retry.',
-        };
+      // 1. First attempt secure RPC admin_get_complaint_evidence
+      const { data: rpcRows, error: rpcError } = await supabase.rpc('admin_get_complaint_evidence', {
+        p_complaint_id: complaintId,
+      });
+
+      if (!rpcError && Array.isArray(rpcRows)) {
+        evidenceRows = rpcRows as SupabaseComplaintEvidenceRow[];
+      } else {
+        if (rpcError && (rpcError.code === '42501' || rpcError.message?.includes('42501'))) {
+          return {
+            media: [],
+            error: 'You do not have permission to view private complaint evidence.',
+          };
+        }
+
+        // 2. Direct table fallback if RPC is not defined
+        const { data: queryRows, error: queryError } = await supabase
+          .from('complaint_evidence')
+          .select(
+            'id, complaint_id, storage_path, file_url, file_name, mime_type, media_type, file_size_bytes, caption, created_at'
+          )
+          .eq('complaint_id', complaintId)
+          .order('created_at', { ascending: true });
+
+        if (queryError) {
+          console.warn(`Error querying complaint_evidence for complaint ${complaintId}:`, queryError.message);
+          return {
+            media: [],
+            error:
+              queryError.code === '42501' || queryError.message?.includes('42501')
+                ? 'You do not have permission to view private complaint evidence.'
+                : 'Evidence images could not be loaded. Please retry.',
+          };
+        }
+
+        evidenceRows = (queryRows || []) as SupabaseComplaintEvidenceRow[];
       }
 
       if (!evidenceRows || evidenceRows.length === 0) {
@@ -678,9 +702,7 @@ export const supabaseComplaintService = {
       }
 
       // Collect storage paths to batch sign from private 'complaint-evidence' storage bucket
-      const rowsWithStoragePath = (evidenceRows as SupabaseComplaintEvidenceRow[]).filter(
-        (r) => Boolean(r.storage_path)
-      );
+      const rowsWithStoragePath = evidenceRows.filter((r) => Boolean(r.storage_path));
       const pathsToSign = rowsWithStoragePath.map((r) => r.storage_path as string);
 
       const signedUrlMap = new Map<string, string>();
@@ -722,7 +744,7 @@ export const supabaseComplaintService = {
       const mediaList: ComplaintMedia[] = [];
       let signingFailures = 0;
 
-      for (const row of evidenceRows as SupabaseComplaintEvidenceRow[]) {
+      for (const row of evidenceRows) {
         let finalUrl = '';
         if (row.storage_path && signedUrlMap.has(row.storage_path)) {
           finalUrl = signedUrlMap.get(row.storage_path)!;
@@ -782,16 +804,19 @@ export const supabaseComplaintService = {
    * Fetch complaint detail and timeline bundle
    */
   async getComplaintDetail(
-    id: string
+    id: string,
+    options?: { loadEvidence?: boolean }
   ): Promise<{ complaint: Complaint; timeline: ComplaintTimelineEvent[]; evidenceError?: string | null } | null> {
     const { segments, subcategories } = await getTaxonomy();
     const segmentsMap = new Map(segments.map((s) => [s.id, s]));
     const subcategoriesMap = new Map(subcategories.map((s) => [s.id, s]));
 
+    const shouldLoadEvidence = options?.loadEvidence ?? true;
+
     const [complaintRowRes, timeline, evidenceResult] = await Promise.all([
       supabase.from('complaints').select('*').eq('id', id).maybeSingle(),
       this.getComplaintTimeline(id),
-      this.getComplaintEvidence(id),
+      shouldLoadEvidence ? this.getComplaintEvidence(id) : Promise.resolve({ media: [] }),
     ]);
 
     if (complaintRowRes.error) {
