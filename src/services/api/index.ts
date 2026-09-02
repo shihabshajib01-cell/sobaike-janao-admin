@@ -24,12 +24,3 @@ export { default as locationActivityService } from './locationActivityService';
 
 export * from './reverseGeocodingService';
 export { default as reverseGeocodingService } from './reverseGeocodingService';
-
-export * from './analyticsApi';
-export { default as analyticsApi } from './analyticsApi';
-
-export * from './auditLogApi';
-export { default as auditLogApi } from './auditLogApi';
-
-export * from './settingsApi';
-export { default as settingsApi } from './settingsApi';

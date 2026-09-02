@@ -5,8 +5,4 @@ export * from './Response';
 export * from './Dashboard';
 export * from './Map';
 export * from './LocationActivity';
-export * from './Analytics';
-export * from './AuditLog';
-export * from './Post';
-export * from './Settings';
 export * from './api';

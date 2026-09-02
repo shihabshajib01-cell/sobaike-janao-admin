@@ -6,7 +6,4 @@ export * from './Responses/ResponsesPage';
 export * from './Categories/CategoriesPage';
 export * from './Map/MapPage';
 export * from './LocationActivity/LocationActivityPage';
-export * from './Analytics/AnalyticsPage';
-export * from './AuditLogs/AuditLogsPage';
-export * from './Settings/SettingsPage';
 export * from './NotFound/NotFoundPage';

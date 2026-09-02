@@ -12,9 +12,6 @@ import {
   CategoriesPage,
   MapPage,
   LocationActivityPage,
-  AnalyticsPage,
-  AuditLogsPage,
-  SettingsPage,
   NotFoundPage,
 } from '@/pages';
 
@@ -91,9 +88,6 @@ export const AppRoutes: React.FC = () => {
           <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/map" element={<MapPage />} />
           <Route path="/location-activity" element={<LocationActivityPage />} />
-          <Route path="/analytics" element={<AnalyticsPage />} />
-          <Route path="/audit-logs" element={<AuditLogsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
 
           {/* Catch-all 404 Route */}
           <Route path="*" element={<NotFoundPage />} />
