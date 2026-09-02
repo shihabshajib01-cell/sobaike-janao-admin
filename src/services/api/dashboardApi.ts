@@ -161,33 +161,22 @@ export class DashboardApi {
     // Fetch real count for each active segment in parallel
     const categoryCounts = await Promise.all(
       segments.map(async (segment) => {
-        try {
-          const res = await complaintApi.getComplaints(
-            { category: segment.id },
-            1,
-            1
-          );
-          const count = res.pagination.totalItems ?? 0;
-          const percentage =
-            totalComplaints > 0 ? (count / totalComplaints) * 100 : 0;
+        const res = await complaintApi.getComplaints(
+          { category: segment.id },
+          1,
+          1
+        );
+        const count = res.pagination.totalItems ?? 0;
+        const percentage =
+          totalComplaints > 0 ? (count / totalComplaints) * 100 : 0;
 
-          return {
-            id: segment.id,
-            nameEn: segment.name_en,
-            nameBn: segment.name_bn,
-            count,
-            percentage,
-          };
-        } catch (err) {
-          console.warn(`Failed to count complaints for segment ${segment.id}:`, err);
-          return {
-            id: segment.id,
-            nameEn: segment.name_en,
-            nameBn: segment.name_bn,
-            count: 0,
-            percentage: 0,
-          };
-        }
+        return {
+          id: segment.id,
+          nameEn: segment.name_en,
+          nameBn: segment.name_bn,
+          count,
+          percentage,
+        };
       })
     );
 

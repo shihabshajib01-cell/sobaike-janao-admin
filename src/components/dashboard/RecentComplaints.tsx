@@ -73,8 +73,8 @@ export const RecentComplaints: React.FC<RecentComplaintsProps> = ({
           </div>
           <CardDescription>
             {isBn
-              ? 'প্ল্যাটফর্মে দাখিলকৃত সর্বশেষ অভিযোগসমূহ'
-              : 'Latest citizen submissions awaiting or under moderation'}
+              ? 'প্ল্যাটফর্মে জমা পড়া সর্বশেষ প্রতিবেদনসমূহ'
+              : 'Latest reports submitted to the platform'}
           </CardDescription>
         </div>
 
@@ -96,12 +96,12 @@ export const RecentComplaints: React.FC<RecentComplaintsProps> = ({
               <FileText className="w-5 h-5" />
             </div>
             <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              {isBn ? 'কোনো প্রতিবেদন নেই' : 'No Recent Reports'}
+              {isBn ? 'এখনও কোনো প্রতিবেদন নেই' : 'No Reports Yet'}
             </p>
             <p className="text-[11px] text-slate-400 dark:text-slate-500">
               {isBn
-                ? 'বর্তমানে পর্যালোচনার জন্য কোনো অভিযোগ নেই।'
-                : 'There are no active submissions in the system.'}
+                ? 'প্রতিবেদন জমা পড়লে এখানে দেখা যাবে।'
+                : 'Reports will appear here after they are submitted.'}
             </p>
           </div>
         ) : (

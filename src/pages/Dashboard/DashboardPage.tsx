@@ -53,10 +53,9 @@ export const DashboardPage: React.FC = () => {
     } catch (err: any) {
       console.error('Failed to load dashboard metrics:', err);
       setError(
-        err?.message ||
-          (isBn
-            ? 'ড্যাশবোর্ডের তথ্য লোড করা যায়নি।'
-            : 'Dashboard data could not be loaded.')
+        isBn
+          ? 'ড্যাশবোর্ডের তথ্য লোড করা যায়নি।'
+          : 'Dashboard data could not be loaded.'
       );
     } finally {
       setLoading(false);
@@ -101,8 +100,10 @@ export const DashboardPage: React.FC = () => {
               <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                 {isBn ? 'ড্যাশবোর্ডের তথ্য লোড করা যায়নি।' : 'Dashboard data could not be loaded.'}
               </h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-mono">
-                {error}
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                {isBn
+                  ? 'সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।'
+                  : 'Check your connection and try again.'}
               </p>
             </div>
             <Button
