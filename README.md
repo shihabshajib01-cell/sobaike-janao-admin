@@ -1,48 +1,55 @@
-# Sobai Ke Janao
+# Sobai Ke Janao Admin Panel
 
-Civic incident reporting and public transparency platform for Bangladesh.
+Administration and operational management interface for the **Sobai Ke Janao** civic reporting and community engagement platform.
 
 ---
 
 ## Overview
 
-**Sobai Ke Janao** is a citizen-first civic reporting platform designed to document, verify, and resolve public incidents across three primary segments:
-1. **Public Harassment** (Eve teasing, stalking, workplace/transit harassment)
-2. **Extortion & Illegal Tolls** (Bus stand extortion, market extortion, illegal parking fees)
-3. **Civic & Municipal Issues** (Road safety, drainage/waste, municipal irregularities)
-
-The system enables secure, anonymous or identified citizen reporting, evidence preservation in private cloud storage, published report transparency, interactive location-based exploration, and bilingual accessibility.
+Sobai Ke Janao Admin Panel provides municipal administrators, operations teams, and moderators with tools to oversee citizen complaints, moderate public community feed posts, dispatch and track official department responses, manage category taxonomies, visualize geographic complaint distributions, monitor user roles and permissions, review administrative audit trails, and configure system preferences.
 
 ---
 
-## Architecture & Tech Stack
+## Features
 
-- **Frontend Framework**: React 19 + TypeScript
-- **Bundler & Build Tool**: Vite 6
-- **Styling & Design System**: Tailwind CSS v4 + Motion
-- **Icons**: Lucide React
-- **Backend & Database**: Supabase (PostgreSQL)
-  - **Complaint Submissions**: Atomic Supabase RPC functions (`submit_public_complaint`) with idempotent request tracking
-  - **Private Evidence Storage**: Supabase Storage bucket (`complaint-evidence`) with `register_public_complaint_evidence` RPC registration
-  - **Public Data Access**: Querying of published reports, segments, and subcategories
-- **Maps & Geolocation**: Interactive map visualization and consented browser geolocation with reverse geocoding
-- **Internationalization**: Complete bilingual support (**English** / **বাংলা**)
-- **Theming**: System / Light / Dark theme tokens
-- **Hosting & Deployment**: Static SPA build deployed via GitHub Pages / Cloud Run
+- **Dashboard & Overview**: Real-time summary metrics of total, pending, resolved, and active complaints, status distributions, category summaries, and recent activity logs.
+- **Complaint Management**: Comprehensive complaint registry with tabular and mobile-optimized card views, multi-criteria filtering (status, ward, category, priority), detail inspection drawer with timeline history, and status progression workflows.
+- **Feed Moderation**: Community feed moderation module supporting dual-state workflows (`unpublished` and `published`), content review, title/description editing, and feed publishing/unpublishing actions.
+- **Response Management**: Official department responses workflow with status filtering, response templates, verification badges, and resolution logging.
+- **Category Management**: Hierarchical categorization for civic issues with category and subcategory creation, editing, and icon management.
+- **Interactive Map View**: Geographic mapping of reported issues with status-coded markers, zone/ward boundaries, and interactive detail popups.
+- **Users & Permissions**: Role-Based Access Control (RBAC) directory supporting Admin, Moderator, and Officer roles with permission management.
+- **Operational Analytics**: Visual charts for complaint trends, resolution time averages, ward-level heatmaps, and category breakdowns.
+- **Audit Logs**: Immutable timeline of administrative actions, actor identifications, IP logs, and change diffs.
+- **System Settings & Localization**: Complete dual-language support (**English** & **Bengali**) with instant language switching and system/light/dark theme toggles.
+- **Resilient Data Architecture**: Transparent service layer featuring real API transport with automatic fallback to client-side mock storage during network failure or offline usage.
 
 ---
 
-## Key Features
+## Tech Stack
 
-- **4-Step Incident Composer**:
-  - Step 1: Category & Subcategory Selection across the three core segments
-  - Step 2: Date, Time, and Incident Location (with interactive map and reverse geocoding)
-  - Step 3: Detailed Description (2,000 character limit), identity choices, and privacy controls
-  - Step 4: Evidence Upload (client-side image compression) and final Review
-- **Private Evidence Preservation**: Securely uploads supporting photos/documents directly to Supabase private storage before administrative review.
-- **Published Public Reports**: Citizens can browse published, moderated incident reports with status updates, timelines, and verified responses.
-- **Consented Visitor Location**: Privacy-first location detection for showing nearby incidents and regional analytics.
-- **Responsive Layout**: Designed for mobile touch targets, tablets, and desktop workstations.
+- **Framework**: [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
+- **Build Tool**: [Vite 6](https://vitejs.dev/)
+- **Routing**: [React Router v7](https://reactrouter.com/) (Hash-based routing for static hosting compatibility)
+- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **Animations**: [Motion](https://motion.dev/)
+
+---
+
+## Architecture
+
+```
+UI Components (Pages / Layouts / Modules)
+       ↓
+API Services (complaintApi, feedApi, categoryApi, userApi, etc.)
+       ↓
+API Client (apiClient — fetch transport with request/response interceptors)
+       ↓ (Network failure / Offline / Mock fallback mode)
+Fallback Services (complaintFallback, feedFallback, etc.)
+       ↓
+Mock Data Store
+```
 
 ---
 
@@ -51,14 +58,14 @@ The system enables secure, anonymous or identified citizen reporting, evidence p
 ### Prerequisites
 
 - **Node.js**: `18.x`, `20.x`, or `22.x`
-- **npm** / **pnpm** / **yarn**
+- **Package Manager**: `npm`, `pnpm`, or `yarn`
 
 ### Installation
 
-1. Clone repository:
+1. Clone the repository:
    ```bash
-   git clone https://github.com/shihabshajib01-cell/sobaike-janao.git
-   cd sobaike-janao
+   git clone https://github.com/your-username/sobaike-admin-panel.git
+   cd sobaike-admin-panel
    ```
 
 2. Install dependencies:
@@ -71,30 +78,112 @@ The system enables secure, anonymous or identified citizen reporting, evidence p
    cp .env.example .env
    ```
 
-   Set your Supabase credentials in `.env`:
-   ```env
-   VITE_SUPABASE_URL=https://your-project.supabase.co
-   VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-or-publishable-key
-   VITE_GOOGLE_MAPS_API_KEY=your-optional-maps-key
-   ```
-
 ### Development
 
-Start the local development server:
+Start the local Vite development server:
+
 ```bash
 npm run dev
 ```
 
-### Production Build
+The application will be accessible at `http://localhost:3000`.
 
-```bash
-npm run build
+---
+
+## Available Scripts
+
+| Command | Description |
+| :--- | :--- |
+| `npm run dev` | Starts the Vite development server on port 3000 |
+| `npm run build` | Compiles TypeScript and builds production assets in `dist/` |
+| `npm run preview` | Serves the production build locally for testing |
+| `npm run lint` | Runs TypeScript type checking (`tsc --noEmit`) |
+| `npm run clean` | Cleans build artifacts and dist directory |
+
+---
+
+## Environment Setup
+
+The application supports optional environment variables defined in `.env.example`:
+
+```env
+# Optional API endpoint. If empty, offline mock services are used automatically.
+VITE_API_BASE_URL=
+
+# Environment mode (development | production)
+VITE_APP_ENV=development
+
+# Base URL path for sub-directory hosting (e.g. "/admin-sobaike-janao/" for GitHub Pages)
+VITE_BASE_PATH=/
 ```
-
-The compiled static assets are output to `dist/`.
 
 ---
 
 ## Deployment
 
-The static build output in `dist/` is self-contained and ready for deployment to GitHub Pages, Cloud Run, Vercel, Netlify, or any static hosting service.
+The static build output in `dist/` is self-contained and compatible with any static hosting service.
+
+### GitHub Pages (Automated via GitHub Actions)
+
+This repository includes a pre-configured GitHub Actions workflow at `.github/workflows/deploy.yml`:
+1. In your GitHub repository, go to **Settings** > **Pages**.
+2. Under **Build and deployment** > **Source**, select **GitHub Actions**.
+3. Push to the `main` branch to trigger automatic build and deployment.
+
+### Vercel / Netlify / Cloudflare Pages
+
+1. Connect your repository to your hosting provider.
+2. Set build configuration:
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+   - **Install Command**: `npm install`
+
+---
+
+## Project Structure
+
+```
+sobaike-admin-panel/
+├── .github/
+│   └── workflows/
+│       └── deploy.yml          # GitHub Pages CI/CD workflow
+├── src/
+│   ├── assets/                 # Static visual assets and icons
+│   ├── components/             # Reusable UI and domain-specific components
+│   │   ├── common/             # Error boundaries, modals, cards
+│   │   ├── complaints/         # Complaint tables, drawers, mobile cards, filters
+│   │   ├── feed/               # Feed tables, detail drawers, status tabs, cards
+│   │   ├── layout/             # Admin sidebar, header, navigation, layout wrappers
+│   │   └── ui/                 # Buttons, inputs, badges, modals, typography
+│   ├── config/                 # Navigation menus, app constants, API configuration
+│   ├── context/                # Language (EN/BN) and Theme providers
+│   ├── hooks/                  # Custom React hooks (debounce, responsive, data fetching)
+│   ├── pages/                  # Page-level components for each primary route
+│   │   ├── Dashboard/          # Operational metrics and activity summary
+│   │   ├── Complaints/         # Citizen complaint management
+│   │   ├── Feed/               # Community feed moderation
+│   │   ├── Responses/          # Official department response queue
+│   │   ├── Categories/         # Taxonomy hierarchy management
+│   │   ├── Map/                # Geographic map monitoring
+│   │   ├── Users/              # User permissions and role assignments
+│   │   ├── Analytics/          # Reporting, metrics, and trends
+│   │   ├── Audit/              # Administrative audit logs
+│   │   └── Settings/           # Preferences and configuration
+│   ├── routes/                 # Route declarations and path definitions
+│   ├── services/               # API clients, transport layers, and mock data stores
+│   ├── themes/                 # Theme tokens and style utilities
+│   ├── types/                  # TypeScript interface definitions
+│   └── utils/                  # Utility helpers (date formatters, feed actions, cn)
+├── .env.example                # Template for environment variables
+├── .gitignore                  # Git ignore definitions
+├── index.html                  # Application HTML entry point
+├── package.json                # Project dependencies and script declarations
+├── tsconfig.json               # TypeScript compiler options
+└── vite.config.ts              # Vite bundler configuration
+```
+
+---
+
+## License
+
+MIT License or proprietary as designated by the project maintainers.
