@@ -1,207 +1,109 @@
 /**
  * Response API Service Layer
- * Abstracts REST/gRPC backend endpoints with mock fallback for development and preview.
+ * UI contract retained for future real Response API integration.
+ * Currently disconnected until backend/schema audit phase.
  */
 
-import { apiClient, ApiClient } from './apiClient';
 import {
   ResponseItem,
   ResponseFilterState,
   ResponseListResponse,
   ResponseStatusFilter,
   ResponseTimelineEvent,
+  ResponseWorkflowResult,
 } from '@/types/Response';
-import { responseFallback, ResponseWorkflowResult } from '@/services/fallback/responseFallback';
+
+export const RESPONSE_MANAGEMENT_CONNECTED = false;
+
+export class ResponseFeatureUnavailableError extends Error {
+  code = 'FEATURE_NOT_CONNECTED';
+
+  constructor() {
+    super('Response management API is not connected.');
+    this.name = 'ResponseFeatureUnavailableError';
+  }
+}
 
 export class ResponseApi {
-  private client: ApiClient;
-
-  constructor(client: ApiClient = apiClient) {
-    this.client = client;
-  }
-
   /**
    * Get filtered and paginated responses list
    */
   async getResponses(
-    filters: Partial<ResponseFilterState> = {},
-    page = 1,
-    limit = 10
+    _filters: Partial<ResponseFilterState> = {},
+    _page = 1,
+    _limit = 10
   ): Promise<ResponseListResponse> {
-    try {
-      const response = await this.client.get<ResponseListResponse>('/responses', {
-        params: {
-          search: filters.search,
-          status: filters.status,
-          relatedType: filters.relatedType,
-          authorRole: filters.authorRole,
-          categoryId: filters.categoryId,
-          page,
-          limit,
-        },
-      });
-      if (response.success && response.data) {
-        return response.data;
-      }
-    } catch {
-      // Graceful fallback
-    }
-    return responseFallback.getResponses(filters, page, limit);
+    throw new ResponseFeatureUnavailableError();
   }
 
   /**
    * Get single response by ID
    */
-  async getResponseById(id: string): Promise<ResponseItem | null> {
-    try {
-      const response = await this.client.get<ResponseItem>(`/responses/${id}`);
-      if (response.success && response.data) {
-        return response.data;
-      }
-    } catch {
-      // Graceful fallback
-    }
-    return responseFallback.getResponseById(id);
+  async getResponseById(_id: string): Promise<ResponseItem | null> {
+    throw new ResponseFeatureUnavailableError();
   }
 
   /**
    * Get response status metrics
    */
   async getStatusCounts(): Promise<Record<ResponseStatusFilter, number>> {
-    try {
-      const response = await this.client.get<Record<ResponseStatusFilter, number>>('/responses/stats');
-      if (response.success && response.data) {
-        return response.data;
-      }
-    } catch {
-      // Graceful fallback
-    }
-    return responseFallback.getStatusCounts();
+    throw new ResponseFeatureUnavailableError();
   }
 
   /**
    * Approve official response
    */
-  async approveResponse(responseId: string, notes?: string): Promise<ResponseWorkflowResult> {
-    try {
-      const response = await this.client.post<ResponseWorkflowResult>(`/responses/${responseId}/approve`, {
-        notes,
-      });
-      if (response.success && response.data) {
-        return response.data;
-      }
-    } catch {
-      // Graceful fallback
-    }
-    return responseFallback.approveResponse(responseId, notes);
+  async approveResponse(_responseId: string, _notes?: string): Promise<ResponseWorkflowResult> {
+    throw new ResponseFeatureUnavailableError();
   }
 
   /**
    * Publish response
    */
   async publishResponse(
-    responseId: string,
-    options?: { notes?: string }
+    _responseId: string,
+    _options?: { notes?: string }
   ): Promise<ResponseWorkflowResult> {
-    try {
-      const response = await this.client.post<ResponseWorkflowResult>(
-        `/responses/${responseId}/publish`,
-        options
-      );
-      if (response.success && response.data) {
-        return response.data;
-      }
-    } catch {
-      // Graceful fallback
-    }
-    return responseFallback.publishResponse(responseId, options);
+    throw new ResponseFeatureUnavailableError();
   }
 
   /**
    * Unpublish response
    */
-  async unpublishResponse(responseId: string, reason: string): Promise<ResponseWorkflowResult> {
-    try {
-      const response = await this.client.post<ResponseWorkflowResult>(
-        `/responses/${responseId}/unpublish`,
-        { reason }
-      );
-      if (response.success && response.data) {
-        return response.data;
-      }
-    } catch {
-      // Graceful fallback
-    }
-    return responseFallback.unpublishResponse(responseId, reason);
+  async unpublishResponse(_responseId: string, _reason: string): Promise<ResponseWorkflowResult> {
+    throw new ResponseFeatureUnavailableError();
   }
 
   /**
    * Reject response
    */
   async rejectResponse(
-    responseId: string,
-    reason: string,
-    explanation: string
+    _responseId: string,
+    _reason: string,
+    _explanation: string
   ): Promise<ResponseWorkflowResult> {
-    try {
-      const response = await this.client.post<ResponseWorkflowResult>(
-        `/responses/${responseId}/reject`,
-        { reason, explanation }
-      );
-      if (response.success && response.data) {
-        return response.data;
-      }
-    } catch {
-      // Graceful fallback
-    }
-    return responseFallback.rejectResponse(responseId, reason, explanation);
+    throw new ResponseFeatureUnavailableError();
   }
 
   /**
    * Update public-facing copy
    */
   async updatePublicVersion(
-    responseId: string,
-    publicContentEn: string,
-    publicContentBn: string
+    _responseId: string,
+    _publicContentEn: string,
+    _publicContentBn: string
   ): Promise<ResponseWorkflowResult> {
-    try {
-      const response = await this.client.put<ResponseWorkflowResult>(
-        `/responses/${responseId}/public-version`,
-        { publicContentEn, publicContentBn }
-      );
-      if (response.success && response.data) {
-        return response.data;
-      }
-    } catch {
-      // Graceful fallback
-    }
-    return responseFallback.updatePublicVersion(
-      responseId,
-      publicContentEn,
-      publicContentBn
-    );
+    throw new ResponseFeatureUnavailableError();
   }
 
   /**
    * Get audit timeline events for response
    */
-  async getResponseTimeline(responseId: string): Promise<ResponseTimelineEvent[]> {
-    try {
-      const response = await this.client.get<ResponseTimelineEvent[]>(
-        `/responses/${responseId}/timeline`
-      );
-      if (response.success && response.data) {
-        return response.data;
-      }
-    } catch {
-      // Graceful fallback
-    }
-    return responseFallback.getResponseTimeline(responseId);
+  async getResponseTimeline(_responseId: string): Promise<ResponseTimelineEvent[]> {
+    throw new ResponseFeatureUnavailableError();
   }
 }
 
 export const responseApi = new ResponseApi();
 export default responseApi;
 export { type ResponseWorkflowResult };
-

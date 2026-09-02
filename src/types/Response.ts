@@ -1,6 +1,6 @@
 /**
  * Response Types and Interfaces
- * Standardized data models for Public & Departmental Response Management in Sobaike Admin.
+ * UI contract retained for future real Response API integration; values are not yet backend-authoritative.
  */
 
 import { ComplaintMedia } from './Complaint';
@@ -113,3 +113,10 @@ export interface ResponseListResponse {
   totalPages: number;
   statusCounts: Record<ResponseStatusFilter, number>;
 }
+
+export interface ResponseWorkflowResult {
+  success: boolean;
+  message: string;
+  response: ResponseItem;
+}
+
