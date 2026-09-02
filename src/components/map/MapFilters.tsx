@@ -1,6 +1,9 @@
 import React from 'react';
-import { MapFilterState } from '@/types/Map';
-import { Category, Subcategory } from '@/types/Category';
+import {
+  MapFilterState,
+  MapCategoryOption,
+  MapSubcategoryOption,
+} from '@/types/Map';
 import { ComplaintLifecycleStatus } from '@/types/Complaint';
 import { useLanguage } from '@/context/LanguageContext';
 import { Input } from '@/components/ui/Input';
@@ -22,8 +25,8 @@ export interface MapFiltersProps {
   filters: MapFilterState;
   onChange: (filters: MapFilterState) => void;
   onReset: () => void;
-  categories: Category[];
-  subcategories: Subcategory[];
+  categories: MapCategoryOption[];
+  subcategories: MapSubcategoryOption[];
   availableWards: string[];
   totalResultsCount: number;
   className?: string;

@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { MapComplaint, MapFilterState, MapSummary } from '@/types/Map';
-import { Category, Subcategory } from '@/types/Category';
+import {
+  MapComplaint,
+  MapFilterState,
+  MapSummary,
+  MapCategoryOption,
+  MapSubcategoryOption,
+} from '@/types/Map';
 import { ComplaintLifecycleStatus } from '@/types/Complaint';
 import { useLanguage } from '@/context/LanguageContext';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -15,7 +20,7 @@ import {
   MapComplaintList,
   MapEmptyState,
 } from '@/components/map';
-import { mapApi, categoryApi } from '@/services/api';
+import { mapApi } from '@/services/api';
 import { RefreshCw, Map as MapIcon, List, Eye } from 'lucide-react';
 import { cn, exportMapComplaintsToCsv, exportMapComplaintsToPdf } from '@/utils';
 
@@ -36,8 +41,8 @@ export const MapPage: React.FC = () => {
   // Data states
   const [complaints, setComplaints] = useState<MapComplaint[]>([]);
   const [summary, setSummary] = useState<MapSummary | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+  const [categories, setCategories] = useState<MapCategoryOption[]>([]);
+  const [subcategories, setSubcategories] = useState<MapSubcategoryOption[]>([]);
   const [availableWards, setAvailableWards] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -54,17 +59,38 @@ export const MapPage: React.FC = () => {
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
 
-  // Load initial taxonomy & location metadata
+  // Load initial taxonomy & location metadata directly from Map dataset
   useEffect(() => {
     async function loadMetadata() {
       try {
-        const [cats, subs, locs] = await Promise.all([
-          categoryApi.getCategories(),
-          categoryApi.getSubcategories(),
+        const [allMapComplaints, locs] = await Promise.all([
+          mapApi.getMapComplaints({}),
           mapApi.getAvailableLocations(),
         ]);
-        setCategories(cats);
-        setSubcategories(subs);
+
+        const catMap = new Map<string, MapCategoryOption>();
+        const subMap = new Map<string, MapSubcategoryOption>();
+
+        allMapComplaints.forEach((c) => {
+          if (c.categoryId && !catMap.has(c.categoryId)) {
+            catMap.set(c.categoryId, {
+              id: c.categoryId,
+              nameEn: c.categoryEn || c.categoryId,
+              nameBn: c.categoryBn || c.categoryEn || c.categoryId,
+            });
+          }
+          if (c.subcategoryId && !subMap.has(c.subcategoryId)) {
+            subMap.set(c.subcategoryId, {
+              id: c.subcategoryId,
+              categoryId: c.categoryId,
+              nameEn: c.subcategoryEn || c.subcategoryId,
+              nameBn: c.subcategoryBn || c.subcategoryEn || c.subcategoryId,
+            });
+          }
+        });
+
+        setCategories(Array.from(catMap.values()));
+        setSubcategories(Array.from(subMap.values()));
         setAvailableWards(locs.wards);
       } catch (err) {
         console.error('Failed to load map metadata:', err);

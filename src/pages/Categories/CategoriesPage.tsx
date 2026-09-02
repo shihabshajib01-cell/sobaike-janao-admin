@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   TaxonomySegment,
   TaxonomySubcategory,
@@ -6,7 +6,7 @@ import {
   TaxonomyFilterState,
   TaxonomyStats,
 } from '@/types/Category';
-import { categoryApi } from '@/services/api';
+import { categoryApi, TaxonomyBundle } from '@/services/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -35,25 +35,25 @@ const INITIAL_FILTERS: TaxonomyFilterState = {
   segmentId: 'all',
 };
 
+const EMPTY_STATS: TaxonomyStats = {
+  segments: 0,
+  subcategories: 0,
+  activeItems: 0,
+};
+
 export const CategoriesPage: React.FC = () => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
 
-  // Data states
-  const [allSegments, setAllSegments] = useState<TaxonomySegment[]>([]);
-  const [taxonomyTree, setTaxonomyTree] = useState<TaxonomySegmentNode[]>([]);
-  const [stats, setStats] = useState<TaxonomyStats>({
-    segments: 0,
-    subcategories: 0,
-    activeItems: 0,
-  });
+  // Loaded taxonomy data bundle from Supabase (loaded once on mount/refresh)
+  const [taxonomyBundle, setTaxonomyBundle] = useState<TaxonomyBundle | null>(null);
 
   // UI / Interaction states
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Filters
+  // Filters (applied locally in-memory via useMemo)
   const [filters, setFilters] = useState<TaxonomyFilterState>(INITIAL_FILTERS);
 
   // Detail Drawer state
@@ -61,37 +61,27 @@ export const CategoriesPage: React.FC = () => {
   const [drawerTarget, setDrawerTarget] = useState<DetailDrawerTarget | null>(null);
 
   /**
-   * Load taxonomy data from Supabase
+   * Load taxonomy data from Supabase (runs on mount and on manual refresh only)
    */
-  const loadTaxonomyData = useCallback(
-    async (isRefresh = false) => {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-      setError(null);
+  const loadTaxonomyData = useCallback(async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    setError(null);
 
-      try {
-        const [rawSegments, filteredTree, computedStats] = await Promise.all([
-          categoryApi.getSegments(),
-          categoryApi.getTaxonomyTree(filters),
-          categoryApi.getTaxonomyStats(),
-        ]);
-
-        setAllSegments(rawSegments);
-        setTaxonomyTree(filteredTree);
-        setStats(computedStats);
-      } catch (err: any) {
-        console.error('Failed to load taxonomy data:', err);
-        setError(err.message || 'Failed to load taxonomy');
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [filters]
-  );
+    try {
+      const bundle = await categoryApi.getTaxonomy();
+      setTaxonomyBundle(bundle);
+    } catch (err: any) {
+      console.error('Failed to load taxonomy data:', err);
+      setError(err.message || 'Failed to load taxonomy');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
     loadTaxonomyData();
@@ -137,6 +127,83 @@ export const CategoriesPage: React.FC = () => {
     setIsDrawerOpen(false);
     setDrawerTarget(null);
   };
+
+  // Client-side filtering via useMemo without querying Supabase on filter changes
+  const filteredTree = useMemo(() => {
+    if (!taxonomyBundle) return [];
+    const { fullTree } = taxonomyBundle;
+    const searchQuery = filters.search.trim().toLowerCase();
+    const { status, segmentId } = filters;
+
+    return fullTree
+      .filter((seg) => {
+        // Segment ID filter
+        if (segmentId !== 'all' && seg.id !== segmentId) {
+          return false;
+        }
+
+        // Status filter: match segment status or if any subcategory matches status
+        if (status !== 'all') {
+          const segMatch = seg.status === status;
+          const hasMatchingSub = seg.subcategories.some((s) => s.status === status);
+          if (!segMatch && !hasMatchingSub) {
+            return false;
+          }
+        }
+
+        // Search filter: match segment names or subcategory names
+        if (searchQuery) {
+          const segNameEnMatch = seg.nameEn.toLowerCase().includes(searchQuery);
+          const segNameBnMatch = seg.nameBn.toLowerCase().includes(searchQuery);
+          const segIdMatch = seg.id.toLowerCase().includes(searchQuery);
+          const subMatch = seg.subcategories.some(
+            (s) =>
+              s.nameEn.toLowerCase().includes(searchQuery) ||
+              s.nameBn.toLowerCase().includes(searchQuery) ||
+              s.id.toLowerCase().includes(searchQuery)
+          );
+
+          if (!segNameEnMatch && !segNameBnMatch && !segIdMatch && !subMatch) {
+            return false;
+          }
+        }
+
+        return true;
+      })
+      .map((seg) => {
+        let filteredSubs = seg.subcategories;
+
+        if (status !== 'all') {
+          filteredSubs = filteredSubs.filter((s) => s.status === status);
+        }
+
+        if (searchQuery) {
+          const segMatchesSearch =
+            seg.nameEn.toLowerCase().includes(searchQuery) ||
+            seg.nameBn.toLowerCase().includes(searchQuery) ||
+            seg.id.toLowerCase().includes(searchQuery);
+
+          // If segment itself matched search, show all filtered subs, otherwise filter subs
+          if (!segMatchesSearch) {
+            filteredSubs = filteredSubs.filter(
+              (s) =>
+                s.nameEn.toLowerCase().includes(searchQuery) ||
+                s.nameBn.toLowerCase().includes(searchQuery) ||
+                s.id.toLowerCase().includes(searchQuery)
+            );
+          }
+        }
+
+        return {
+          ...seg,
+          subcategories: filteredSubs,
+        };
+      });
+  }, [taxonomyBundle, filters]);
+
+  const stats = taxonomyBundle?.stats || EMPTY_STATS;
+  const allSegments = taxonomyBundle?.segments || [];
+  const fullTree = taxonomyBundle?.fullTree || [];
 
   const isFiltered = Boolean(
     filters.search ||
@@ -222,7 +289,7 @@ export const CategoriesPage: React.FC = () => {
                 {stats.activeItems}
               </h3>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                {isBn ? 'পাবলিক ফ্লোতে দৃশ্যমান' : 'Live in public submission'}
+                {isBn ? 'সক্রিয় বিভাগ ও সাব-ক্যাটাগরি' : 'Active segments and subcategories'}
               </p>
             </div>
             <div className="w-11 h-11 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200/80 dark:border-indigo-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
@@ -232,9 +299,9 @@ export const CategoriesPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* Segment Navigation Tabs */}
+      {/* Segment Navigation Tabs (Always receives full real taxonomy to stay stable during filtering) */}
       <SegmentTabs
-        segments={taxonomyTree}
+        segments={fullTree}
         selectedSegmentId={filters.segmentId}
         onSelectSegment={handleSelectSegmentTab}
         totalItemsCount={stats.segments}
@@ -246,7 +313,7 @@ export const CategoriesPage: React.FC = () => {
         onChange={handleFilterChange}
         onReset={handleResetFilters}
         segments={allSegments}
-        totalResultsCount={taxonomyTree.length}
+        totalResultsCount={filteredTree.length}
       />
 
       {/* Error State */}
@@ -290,7 +357,7 @@ export const CategoriesPage: React.FC = () => {
       )}
 
       {/* Empty State */}
-      {!loading && !error && taxonomyTree.length === 0 && (
+      {!loading && !error && filteredTree.length === 0 && (
         <CategoryEmptyState
           isFiltered={isFiltered}
           onResetFilters={handleResetFilters}
@@ -298,9 +365,9 @@ export const CategoriesPage: React.FC = () => {
       )}
 
       {/* Primary Taxonomy Hierarchy View */}
-      {!loading && !error && taxonomyTree.length > 0 && (
+      {!loading && !error && filteredTree.length > 0 && (
         <TaxonomyTree
-          segments={taxonomyTree}
+          segments={filteredTree}
           onInspectSegment={handleInspectSegment}
           onInspectSubcategory={handleInspectSubcategory}
         />

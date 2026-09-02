@@ -20,8 +20,6 @@ export interface TaxonomySubcategory {
   nameBn: string;
   status: TaxonomyStatus;
   order: number;
-  /** Backwards compatibility alias for segmentId */
-  categoryId?: string;
 }
 
 export interface TaxonomySegmentNode extends TaxonomySegment {
@@ -39,9 +37,3 @@ export interface TaxonomyStats {
   subcategories: number;
   activeItems: number;
 }
-
-// Backwards-compatible aliases for retained modules (e.g., MapPage)
-export type CategoryStatus = TaxonomyStatus;
-export type Category = TaxonomySegment;
-export type Subcategory = TaxonomySubcategory;
-export type CategoryFilterState = TaxonomyFilterState;

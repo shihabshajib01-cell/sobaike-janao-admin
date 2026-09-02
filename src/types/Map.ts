@@ -64,3 +64,16 @@ export interface MapLocationOption {
   zone: string;
   label: string;
 }
+
+export interface MapCategoryOption {
+  id: string;
+  nameEn: string;
+  nameBn: string;
+}
+
+export interface MapSubcategoryOption {
+  id: string;
+  categoryId: string;
+  nameEn: string;
+  nameBn: string;
+}
