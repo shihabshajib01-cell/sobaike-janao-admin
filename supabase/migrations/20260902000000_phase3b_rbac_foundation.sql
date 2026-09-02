@@ -14,19 +14,27 @@ BEGIN;
 -- ------------------------------------------------------------------------------
 -- 1. EXTEND public.admin_users (NON-DESTRUCTIVE / SAFE COLUMNS ONLY)
 -- ------------------------------------------------------------------------------
--- Ensure admin_users exists and add standard audit timestamps if missing.
+-- Ensure admin_users exists and add standard audit timestamps + display_name if missing.
 -- Preserves verified fields: user_id (UUID PK) and active (BOOLEAN).
 
 CREATE TABLE IF NOT EXISTS public.admin_users (
     user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    display_name TEXT NULL,
     active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Safely add created_at / updated_at if table already existed with only user_id and active
+-- Safely add columns if table already existed with fewer columns
 DO $$
 BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' AND table_name = 'admin_users' AND column_name = 'display_name'
+    ) THEN
+        ALTER TABLE public.admin_users ADD COLUMN display_name TEXT NULL;
+    END IF;
+
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns 
         WHERE table_schema = 'public' AND table_name = 'admin_users' AND column_name = 'created_at'
@@ -77,6 +85,7 @@ CREATE TABLE IF NOT EXISTS public.roles (
     name_en TEXT NOT NULL,
     name_bn TEXT NOT NULL,
     description TEXT,
+    active BOOLEAN NOT NULL DEFAULT true,
     is_system BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -132,7 +141,7 @@ CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_created_at ON public.admin_audit
 CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_action ON public.admin_audit_logs(action);
 
 -- ------------------------------------------------------------------------------
--- 5. CANONICAL PERMISSION SEEDING (IDEMPOTENT)
+-- 5. CANONICAL PERMISSION SEEDING (IDEMPOTENT & NON-OVERWRITING)
 -- ------------------------------------------------------------------------------
 -- Derived strictly from Phase 3A Architecture Specification and reconciled with
 -- live connected modules (including live Map Monitoring).
@@ -167,15 +176,10 @@ VALUES
     ('admin_users.manage', 'admin_users', 'manage', 'Manage Administrators', 'অ্যাডমিন পরিচালনা করুন', 'Invite, activate, deactivate, and manage administrative user accounts.'),
     ('roles.manage', 'roles', 'manage', 'Manage Roles', 'ভূমিকা পরিচালনা করুন', 'Create, update, and configure role definitions and permission sets.'),
     ('audit.view', 'audit', 'view', 'View Audit Logs', 'অডিট লগ দেখুন', 'Inspect administrative security audit trail and historical logs.')
-ON CONFLICT (id) DO UPDATE SET
-    module = EXCLUDED.module,
-    action = EXCLUDED.action,
-    name_en = EXCLUDED.name_en,
-    name_bn = EXCLUDED.name_bn,
-    description = EXCLUDED.description;
+ON CONFLICT (id) DO NOTHING;
 
 -- ------------------------------------------------------------------------------
--- 6. ROW-LEVEL SECURITY (RLS) POLICIES
+-- 6. TIGHTENED ROW-LEVEL SECURITY (RLS) POLICIES
 -- ------------------------------------------------------------------------------
 
 -- Enable RLS on all tables
@@ -187,18 +191,15 @@ ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admin_audit_logs ENABLE ROW LEVEL SECURITY;
 
 -- 6.1. Policies for public.admin_users
--- Preserve current login flow: authenticated users must be able to read their own record to verify membership.
--- Active admins may also read admin_users for admin status checks.
+-- Preserve current login flow: authenticated users can read ONLY their own record to verify membership and display name.
 DROP POLICY IF EXISTS "Users can read own admin membership" ON public.admin_users;
 CREATE POLICY "Users can read own admin membership"
     ON public.admin_users
     FOR SELECT
     TO authenticated
-    USING (user_id = auth.uid() OR public.is_active_admin());
+    USING (user_id = auth.uid());
 
--- Disallow direct client-side insert/update/delete on admin_users
-DROP POLICY IF EXISTS "Disallow direct client mutations on admin_users" ON public.admin_users;
--- (No INSERT/UPDATE/DELETE policy for authenticated/anon means direct table writes are DENIED by default)
+-- Disallow direct client-side insert/update/delete on admin_users (DENIED by default)
 
 -- 6.2. Policies for public.permissions
 -- Read-only for authenticated active admins
@@ -228,24 +229,19 @@ CREATE POLICY "Active admins can read role_permissions"
     USING (public.is_active_admin());
 
 -- 6.5. Policies for public.user_roles
--- Authenticated users can read their own role assignment; active admins can resolve roles
+-- Authenticated users can read ONLY their own role assignment for permission resolution
 DROP POLICY IF EXISTS "Users can read own role assignment" ON public.user_roles;
 CREATE POLICY "Users can read own role assignment"
     ON public.user_roles
     FOR SELECT
     TO authenticated
-    USING (user_id = auth.uid() OR public.is_active_admin());
+    USING (user_id = auth.uid());
 
 -- Direct client-side INSERT/UPDATE/DELETE on user_roles is strictly prohibited (no mutation policies)
 
 -- 6.6. Policies for public.admin_audit_logs
--- Append-only via server RPCs; active admins can read audit logs in future phases
+-- No direct client table SELECT during Phase 3B. (Audit trail reads will be mediated via controlled RPCs with audit.view in Phase 3H).
 DROP POLICY IF EXISTS "Active admins can read audit logs" ON public.admin_audit_logs;
-CREATE POLICY "Active admins can read audit logs"
-    ON public.admin_audit_logs
-    FOR SELECT
-    TO authenticated
-    USING (public.is_active_admin());
 
 -- ------------------------------------------------------------------------------
 -- 7. PERMISSIONS & GRANTS SANITIZATION
@@ -265,6 +261,8 @@ GRANT SELECT ON public.roles TO authenticated;
 GRANT SELECT ON public.permissions TO authenticated;
 GRANT SELECT ON public.role_permissions TO authenticated;
 GRANT SELECT ON public.user_roles TO authenticated;
-GRANT SELECT ON public.admin_audit_logs TO authenticated;
+
+-- Disallow SELECT grant on admin_audit_logs from authenticated during Phase 3B
+REVOKE SELECT ON public.admin_audit_logs FROM authenticated;
 
 COMMIT;

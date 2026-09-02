@@ -10,17 +10,20 @@ This directory contains the additive, non-destructive PostgreSQL migration and a
 
 1. **`supabase/audit/phase_3b_database_inspection.sql`**
    - **Type:** Non-destructive read-only SQL inspection queries.
-   - **Purpose:** Verifies live columns, constraints, foreign keys, RLS status, existing grants, and RPC security definitions on `public.admin_users` and related tables before/after migration execution.
-   - **Safety:** Contains only `SELECT` queries against `information_schema` and `pg_catalog`.
+   - **Purpose:** Verifies live columns, constraints, foreign keys, RLS status, existing grants, and RPC security definitions on `public.admin_users` and related tables before and after applying migrations.
+   - **Execution:** Run in the Supabase SQL Editor. Contains only `SELECT` queries against `information_schema` and `pg_catalog`.
 
 2. **`supabase/migrations/20260902000000_phase3b_rbac_foundation.sql`**
-   - **Type:** Additive, idempotent database migration.
+   - **Type:** Base additive, idempotent database migration.
    - **Purpose:** Creates the relational schema for RBAC (`roles`, `permissions`, `role_permissions`, `user_roles`, `admin_audit_logs`), seeds canonical active permissions, and establishes restrictive Row-Level Security (RLS) policies.
-   - **Safety:** Transaction-wrapped (`BEGIN ... COMMIT`), utilizes `IF NOT EXISTS` / `DO UPDATE`, preserves verified `admin_users` login flow, and denies direct client table mutations.
+
+3. **`supabase/migrations/20260902000001_phase3b_rbac_correction.sql`**
+   - **Type:** Forward correction migration.
+   - **Purpose:** Adds `public.roles.active` (BOOLEAN NOT NULL DEFAULT true) and `public.admin_users.display_name` (TEXT NULL), tightens self-read RLS policies on `admin_users` and `user_roles`, revokes direct client table SELECT on `admin_audit_logs`, and ensures `ON CONFLICT (id) DO NOTHING` for permission seeding.
 
 ---
 
-## Schema Architecture
+## Target Schema Architecture
 
 ```
                       +-------------------+
@@ -28,6 +31,7 @@ This directory contains the additive, non-destructive PostgreSQL migration and a
                       |-------------------|
                       | id (UUID, PK)     |
                       | email (text)      |
+                      | encrypted_password|
                       +-------------------+
                                 |
                                 | 1:1
@@ -36,9 +40,10 @@ This directory contains the additive, non-destructive PostgreSQL migration and a
 |       roles        |        |    admin_users     |
 |--------------------|        |--------------------|
 | id (text, PK)      |        | user_id (UUID, PK) |
-| name_en (text)     |        | active (boolean)   |
-| name_bn (text)     |        | created_at (timest)|
-| description (text) |        | updated_at (timest)|
+| name_en (text)     |        | display_name (text)| (Nullable editable user name)
+| name_bn (text)     |        | active (boolean)   | (Platform access gate)
+| description (text) |        | created_at (timest)|
+| active (boolean)   |        | updated_at (timest)|
 | is_system (boolean)|        +--------------------+
 | created_at (timest)|                  |
 | updated_at (timest)|                  | 1
@@ -84,34 +89,68 @@ This directory contains the additive, non-destructive PostgreSQL migration and a
 
 ---
 
+## Security Boundaries & Credential Policy
+
+1. **Passwords & Authentication:**
+   - Passwords exist ONLY within `auth.users` managed by Supabase Auth.
+   - There is **NO** password column in `public.admin_users` or any application table.
+   - Passwords must never be stored in logs, audits, localStorage, or frontend state.
+
+2. **Email & Identity:**
+   - Email is authoritative in `auth.users`.
+   - `public.admin_users.display_name` stores the editable User Name in the Admin domain.
+
+3. **Row-Level Security (RLS) Posture:**
+   - **`public.admin_users`**: Strict self-read (`user_id = auth.uid()`). Authenticated admins cannot directly query other admins' records. Global admin directory querying is deferred to Phase 3D via authenticated RPCs requiring `admin_users.view`.
+   - **`public.user_roles`**: Strict self-read (`user_id = auth.uid()`). Authenticated admins read only their own active role assignment.
+   - **`public.roles` / `public.permissions` / `public.role_permissions`**: Read-only access for active administrators (`public.is_active_admin()`).
+   - **`public.admin_audit_logs`**: Direct client table SELECT is denied. Audit log inspection will be mediated via controlled RPCs with `audit.view` in Phase 3H.
+   - **Direct Browser Mutations**: DENIED on all RBAC tables (`INSERT`, `UPDATE`, `DELETE` are disallowed for frontend clients).
+
+---
+
 ## Seeded Canonical Permissions (15)
 
 | Permission ID | Module | Action | Description |
 | :--- | :--- | :--- | :--- |
-| `dashboard.view` | `dashboard` | `view` | View dashboard KPIs and statistics |
-| `complaints.view` | `complaints` | `view` | View complaint registry and details |
-| `complaints.evidence_view` | `complaints` | `evidence_view` | View sensitive citizen photos/videos |
-| `complaints.export` | `complaints` | `export` | Export complaints to CSV/PDF |
-| `complaints.publish` | `complaints` | `publish` | Publish complaints to public feed |
-| `complaints.unpublish` | `complaints` | `unpublish` | Retract complaints from public feed |
-| `complaints.reject` | `complaints` | `reject` | Reject complaints with reason code |
-| `categories.view` | `categories` | `view` | View taxonomy hierarchy |
-| `location_activity.view` | `location_activity` | `view` | View visitor location telemetry |
-| `map.view` | `map` | `view` | View geospatial incident map |
-| `responses.view` | `responses` | `view` | View official responses module |
-| `admin_users.view` | `admin_users` | `view` | View administrator directory (Phase 3D) |
-| `admin_users.manage` | `admin_users` | `manage` | Manage admin accounts & invites (Phase 3D) |
-| `roles.manage` | `roles` | `manage` | Manage custom roles & permissions (Phase 3E) |
-| `audit.view` | `audit` | `view` | View security audit log (Phase 3H) |
+| `dashboard.view` | `dashboard` | `view` | View aggregate analytics, KPI statistics, and platform overview metrics. |
+| `complaints.view` | `complaints` | `view` | View complaint dossier registry, search, filter, and read details. |
+| `complaints.evidence_view` | `complaints` | `evidence_view` | View citizen-submitted private photographic and video evidence media. |
+| `complaints.export` | `complaints` | `export` | Export filtered complaint registries to CSV and PDF documents. |
+| `complaints.publish` | `complaints` | `publish` | Publish approved complaints to the public citizen feed. |
+| `complaints.unpublish` | `complaints` | `unpublish` | Retract published complaints from the public citizen feed. |
+| `complaints.reject` | `complaints` | `reject` | Reject invalid complaints with reason codes and administrative notes. |
+| `categories.view` | `categories` | `view` | View complaint taxonomy segments and subcategories. |
+| `location_activity.view` | `location_activity` | `view` | View visitor telemetry, permission grant analytics, and session logs. |
+| `map.view` | `map` | `view` | View geospatial incident mapping, district distributions, and location markers. |
+| `responses.view` | `responses` | `view` | View official agency response module (Reserved). |
+| `admin_users.view` | `admin_users` | `view` | View administrative user directory and active statuses (Phase 3D). |
+| `admin_users.manage` | `admin_users` | `manage` | Invite, activate, deactivate, and manage administrative user accounts (Phase 3D). |
+| `roles.manage` | `roles` | `manage` | Create, update, and configure role definitions and permission sets (Phase 3E). |
+| `audit.view` | `audit` | `view` | Inspect administrative security audit trail and historical logs (Phase 3H). |
 
-*Note: Roles remain unseeded in Phase 3B pending formal role catalogue approval from the product owner.*
+*Note: Roles remain unseeded in Phase 3B. Real role records will be created through the Role Creation UI in Phase 3E.*
 
 ---
 
-## Rollback & Recovery Guide
+## Execution Instructions for Supabase
 
-If required to revert Phase 3B database changes:
+1. Open your **Supabase Dashboard** > **SQL Editor**.
+2. Run `supabase/audit/phase_3b_database_inspection.sql` to inspect current tables.
+3. If running migrations manually:
+   - Run `supabase/migrations/20260902000000_phase3b_rbac_foundation.sql`.
+   - Run `supabase/migrations/20260902000001_phase3b_rbac_correction.sql`.
+4. Re-run `supabase/audit/phase_3b_database_inspection.sql` to verify that all 6 tables, indexes, constraints, 15 permissions, and tightened RLS policies exist.
 
+---
+
+## Rollback & Recovery Warnings
+
+> ⚠️ **CRITICAL WARNING:**
+> The `DROP TABLE ... CASCADE` statements below are **ONLY SAFE FOR AN EMPTY / PRE-PRODUCTION** testing environment before production data exists.
+> Once production roles, user assignments, or audit logs have been recorded, **DO NOT DROP TABLES**. Instead, apply forward corrective migrations to alter schema or adjust policies safely.
+
+### Pre-Production Emergency Reset Script:
 ```sql
 BEGIN;
 
