@@ -1,7 +1,13 @@
 /**
  * Role Management API Service Layer
- * Interacts exclusively with Supabase RPC `admin_list_roles`.
- * Strictly read-only: no direct table reads, no mock data fallbacks, no mutation bypasses.
+ * Interacts exclusively with Supabase RPCs:
+ * - admin_list_roles
+ * - admin_get_permission_catalogue
+ * - admin_get_role_detail
+ * - admin_create_role
+ * - admin_update_role
+ * - admin_replace_role_permissions
+ * Strictly authoritative: no direct table mutations, no mock fallbacks in configured production.
  */
 
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
@@ -11,6 +17,10 @@ import {
   PermissionCatalogueItem,
   CreateRoleInput,
   CreateRoleResult,
+  RoleDetail,
+  RoleUpdateInput,
+  ReplaceRolePermissionsInput,
+  ReplaceRolePermissionsResult,
   RoleApiError,
 } from '@/types/Role';
 
@@ -34,7 +44,7 @@ const FALLBACK_ROLES: RoleListItem[] = [
     description: 'Authorized to review, verify, publish, edit, and reject citizen complaints',
     active: true,
     is_system: false,
-    permission_count: 8,
+    permission_count: 6,
     assigned_user_count: 4,
     created_at: '2026-08-10T12:00:00Z',
     updated_at: null,
@@ -46,7 +56,7 @@ const FALLBACK_ROLES: RoleListItem[] = [
     description: 'Authorized to read assigned complaints, append updates, and inspect operational feeds',
     active: true,
     is_system: false,
-    permission_count: 5,
+    permission_count: 4,
     assigned_user_count: 7,
     created_at: '2026-08-15T09:30:00Z',
     updated_at: null,
@@ -54,51 +64,81 @@ const FALLBACK_ROLES: RoleListItem[] = [
 ];
 
 const inMemoryRoles: RoleListItem[] = [...FALLBACK_ROLES];
+const inMemoryRolePermissions: Record<string, string[]> = {
+  super_admin: [
+    'dashboard.view',
+    'complaints.view',
+    'complaints.evidence_view',
+    'complaints.export',
+    'complaints.publish',
+    'complaints.unpublish',
+    'complaints.reject',
+    'categories.view',
+    'location_activity.view',
+    'map.view',
+    'responses.view',
+    'admin_users.view',
+    'admin_users.manage',
+    'roles.manage',
+    'audit.view',
+  ],
+  content_moderator: [
+    'dashboard.view',
+    'complaints.view',
+    'complaints.evidence_view',
+    'complaints.publish',
+    'complaints.unpublish',
+    'complaints.reject',
+  ],
+  field_officer: [
+    'dashboard.view',
+    'complaints.view',
+    'categories.view',
+    'map.view',
+  ],
+};
 
-const FALLBACK_CATALOGUE: PermissionCatalogueItem[] = [
-  { id: 'complaints.view', module: 'complaints', action: 'view', name_en: 'View Complaints', name_bn: 'অভিযোগ দেখুন', description: 'Access and inspect citizen complaints', created_at: '2026-08-01T00:00:00Z' },
-  { id: 'complaints.edit', module: 'complaints', action: 'edit', name_en: 'Edit Complaints', name_bn: 'অভিযোগ সম্পাদনা', description: 'Modify titles, descriptions, and taxonomy', created_at: '2026-08-01T00:00:00Z' },
-  { id: 'complaints.publish', module: 'complaints', action: 'publish', name_en: 'Publish Complaints', name_bn: 'অভিযোগ প্রকাশ', description: 'Approve and publish complaints to public feed', created_at: '2026-08-01T00:00:00Z' },
-  { id: 'complaints.unpublish', module: 'complaints', action: 'unpublish', name_en: 'Unpublish Complaints', name_bn: 'অভিযোগ অপ্রকাশিত', description: 'Withdraw published complaints', created_at: '2026-08-01T00:00:00Z' },
-  { id: 'complaints.reject', module: 'complaints', action: 'reject', name_en: 'Reject Complaints', name_bn: 'অভিযোগ প্রত্যাখ্যান', description: 'Reject invalid or out-of-scope submissions', created_at: '2026-08-01T00:00:00Z' },
-  { id: 'complaints.update', module: 'complaints', action: 'update', name_en: 'Post Updates', name_bn: 'আপডেট পোস্ট', description: 'Append official investigation updates', created_at: '2026-08-01T00:00:00Z' },
-  { id: 'categories.view', module: 'categories', action: 'view', name_en: 'View Categories', name_bn: 'শ্রেণি দেখুন', description: 'Inspect category taxonomy structure', created_at: '2026-08-01T00:00:00Z' },
-  { id: 'roles.view', module: 'roles', action: 'view', name_en: 'View Roles', name_bn: 'রোল দেখুন', description: 'Inspect administrative roles and privileges', created_at: '2026-08-01T00:00:00Z' },
-  { id: 'roles.manage', module: 'roles', action: 'manage', name_en: 'Manage Roles', name_bn: 'রোল ব্যবস্থাপনা', description: 'Create and configure RBAC roles', created_at: '2026-08-01T00:00:00Z' },
-  { id: 'users.view', module: 'users', action: 'view', name_en: 'View Administrators', name_bn: 'অ্যাডমিন দেখুন', description: 'View list of admin users and statuses', created_at: '2026-08-01T00:00:00Z' },
-  { id: 'users.manage', module: 'users', action: 'manage', name_en: 'Manage Administrators', name_bn: 'অ্যাডমিন ব্যবস্থাপনা', description: 'Invite, activate, or revoke admin privileges', created_at: '2026-08-01T00:00:00Z' },
-  { id: 'activity.view', module: 'activity', action: 'view', name_en: 'View Activity Sessions', name_bn: 'সেশন দেখুন', description: 'Inspect visitor session and device metrics', created_at: '2026-08-01T00:00:00Z' },
-  { id: 'audit.view', module: 'audit', action: 'view', name_en: 'View Audit Logs', name_bn: 'অডিট লগ দেখুন', description: 'View system audit trails', created_at: '2026-08-01T00:00:00Z' },
-  { id: 'dashboard.view', module: 'dashboard', action: 'view', name_en: 'View Dashboard', name_bn: 'ড্যাশবোর্ড দেখুন', description: 'Access operational dashboard', created_at: '2026-08-01T00:00:00Z' },
-  { id: 'system.configure', module: 'system', action: 'configure', name_en: 'System Configuration', name_bn: 'সিস্টেম কনফিগারেশন', description: 'Manage platform core settings', created_at: '2026-08-01T00:00:00Z' },
+const CANONICAL_FALLBACK_CATALOGUE: PermissionCatalogueItem[] = [
+  { id: 'dashboard.view', module: 'dashboard', action: 'view', name_en: 'View Dashboard', name_bn: 'ড্যাশবোর্ড দেখুন', description: 'View aggregate analytics, KPI statistics, and platform overview metrics.', created_at: '2026-08-01T00:00:00Z' },
+  { id: 'complaints.view', module: 'complaints', action: 'view', name_en: 'View Complaints', name_bn: 'অভিযোগ দেখুন', description: 'View complaint dossier registry, search, filter, and read details.', created_at: '2026-08-01T00:00:00Z' },
+  { id: 'complaints.evidence_view', module: 'complaints', action: 'evidence_view', name_en: 'View Private Evidence', name_bn: 'সংবেদনশীল প্রমাণাদি দেখুন', description: 'View citizen-submitted private photographic and video evidence media.', created_at: '2026-08-01T00:00:00Z' },
+  { id: 'complaints.export', module: 'complaints', action: 'export', name_en: 'Export Complaints', name_bn: 'অভিযোগ রপ্তানি করুন', description: 'Export filtered complaint registries to CSV and PDF documents.', created_at: '2026-08-01T00:00:00Z' },
+  { id: 'complaints.publish', module: 'complaints', action: 'publish', name_en: 'Publish Complaint', name_bn: 'অভিযোগ প্রকাশ করুন', description: 'Publish approved complaints to the public citizen feed.', created_at: '2026-08-01T00:00:00Z' },
+  { id: 'complaints.unpublish', module: 'complaints', action: 'unpublish', name_en: 'Unpublish Complaint', name_bn: 'অভিযোগ অপ্রকাশিত করুন', description: 'Retract published complaints from the public citizen feed.', created_at: '2026-08-01T00:00:00Z' },
+  { id: 'complaints.reject', module: 'complaints', action: 'reject', name_en: 'Reject Complaint', name_bn: 'অভিযোগ প্রত্যাখ্যান করুন', description: 'Reject invalid complaints with reason codes and administrative notes.', created_at: '2026-08-01T00:00:00Z' },
+  { id: 'categories.view', module: 'categories', action: 'view', name_en: 'View Categories', name_bn: 'ক্যাটাগরি দেখুন', description: 'View complaint taxonomy segments and subcategories.', created_at: '2026-08-01T00:00:00Z' },
+  { id: 'location_activity.view', module: 'location_activity', action: 'view', name_en: 'View Location Activity', name_bn: 'লোকেশন অ্যাক্টিভিটি দেখুন', description: 'View visitor telemetry, permission grant analytics, and session logs.', created_at: '2026-08-01T00:00:00Z' },
+  { id: 'map.view', module: 'map', action: 'view', name_en: 'View Map Monitoring', name_bn: 'ম্যাপ মনিটরিং দেখুন', description: 'View geospatial incident mapping, district distributions, and location markers.', created_at: '2026-08-01T00:00:00Z' },
+  { id: 'responses.view', module: 'responses', action: 'view', name_en: 'View Responses', name_bn: 'প্রতিক্রিয়া দেখুন', description: 'View official agency response module.', created_at: '2026-08-01T00:00:00Z' },
+  { id: 'admin_users.view', module: 'admin_users', action: 'view', name_en: 'View Administrators', name_bn: 'অ্যাডমিন ব্যবহারকারী দেখুন', description: 'View administrative user directory and active statuses.', created_at: '2026-08-01T00:00:00Z' },
+  { id: 'admin_users.manage', module: 'admin_users', action: 'manage', name_en: 'Manage Administrators', name_bn: 'অ্যাডমিন পরিচালনা করুন', description: 'Invite, activate, deactivate, and manage administrative user accounts.', created_at: '2026-08-01T00:00:00Z' },
+  { id: 'roles.manage', module: 'roles', action: 'manage', name_en: 'Manage Roles', name_bn: 'ভূমিকা পরিচালনা করুন', description: 'Create, update, and configure role definitions and permission sets.', created_at: '2026-08-01T00:00:00Z' },
+  { id: 'audit.view', module: 'audit', action: 'view', name_en: 'View Audit Logs', name_bn: 'অডিট লগ দেখুন', description: 'Inspect administrative security audit trail and historical logs.', created_at: '2026-08-01T00:00:00Z' },
 ];
 
 export class RoleApi {
   /**
-   * List administrative roles via the secure `admin_list_roles` database RPC (or fallback).
+   * List administrative roles via the secure `admin_list_roles` database RPC.
    */
   async listRoles(): Promise<RoleListItem[]> {
     if (isSupabaseConfigured) {
-      try {
-        const { data, error } = await supabase.rpc('admin_list_roles');
-        if (!error && data) {
-          const rows = data as unknown as RoleRpcRow[];
-          return rows.map((item) => ({
-            id: String(item.id),
-            name_en: String(item.name_en || ''),
-            name_bn: item.name_bn ? String(item.name_bn) : null,
-            description: item.description ? String(item.description) : null,
-            active: Boolean(item.active),
-            is_system: Boolean(item.is_system),
-            permission_count: Number(item.permission_count || 0),
-            assigned_user_count: Number(item.assigned_user_count || 0),
-            created_at: String(item.created_at || ''),
-            updated_at: item.updated_at ? String(item.updated_at) : null,
-          }));
-        }
-      } catch (err) {
-        console.warn('RPC admin_list_roles failed, using fallback roles:', err);
+      const { data, error } = await supabase.rpc('admin_list_roles');
+      if (error) {
+        throw new RoleApiError(error.message, error.code, error.details, error.hint);
       }
+      const rows = (data || []) as unknown as RoleRpcRow[];
+      return rows.map((item) => ({
+        id: String(item.id),
+        name_en: String(item.name_en || ''),
+        name_bn: item.name_bn ? String(item.name_bn) : null,
+        description: item.description ? String(item.description) : null,
+        active: Boolean(item.active),
+        is_system: Boolean(item.is_system),
+        permission_count: Number(item.permission_count || 0),
+        assigned_user_count: Number(item.assigned_user_count || 0),
+        created_at: String(item.created_at || ''),
+        updated_at: item.updated_at ? String(item.updated_at) : null,
+      }));
     }
 
     return inMemoryRoles;
@@ -109,52 +149,101 @@ export class RoleApi {
    */
   async getPermissionCatalogue(): Promise<PermissionCatalogueItem[]> {
     if (isSupabaseConfigured) {
-      try {
-        const { data, error } = await supabase.rpc('admin_get_permission_catalogue');
-        if (!error && data) {
-          const rows = data as unknown as PermissionCatalogueItem[];
-          return rows.map((p) => ({
-            id: String(p.id),
-            module: String(p.module),
-            action: String(p.action),
-            name_en: String(p.name_en || ''),
-            name_bn: p.name_bn ? String(p.name_bn) : null,
-            description: p.description ? String(p.description) : null,
-            created_at: String(p.created_at || ''),
-          }));
-        }
-      } catch (err) {
-        console.warn('RPC admin_get_permission_catalogue failed, using fallback catalogue:', err);
+      const { data, error } = await supabase.rpc('admin_get_permission_catalogue');
+      if (error) {
+        throw new RoleApiError(error.message, error.code, error.details, error.hint);
       }
+      const rows = (data || []) as unknown as PermissionCatalogueItem[];
+      return rows.map((p) => ({
+        id: String(p.id),
+        module: String(p.module),
+        action: String(p.action),
+        name_en: String(p.name_en || ''),
+        name_bn: p.name_bn ? String(p.name_bn) : null,
+        description: p.description ? String(p.description) : null,
+        created_at: String(p.created_at || ''),
+      }));
     }
 
-    return FALLBACK_CATALOGUE;
+    return CANONICAL_FALLBACK_CATALOGUE;
+  }
+
+  /**
+   * Fetch full role detail by ID via `admin_get_role_detail`.
+   */
+  async getRoleDetail(roleId: string): Promise<RoleDetail> {
+    const cleanId = roleId ? roleId.trim() : '';
+    if (!cleanId) {
+      throw new RoleApiError('Role ID cannot be empty.', '22000');
+    }
+
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase.rpc('admin_get_role_detail', {
+        p_role_id: cleanId,
+      });
+
+      if (error) {
+        throw new RoleApiError(error.message, error.code, error.details, error.hint);
+      }
+
+      if (!data) {
+        throw new RoleApiError(`Role not found with ID: ${cleanId}`, 'P0002');
+      }
+
+      const item = data as unknown as RoleDetail;
+      return {
+        id: String(item.id),
+        name_en: String(item.name_en || ''),
+        name_bn: item.name_bn ? String(item.name_bn) : null,
+        description: item.description ? String(item.description) : null,
+        active: Boolean(item.active),
+        is_system: Boolean(item.is_system),
+        permission_ids: Array.isArray(item.permission_ids) ? item.permission_ids.map(String) : [],
+        permission_count: Number(item.permission_count || 0),
+        assigned_user_count: Number(item.assigned_user_count || 0),
+        created_at: String(item.created_at || ''),
+        updated_at: item.updated_at ? String(item.updated_at) : null,
+      };
+    }
+
+    const role = inMemoryRoles.find((r) => r.id === cleanId);
+    if (!role) {
+      throw new RoleApiError(`Role not found with ID: ${cleanId}`, 'P0002');
+    }
+
+    return {
+      ...role,
+      permission_ids: inMemoryRolePermissions[cleanId] || [],
+    };
   }
 
   /**
    * Atomically create a new administrative role with validated permission IDs.
    */
   async createRole(input: CreateRoleInput): Promise<CreateRoleResult> {
-    if (isSupabaseConfigured) {
-      try {
-        const { data, error } = await supabase.rpc('admin_create_role', {
-          p_name: input.name.trim(),
-          p_active: input.active,
-          p_permission_ids: input.permission_ids,
-          p_description: input.description && input.description.trim() ? input.description.trim() : null,
-        });
+    const cleanName = input.name ? input.name.trim() : '';
+    if (!cleanName) {
+      throw new RoleApiError('Role name is required and cannot be blank.', '22000');
+    }
 
-        if (!error && data) {
-          return data as unknown as CreateRoleResult;
-        }
-      } catch (err) {
-        console.warn('RPC admin_create_role failed, saving to in-memory store:', err);
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase.rpc('admin_create_role', {
+        p_name: cleanName,
+        p_active: input.active,
+        p_permission_ids: input.permission_ids,
+        p_description: input.description && input.description.trim() ? input.description.trim() : null,
+      });
+
+      if (error) {
+        throw new RoleApiError(error.message, error.code, error.details, error.hint);
       }
+
+      return data as unknown as CreateRoleResult;
     }
 
     const newRole: RoleListItem = {
       id: `role_${Date.now()}`,
-      name_en: input.name.trim(),
+      name_en: cleanName,
       name_bn: null,
       description: input.description?.trim() || null,
       active: input.active,
@@ -165,8 +254,9 @@ export class RoleApi {
       updated_at: null,
     };
     inMemoryRoles.push(newRole);
+    inMemoryRolePermissions[newRole.id] = [...input.permission_ids];
 
-    const createdResult: CreateRoleResult = {
+    return {
       id: newRole.id,
       name_en: newRole.name_en,
       name_bn: null,
@@ -178,8 +268,112 @@ export class RoleApi {
       created_at: newRole.created_at,
       updated_at: newRole.created_at,
     };
+  }
 
-    return createdResult;
+  /**
+   * Atomically update role metadata and optionally replace its permission set.
+   */
+  async updateRole(input: RoleUpdateInput): Promise<RoleDetail> {
+    const cleanId = input.id ? input.id.trim() : '';
+    const cleanName = input.name ? input.name.trim() : '';
+
+    if (!cleanId) {
+      throw new RoleApiError('Role ID cannot be empty.', '22000');
+    }
+    if (!cleanName) {
+      throw new RoleApiError('Role name is required and cannot be blank.', '22000');
+    }
+
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase.rpc('admin_update_role', {
+        p_role_id: cleanId,
+        p_name: cleanName,
+        p_active: input.active,
+        p_permission_ids: input.permission_ids !== undefined ? input.permission_ids : null,
+        p_description: input.description && input.description.trim() ? input.description.trim() : null,
+      });
+
+      if (error) {
+        throw new RoleApiError(error.message, error.code, error.details, error.hint);
+      }
+
+      return data as unknown as RoleDetail;
+    }
+
+    const existingIndex = inMemoryRoles.findIndex((r) => r.id === cleanId);
+    if (existingIndex === -1) {
+      throw new RoleApiError(`Role not found with ID: ${cleanId}`, 'P0002');
+    }
+
+    const existing = inMemoryRoles[existingIndex];
+    if (existing.is_system && !input.active) {
+      throw new RoleApiError('System roles are protected and cannot be deactivated.', '42501');
+    }
+    if (existing.is_system && input.permission_ids !== undefined && input.permission_ids !== null) {
+      throw new RoleApiError('System role permissions are protected and cannot be modified.', '42501');
+    }
+
+    const updated: RoleListItem = {
+      ...existing,
+      name_en: cleanName,
+      active: input.active,
+      description: input.description?.trim() || null,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (input.permission_ids !== undefined && input.permission_ids !== null) {
+      inMemoryRolePermissions[cleanId] = [...input.permission_ids];
+      updated.permission_count = input.permission_ids.length;
+    }
+
+    inMemoryRoles[existingIndex] = updated;
+
+    return {
+      ...updated,
+      permission_ids: inMemoryRolePermissions[cleanId] || [],
+    };
+  }
+
+  /**
+   * Dedicated atomic replacement of a role's permission set via `admin_replace_role_permissions`.
+   */
+  async replaceRolePermissions(input: ReplaceRolePermissionsInput): Promise<ReplaceRolePermissionsResult> {
+    const cleanId = input.role_id ? input.role_id.trim() : '';
+    if (!cleanId) {
+      throw new RoleApiError('Role ID cannot be empty.', '22000');
+    }
+
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase.rpc('admin_replace_role_permissions', {
+        p_role_id: cleanId,
+        p_permission_ids: input.permission_ids,
+      });
+
+      if (error) {
+        throw new RoleApiError(error.message, error.code, error.details, error.hint);
+      }
+
+      return data as unknown as ReplaceRolePermissionsResult;
+    }
+
+    const role = inMemoryRoles.find((r) => r.id === cleanId);
+    if (!role) {
+      throw new RoleApiError(`Role not found with ID: ${cleanId}`, 'P0002');
+    }
+    if (role.is_system) {
+      throw new RoleApiError('System roles are protected and their permissions cannot be modified.', '42501');
+    }
+
+    inMemoryRolePermissions[cleanId] = [...input.permission_ids];
+    role.permission_count = input.permission_ids.length;
+    role.updated_at = new Date().toISOString();
+
+    return {
+      role_id: cleanId,
+      permission_ids: input.permission_ids,
+      permission_count: input.permission_ids.length,
+      updated_at: role.updated_at,
+    };
   }
 }
 
