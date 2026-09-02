@@ -539,7 +539,7 @@ export const FeedDetailDrawer: React.FC<FeedDetailDrawerProps> = ({
         size="lg"
         mobileSheet={true}
         title={`${post.id} — ${isBn ? 'পাবলিক ফিড মডারেশন' : 'Public Feed'}`}
-        description={`${isBn ? 'নাগরিক রেফারেন্স:' : 'Complaint Ref:'} ${post.complaintId || 'N/A'} • ${post.location.ward}`}
+        description={`${isBn ? 'নাগরিক রেফারেন্স:' : 'Complaint Ref:'} ${post.complaintId || 'N/A'} • ${post.location?.ward || post.ward || '-'}`}
         footer={
           <div className="flex items-center justify-between w-full gap-2">
             <Button

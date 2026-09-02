@@ -36,3 +36,19 @@ export interface Permission {
   descriptionBn?: string;
 }
 
+export interface Role {
+  id: string;
+  name: string;
+  nameBn?: string;
+  description?: string;
+  descriptionBn?: string;
+  permissions?: string[] | Permission[];
+  usersCount?: number;
+  isSystem?: boolean;
+}
+
+export interface UserFilterState {
+  search: string;
+  role?: string;
+  status?: string;
+}
