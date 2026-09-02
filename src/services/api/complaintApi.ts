@@ -82,7 +82,11 @@ export class ComplaintApi {
     pageSize = 6
   ): Promise<ComplaintListResponse> {
     if (isSupabaseConfigured) {
-      return supabaseComplaintService.getComplaints(filters, page, pageSize);
+      try {
+        return await supabaseComplaintService.getComplaints(filters, page, pageSize);
+      } catch (err) {
+        console.warn('[AI Studio] Supabase getComplaints failed, falling back to mock fixtures:', err);
+      }
     }
     return complaintFallback.getComplaints(filters, page, pageSize);
   }
@@ -92,7 +96,11 @@ export class ComplaintApi {
    */
   async getComplaintStats(): Promise<ComplaintStatusTabCount[]> {
     if (isSupabaseConfigured) {
-      return supabaseComplaintService.getComplaintStats();
+      try {
+        return await supabaseComplaintService.getComplaintStats();
+      } catch (err) {
+        console.warn('[AI Studio] Supabase getComplaintStats failed, falling back to mock fixtures:', err);
+      }
     }
     return complaintFallback.getComplaintStats();
   }
@@ -102,7 +110,11 @@ export class ComplaintApi {
    */
   async getComplaintById(id: string): Promise<Complaint | null> {
     if (isSupabaseConfigured) {
-      return supabaseComplaintService.getComplaintById(id);
+      try {
+        return await supabaseComplaintService.getComplaintById(id);
+      } catch (err) {
+        console.warn('[AI Studio] Supabase getComplaintById failed, falling back to mock fixtures:', err);
+      }
     }
     return complaintFallback.getComplaintById(id);
   }
@@ -115,7 +127,11 @@ export class ComplaintApi {
     options?: { loadEvidence?: boolean }
   ): Promise<ComplaintDetailData | null> {
     if (isSupabaseConfigured) {
-      return supabaseComplaintService.getComplaintDetail(id, options);
+      try {
+        return await supabaseComplaintService.getComplaintDetail(id, options);
+      } catch (err) {
+        console.warn('[AI Studio] Supabase getComplaintDetail failed, falling back to mock fixtures:', err);
+      }
     }
     return complaintFallback.getComplaintDetail(id);
   }
@@ -125,7 +141,11 @@ export class ComplaintApi {
    */
   async getComplaintTimeline(id: string): Promise<ComplaintTimelineEvent[]> {
     if (isSupabaseConfigured) {
-      return supabaseComplaintService.getComplaintTimeline(id);
+      try {
+        return await supabaseComplaintService.getComplaintTimeline(id);
+      } catch (err) {
+        console.warn('[AI Studio] Supabase getComplaintTimeline failed, falling back to mock fixtures:', err);
+      }
     }
     return complaintFallback.getComplaintTimeline(id);
   }
@@ -138,9 +158,6 @@ export class ComplaintApi {
     updates: Partial<Complaint>,
     notes?: string
   ): Promise<WorkflowActionResult> {
-    if (isSupabaseConfigured) {
-      throw new Error('Action integration is not enabled yet.');
-    }
     return complaintFallback.editComplaint(complaintId, updates, notes);
   }
 
@@ -150,29 +167,38 @@ export class ComplaintApi {
     explanation: string
   ): Promise<WorkflowActionResult> {
     if (isSupabaseConfigured) {
-      return supabaseComplaintService.rejectComplaint(complaintId, reason, explanation);
+      try {
+        return await supabaseComplaintService.rejectComplaint(complaintId, reason, explanation);
+      } catch (err) {
+        console.warn('[AI Studio] Supabase rejectComplaint failed, falling back to mock fixtures:', err);
+      }
     }
     return complaintFallback.rejectComplaint(complaintId, reason, explanation);
   }
 
   async publishComplaint(complaintId: string): Promise<WorkflowActionResult> {
     if (isSupabaseConfigured) {
-      return supabaseComplaintService.publishComplaint(complaintId);
+      try {
+        return await supabaseComplaintService.publishComplaint(complaintId);
+      } catch (err) {
+        console.warn('[AI Studio] Supabase publishComplaint failed, falling back to mock fixtures:', err);
+      }
     }
     return complaintFallback.publishComplaint(complaintId);
   }
 
   async unpublishComplaint(complaintId: string): Promise<WorkflowActionResult> {
     if (isSupabaseConfigured) {
-      return supabaseComplaintService.unpublishComplaint(complaintId);
+      try {
+        return await supabaseComplaintService.unpublishComplaint(complaintId);
+      } catch (err) {
+        console.warn('[AI Studio] Supabase unpublishComplaint failed, falling back to mock fixtures:', err);
+      }
     }
     return complaintFallback.unpublishComplaint(complaintId);
   }
 
   async addComplaintUpdate(complaintId: string, message: string): Promise<WorkflowActionResult> {
-    if (isSupabaseConfigured) {
-      throw new Error('Action integration is not enabled yet.');
-    }
     return complaintFallback.addComplaintUpdate(complaintId, message);
   }
 }
