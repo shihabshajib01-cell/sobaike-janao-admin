@@ -6,6 +6,7 @@ import {
   FolderTree,
   MapPin,
   MapPinned,
+  ShieldCheck,
 } from 'lucide-react';
 import { TranslationDictionary } from '@/context/LanguageContext';
 
@@ -54,5 +55,11 @@ export const ADMIN_NAVIGATION_ITEMS: RouteItem[] = [
     labelKey: 'locationActivity',
     defaultLabel: 'Location Activity',
     icon: MapPinned,
+  },
+  {
+    path: '/roles',
+    labelKey: 'roles',
+    defaultLabel: 'Roles & Permissions',
+    icon: ShieldCheck,
   },
 ];

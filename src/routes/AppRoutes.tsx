@@ -12,6 +12,7 @@ import {
   CategoriesPage,
   MapPage,
   LocationActivityPage,
+  RolesPage,
   NotFoundPage,
 } from '@/pages';
 
@@ -88,6 +89,7 @@ export const AppRoutes: React.FC = () => {
           <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/map" element={<MapPage />} />
           <Route path="/location-activity" element={<LocationActivityPage />} />
+          <Route path="/roles" element={<RolesPage />} />
 
           {/* Catch-all 404 Route */}
           <Route path="*" element={<NotFoundPage />} />

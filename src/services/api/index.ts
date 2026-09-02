@@ -21,3 +21,7 @@ export { default as locationActivityService } from './locationActivityService';
 
 export * from './reverseGeocodingService';
 export { default as reverseGeocodingService } from './reverseGeocodingService';
+
+export * from './roleApi';
+export { default as roleApi } from './roleApi';
+

@@ -10,6 +10,7 @@ export interface TranslationDictionary {
     categories: string;
     map: string;
     locationActivity: string;
+    roles: string;
   };
   header: {
     searchPlaceholder: string;
@@ -46,6 +47,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       categories: 'Categories',
       map: 'Map Monitoring',
       locationActivity: 'Location Activity',
+      roles: 'Roles & Permissions',
     },
     header: {
       searchPlaceholder: 'Search complaints, IDs, wards...',
@@ -80,6 +82,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       categories: 'বিভাগসমূহ',
       map: 'ম্যাপ মনিটরিং',
       locationActivity: 'লোকেশন অ্যাক্টিভিটি',
+      roles: 'ভূমিকা ও অনুমতি',
     },
     header: {
       searchPlaceholder: 'অভিযোগ, আইডি, ওয়ার্ড অনুসন্ধান করুন...',
