@@ -103,6 +103,13 @@ export class RoleApiError extends Error {
       this.message.toLowerCase().includes('cannot be empty')
     );
   }
+
+  get isConfigError(): boolean {
+    return (
+      this.code === 'CONFIG_ERROR' ||
+      this.message.toLowerCase().includes('not configured')
+    );
+  }
 }
 
 export interface RoleDetail {

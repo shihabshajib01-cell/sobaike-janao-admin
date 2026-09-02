@@ -34,6 +34,14 @@ This directory contains the database migrations, audit scripts, and security def
        - `public.admin_update_role(p_role_id, p_name, p_active, p_permission_ids, p_description)`
        - `public.admin_replace_role_permissions(p_role_id, p_permission_ids)`
 
+5. **`20260902000007_phase2a_role_backend_safety.sql`**
+   - **Phase:** Phase 2A Role Management Backend Safety
+   - **Contents:** Introduces `count_effective_role_managers()`, advisory transaction locks, system-role protection, and last-manager protection.
+
+6. **`20260902000008_phase2a_role_update_correction.sql`**
+   - **Phase:** Phase 2A Role Update Correction
+   - **Contents:** Preserves existing Bengali role names (`name_bn`) during English renames, preserves omitted descriptions, and supports explicit description updates.
+
 ---
 
 ## Role Management Backend API Specification
