@@ -363,23 +363,17 @@ export class RoleApi {
         p_update_description: hasDescriptionUpdate,
       };
 
-      let { data, error } = await supabase.rpc('admin_update_role', rpcParams);
-
-      // Graceful fallback if live database does not yet have migration 00008 (p_update_description)
-      if (error && (error.code === 'PGRST202' || error.message.includes('p_update_description'))) {
-        const fallbackParams: Record<string, unknown> = {
-          p_role_id: cleanId,
-          p_name: cleanName,
-          p_active: input.active,
-          p_permission_ids: input.permission_ids !== undefined ? input.permission_ids : null,
-          p_description: cleanDesc,
-        };
-        const fallbackRes = await supabase.rpc('admin_update_role', fallbackParams);
-        data = fallbackRes.data;
-        error = fallbackRes.error;
-      }
+      const { data, error } = await supabase.rpc('admin_update_role', rpcParams);
 
       if (error) {
+        if (error.code === 'PGRST202' || error.message?.includes('p_update_description')) {
+          throw new RoleApiError(
+            'The database is missing migration 00008 required for safe role updates. Please apply migration 20260902000008_phase2a_role_update_correction.sql.',
+            'COMPATIBILITY_ERROR',
+            error.details,
+            'Apply migration 00008 to enable safe role updates with name_bn and description preservation.'
+          );
+        }
         throw new RoleApiError(error.message, error.code, error.details, error.hint);
       }
 

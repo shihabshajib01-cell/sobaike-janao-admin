@@ -37,6 +37,21 @@ export interface UserPermissionProfile {
   isAdmin: boolean;
 }
 
+const isDev = Boolean(typeof import.meta !== 'undefined' && import.meta.env?.DEV);
+
+const DEV_MOCK_PROFILE: UserPermissionProfile = {
+  role: {
+    id: 'dev_admin',
+    name_en: 'System Administrator (Dev)',
+    name_bn: 'সিস্টেম অ্যাডমিনিস্ট্রেটর (ডেভ)',
+    active: true,
+    is_system: true,
+  },
+  permissions: [...CANONICAL_PERMISSIONS],
+  isBootstrapMode: false,
+  isAdmin: true,
+};
+
 /**
  * Service to resolve effective administrative role and permissions for an authenticated admin.
  * Follows strict database RBAC foundation:
@@ -51,74 +66,59 @@ export const permissionService = {
    * Resolves the effective authorization profile for the currently authenticated admin caller
    */
   async resolveCurrentUserAuthorization(): Promise<UserPermissionProfile> {
-    const fallbackProfile: UserPermissionProfile = {
-      role: {
-        id: 'dev_admin',
-        name_en: 'System Administrator (Dev)',
-        name_bn: 'সিস্টেম অ্যাডমিনিস্ট্রেটর (ডেভ)',
-        active: true,
-        is_system: true,
-      },
-      permissions: [...CANONICAL_PERMISSIONS],
-      isBootstrapMode: true,
-      isAdmin: true,
+    if (!isSupabaseConfigured) {
+      if (isDev) {
+        return DEV_MOCK_PROFILE;
+      }
+      throw new Error('Supabase authorization service is not configured in this environment.');
+    }
+
+    const currentUser = await authService.getCurrentUser();
+    if (!currentUser?.id) {
+      throw new Error('No authenticated user found for authorization context resolution.');
+    }
+
+    // Authoritative check: Database runtime context RPC using auth.uid() exclusively
+    const { data: contextData, error: rpcError } = await supabase.rpc(
+      'admin_get_my_authorization_context'
+    );
+
+    if (rpcError) {
+      console.error('Authorization context RPC failed:', rpcError.message || rpcError);
+      throw new Error(`Authorization context RPC failed: ${rpcError.message || 'Unknown error'}`);
+    }
+
+    if (!contextData || typeof contextData !== 'object') {
+      throw new Error('Invalid authorization context response received from server.');
+    }
+
+    const parsed = contextData as {
+      is_admin?: boolean;
+      is_bootstrap?: boolean;
+      role?: UserAssignedRole | null;
+      permission_ids?: string[];
     };
 
-    if (!isSupabaseConfigured) {
-      return fallbackProfile;
-    }
+    const isAdmin = Boolean(parsed.is_admin);
+    const isBootstrap = Boolean(parsed.is_bootstrap);
+    const role = parsed.role || null;
+    const permissions = Array.isArray(parsed.permission_ids) ? parsed.permission_ids : [];
 
-    try {
-      const currentUser = await authService.getCurrentUser();
-      if (!currentUser?.id) {
-        return fallbackProfile;
-      }
-
-      // Authoritative check: Database runtime context RPC using auth.uid() exclusively
-      const { data: contextData, error: rpcError } = await supabase.rpc(
-        'admin_get_my_authorization_context'
-      );
-
-      if (rpcError) {
-        console.warn('Authorization context RPC failed, using fallback profile:', rpcError.message || rpcError);
-        return fallbackProfile;
-      }
-
-      if (!contextData || typeof contextData !== 'object') {
-        return fallbackProfile;
-      }
-
-      const parsed = contextData as {
-        is_admin?: boolean;
-        is_bootstrap?: boolean;
-        role?: UserAssignedRole | null;
-        permission_ids?: string[];
-      };
-
-      const isAdmin = Boolean(parsed.is_admin);
-      const isBootstrap = Boolean(parsed.is_bootstrap);
-      const role = parsed.role || null;
-      const permissions = Array.isArray(parsed.permission_ids) ? parsed.permission_ids : [];
-
-      return {
-        isAdmin,
-        isBootstrapMode: isBootstrap,
-        role: role
-          ? {
-              id: String(role.id),
-              name_en: String(role.name_en || ''),
-              name_bn: role.name_bn ? String(role.name_bn) : null,
-              description: role.description ? String(role.description) : null,
-              active: Boolean(role.active),
-              is_system: Boolean(role.is_system),
-            }
-          : null,
-        permissions: isAdmin ? permissions : [],
-      };
-    } catch (err) {
-      console.warn('Failed to resolve authorization context from server, using fallback profile:', err);
-      return fallbackProfile;
-    }
+    return {
+      isAdmin,
+      isBootstrapMode: isBootstrap,
+      role: role
+        ? {
+            id: String(role.id),
+            name_en: String(role.name_en || ''),
+            name_bn: role.name_bn ? String(role.name_bn) : null,
+            description: role.description ? String(role.description) : null,
+            active: Boolean(role.active),
+            is_system: Boolean(role.is_system),
+          }
+        : null,
+      permissions: isAdmin ? permissions : [],
+    };
   },
 
   /**

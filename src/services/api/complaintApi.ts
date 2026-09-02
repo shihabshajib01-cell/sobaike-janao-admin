@@ -28,6 +28,8 @@ export interface ComplaintDetailData {
   evidenceError?: string | null;
 }
 
+const isDev = Boolean(typeof import.meta !== 'undefined' && import.meta.env?.DEV);
+
 export class ComplaintApi {
   private client: ApiClient;
 
@@ -40,20 +42,19 @@ export class ComplaintApi {
    */
   async getSegments(): Promise<SupabaseSegment[]> {
     if (isSupabaseConfigured) {
-      try {
-        return await getTaxonomySegments();
-      } catch (err) {
-        console.warn('Failed to load taxonomy segments from Supabase, using fallback:', err);
-      }
+      return await getTaxonomySegments();
     }
-    return [
-      { id: 'roads_traffic', name_en: 'Roads & Traffic', name_bn: 'রাস্তাঘাট ও ট্রাফিক', active: true },
-      { id: 'waste_management', name_en: 'Waste Management', name_bn: 'বর্জ্য ব্যবস্থাপনা', active: true },
-      { id: 'extortion', name_en: 'Extortion & Illegal Tolls', name_bn: 'চাঁদাবাজি ও অবৈধ টোল', active: true },
-      { id: 'harassment', name_en: 'Public Harassment', name_bn: 'পাবলিক হয়রানি', active: true },
-      { id: 'civic_issues', name_en: 'Civic Problems & Drainage', name_bn: 'নাগরিক সমস্যা ও ড্রেনেজ', active: true },
-      { id: 'corruption', name_en: 'Public Office Irregularities', name_bn: 'সরকারি দপ্তরের অনিয়ম', active: true },
-    ];
+    if (isDev) {
+      return [
+        { id: 'roads_traffic', name_en: 'Roads & Traffic', name_bn: 'রাস্তাঘাট ও ট্রাফিক', active: true },
+        { id: 'waste_management', name_en: 'Waste Management', name_bn: 'বর্জ্য ব্যবস্থাপনা', active: true },
+        { id: 'extortion', name_en: 'Extortion & Illegal Tolls', name_bn: 'চাঁদাবাজি ও অবৈধ টোল', active: true },
+        { id: 'harassment', name_en: 'Public Harassment', name_bn: 'পাবলিক হয়রানি', active: true },
+        { id: 'civic_issues', name_en: 'Civic Problems & Drainage', name_bn: 'নাগরিক সমস্যা ও ড্রেনেজ', active: true },
+        { id: 'corruption', name_en: 'Public Office Irregularities', name_bn: 'সরকারি দপ্তরের অনিয়ম', active: true },
+      ];
+    }
+    throw new Error('Supabase complaint service is not configured in this environment.');
   }
 
   /**
@@ -61,29 +62,29 @@ export class ComplaintApi {
    */
   async getLocations(): Promise<string[]> {
     if (isSupabaseConfigured) {
-      try {
-        return await getDistinctLocations();
-      } catch (err) {
-        console.warn('Failed to load locations from Supabase, using fallback:', err);
-      }
+      return await getDistinctLocations();
     }
-    return [
-      'Dhaka',
-      'Chattogram',
-      'Gazipur',
-      'Narayanganj',
-      'Sylhet',
-      'Rajshahi',
-      'Khulna',
-      'Barishal',
-      'Rangpur',
-      'Mymensingh',
-    ];
+    if (isDev) {
+      return [
+        'Dhaka',
+        'Chattogram',
+        'Gazipur',
+        'Narayanganj',
+        'Sylhet',
+        'Rajshahi',
+        'Khulna',
+        'Barishal',
+        'Rangpur',
+        'Mymensingh',
+      ];
+    }
+    throw new Error('Supabase complaint service is not configured in this environment.');
   }
 
   /**
    * Get paginated and filtered complaint list
-   * Configured production queries Supabase; falls back gracefully to in-memory fixtures.
+   * Configured production queries Supabase directly and fails closed on error.
+   * Zero rows return real empty list, never fake fixtures.
    */
   async getComplaints(
     filters: Partial<ComplaintFilterState> = {},
@@ -91,13 +92,12 @@ export class ComplaintApi {
     pageSize = 6
   ): Promise<ComplaintListResponse> {
     if (isSupabaseConfigured) {
-      try {
-        return await supabaseComplaintService.getComplaints(filters, page, pageSize);
-      } catch (err) {
-        console.warn('Failed to query complaints from Supabase, using mock fixtures:', err);
-      }
+      return await supabaseComplaintService.getComplaints(filters, page, pageSize);
     }
-    return complaintFallback.getComplaints(filters, page, pageSize);
+    if (isDev) {
+      return complaintFallback.getComplaints(filters, page, pageSize);
+    }
+    throw new Error('Supabase complaint service is not configured in this environment.');
   }
 
   /**
@@ -105,13 +105,12 @@ export class ComplaintApi {
    */
   async getComplaintStats(): Promise<ComplaintStatusTabCount[]> {
     if (isSupabaseConfigured) {
-      try {
-        return await supabaseComplaintService.getComplaintStats();
-      } catch (err) {
-        console.warn('Failed to query complaint stats from Supabase, using mock fixtures:', err);
-      }
+      return await supabaseComplaintService.getComplaintStats();
     }
-    return complaintFallback.getComplaintStats();
+    if (isDev) {
+      return complaintFallback.getComplaintStats();
+    }
+    throw new Error('Supabase complaint service is not configured in this environment.');
   }
 
   /**
@@ -119,13 +118,12 @@ export class ComplaintApi {
    */
   async getComplaintById(id: string): Promise<Complaint | null> {
     if (isSupabaseConfigured) {
-      try {
-        return await supabaseComplaintService.getComplaintById(id);
-      } catch (err) {
-        console.warn(`Failed to get complaint ${id} from Supabase, using mock fixtures:`, err);
-      }
+      return await supabaseComplaintService.getComplaintById(id);
     }
-    return complaintFallback.getComplaintById(id);
+    if (isDev) {
+      return complaintFallback.getComplaintById(id);
+    }
+    throw new Error('Supabase complaint service is not configured in this environment.');
   }
 
   /**
@@ -136,13 +134,12 @@ export class ComplaintApi {
     options?: { loadEvidence?: boolean }
   ): Promise<ComplaintDetailData | null> {
     if (isSupabaseConfigured) {
-      try {
-        return await supabaseComplaintService.getComplaintDetail(id, options);
-      } catch (err) {
-        console.warn(`Failed to get complaint detail ${id} from Supabase, using mock fixtures:`, err);
-      }
+      return await supabaseComplaintService.getComplaintDetail(id, options);
     }
-    return complaintFallback.getComplaintDetail(id);
+    if (isDev) {
+      return complaintFallback.getComplaintDetail(id);
+    }
+    throw new Error('Supabase complaint service is not configured in this environment.');
   }
 
   /**
@@ -150,13 +147,12 @@ export class ComplaintApi {
    */
   async getComplaintTimeline(id: string): Promise<ComplaintTimelineEvent[]> {
     if (isSupabaseConfigured) {
-      try {
-        return await supabaseComplaintService.getComplaintTimeline(id);
-      } catch (err) {
-        console.warn(`Failed to get timeline for complaint ${id} from Supabase, using mock fixtures:`, err);
-      }
+      return await supabaseComplaintService.getComplaintTimeline(id);
     }
-    return complaintFallback.getComplaintTimeline(id);
+    if (isDev) {
+      return complaintFallback.getComplaintTimeline(id);
+    }
+    throw new Error('Supabase complaint service is not configured in this environment.');
   }
 
   /**
@@ -167,7 +163,13 @@ export class ComplaintApi {
     updates: Partial<Complaint>,
     notes?: string
   ): Promise<WorkflowActionResult> {
-    return complaintFallback.editComplaint(complaintId, updates, notes);
+    if (isSupabaseConfigured) {
+      throw new Error('Direct complaint editing is not supported on configured backend.');
+    }
+    if (isDev) {
+      return complaintFallback.editComplaint(complaintId, updates, notes);
+    }
+    throw new Error('Supabase complaint service is not configured in this environment.');
   }
 
   async rejectComplaint(
@@ -176,39 +178,42 @@ export class ComplaintApi {
     explanation: string
   ): Promise<WorkflowActionResult> {
     if (isSupabaseConfigured) {
-      try {
-        return await supabaseComplaintService.rejectComplaint(complaintId, reason, explanation);
-      } catch (err) {
-        console.warn(`Failed to reject complaint ${complaintId} on Supabase, using mock fallback:`, err);
-      }
+      return await supabaseComplaintService.rejectComplaint(complaintId, reason, explanation);
     }
-    return complaintFallback.rejectComplaint(complaintId, reason, explanation);
+    if (isDev) {
+      return complaintFallback.rejectComplaint(complaintId, reason, explanation);
+    }
+    throw new Error('Supabase complaint service is not configured in this environment.');
   }
 
   async publishComplaint(complaintId: string): Promise<WorkflowActionResult> {
     if (isSupabaseConfigured) {
-      try {
-        return await supabaseComplaintService.publishComplaint(complaintId);
-      } catch (err) {
-        console.warn(`Failed to publish complaint ${complaintId} on Supabase, using mock fallback:`, err);
-      }
+      return await supabaseComplaintService.publishComplaint(complaintId);
     }
-    return complaintFallback.publishComplaint(complaintId);
+    if (isDev) {
+      return complaintFallback.publishComplaint(complaintId);
+    }
+    throw new Error('Supabase complaint service is not configured in this environment.');
   }
 
   async unpublishComplaint(complaintId: string): Promise<WorkflowActionResult> {
     if (isSupabaseConfigured) {
-      try {
-        return await supabaseComplaintService.unpublishComplaint(complaintId);
-      } catch (err) {
-        console.warn(`Failed to unpublish complaint ${complaintId} on Supabase, using mock fallback:`, err);
-      }
+      return await supabaseComplaintService.unpublishComplaint(complaintId);
     }
-    return complaintFallback.unpublishComplaint(complaintId);
+    if (isDev) {
+      return complaintFallback.unpublishComplaint(complaintId);
+    }
+    throw new Error('Supabase complaint service is not configured in this environment.');
   }
 
   async addComplaintUpdate(complaintId: string, message: string): Promise<WorkflowActionResult> {
-    return complaintFallback.addComplaintUpdate(complaintId, message);
+    if (isSupabaseConfigured) {
+      throw new Error('Complaint update messages must be added via authenticated database procedures.');
+    }
+    if (isDev) {
+      return complaintFallback.addComplaintUpdate(complaintId, message);
+    }
+    throw new Error('Supabase complaint service is not configured in this environment.');
   }
 }
 

@@ -40,6 +40,8 @@ const DEV_FALLBACK_SUBCATEGORIES: TaxonomySubcategory[] = [
   { id: 'broken_streetlamp', segmentId: 'public_lighting', nameEn: 'Broken Streetlamp', nameBn: 'অকেজো সড়কবাতি', status: 'active', order: 1 },
 ];
 
+const isDev = Boolean(typeof import.meta !== 'undefined' && import.meta.env?.DEV);
+
 function createDevFallbackTaxonomyBundle(): TaxonomyBundle {
   const fullTree: TaxonomySegmentNode[] = DEV_FALLBACK_SEGMENTS.map((seg) => ({
     ...seg,
@@ -68,72 +70,70 @@ export class CategoryApi {
    */
   async getTaxonomy(): Promise<TaxonomyBundle> {
     if (!isSupabaseConfigured) {
-      return createDevFallbackTaxonomyBundle();
+      if (isDev) {
+        return createDevFallbackTaxonomyBundle();
+      }
+      throw new Error('Supabase taxonomy service is not configured in this environment.');
     }
 
-    try {
-      const [segmentsRes, subcategoriesRes] = await Promise.all([
-        supabase
-          .from('segments')
-          .select('id, name_en, name_bn, active, sort_order')
-          .order('sort_order', { ascending: true }),
-        supabase
-          .from('subcategories')
-          .select('id, segment_id, name_en, name_bn, active, sort_order')
-          .order('sort_order', { ascending: true }),
-      ]);
+    const [segmentsRes, subcategoriesRes] = await Promise.all([
+      supabase
+        .from('segments')
+        .select('id, name_en, name_bn, active, sort_order')
+        .order('sort_order', { ascending: true }),
+      supabase
+        .from('subcategories')
+        .select('id, segment_id, name_en, name_bn, active, sort_order')
+        .order('sort_order', { ascending: true }),
+    ]);
 
-      if (segmentsRes.error) {
-        console.error('Supabase segments query failed:', segmentsRes.error);
-        throw new Error(`Failed to load segments: ${segmentsRes.error.message}`);
-      }
-
-      if (subcategoriesRes.error) {
-        console.error('Supabase subcategories query failed:', subcategoriesRes.error);
-        throw new Error(`Failed to load subcategories: ${subcategoriesRes.error.message}`);
-      }
-
-      const segments: TaxonomySegment[] = (segmentsRes.data || []).map((row) => ({
-        id: row.id,
-        nameEn: row.name_en || row.name_bn || row.id,
-        nameBn: row.name_bn || row.name_en || row.id,
-        status: row.active === false ? 'inactive' : 'active',
-        order: row.sort_order ?? 0,
-      }));
-
-      const subcategories: TaxonomySubcategory[] = (subcategoriesRes.data || []).map((row) => ({
-        id: row.id,
-        segmentId: row.segment_id,
-        nameEn: row.name_en || row.name_bn || row.id,
-        nameBn: row.name_bn || row.name_en || row.id,
-        status: row.active === false ? 'inactive' : 'active',
-        order: row.sort_order ?? 0,
-      }));
-
-      const fullTree: TaxonomySegmentNode[] = segments.map((seg) => ({
-        ...seg,
-        subcategories: subcategories.filter((sub) => sub.segmentId === seg.id),
-      }));
-
-      const activeSegments = segments.filter((s) => s.status === 'active').length;
-      const activeSubs = subcategories.filter((s) => s.status === 'active').length;
-
-      const stats: TaxonomyStats = {
-        segments: segments.length,
-        subcategories: subcategories.length,
-        activeItems: activeSegments + activeSubs,
-      };
-
-      return {
-        segments,
-        subcategories,
-        fullTree,
-        stats,
-      };
-    } catch (err) {
-      console.warn('Failed to load taxonomy from Supabase, using mock fixtures:', err);
-      return createDevFallbackTaxonomyBundle();
+    if (segmentsRes.error) {
+      console.error('Supabase segments query failed:', segmentsRes.error);
+      throw new Error(`Failed to load segments: ${segmentsRes.error.message}`);
     }
+
+    if (subcategoriesRes.error) {
+      console.error('Supabase subcategories query failed:', subcategoriesRes.error);
+      throw new Error(`Failed to load subcategories: ${subcategoriesRes.error.message}`);
+    }
+
+    const segments: TaxonomySegment[] = (segmentsRes.data || []).map((row) => ({
+      id: row.id,
+      nameEn: row.name_en || row.name_bn || row.id,
+      nameBn: row.name_bn || row.name_en || row.id,
+      status: row.active === false ? 'inactive' : 'active',
+      order: row.sort_order ?? 0,
+    }));
+
+    const subcategories: TaxonomySubcategory[] = (subcategoriesRes.data || []).map((row) => ({
+      id: row.id,
+      segmentId: row.segment_id,
+      nameEn: row.name_en || row.name_bn || row.id,
+      nameBn: row.name_bn || row.name_en || row.id,
+      status: row.active === false ? 'inactive' : 'active',
+      order: row.sort_order ?? 0,
+    }));
+
+    const fullTree: TaxonomySegmentNode[] = segments.map((seg) => ({
+      ...seg,
+      subcategories: subcategories.filter((sub) => sub.segmentId === seg.id),
+    }));
+
+    const activeSegments = segments.filter((s) => s.status === 'active').length;
+    const activeSubs = subcategories.filter((s) => s.status === 'active').length;
+
+    const stats: TaxonomyStats = {
+      segments: segments.length,
+      subcategories: subcategories.length,
+      activeItems: activeSegments + activeSubs,
+    };
+
+    return {
+      segments,
+      subcategories,
+      fullTree,
+      stats,
+    };
   }
 
   /**
