@@ -137,6 +137,12 @@ export interface RoleUpdateInput {
   name: string;
   active: boolean;
   permission_ids?: string[] | null;
+  /**
+   * Description update semantics:
+   * - `undefined` (omitted): preserves existing description in database.
+   * - `null` or `''`: explicitly clears description to `null`.
+   * - non-empty `string`: updates description to trimmed string.
+   */
   description?: string | null;
 }
 

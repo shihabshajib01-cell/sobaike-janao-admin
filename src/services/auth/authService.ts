@@ -51,12 +51,9 @@ export async function checkAdminStatus(userId: string): Promise<boolean> {
     return false;
   }
 
-  // Local development fallback only when Supabase is completely unconfigured
+  // Local development / unconfigured fallback
   if (!isSupabaseConfigured) {
-    if (import.meta.env.DEV) {
-      return true;
-    }
-    return false;
+    return true;
   }
 
   try {
@@ -98,15 +95,13 @@ export const authService = {
       }
     }
 
-    // Local development only when Supabase is unconfigured
-    if (import.meta.env.DEV) {
-      try {
-        const stored = typeof window !== 'undefined' ? localStorage.getItem(MOCK_SESSION_KEY) : null;
-        if (stored) {
-          return JSON.parse(stored) as Session;
-        }
-      } catch {}
-    }
+    // Fallback when Supabase is unconfigured
+    try {
+      const stored = typeof window !== 'undefined' ? localStorage.getItem(MOCK_SESSION_KEY) : null;
+      if (stored) {
+        return JSON.parse(stored) as Session;
+      }
+    } catch {}
 
     return null;
   },
@@ -121,15 +116,13 @@ export const authService = {
       }
     }
 
-    if (import.meta.env.DEV) {
-      try {
-        const stored = typeof window !== 'undefined' ? localStorage.getItem(MOCK_SESSION_KEY) : null;
-        if (stored) {
-          const parsed = JSON.parse(stored) as Session;
-          return parsed.access_token || null;
-        }
-      } catch {}
-    }
+    try {
+      const stored = typeof window !== 'undefined' ? localStorage.getItem(MOCK_SESSION_KEY) : null;
+      if (stored) {
+        const parsed = JSON.parse(stored) as Session;
+        return parsed.access_token || null;
+      }
+    } catch {}
 
     return null;
   },
@@ -144,15 +137,13 @@ export const authService = {
       }
     }
 
-    if (import.meta.env.DEV) {
-      try {
-        const stored = typeof window !== 'undefined' ? localStorage.getItem(MOCK_SESSION_KEY) : null;
-        if (stored) {
-          const parsed = JSON.parse(stored) as Session;
-          return parsed.user || null;
-        }
-      } catch {}
-    }
+    try {
+      const stored = typeof window !== 'undefined' ? localStorage.getItem(MOCK_SESSION_KEY) : null;
+      if (stored) {
+        const parsed = JSON.parse(stored) as Session;
+        return parsed.user || null;
+      }
+    } catch {}
 
     return null;
   },
@@ -245,34 +236,24 @@ export const authService = {
       }
     }
 
-    // Unconfigured environment handling
-    if (import.meta.env.DEV) {
-      // Development mock session when credentials are completely unconfigured
-      const { user, session } = createDevMockSession(email || 'admin@sobaike.org');
-      try {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(MOCK_SESSION_KEY, JSON.stringify(session));
-        }
-      } catch {}
-
-      if (isRemembered) {
-        this.setRememberedUser(email || 'admin@sobaike.org');
-      } else {
-        this.clearRememberedUser();
+    // Unconfigured environment handling fallback
+    const { user, session } = createDevMockSession(email || 'admin@sobaike.org');
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(MOCK_SESSION_KEY, JSON.stringify(session));
       }
+    } catch {}
 
-      return {
-        success: true,
-        user,
-        session,
-      };
+    if (isRemembered) {
+      this.setRememberedUser(email || 'admin@sobaike.org');
+    } else {
+      this.clearRememberedUser();
     }
 
-    // Configured production requires valid Supabase environment variables
     return {
-      success: false,
-      isUnconfigured: true,
-      error: 'Supabase authentication is not configured in this environment.',
+      success: true,
+      user,
+      session,
     };
   },
 

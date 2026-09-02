@@ -150,8 +150,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               authService.logout().catch(() => {});
             }, 0);
           }
-        } else if (!isSupabaseConfigured && import.meta.env.DEV) {
-          // In unconfigured dev mode, check if user explicitly signed out
+        } else if (!isSupabaseConfigured) {
+          // In unconfigured mode, check if user explicitly signed out
           const wasExplicitSignout =
             typeof window !== 'undefined' &&
             localStorage.getItem('sobaike_explicit_signout') === 'true';

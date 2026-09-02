@@ -7,7 +7,7 @@
  * - admin_create_role
  * - admin_update_role
  * - admin_replace_role_permissions
- * Strictly authoritative: no direct table mutations, no mock fallbacks in configured production.
+ * Strictly authoritative: no direct table mutations, no mock fallbacks in unconfigured production.
  */
 
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
@@ -23,6 +23,30 @@ import {
   ReplaceRolePermissionsResult,
   RoleApiError,
 } from '@/types/Role';
+
+/**
+ * Asserts whether role management is configured.
+ * - When Supabase credentials are configured: proceeds with authoritative Supabase RPCs.
+ * - When Supabase credentials are unconfigured AND in local dev (`import.meta.env.DEV`): allows dev fixtures.
+ * - When Supabase credentials are unconfigured in production: immediately throws a distinguishable RoleApiError with code 'CONFIG_ERROR'.
+ */
+function assertRoleApiConfigured(): 'configured' | 'dev_fallback' {
+  if (isSupabaseConfigured) {
+    return 'configured';
+  }
+  const isDev = Boolean(typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV);
+  if (isDev) {
+    return 'dev_fallback';
+  }
+  throw new RoleApiError(
+    'Supabase role management is not configured in this environment.',
+    'CONFIG_ERROR'
+  );
+}
+
+// ==============================================================================
+// DEV-ONLY IN-MEMORY FIXTURES (Active ONLY when import.meta.env.DEV && !isSupabaseConfigured)
+// ==============================================================================
 
 const FALLBACK_ROLES: RoleListItem[] = [
   {
@@ -121,7 +145,9 @@ export class RoleApi {
    * List administrative roles via the secure `admin_list_roles` database RPC.
    */
   async listRoles(): Promise<RoleListItem[]> {
-    if (isSupabaseConfigured) {
+    const mode = assertRoleApiConfigured();
+
+    if (mode === 'configured') {
       const { data, error } = await supabase.rpc('admin_list_roles');
       if (error) {
         throw new RoleApiError(error.message, error.code, error.details, error.hint);
@@ -141,14 +167,16 @@ export class RoleApi {
       }));
     }
 
-    return inMemoryRoles;
+    return [...inMemoryRoles];
   }
 
   /**
    * Fetch the canonical 15 permissions catalogue via the secure `admin_get_permission_catalogue` database RPC.
    */
   async getPermissionCatalogue(): Promise<PermissionCatalogueItem[]> {
-    if (isSupabaseConfigured) {
+    const mode = assertRoleApiConfigured();
+
+    if (mode === 'configured') {
       const { data, error } = await supabase.rpc('admin_get_permission_catalogue');
       if (error) {
         throw new RoleApiError(error.message, error.code, error.details, error.hint);
@@ -165,7 +193,7 @@ export class RoleApi {
       }));
     }
 
-    return CANONICAL_FALLBACK_CATALOGUE;
+    return [...CANONICAL_FALLBACK_CATALOGUE];
   }
 
   /**
@@ -177,7 +205,9 @@ export class RoleApi {
       throw new RoleApiError('Role ID cannot be empty.', '22000');
     }
 
-    if (isSupabaseConfigured) {
+    const mode = assertRoleApiConfigured();
+
+    if (mode === 'configured') {
       const { data, error } = await supabase.rpc('admin_get_role_detail', {
         p_role_id: cleanId,
       });
@@ -213,7 +243,7 @@ export class RoleApi {
 
     return {
       ...role,
-      permission_ids: inMemoryRolePermissions[cleanId] || [],
+      permission_ids: inMemoryRolePermissions[cleanId] ? [...inMemoryRolePermissions[cleanId]] : [],
     };
   }
 
@@ -226,7 +256,9 @@ export class RoleApi {
       throw new RoleApiError('Role name is required and cannot be blank.', '22000');
     }
 
-    if (isSupabaseConfigured) {
+    const mode = assertRoleApiConfigured();
+
+    if (mode === 'configured') {
       const { data, error } = await supabase.rpc('admin_create_role', {
         p_name: cleanName,
         p_active: input.active,
@@ -239,6 +271,24 @@ export class RoleApi {
       }
 
       return data as unknown as CreateRoleResult;
+    }
+
+    // Dev fallback: duplicate check
+    const isDuplicate = inMemoryRoles.some(
+      (r) => r.name_en.toLowerCase() === cleanName.toLowerCase()
+    );
+    if (isDuplicate) {
+      throw new RoleApiError('A role with this name already exists.', '23505');
+    }
+
+    // Dev fallback: validate permission IDs
+    const validPermIds = new Set(CANONICAL_FALLBACK_CATALOGUE.map((p) => p.id));
+    const invalidPerms = input.permission_ids.filter((id) => !validPermIds.has(id));
+    if (invalidPerms.length > 0) {
+      throw new RoleApiError(
+        `Invalid permission ID(s) provided: ${invalidPerms.join(', ')}`,
+        '22000'
+      );
     }
 
     const newRole: RoleListItem = {
@@ -272,6 +322,7 @@ export class RoleApi {
 
   /**
    * Atomically update role metadata and optionally replace its permission set.
+   * Preserves existing Bengali role names (name_bn) and preserves omitted descriptions.
    */
   async updateRole(input: RoleUpdateInput): Promise<RoleDetail> {
     const cleanId = input.id ? input.id.trim() : '';
@@ -284,14 +335,49 @@ export class RoleApi {
       throw new RoleApiError('Role name is required and cannot be blank.', '22000');
     }
 
-    if (isSupabaseConfigured) {
-      const { data, error } = await supabase.rpc('admin_update_role', {
+    const mode = assertRoleApiConfigured();
+
+    // Determine description update semantics:
+    // - If input.description was omitted (undefined): preserve existing description
+    // - If input.description is a non-empty string: update to trimmed string
+    // - If input.description is null or empty string '': update to null (explicitly clear)
+    const hasDescriptionUpdate =
+      Object.prototype.hasOwnProperty.call(input, 'description') &&
+      input.description !== undefined;
+
+    let cleanDesc: string | null = null;
+    if (hasDescriptionUpdate) {
+      cleanDesc =
+        typeof input.description === 'string' && input.description.trim().length > 0
+          ? input.description.trim()
+          : null;
+    }
+
+    if (mode === 'configured') {
+      const rpcParams: Record<string, unknown> = {
         p_role_id: cleanId,
         p_name: cleanName,
         p_active: input.active,
         p_permission_ids: input.permission_ids !== undefined ? input.permission_ids : null,
-        p_description: input.description && input.description.trim() ? input.description.trim() : null,
-      });
+        p_description: cleanDesc,
+        p_update_description: hasDescriptionUpdate,
+      };
+
+      let { data, error } = await supabase.rpc('admin_update_role', rpcParams);
+
+      // Graceful fallback if live database does not yet have migration 00008 (p_update_description)
+      if (error && (error.code === 'PGRST202' || error.message.includes('p_update_description'))) {
+        const fallbackParams: Record<string, unknown> = {
+          p_role_id: cleanId,
+          p_name: cleanName,
+          p_active: input.active,
+          p_permission_ids: input.permission_ids !== undefined ? input.permission_ids : null,
+          p_description: cleanDesc,
+        };
+        const fallbackRes = await supabase.rpc('admin_update_role', fallbackParams);
+        data = fallbackRes.data;
+        error = fallbackRes.error;
+      }
 
       if (error) {
         throw new RoleApiError(error.message, error.code, error.details, error.hint);
@@ -300,24 +386,88 @@ export class RoleApi {
       return data as unknown as RoleDetail;
     }
 
+    // Dev fallback:
     const existingIndex = inMemoryRoles.findIndex((r) => r.id === cleanId);
     if (existingIndex === -1) {
       throw new RoleApiError(`Role not found with ID: ${cleanId}`, 'P0002');
     }
 
     const existing = inMemoryRoles[existingIndex];
-    if (existing.is_system && !input.active) {
-      throw new RoleApiError('System roles are protected and cannot be deactivated.', '42501');
+
+    // System-role protection
+    if (existing.is_system) {
+      if (!input.active) {
+        throw new RoleApiError('System roles are protected and cannot be deactivated.', '42501');
+      }
+      if (input.permission_ids !== undefined && input.permission_ids !== null) {
+        throw new RoleApiError('System role permissions are protected and cannot be modified.', '42501');
+      }
+      if (cleanName.toLowerCase() !== existing.name_en.toLowerCase()) {
+        throw new RoleApiError('System role names are protected and cannot be modified.', '42501');
+      }
     }
-    if (existing.is_system && input.permission_ids !== undefined && input.permission_ids !== null) {
-      throw new RoleApiError('System role permissions are protected and cannot be modified.', '42501');
+
+    // Duplicate visible name check against other roles
+    const isDuplicate = inMemoryRoles.some(
+      (r) => r.id !== cleanId && r.name_en.toLowerCase() === cleanName.toLowerCase()
+    );
+    if (isDuplicate) {
+      throw new RoleApiError('A role with this name already exists.', '23505');
     }
+
+    // Last-manager protection simulation in dev fallback
+    if (existing.active && !input.active) {
+      const perms = inMemoryRolePermissions[cleanId] || [];
+      if (perms.includes('roles.manage')) {
+        const otherActiveHolders = inMemoryRoles.filter(
+          (r) => r.id !== cleanId && r.active && (inMemoryRolePermissions[r.id] || []).includes('roles.manage')
+        );
+        if (otherActiveHolders.length === 0) {
+          throw new RoleApiError(
+            'Operation rejected: Cannot modify or deactivate this role because it would leave no active administrators with role management permissions.',
+            '23514'
+          );
+        }
+      }
+    }
+
+    if (input.permission_ids !== undefined && input.permission_ids !== null) {
+      const validPermIds = new Set(CANONICAL_FALLBACK_CATALOGUE.map((p) => p.id));
+      const invalidPerms = input.permission_ids.filter((id) => !validPermIds.has(id));
+      if (invalidPerms.length > 0) {
+        throw new RoleApiError(
+          `Invalid permission ID(s) provided: ${invalidPerms.join(', ')}`,
+          '22000'
+        );
+      }
+
+      if (!input.permission_ids.includes('roles.manage')) {
+        const perms = inMemoryRolePermissions[cleanId] || [];
+        if (perms.includes('roles.manage')) {
+          const otherActiveHolders = inMemoryRoles.filter(
+            (r) => r.id !== cleanId && r.active && (inMemoryRolePermissions[r.id] || []).includes('roles.manage')
+          );
+          if (otherActiveHolders.length === 0) {
+            throw new RoleApiError(
+              'Operation rejected: Cannot remove roles.manage permission because it would leave no active administrators with role management permissions.',
+              '23514'
+            );
+          }
+        }
+      }
+    }
+
+    // Description resolution:
+    // If description omitted -> preserve existing description!
+    // If description provided -> cleanDesc (null if empty, or trimmed text)
+    const nextDescription = hasDescriptionUpdate ? cleanDesc : existing.description;
 
     const updated: RoleListItem = {
       ...existing,
       name_en: cleanName,
+      name_bn: existing.name_bn, // PRESERVE existing Bengali role name!
       active: input.active,
-      description: input.description?.trim() || null,
+      description: nextDescription, // PRESERVE omitted description or update!
       updated_at: new Date().toISOString(),
     };
 
@@ -330,7 +480,7 @@ export class RoleApi {
 
     return {
       ...updated,
-      permission_ids: inMemoryRolePermissions[cleanId] || [],
+      permission_ids: inMemoryRolePermissions[cleanId] ? [...inMemoryRolePermissions[cleanId]] : [],
     };
   }
 
@@ -343,7 +493,9 @@ export class RoleApi {
       throw new RoleApiError('Role ID cannot be empty.', '22000');
     }
 
-    if (isSupabaseConfigured) {
+    const mode = assertRoleApiConfigured();
+
+    if (mode === 'configured') {
       const { data, error } = await supabase.rpc('admin_replace_role_permissions', {
         p_role_id: cleanId,
         p_permission_ids: input.permission_ids,
@@ -356,12 +508,39 @@ export class RoleApi {
       return data as unknown as ReplaceRolePermissionsResult;
     }
 
+    // Dev fallback:
     const role = inMemoryRoles.find((r) => r.id === cleanId);
     if (!role) {
       throw new RoleApiError(`Role not found with ID: ${cleanId}`, 'P0002');
     }
     if (role.is_system) {
       throw new RoleApiError('System roles are protected and their permissions cannot be modified.', '42501');
+    }
+
+    // Permission validation
+    const validPermIds = new Set(CANONICAL_FALLBACK_CATALOGUE.map((p) => p.id));
+    const invalidPerms = input.permission_ids.filter((id) => !validPermIds.has(id));
+    if (invalidPerms.length > 0) {
+      throw new RoleApiError(
+        `Invalid permission ID(s) provided: ${invalidPerms.join(', ')}`,
+        '22000'
+      );
+    }
+
+    // Last-manager protection simulation in dev fallback
+    if (!input.permission_ids.includes('roles.manage')) {
+      const perms = inMemoryRolePermissions[cleanId] || [];
+      if (perms.includes('roles.manage')) {
+        const otherActiveHolders = inMemoryRoles.filter(
+          (r) => r.id !== cleanId && r.active && (inMemoryRolePermissions[r.id] || []).includes('roles.manage')
+        );
+        if (otherActiveHolders.length === 0) {
+          throw new RoleApiError(
+            'Operation rejected: Cannot remove roles.manage permission because it would leave no active administrators with role management permissions.',
+            '23514'
+          );
+        }
+      }
     }
 
     inMemoryRolePermissions[cleanId] = [...input.permission_ids];

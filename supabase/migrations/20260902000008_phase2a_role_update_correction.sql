@@ -5,6 +5,8 @@
 --         Preserves System-Role Invariant, Preserves Last Manager Protection.
 -- ==============================================================================
 
+BEGIN;
+
 -- ------------------------------------------------------------------------------
 -- 1. DROP OLD OVERLOAD TO AVOID POSTGRESQL FUNCTION AMBIGUITY
 -- ------------------------------------------------------------------------------
@@ -245,3 +247,5 @@ $$;
 REVOKE ALL ON FUNCTION public.admin_update_role(text, text, boolean, text[], text, boolean) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.admin_update_role(text, text, boolean, text[], text, boolean) FROM anon;
 GRANT EXECUTE ON FUNCTION public.admin_update_role(text, text, boolean, text[], text, boolean) TO authenticated;
+
+COMMIT;

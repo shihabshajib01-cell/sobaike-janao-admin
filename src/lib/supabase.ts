@@ -6,18 +6,20 @@ const FALLBACK_SUPABASE_URL =
 const FALLBACK_SUPABASE_PUBLISHABLE_KEY =
   'sb_publishable_3wqaYyxPJ6spRNS0jNOi4w_69Jqc3-b';
 
+const metaEnv = typeof import.meta !== 'undefined' ? import.meta.env : undefined;
+
 const supabaseUrl =
-  import.meta.env.VITE_SUPABASE_URL ||
+  metaEnv?.VITE_SUPABASE_URL ||
   FALLBACK_SUPABASE_URL;
 
 const supabaseAnonKey =
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  metaEnv?.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  metaEnv?.VITE_SUPABASE_ANON_KEY ||
   FALLBACK_SUPABASE_PUBLISHABLE_KEY;
 
 export const isSupabaseConfigured = Boolean(
-  import.meta.env.VITE_SUPABASE_URL &&
-  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY)
+  metaEnv?.VITE_SUPABASE_URL &&
+  (metaEnv?.VITE_SUPABASE_PUBLISHABLE_KEY || metaEnv?.VITE_SUPABASE_ANON_KEY)
 );
 
 /**
