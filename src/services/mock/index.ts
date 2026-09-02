@@ -16,9 +16,5 @@ export * from './responseWorkflowService';
 export { mockResponseWorkflowService } from './responseWorkflowService';
 export * from './responseTimelineService';
 export { mockResponseTimelineService } from './responseTimelineService';
-export * from './categoryService';
-export { mockCategoryService, default as categoryService } from './categoryService';
 export * from './mapService';
 export { mockMapService, default as mapService } from './mapService';
-
-

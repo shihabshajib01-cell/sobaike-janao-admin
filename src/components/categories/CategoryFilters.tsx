@@ -1,184 +1,210 @@
 import React from 'react';
-import { CategoryFilterState, Feature } from '@/types/Category';
+import { TaxonomyFilterState, TaxonomySegment } from '@/types/Category';
 import { useLanguage } from '@/context/LanguageContext';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { Search, RotateCcw, X, Filter } from 'lucide-react';
+import { RotateCcw, SlidersHorizontal, X, Layers, Activity } from 'lucide-react';
 import { cn } from '@/utils';
 
 export interface CategoryFiltersProps {
-  filters: CategoryFilterState;
-  features: Feature[];
-  onChange: (filters: CategoryFilterState) => void;
+  filters: TaxonomyFilterState;
+  onChange: (filters: TaxonomyFilterState) => void;
   onReset: () => void;
+  segments: TaxonomySegment[];
+  totalResultsCount: number;
   className?: string;
-  totalResultsCount?: number;
 }
 
 export const CategoryFilters: React.FC<CategoryFiltersProps> = ({
   filters,
-  features,
   onChange,
   onReset,
-  className,
+  segments,
   totalResultsCount,
+  className,
 }) => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
 
-  const hasActiveFilters =
-    Boolean(filters.search) ||
+  const hasActiveFilters = Boolean(
+    filters.search ||
     filters.status !== 'all' ||
-    filters.featureId !== 'all';
+    filters.segmentId !== 'all'
+  );
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange({ ...filters, search: e.target.value });
   };
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    onChange({ ...filters, status: e.target.value as CategoryFilterState['status'] });
+    onChange({
+      ...filters,
+      status: e.target.value as 'all' | 'active' | 'inactive',
+    });
   };
 
-  const handleFeatureChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    onChange({ ...filters, featureId: e.target.value });
+  const handleSegmentChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    onChange({
+      ...filters,
+      segmentId: e.target.value,
+    });
   };
 
-  const featureOptions = [
-    { value: 'all', label: isBn ? 'সকল ফিচার (Top-Level)' : 'All Features (Top-Level)' },
-    ...features.map((f) => ({
-      value: f.id,
-      label: isBn ? f.nameBn : f.nameEn,
-    })),
-  ];
-
-  const statusOptions = [
-    { value: 'all', label: isBn ? 'সকল স্ট্যাটাস' : 'All Statuses' },
-    { value: 'active', label: isBn ? 'সক্রিয় (Active)' : 'Active Only' },
-    { value: 'inactive', label: isBn ? 'নিষ্ক্রিয় (Inactive)' : 'Inactive Only' },
-  ];
+  const selectedSegmentObj = segments.find((s) => s.id === filters.segmentId);
 
   return (
-    <div className={cn('bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs space-y-3', className)}>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-center">
-        {/* Search Input */}
-        <div className="lg:col-span-6">
+    <div
+      className={cn(
+        'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3.5 shadow-xs',
+        className
+      )}
+    >
+      {/* Primary Filters Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        {/* Search */}
+        <div className="sm:col-span-2 lg:col-span-2">
           <Input
-            id="category-search-input"
-            type="text"
-            placeholder={
-              isBn
-                ? 'ফিচার, ক্যাটাগরি বা সাবক্যাটাগরি খুঁজুন (বাংলা / English)...'
-                : 'Search feature, category or subcategory name...'
-            }
+            id="taxonomy-search-input"
             value={filters.search}
             onChange={handleSearchChange}
+            placeholder={
+              isBn
+                ? 'বিভাগ বা সাব-ক্যাটাগরির নাম খুঁজুন...'
+                : 'Search segment or subcategory name/ID...'
+            }
             isSearch
             onClear={() => onChange({ ...filters, search: '' })}
-            className="w-full"
+            className="h-9 text-xs"
           />
         </div>
 
-        {/* Feature Filter */}
-        <div className="lg:col-span-3">
+        {/* Segment Filter */}
+        <div>
           <Select
-            id="category-feature-filter"
-            options={featureOptions}
-            value={filters.featureId}
-            onChange={handleFeatureChange}
-            aria-label={isBn ? 'ফিচার ফিল্টার' : 'Filter by Feature'}
-          />
+            id="taxonomy-segment-select"
+            value={filters.segmentId}
+            onChange={handleSegmentChange}
+            className="h-9 text-xs"
+          >
+            <option value="all">{isBn ? 'সকল বিভাগ' : 'All Segments'}</option>
+            {segments.map((seg) => (
+              <option key={seg.id} value={seg.id}>
+                {isBn ? seg.nameBn : seg.nameEn}
+              </option>
+            ))}
+          </Select>
         </div>
 
         {/* Status Filter */}
-        <div className="lg:col-span-3">
+        <div>
           <Select
-            id="category-status-filter"
-            options={statusOptions}
+            id="taxonomy-status-select"
             value={filters.status}
             onChange={handleStatusChange}
-            aria-label={isBn ? 'স্ট্যাটাস ফিল্টার' : 'Filter by Status'}
-          />
+            className="h-9 text-xs"
+          >
+            <option value="all">{isBn ? 'সকল স্ট্যাটাস' : 'All Statuses'}</option>
+            <option value="active">{isBn ? 'সক্রিয়' : 'Active'}</option>
+            <option value="inactive">{isBn ? 'নিষ্ক্রিয়' : 'Inactive'}</option>
+          </Select>
         </div>
       </div>
 
-      {/* Active Filter Indicators & Reset Action */}
-      {hasActiveFilters && (
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
-              <Filter className="w-3 h-3" />
-              {isBn ? 'সক্রিয় ফিল্টারসমূহ:' : 'Active filters:'}
+      {/* Active Filter Chips & Reset */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+        <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+          <span className="text-slate-400 font-medium shrink-0 flex items-center gap-1">
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            <span>{isBn ? 'সক্রিয় ফিল্টার:' : 'Active:'}</span>
+          </span>
+
+          {!hasActiveFilters ? (
+            <span className="text-slate-400 italic text-[11px]">
+              {isBn ? 'সকল শ্রেণিবিন্যাস প্রদর্শিত হচ্ছে' : 'Showing all taxonomy records'}
             </span>
-
-            {filters.search && (
-              <Badge status="default" size="sm" className="gap-1">
-                <span>{isBn ? 'অনুসন্ধান:' : 'Search:'} {filters.search}</span>
-                <button
-                  onClick={() => onChange({ ...filters, search: '' })}
-                  className="hover:text-slate-900 dark:hover:text-white"
-                  aria-label="Remove search filter"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </Badge>
-            )}
-
-            {filters.featureId !== 'all' && (
-              <Badge status="info" size="sm" className="gap-1">
-                <span>
-                  {featureOptions.find((o) => o.value === filters.featureId)?.label}
+          ) : (
+            <>
+              {filters.search && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs">
+                  <span>"{filters.search}"</span>
+                  <button
+                    type="button"
+                    onClick={() => onChange({ ...filters, search: '' })}
+                    className="hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
+                    aria-label="Remove search filter"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
                 </span>
-                <button
-                  onClick={() => onChange({ ...filters, featureId: 'all' })}
-                  className="hover:text-slate-900 dark:hover:text-white"
-                  aria-label="Remove feature filter"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </Badge>
-            )}
+              )}
 
-            {filters.status !== 'all' && (
-              <Badge
-                status={filters.status === 'active' ? 'approved' : 'default'}
-                size="sm"
-                className="gap-1"
-              >
-                <span>
-                  {filters.status === 'active'
-                    ? isBn ? 'সক্রিয়' : 'Active'
-                    : isBn ? 'নিষ্ক্রিয়' : 'Inactive'}
+              {filters.segmentId !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs">
+                  <Layers className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                  <span>
+                    {selectedSegmentObj
+                      ? isBn
+                        ? selectedSegmentObj.nameBn
+                        : selectedSegmentObj.nameEn
+                      : filters.segmentId}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onChange({ ...filters, segmentId: 'all' })}
+                    className="hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
+                    aria-label="Remove segment filter"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
                 </span>
-                <button
-                  onClick={() => onChange({ ...filters, status: 'all' })}
-                  className="hover:text-slate-900 dark:hover:text-white"
-                  aria-label="Remove status filter"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </Badge>
-            )}
+              )}
 
-            {typeof totalResultsCount === 'number' && (
-              <span className="text-slate-500 dark:text-slate-400 ml-1">
-                ({totalResultsCount} {isBn ? 'টি পাওয়া গেছে' : 'found'})
-              </span>
-            )}
-          </div>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onReset}
-            leftIcon={<RotateCcw className="w-3 h-3" />}
-            className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white h-7 px-2"
-          >
-            {isBn ? 'সব রিসেট করুন' : 'Reset all'}
-          </Button>
+              {filters.status !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs">
+                  <Activity className="w-3 h-3 text-sky-600 dark:text-sky-400" />
+                  <span>
+                    {filters.status === 'active'
+                      ? isBn
+                        ? 'সক্রিয়'
+                        : 'Active'
+                      : isBn
+                      ? 'নিষ্ক্রিয়'
+                      : 'Inactive'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onChange({ ...filters, status: 'all' })}
+                    className="hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
+                    aria-label="Remove status filter"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+            </>
+          )}
         </div>
-      )}
+
+        <div className="flex items-center gap-2 shrink-0 ml-auto">
+          <Badge variant="outline" size="sm" className="font-mono">
+            {totalResultsCount} {isBn ? 'বিভাগ ফলাফল' : 'segments'}
+          </Badge>
+
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onReset}
+              leftIcon={<RotateCcw className="w-3 h-3" />}
+              className="h-7 px-2 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
+            >
+              {isBn ? 'রিসেট' : 'Reset'}
+            </Button>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

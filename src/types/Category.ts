@@ -1,63 +1,47 @@
 /**
- * Category & Hierarchy Domain Types
- * Strict 3-level taxonomy: Feature -> Category -> Subcategory
- * Demo taxonomy data aligned with public product scope
+ * Real Sobaike Taxonomy Domain Types (Segment -> Subcategory).
+ * Represents the truthful 2-level taxonomy used by public reporting.
  */
 
-export type CategoryStatus = 'active' | 'inactive';
+export type TaxonomyStatus = 'active' | 'inactive';
 
-export type FeatureId =
-  | 'complaints'
-  | 'public_feed';
-
-export interface Feature {
-  id: FeatureId | string;
-  nameEn: string;
-  nameBn: string;
-  status: CategoryStatus;
-  order: number;
-}
-
-export interface Category {
+export interface TaxonomySegment {
   id: string;
-  featureId: FeatureId | string;
   nameEn: string;
   nameBn: string;
-  status: CategoryStatus;
+  status: TaxonomyStatus;
   order: number;
 }
 
-export interface Subcategory {
+export interface TaxonomySubcategory {
   id: string;
-  categoryId: string;
-  featureId?: FeatureId | string;
+  segmentId: string;
   nameEn: string;
   nameBn: string;
-  status: CategoryStatus;
+  status: TaxonomyStatus;
   order: number;
+  /** Backwards compatibility alias for segmentId */
+  categoryId?: string;
 }
 
-export interface CategoryTreeNode extends Category {
-  subcategories: Subcategory[];
+export interface TaxonomySegmentNode extends TaxonomySegment {
+  subcategories: TaxonomySubcategory[];
 }
 
-export interface FeatureTreeNode extends Feature {
-  categories: CategoryTreeNode[];
-}
-
-export interface CategoryFilterState {
+export interface TaxonomyFilterState {
   search: string;
-  status: 'all' | CategoryStatus;
-  featureId: 'all' | string;
-  categoryId: 'all' | string;
+  status: 'all' | TaxonomyStatus;
+  segmentId: 'all' | string;
 }
 
-export interface CategoryDetailDrawerData {
-  type: 'feature' | 'category' | 'subcategory';
-  item: Feature | Category | Subcategory;
-  parentFeature?: Feature;
-  parentCategory?: Category;
-  childCategories?: Category[];
-  childSubcategories?: Subcategory[];
+export interface TaxonomyStats {
+  segments: number;
+  subcategories: number;
+  activeItems: number;
 }
 
+// Backwards-compatible aliases for retained modules (e.g., MapPage)
+export type CategoryStatus = TaxonomyStatus;
+export type Category = TaxonomySegment;
+export type Subcategory = TaxonomySubcategory;
+export type CategoryFilterState = TaxonomyFilterState;
