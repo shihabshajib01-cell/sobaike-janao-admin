@@ -256,43 +256,6 @@ export const LoginPage: React.FC = () => {
                   ? 'লগইন'
                   : 'Login'}
               </Button>
-
-              {/* Quick Demo Sign-in Option */}
-              <div className="pt-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="md"
-                  fullWidth
-                  disabled={isLoading || loginSuccess}
-                  onClick={() => {
-                    setEmail('admin@sobaike.org');
-                    setPassword('admin123');
-                    setIsLoading(true);
-                    setErrors({});
-                    login({
-                      email: 'admin@sobaike.org',
-                      password: 'admin123',
-                      rememberMe: true,
-                    })
-                      .then((response) => {
-                        if (response.success) {
-                          setLoginSuccess(true);
-                          setTimeout(() => {
-                            const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
-                            navigate(from, { replace: true });
-                          }, 400);
-                        } else {
-                          setErrors({ general: response.error || 'Demo login failed' });
-                        }
-                      })
-                      .finally(() => setIsLoading(false));
-                  }}
-                  className="text-xs border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  {language === 'bn' ? '⚡ দ্রুত ডেমো লগইন' : '⚡ Quick Demo Sign-In (admin@sobaike.org)'}
-                </Button>
-              </div>
             </form>
 
             {/* Helper Footer */}

@@ -70,28 +70,8 @@ export const permissionService = {
       throw new Error('Supabase client is not configured in production environment.');
     }
 
-    // Dev mode with mock/demo session
-    const currentUser = await authService.getCurrentUser();
-    if (
-      import.meta.env.DEV &&
-      currentUser &&
-      (currentUser.id.startsWith('dev-admin') || currentUser.id === 'mock-admin')
-    ) {
-      return {
-        role: {
-          id: 'dev_admin',
-          name_en: 'System Administrator (Dev)',
-          name_bn: 'সিস্টেম অ্যাডমিনিস্ট্রেটর (ডেভ)',
-          active: true,
-          is_system: true,
-        },
-        permissions: [...CANONICAL_PERMISSIONS],
-        isBootstrapMode: true,
-        isAdmin: true,
-      };
-    }
-
     // In configured production, missing authenticated caller must fail closed
+    const currentUser = await authService.getCurrentUser();
     if (!currentUser?.id) {
       throw new Error('No authenticated user session found for authorization resolution.');
     }
@@ -137,7 +117,7 @@ export const permissionService = {
             is_system: Boolean(role.is_system),
           }
         : null,
-      permissions,
+      permissions: isAdmin ? permissions : [],
     };
   },
 

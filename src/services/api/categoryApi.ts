@@ -1,7 +1,7 @@
 /**
  * Real Read-Only Taxonomy API Service Layer
  * Reads real segments and subcategories directly from Supabase.
- * Strictly read-only: no fake write methods, no mock fallbacks, no old REST endpoints.
+ * Strictly read-only: no fake write methods, no mock fallbacks in configured production.
  */
 
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
@@ -19,7 +19,7 @@ export interface TaxonomyBundle {
   stats: TaxonomyStats;
 }
 
-const FALLBACK_SEGMENTS: TaxonomySegment[] = [
+const DEV_FALLBACK_SEGMENTS: TaxonomySegment[] = [
   { id: 'harassment', nameEn: 'Harassment & Violence', nameBn: 'যৌন হয়রানি ও সহিংসতা', status: 'active', order: 1 },
   { id: 'rickshaw', nameEn: 'Battery Rickshaw & Charging Hazards', nameBn: 'ব্যাটারি রিকশা ও চার্জিং ঝুঁকি', status: 'active', order: 2 },
   { id: 'roads_traffic', nameEn: 'Roads & Traffic Hazards', nameBn: 'রাস্তাঘাট ও ট্রাফিক ঝুঁকি', status: 'active', order: 3 },
@@ -28,7 +28,7 @@ const FALLBACK_SEGMENTS: TaxonomySegment[] = [
   { id: 'public_lighting', nameEn: 'Street & Public Lighting', nameBn: 'সড়ক ও পাবলিক বাতি', status: 'active', order: 6 },
 ];
 
-const FALLBACK_SUBCATEGORIES: TaxonomySubcategory[] = [
+const DEV_FALLBACK_SUBCATEGORIES: TaxonomySubcategory[] = [
   { id: 'street_harassment', segmentId: 'harassment', nameEn: 'Street Harassment', nameBn: 'সড়কে হয়রানি', status: 'active', order: 1 },
   { id: 'domestic_abuse', segmentId: 'harassment', nameEn: 'Domestic Abuse', nameBn: 'পারিবারিক নির্যাতন', status: 'active', order: 2 },
   { id: 'unauthorized_charging', segmentId: 'rickshaw', nameEn: 'Unauthorized Charging Station', nameBn: 'অবৈধ চার্জিং স্টেশন', status: 'active', order: 1 },
@@ -40,21 +40,21 @@ const FALLBACK_SUBCATEGORIES: TaxonomySubcategory[] = [
   { id: 'broken_streetlamp', segmentId: 'public_lighting', nameEn: 'Broken Streetlamp', nameBn: 'অকেজো সড়কবাতি', status: 'active', order: 1 },
 ];
 
-function createFallbackTaxonomyBundle(): TaxonomyBundle {
-  const fullTree: TaxonomySegmentNode[] = FALLBACK_SEGMENTS.map((seg) => ({
+function createDevFallbackTaxonomyBundle(): TaxonomyBundle {
+  const fullTree: TaxonomySegmentNode[] = DEV_FALLBACK_SEGMENTS.map((seg) => ({
     ...seg,
-    subcategories: FALLBACK_SUBCATEGORIES.filter((sub) => sub.segmentId === seg.id),
+    subcategories: DEV_FALLBACK_SUBCATEGORIES.filter((sub) => sub.segmentId === seg.id),
   }));
 
   const stats: TaxonomyStats = {
-    segments: FALLBACK_SEGMENTS.length,
-    subcategories: FALLBACK_SUBCATEGORIES.length,
-    activeItems: FALLBACK_SEGMENTS.length + FALLBACK_SUBCATEGORIES.length,
+    segments: DEV_FALLBACK_SEGMENTS.length,
+    subcategories: DEV_FALLBACK_SUBCATEGORIES.length,
+    activeItems: DEV_FALLBACK_SEGMENTS.length + DEV_FALLBACK_SUBCATEGORIES.length,
   };
 
   return {
-    segments: FALLBACK_SEGMENTS,
-    subcategories: FALLBACK_SUBCATEGORIES,
+    segments: DEV_FALLBACK_SEGMENTS,
+    subcategories: DEV_FALLBACK_SUBCATEGORIES,
     fullTree,
     stats,
   };
@@ -62,74 +62,76 @@ function createFallbackTaxonomyBundle(): TaxonomyBundle {
 
 export class CategoryApi {
   /**
-   * Fetch all taxonomy data in a single unified read (with resilient fallback)
+   * Fetch all taxonomy data in a single unified read.
+   * In configured production: queries real Supabase tables and throws real errors on failure.
+   * Genuine empty databases return empty arrays and 0 stats; never fake data.
    */
   async getTaxonomy(): Promise<TaxonomyBundle> {
     if (!isSupabaseConfigured) {
-      return createFallbackTaxonomyBundle();
-    }
-
-    try {
-      const [segmentsRes, subcategoriesRes] = await Promise.all([
-        supabase
-          .from('segments')
-          .select('id, name_en, name_bn, active, sort_order')
-          .order('sort_order', { ascending: true }),
-        supabase
-          .from('subcategories')
-          .select('id, segment_id, name_en, name_bn, active, sort_order')
-          .order('sort_order', { ascending: true }),
-      ]);
-
-      if (segmentsRes.error || subcategoriesRes.error) {
-        console.warn(
-          'Supabase taxonomy query failed, using fallback taxonomy:',
-          segmentsRes.error || subcategoriesRes.error
-        );
-        return createFallbackTaxonomyBundle();
+      if (import.meta.env.DEV) {
+        return createDevFallbackTaxonomyBundle();
       }
-
-      const segments: TaxonomySegment[] = (segmentsRes.data || []).map((row) => ({
-        id: row.id,
-        nameEn: row.name_en || row.name_bn || row.id,
-        nameBn: row.name_bn || row.name_en || row.id,
-        status: row.active === false ? 'inactive' : 'active',
-        order: row.sort_order ?? 0,
-      }));
-
-      const subcategories: TaxonomySubcategory[] = (subcategoriesRes.data || []).map((row) => ({
-        id: row.id,
-        segmentId: row.segment_id,
-        nameEn: row.name_en || row.name_bn || row.id,
-        nameBn: row.name_bn || row.name_en || row.id,
-        status: row.active === false ? 'inactive' : 'active',
-        order: row.sort_order ?? 0,
-      }));
-
-      const fullTree: TaxonomySegmentNode[] = segments.map((seg) => ({
-        ...seg,
-        subcategories: subcategories.filter((sub) => sub.segmentId === seg.id),
-      }));
-
-      const activeSegments = segments.filter((s) => s.status === 'active').length;
-      const activeSubs = subcategories.filter((s) => s.status === 'active').length;
-
-      const stats: TaxonomyStats = {
-        segments: segments.length,
-        subcategories: subcategories.length,
-        activeItems: activeSegments + activeSubs,
-      };
-
-      return {
-        segments: segments.length > 0 ? segments : FALLBACK_SEGMENTS,
-        subcategories: subcategories.length > 0 ? subcategories : FALLBACK_SUBCATEGORIES,
-        fullTree: fullTree.length > 0 ? fullTree : createFallbackTaxonomyBundle().fullTree,
-        stats,
-      };
-    } catch (err) {
-      console.warn('Error fetching taxonomy from Supabase, using fallback:', err);
-      return createFallbackTaxonomyBundle();
+      throw new Error('Supabase client is not configured in this environment.');
     }
+
+    const [segmentsRes, subcategoriesRes] = await Promise.all([
+      supabase
+        .from('segments')
+        .select('id, name_en, name_bn, active, sort_order')
+        .order('sort_order', { ascending: true }),
+      supabase
+        .from('subcategories')
+        .select('id, segment_id, name_en, name_bn, active, sort_order')
+        .order('sort_order', { ascending: true }),
+    ]);
+
+    if (segmentsRes.error) {
+      console.error('Supabase segments query failed:', segmentsRes.error);
+      throw new Error(`Failed to load segments: ${segmentsRes.error.message}`);
+    }
+
+    if (subcategoriesRes.error) {
+      console.error('Supabase subcategories query failed:', subcategoriesRes.error);
+      throw new Error(`Failed to load subcategories: ${subcategoriesRes.error.message}`);
+    }
+
+    const segments: TaxonomySegment[] = (segmentsRes.data || []).map((row) => ({
+      id: row.id,
+      nameEn: row.name_en || row.name_bn || row.id,
+      nameBn: row.name_bn || row.name_en || row.id,
+      status: row.active === false ? 'inactive' : 'active',
+      order: row.sort_order ?? 0,
+    }));
+
+    const subcategories: TaxonomySubcategory[] = (subcategoriesRes.data || []).map((row) => ({
+      id: row.id,
+      segmentId: row.segment_id,
+      nameEn: row.name_en || row.name_bn || row.id,
+      nameBn: row.name_bn || row.name_en || row.id,
+      status: row.active === false ? 'inactive' : 'active',
+      order: row.sort_order ?? 0,
+    }));
+
+    const fullTree: TaxonomySegmentNode[] = segments.map((seg) => ({
+      ...seg,
+      subcategories: subcategories.filter((sub) => sub.segmentId === seg.id),
+    }));
+
+    const activeSegments = segments.filter((s) => s.status === 'active').length;
+    const activeSubs = subcategories.filter((s) => s.status === 'active').length;
+
+    const stats: TaxonomyStats = {
+      segments: segments.length,
+      subcategories: subcategories.length,
+      activeItems: activeSegments + activeSubs,
+    };
+
+    return {
+      segments,
+      subcategories,
+      fullTree,
+      stats,
+    };
   }
 
   /**

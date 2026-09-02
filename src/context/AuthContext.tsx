@@ -63,6 +63,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const profile = await permissionService.resolveCurrentUserAuthorization();
       if (isMountedRef.current) {
+        if (!profile.isAdmin) {
+          // Authoritative backend context denied admin status - fail closed
+          setIsAdmin(false);
+          isAdminRef.current = false;
+          setPermissions([]);
+          setRole(null);
+          setIsBootstrapMode(false);
+          setPermissionsError(false);
+          permissionsRef.current = [];
+          authService.logout().catch(() => {});
+          return [];
+        }
+
+        setIsAdmin(true);
+        isAdminRef.current = true;
         setPermissions(profile.permissions);
         setRole(profile.role);
         setIsBootstrapMode(profile.isBootstrapMode);
@@ -73,6 +88,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       console.warn('Failed to load user permissions:', err);
       if (isMountedRef.current) {
+        setIsAdmin(false);
+        isAdminRef.current = false;
         setPermissions([]);
         setRole(null);
         setIsBootstrapMode(false);
@@ -246,10 +263,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (result.success && result.session && result.user) {
       setSession(result.session);
       setUser(result.user);
-      setIsAdmin(true);
       userRef.current = result.user;
-      isAdminRef.current = true;
+      
       await loadUserPermissions();
+
+      if (!isAdminRef.current) {
+        resetAuthState();
+        return {
+          success: false,
+          isUnauthorizedAdmin: true,
+          error: 'Unauthorized: Your account does not have active administrative privileges.',
+        };
+      }
     } else {
       resetAuthState();
     }

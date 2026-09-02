@@ -19,7 +19,7 @@ export interface LoginResponse {
 const REMEMBERED_EMAIL_KEY = 'sobaike_remembered_email';
 const MOCK_SESSION_KEY = 'sobaike_mock_session';
 
-const createMockSession = (email: string): { user: User; session: Session } => {
+const createDevMockSession = (email: string): { user: User; session: Session } => {
   const user: User = {
     id: 'dev-admin-id-0001',
     app_metadata: { provider: 'email' },
@@ -41,16 +41,22 @@ const createMockSession = (email: string): { user: User; session: Session } => {
 
 /**
  * Verifies if the authenticated user exists in public.admin_users and is marked active.
+ * Strict fail-closed semantics:
+ * - Returns true ONLY if Supabase is configured, user exists in admin_users, and active === true.
+ * - Returns false on missing userId, query error, network error, missing row, or inactive status.
+ * - Dev mock exception strictly isolated to (!isSupabaseConfigured && import.meta.env.DEV).
  */
 export async function checkAdminStatus(userId: string): Promise<boolean> {
   if (!userId) {
     return false;
   }
-  if (userId.startsWith('dev-admin') || userId === 'mock-admin') {
-    return true;
-  }
+
+  // Local development fallback only when Supabase is completely unconfigured
   if (!isSupabaseConfigured) {
-    return true;
+    if (import.meta.env.DEV) {
+      return true;
+    }
+    return false;
   }
 
   try {
@@ -62,14 +68,18 @@ export async function checkAdminStatus(userId: string): Promise<boolean> {
       .maybeSingle();
 
     if (error) {
-      console.warn('Error verifying admin_users membership (allowing fallback):', error.message);
-      return true;
+      console.error('Admin verification query failed (failing closed):', error.message);
+      return false;
     }
 
-    return Boolean(data && data.active);
-  } catch (err) {
-    console.warn('Admin verification request failed (allowing fallback):', err);
+    if (!data || data.active !== true) {
+      return false;
+    }
+
     return true;
+  } catch (err) {
+    console.error('Admin verification request exception (failing closed):', err);
+    return false;
   }
 }
 
@@ -79,53 +89,72 @@ export const authService = {
   },
 
   async getSession(): Promise<Session | null> {
-    try {
-      const stored = typeof window !== 'undefined' ? localStorage.getItem(MOCK_SESSION_KEY) : null;
-      if (stored) {
-        return JSON.parse(stored) as Session;
+    if (isSupabaseConfigured) {
+      try {
+        const { data } = await supabase.auth.getSession();
+        return data.session;
+      } catch {
+        return null;
       }
-    } catch {}
-    if (!isSupabaseConfigured) return null;
-    try {
-      const { data } = await supabase.auth.getSession();
-      return data.session;
-    } catch {
-      return null;
     }
+
+    // Local development only when Supabase is unconfigured
+    if (import.meta.env.DEV) {
+      try {
+        const stored = typeof window !== 'undefined' ? localStorage.getItem(MOCK_SESSION_KEY) : null;
+        if (stored) {
+          return JSON.parse(stored) as Session;
+        }
+      } catch {}
+    }
+
+    return null;
   },
 
   async getAccessToken(): Promise<string | null> {
-    try {
-      const stored = typeof window !== 'undefined' ? localStorage.getItem(MOCK_SESSION_KEY) : null;
-      if (stored) {
-        const parsed = JSON.parse(stored) as Session;
-        return parsed.access_token || null;
+    if (isSupabaseConfigured) {
+      try {
+        const { data } = await supabase.auth.getSession();
+        return data.session?.access_token || null;
+      } catch {
+        return null;
       }
-    } catch {}
-    if (!isSupabaseConfigured) return null;
-    try {
-      const { data } = await supabase.auth.getSession();
-      return data.session?.access_token || null;
-    } catch {
-      return null;
     }
+
+    if (import.meta.env.DEV) {
+      try {
+        const stored = typeof window !== 'undefined' ? localStorage.getItem(MOCK_SESSION_KEY) : null;
+        if (stored) {
+          const parsed = JSON.parse(stored) as Session;
+          return parsed.access_token || null;
+        }
+      } catch {}
+    }
+
+    return null;
   },
 
   async getCurrentUser(): Promise<User | null> {
-    try {
-      const stored = typeof window !== 'undefined' ? localStorage.getItem(MOCK_SESSION_KEY) : null;
-      if (stored) {
-        const parsed = JSON.parse(stored) as Session;
-        return parsed.user || null;
+    if (isSupabaseConfigured) {
+      try {
+        const { data } = await supabase.auth.getUser();
+        return data.user;
+      } catch {
+        return null;
       }
-    } catch {}
-    if (!isSupabaseConfigured) return null;
-    try {
-      const { data } = await supabase.auth.getUser();
-      return data.user;
-    } catch {
-      return null;
     }
+
+    if (import.meta.env.DEV) {
+      try {
+        const stored = typeof window !== 'undefined' ? localStorage.getItem(MOCK_SESSION_KEY) : null;
+        if (stored) {
+          const parsed = JSON.parse(stored) as Session;
+          return parsed.user || null;
+        }
+      } catch {}
+    }
+
+    return null;
   },
 
   getRememberedUser(): string | null {
@@ -152,16 +181,16 @@ export const authService = {
     }
   },
 
+  /**
+   * Primary authentication entrypoint.
+   * In configured environments, authenticates exclusively via Supabase with password credentials
+   * and verifies active administrative authorization.
+   * Fails closed: no demo accounts, no backdoor passwords.
+   */
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
     const email = (credentials.email || '').trim().toLowerCase();
     const password = credentials.password;
     const isRemembered = Boolean(credentials.rememberMe);
-
-    // If demo account or mock environment test
-    const isDemoAccount =
-      email === 'admin@sobaike.org' ||
-      email === 'admin@example.com' ||
-      email === 'demo@sobaike.org';
 
     if (isSupabaseConfigured) {
       try {
@@ -170,36 +199,68 @@ export const authService = {
           password,
         });
 
-        if (!error && data.user && data.session) {
-          const isAdmin = await checkAdminStatus(data.user.id);
-          if (isAdmin) {
-            if (isRemembered) this.setRememberedUser(email);
-            else this.clearRememberedUser();
-            return {
-              success: true,
-              user: data.user,
-              session: data.session,
-            };
-          }
+        if (error) {
+          return {
+            success: false,
+            error: error.message || 'Invalid email or password',
+          };
         }
-      } catch (err) {
-        console.warn('Supabase remote sign-in failed, checking mock fallback:', err);
+
+        if (!data.user || !data.session) {
+          return {
+            success: false,
+            error: 'Authentication failed. Please try again.',
+          };
+        }
+
+        // Verify active administrative standing in public.admin_users
+        const isAdmin = await checkAdminStatus(data.user.id);
+        if (!isAdmin) {
+          // Immediately sign out unauthorized user from Supabase client
+          await supabase.auth.signOut().catch(() => {});
+          return {
+            success: false,
+            isUnauthorizedAdmin: true,
+            error: 'Unauthorized: Your account does not have active administrative privileges.',
+          };
+        }
+
+        if (isRemembered) {
+          this.setRememberedUser(email);
+        } else {
+          this.clearRememberedUser();
+        }
+
+        return {
+          success: true,
+          user: data.user,
+          session: data.session,
+        };
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Authentication service error';
+        return {
+          success: false,
+          error: message,
+        };
       }
     }
 
-    // Fallback demo/development login
-    if (isDemoAccount || !isSupabaseConfigured || password === 'admin123' || password === 'admin') {
-      const { user, session } = createMockSession(email || 'admin@sobaike.org');
+    // Unconfigured environment handling
+    if (import.meta.env.DEV) {
+      // Development mock session when credentials are completely unconfigured
+      const { user, session } = createDevMockSession(email || 'admin@sobaike.org');
       try {
         if (typeof window !== 'undefined') {
           localStorage.setItem(MOCK_SESSION_KEY, JSON.stringify(session));
         }
       } catch {}
+
       if (isRemembered) {
         this.setRememberedUser(email || 'admin@sobaike.org');
       } else {
         this.clearRememberedUser();
       }
+
       return {
         success: true,
         user,
@@ -207,9 +268,11 @@ export const authService = {
       };
     }
 
+    // Configured production requires valid Supabase environment variables
     return {
       success: false,
-      error: 'Invalid credentials. You can sign in using demo account: admin@sobaike.org / admin123',
+      isUnconfigured: true,
+      error: 'Supabase authentication is not configured in this environment.',
     };
   },
 
@@ -219,7 +282,9 @@ export const authService = {
         localStorage.removeItem(MOCK_SESSION_KEY);
       }
     } catch {}
+
     if (!isSupabaseConfigured) return;
+
     try {
       await supabase.auth.signOut();
     } catch (err) {

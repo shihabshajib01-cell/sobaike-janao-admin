@@ -42,14 +42,17 @@ export class ComplaintApi {
     if (isSupabaseConfigured) {
       return getTaxonomySegments();
     }
-    return [
-      { id: 'roads_traffic', name_en: 'Roads & Traffic', name_bn: 'রাস্তাঘাট ও ট্রাফিক', active: true },
-      { id: 'waste_management', name_en: 'Waste Management', name_bn: 'বর্জ্য ব্যবস্থাপনা', active: true },
-      { id: 'extortion', name_en: 'Extortion & Illegal Tolls', name_bn: 'চাঁদাবাজি ও অবৈধ টোল', active: true },
-      { id: 'harassment', name_en: 'Public Harassment', name_bn: 'পাবলিক হয়রানি', active: true },
-      { id: 'civic_issues', name_en: 'Civic Problems & Drainage', name_bn: 'নাগরিক সমস্যা ও ড্রেনেজ', active: true },
-      { id: 'corruption', name_en: 'Public Office Irregularities', name_bn: 'সরকারি দপ্তরের অনিয়ম', active: true },
-    ];
+    if (import.meta.env.DEV) {
+      return [
+        { id: 'roads_traffic', name_en: 'Roads & Traffic', name_bn: 'রাস্তাঘাট ও ট্রাফিক', active: true },
+        { id: 'waste_management', name_en: 'Waste Management', name_bn: 'বর্জ্য ব্যবস্থাপনা', active: true },
+        { id: 'extortion', name_en: 'Extortion & Illegal Tolls', name_bn: 'চাঁদাবাজি ও অবৈধ টোল', active: true },
+        { id: 'harassment', name_en: 'Public Harassment', name_bn: 'পাবলিক হয়রানি', active: true },
+        { id: 'civic_issues', name_en: 'Civic Problems & Drainage', name_bn: 'নাগরিক সমস্যা ও ড্রেনেজ', active: true },
+        { id: 'corruption', name_en: 'Public Office Irregularities', name_bn: 'সরকারি দপ্তরের অনিয়ম', active: true },
+      ];
+    }
+    return [];
   }
 
   /**
@@ -59,22 +62,26 @@ export class ComplaintApi {
     if (isSupabaseConfigured) {
       return getDistinctLocations();
     }
-    return [
-      'Dhaka',
-      'Chattogram',
-      'Gazipur',
-      'Narayanganj',
-      'Sylhet',
-      'Rajshahi',
-      'Khulna',
-      'Barishal',
-      'Rangpur',
-      'Mymensingh',
-    ];
+    if (import.meta.env.DEV) {
+      return [
+        'Dhaka',
+        'Chattogram',
+        'Gazipur',
+        'Narayanganj',
+        'Sylhet',
+        'Rajshahi',
+        'Khulna',
+        'Barishal',
+        'Rangpur',
+        'Mymensingh',
+      ];
+    }
+    return [];
   }
 
   /**
    * Get paginated and filtered complaint list
+   * Configured production queries Supabase exclusively and throws real errors on failure.
    */
   async getComplaints(
     filters: Partial<ComplaintFilterState> = {},
@@ -82,13 +89,12 @@ export class ComplaintApi {
     pageSize = 6
   ): Promise<ComplaintListResponse> {
     if (isSupabaseConfigured) {
-      try {
-        return await supabaseComplaintService.getComplaints(filters, page, pageSize);
-      } catch (err) {
-        console.warn('[AI Studio] Supabase getComplaints failed, falling back to mock fixtures:', err);
-      }
+      return await supabaseComplaintService.getComplaints(filters, page, pageSize);
     }
-    return complaintFallback.getComplaints(filters, page, pageSize);
+    if (import.meta.env.DEV) {
+      return complaintFallback.getComplaints(filters, page, pageSize);
+    }
+    throw new Error('Supabase client is not configured in this environment.');
   }
 
   /**
@@ -96,13 +102,12 @@ export class ComplaintApi {
    */
   async getComplaintStats(): Promise<ComplaintStatusTabCount[]> {
     if (isSupabaseConfigured) {
-      try {
-        return await supabaseComplaintService.getComplaintStats();
-      } catch (err) {
-        console.warn('[AI Studio] Supabase getComplaintStats failed, falling back to mock fixtures:', err);
-      }
+      return await supabaseComplaintService.getComplaintStats();
     }
-    return complaintFallback.getComplaintStats();
+    if (import.meta.env.DEV) {
+      return complaintFallback.getComplaintStats();
+    }
+    throw new Error('Supabase client is not configured in this environment.');
   }
 
   /**
@@ -110,30 +115,28 @@ export class ComplaintApi {
    */
   async getComplaintById(id: string): Promise<Complaint | null> {
     if (isSupabaseConfigured) {
-      try {
-        return await supabaseComplaintService.getComplaintById(id);
-      } catch (err) {
-        console.warn('[AI Studio] Supabase getComplaintById failed, falling back to mock fixtures:', err);
-      }
+      return await supabaseComplaintService.getComplaintById(id);
     }
-    return complaintFallback.getComplaintById(id);
+    if (import.meta.env.DEV) {
+      return complaintFallback.getComplaintById(id);
+    }
+    throw new Error('Supabase client is not configured in this environment.');
   }
 
   /**
-   * Get complete complaint detail workspace package (complaint + timeline)
+   * Get complete complaint detail workspace package (complaint + timeline + evidence)
    */
   async getComplaintDetail(
     id: string,
     options?: { loadEvidence?: boolean }
   ): Promise<ComplaintDetailData | null> {
     if (isSupabaseConfigured) {
-      try {
-        return await supabaseComplaintService.getComplaintDetail(id, options);
-      } catch (err) {
-        console.warn('[AI Studio] Supabase getComplaintDetail failed, falling back to mock fixtures:', err);
-      }
+      return await supabaseComplaintService.getComplaintDetail(id, options);
     }
-    return complaintFallback.getComplaintDetail(id);
+    if (import.meta.env.DEV) {
+      return complaintFallback.getComplaintDetail(id);
+    }
+    throw new Error('Supabase client is not configured in this environment.');
   }
 
   /**
@@ -141,13 +144,12 @@ export class ComplaintApi {
    */
   async getComplaintTimeline(id: string): Promise<ComplaintTimelineEvent[]> {
     if (isSupabaseConfigured) {
-      try {
-        return await supabaseComplaintService.getComplaintTimeline(id);
-      } catch (err) {
-        console.warn('[AI Studio] Supabase getComplaintTimeline failed, falling back to mock fixtures:', err);
-      }
+      return await supabaseComplaintService.getComplaintTimeline(id);
     }
-    return complaintFallback.getComplaintTimeline(id);
+    if (import.meta.env.DEV) {
+      return complaintFallback.getComplaintTimeline(id);
+    }
+    throw new Error('Supabase client is not configured in this environment.');
   }
 
   /**
@@ -158,7 +160,10 @@ export class ComplaintApi {
     updates: Partial<Complaint>,
     notes?: string
   ): Promise<WorkflowActionResult> {
-    return complaintFallback.editComplaint(complaintId, updates, notes);
+    if (import.meta.env.DEV && !isSupabaseConfigured) {
+      return complaintFallback.editComplaint(complaintId, updates, notes);
+    }
+    throw new Error('Direct complaint editing is not permitted.');
   }
 
   async rejectComplaint(
@@ -169,25 +174,37 @@ export class ComplaintApi {
     if (isSupabaseConfigured) {
       return await supabaseComplaintService.rejectComplaint(complaintId, reason, explanation);
     }
-    return complaintFallback.rejectComplaint(complaintId, reason, explanation);
+    if (import.meta.env.DEV) {
+      return complaintFallback.rejectComplaint(complaintId, reason, explanation);
+    }
+    throw new Error('Supabase client is not configured in this environment.');
   }
 
   async publishComplaint(complaintId: string): Promise<WorkflowActionResult> {
     if (isSupabaseConfigured) {
       return await supabaseComplaintService.publishComplaint(complaintId);
     }
-    return complaintFallback.publishComplaint(complaintId);
+    if (import.meta.env.DEV) {
+      return complaintFallback.publishComplaint(complaintId);
+    }
+    throw new Error('Supabase client is not configured in this environment.');
   }
 
   async unpublishComplaint(complaintId: string): Promise<WorkflowActionResult> {
     if (isSupabaseConfigured) {
       return await supabaseComplaintService.unpublishComplaint(complaintId);
     }
-    return complaintFallback.unpublishComplaint(complaintId);
+    if (import.meta.env.DEV) {
+      return complaintFallback.unpublishComplaint(complaintId);
+    }
+    throw new Error('Supabase client is not configured in this environment.');
   }
 
   async addComplaintUpdate(complaintId: string, message: string): Promise<WorkflowActionResult> {
-    return complaintFallback.addComplaintUpdate(complaintId, message);
+    if (import.meta.env.DEV && !isSupabaseConfigured) {
+      return complaintFallback.addComplaintUpdate(complaintId, message);
+    }
+    throw new Error('Adding custom timeline updates without status change is not supported.');
   }
 }
 
