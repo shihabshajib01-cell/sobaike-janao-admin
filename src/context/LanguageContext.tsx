@@ -124,6 +124,46 @@ export interface TranslationDictionary {
     moduleAdminUsers: string;
     moduleRoles: string;
     moduleAudit: string;
+    // Role Detail & Edit additions (Phase 2B)
+    roleDetailTitle: string;
+    roleDetailSubtitle: string;
+    backToRoles: string;
+    backToDetail: string;
+    editRole: string;
+    editRoleTitle: string;
+    editRoleSubtitle: string;
+    technicalRoleId: string;
+    technicalRoleIdHelper: string;
+    englishName: string;
+    bengaliName: string;
+    notSpecified: string;
+    roleType: string;
+    systemRole: string;
+    customRole: string;
+    lastUpdated: string;
+    neverUpdated: string;
+    assignedPermissions: string;
+    noAssignedPermissions: string;
+    noAssignedPermissionsDesc: string;
+    assignedCountBadge: string;
+    systemRoleProtectedNotice: string;
+    systemRoleProtectedEditNotice: string;
+    roleNotFoundTitle: string;
+    roleNotFoundMessage: string;
+    viewDetails: string;
+    saveChanges: string;
+    savingChanges: string;
+    roleUpdatedSuccess: string;
+    noChangesDetected: string;
+    readOnlyField: string;
+    bengaliNameNotice: string;
+    lastManagerError: string;
+    systemRoleError: string;
+    compatibilityError: string;
+    copyId: string;
+    idCopied: string;
+    activeStatusHelper: string;
+    inactiveStatusHelper: string;
   };
 }
 
@@ -251,6 +291,46 @@ export const translations: Record<Language, TranslationDictionary> = {
       moduleAdminUsers: 'User Management',
       moduleRoles: 'Roles & Permissions',
       moduleAudit: 'Audit',
+      // Role Detail & Edit additions (Phase 2B)
+      roleDetailTitle: 'Role Details',
+      roleDetailSubtitle: 'Inspect role metadata, status, and assigned permissions.',
+      backToRoles: 'Back to Roles',
+      backToDetail: 'Back to Role Details',
+      editRole: 'Edit Role',
+      editRoleTitle: 'Edit Role',
+      editRoleSubtitle: 'Update role settings, description, and assigned permissions.',
+      technicalRoleId: 'Technical Role ID',
+      technicalRoleIdHelper: 'Permanent system identifier used for authorization checks.',
+      englishName: 'Role Name (English)',
+      bengaliName: 'Role Name (Bengali)',
+      notSpecified: 'Not specified',
+      roleType: 'Role Type',
+      systemRole: 'System Role',
+      customRole: 'Custom Role',
+      lastUpdated: 'Last Updated',
+      neverUpdated: 'Never updated',
+      assignedPermissions: 'Assigned Permissions',
+      noAssignedPermissions: 'No permissions assigned to this role',
+      noAssignedPermissionsDesc: 'Users with this role will not have access to permission-controlled administrative features.',
+      assignedCountBadge: '{count} assigned',
+      systemRoleProtectedNotice: 'This is a protected system role. Core settings and permissions cannot be changed.',
+      systemRoleProtectedEditNotice: 'Core configuration (name, status, and permissions) for system roles is permanently locked. Only the description can be modified.',
+      roleNotFoundTitle: 'Role Not Found',
+      roleNotFoundMessage: 'The requested administrative role does not exist or may have been removed.',
+      viewDetails: 'View Details',
+      saveChanges: 'Save Changes',
+      savingChanges: 'Saving Changes...',
+      roleUpdatedSuccess: 'Role updated successfully.',
+      noChangesDetected: 'No changes detected',
+      readOnlyField: 'Read-only',
+      bengaliNameNotice: 'Bengali role name is preserved and managed separately.',
+      lastManagerError: 'Operation rejected: Cannot modify or deactivate this role because it would leave no active administrators with role management permissions.',
+      systemRoleError: 'System roles are protected by security policies. Core settings and permissions cannot be changed.',
+      compatibilityError: 'Role updates are temporarily unavailable because the required backend update has not been applied. Please contact your system administrator.',
+      copyId: 'Copy ID',
+      idCopied: 'ID Copied',
+      activeStatusHelper: 'Active roles grant their permissions to assigned users.',
+      inactiveStatusHelper: 'Inactive roles do not grant permissions to assigned users.',
     },
   },
   bn: {
@@ -376,6 +456,46 @@ export const translations: Record<Language, TranslationDictionary> = {
       moduleAdminUsers: 'ব্যবহারকারী পরিচালনা',
       moduleRoles: 'ভূমিকা ও অনুমতি',
       moduleAudit: 'অডিট',
+      // Role Detail & Edit additions (Phase 2B)
+      roleDetailTitle: 'ভূমিকার বিবরণ',
+      roleDetailSubtitle: 'ভূমিকার মেটাডাটা, স্ট্যাটাস এবং বরাদ্দকৃত অনুমতি পর্যালোচনা করুন।',
+      backToRoles: 'ভূমিকা তালিকায় ফিরুন',
+      backToDetail: 'ভূমিকার বিবরণে ফিরুন',
+      editRole: 'ভূমিকা সম্পাদনা',
+      editRoleTitle: 'ভূমিকা সম্পাদনা',
+      editRoleSubtitle: 'ভূমিকার সেটিংস, বিবরণ এবং বরাদ্দকৃত অনুমতি হালনাগাদ করুন।',
+      technicalRoleId: 'টেকনিক্যাল ভূমিকা আইডি',
+      technicalRoleIdHelper: 'অনুমতি যাচাইয়ের জন্য স্থায়ী সিস্টেম শনাক্তকারী।',
+      englishName: 'ভূমিকার নাম (ইংরেজি)',
+      bengaliName: 'ভূমিকার নাম (বাংলা)',
+      notSpecified: 'নির্দিষ্ট করা নেই',
+      roleType: 'ভূমিকার ধরন',
+      systemRole: 'সিস্টেম ভূমিকা',
+      customRole: 'কাস্টম ভূমিকা',
+      lastUpdated: 'সর্বশেষ হালনাগাদ',
+      neverUpdated: 'কখনো পরিবর্তন হয়নি',
+      assignedPermissions: 'বরাদ্দকৃত অনুমতিসমূহ',
+      noAssignedPermissions: 'এই ভূমিকায় কোনো অনুমতি বরাদ্দ নেই',
+      noAssignedPermissionsDesc: 'এই ভূমিকার ব্যবহারকারীরা কোনো অনুমতি-নিয়ন্ত্রিত প্রশাসনিক ফিচারে প্রবেশাধিকার পাবেন না।',
+      assignedCountBadge: '{count} টি বরাদ্দকৃত',
+      systemRoleProtectedNotice: 'এটি একটি সুরক্ষিত সিস্টেম ভূমিকা। মূল সেটিংস ও অনুমতি পরিবর্তন করা যাবে না।',
+      systemRoleProtectedEditNotice: 'সিস্টেম ভূমিকার মূল সেটিংস (নাম, স্ট্যাটাস এবং অনুমতি) স্থায়ীভাবে লক করা। শুধুমাত্র বিবরণ সম্পাদনা করা যাবে।',
+      roleNotFoundTitle: 'ভূমিকা পাওয়া যায়নি',
+      roleNotFoundMessage: 'অনুরোধকৃত প্রশাসনিক ভূমিকাটি বিদ্যমান নেই বা সরানো হয়ে থাকতে পারে।',
+      viewDetails: 'বিস্তারিত দেখুন',
+      saveChanges: 'পরিবর্তন সংরক্ষণ করুন',
+      savingChanges: 'সংরক্ষণ করা হচ্ছে...',
+      roleUpdatedSuccess: 'ভূমিকা সফলভাবে হালনাগাদ হয়েছে।',
+      noChangesDetected: 'কোনো পরিবর্তন করা হয়নি',
+      readOnlyField: 'শুধুমাত্র পাঠযোগ্য',
+      bengaliNameNotice: 'বাংলা ভূমিকার নাম সংরক্ষিত থাকে এবং আলাদাভাবে পরিচালিত হয়।',
+      lastManagerError: 'কার্যক্রম বাতিল: এই ভূমিকাটি পরিবর্তন বা নিষ্ক্রিয় করা যাবে না কারণ এর ফলে সিস্টেমে ভূমিকা পরিচালনা করার মতো কোনো সক্রিয় প্রশাসক থাকবে না।',
+      systemRoleError: 'সিস্টেম ভূমিকাগুলো নিরাপত্তা নীতি দ্বারা সুরক্ষিত। মূল সেটিংস ও অনুমতি পরিবর্তন করা যাবে না।',
+      compatibilityError: 'প্রয়োজনীয় ব্যাকএন্ড আপডেট প্রয়োগ না করায় ভূমিকা আপডেট সাময়িকভাবে অনুপলব্ধ। অনুগ্রহ করে সিস্টেম অ্যাডমিনিস্ট্রেটরের সাথে যোগাযোগ করুন।',
+      copyId: 'আইডি কপি করুন',
+      idCopied: 'আইডি কপি করা হয়েছে',
+      activeStatusHelper: 'সক্রিয় ভূমিকার অনুমতিগুলো বরাদ্দকৃত ব্যবহারকারীরা ব্যবহার করতে পারেন।',
+      inactiveStatusHelper: 'নিষ্ক্রিয় ভূমিকার অনুমতিগুলো বরাদ্দকৃত ব্যবহারকারীরা ব্যবহার করতে পারেন না।',
     },
   },
 };

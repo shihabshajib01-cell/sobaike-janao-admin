@@ -15,6 +15,8 @@ import {
   LocationActivityPage,
   RolesPage,
   CreateRolePage,
+  RoleDetailPage,
+  EditRolePage,
   NotFoundPage,
 } from '@/pages';
 
@@ -207,6 +209,22 @@ export const AppRoutes: React.FC = () => {
             element={
               <PermissionGuard requiredPermission="roles.manage">
                 <CreateRolePage />
+              </PermissionGuard>
+            }
+          />
+          <Route
+            path="/roles/:roleId"
+            element={
+              <PermissionGuard requiredPermission="roles.manage">
+                <RoleDetailPage />
+              </PermissionGuard>
+            }
+          />
+          <Route
+            path="/roles/:roleId/edit"
+            element={
+              <PermissionGuard requiredPermission="roles.manage">
+                <EditRolePage />
               </PermissionGuard>
             }
           />

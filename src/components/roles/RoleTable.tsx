@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Table,
   TableHeader,
@@ -8,17 +9,23 @@ import {
   TableCell,
 } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
 import { useLanguage } from '@/context/LanguageContext';
 import { RoleListItem } from '@/types/Role';
-import { Shield, KeyRound, Users, Calendar } from 'lucide-react';
+import { Shield, KeyRound, Users, Calendar, Eye } from 'lucide-react';
 
 export interface RoleTableProps {
   roles: RoleListItem[];
 }
 
 export const RoleTable: React.FC<RoleTableProps> = ({ roles }) => {
+  const navigate = useNavigate();
   const { t, language } = useLanguage();
   const isBn = language === 'bn';
+
+  const handleViewDetail = (roleId: string) => {
+    navigate(`/roles/${roleId}`);
+  };
 
   const formatNumber = (num: number): string => {
     if (!isBn) return num.toLocaleString();
@@ -46,11 +53,12 @@ export const RoleTable: React.FC<RoleTableProps> = ({ roles }) => {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[300px]">{t.roles.roleName}</TableHead>
-            <TableHead className="w-[120px]">{t.roles.status}</TableHead>
-            <TableHead className="w-[160px]">{t.roles.permissions}</TableHead>
-            <TableHead className="w-[170px]">{t.roles.assignedUsers}</TableHead>
-            <TableHead className="w-[150px]">{t.roles.created}</TableHead>
+            <TableHead className="w-[280px]">{t.roles.roleName}</TableHead>
+            <TableHead className="w-[110px]">{t.roles.status}</TableHead>
+            <TableHead className="w-[150px]">{t.roles.permissions}</TableHead>
+            <TableHead className="w-[160px]">{t.roles.assignedUsers}</TableHead>
+            <TableHead className="w-[140px]">{t.roles.created}</TableHead>
+            <TableHead className="w-[90px] text-right">{t.common.actions}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -60,7 +68,8 @@ export const RoleTable: React.FC<RoleTableProps> = ({ roles }) => {
             return (
               <TableRow
                 key={role.id}
-                className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
+                className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group cursor-pointer"
+                onClick={() => handleViewDetail(role.id)}
               >
                 {/* 1. Role Name & Description */}
                 <TableCell className="font-medium">
@@ -70,9 +79,16 @@ export const RoleTable: React.FC<RoleTableProps> = ({ roles }) => {
                     </div>
                     <div className="min-w-0 space-y-0.5">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-slate-900 dark:text-slate-100 text-xs sm:text-sm">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewDetail(role.id);
+                          }}
+                          className="font-semibold text-slate-900 dark:text-slate-100 text-xs sm:text-sm hover:text-sky-600 dark:hover:text-sky-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-500 rounded text-left transition-colors"
+                        >
                           {displayName}
-                        </span>
+                        </button>
                         {role.is_system && (
                           <Badge size="sm" variant="subtle" status="info">
                             {t.roles.system}
@@ -135,6 +151,23 @@ export const RoleTable: React.FC<RoleTableProps> = ({ roles }) => {
                     <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     <span>{formatDate(role.created_at)}</span>
                   </div>
+                </TableCell>
+
+                {/* 6. Action Button */}
+                <TableCell className="text-right">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleViewDetail(role.id);
+                    }}
+                    className="h-7 px-2.5 text-xs text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400"
+                    aria-label={`${t.roles.viewDetails}: ${displayName}`}
+                  >
+                    <Eye className="w-3.5 h-3.5 mr-1" />
+                    <span>{isBn ? 'দেখুন' : 'View'}</span>
+                  </Button>
                 </TableCell>
               </TableRow>
             );

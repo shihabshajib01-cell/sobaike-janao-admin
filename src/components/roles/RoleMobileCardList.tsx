@@ -1,17 +1,24 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
 import { useLanguage } from '@/context/LanguageContext';
 import { RoleListItem } from '@/types/Role';
-import { Shield, KeyRound, Users, Calendar } from 'lucide-react';
+import { Shield, KeyRound, Users, Calendar, ChevronRight } from 'lucide-react';
 
 export interface RoleMobileCardListProps {
   roles: RoleListItem[];
 }
 
 export const RoleMobileCardList: React.FC<RoleMobileCardListProps> = ({ roles }) => {
+  const navigate = useNavigate();
   const { t, language } = useLanguage();
   const isBn = language === 'bn';
+
+  const handleViewDetail = (roleId: string) => {
+    navigate(`/roles/${roleId}`);
+  };
 
   const formatNumber = (num: number): string => {
     if (!isBn) return num.toLocaleString();
@@ -42,7 +49,8 @@ export const RoleMobileCardList: React.FC<RoleMobileCardListProps> = ({ roles })
         return (
           <Card
             key={role.id}
-            className="border border-slate-200 dark:border-slate-800 shadow-xs"
+            className="border border-slate-200 dark:border-slate-800 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors cursor-pointer"
+            onClick={() => handleViewDetail(role.id)}
           >
             <CardContent className="p-4 space-y-3">
               {/* Header: Title + Status Badge */}
@@ -107,13 +115,25 @@ export const RoleMobileCardList: React.FC<RoleMobileCardListProps> = ({ roles })
                 </div>
               </div>
 
-              {/* Created Date */}
+              {/* Footer: Created Date + View Details button */}
               <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
-                <span>{t.roles.createdLabel}</span>
                 <span className="flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
                   {formatDate(role.created_at)}
                 </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleViewDetail(role.id);
+                  }}
+                  className="h-6 px-2 text-xs font-medium text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950/40"
+                  rightIcon={<ChevronRight className="w-3 h-3" />}
+                  aria-label={`${t.roles.viewDetails}: ${displayName}`}
+                >
+                  <span>{t.roles.viewDetails}</span>
+                </Button>
               </div>
             </CardContent>
           </Card>

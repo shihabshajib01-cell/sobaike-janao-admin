@@ -8,4 +8,6 @@ export * from './Map/MapPage';
 export * from './LocationActivity/LocationActivityPage';
 export * from './Roles/RolesPage';
 export * from './Roles/CreateRolePage';
+export * from './Roles/RoleDetailPage';
+export * from './Roles/EditRolePage';
 export * from './NotFound/NotFoundPage';

@@ -146,6 +146,8 @@ export interface RoleUpdateInput {
   description?: string | null;
 }
 
+export type UpdateRoleInput = RoleUpdateInput;
+
 export interface ReplaceRolePermissionsInput {
   role_id: string;
   permission_ids: string[];
