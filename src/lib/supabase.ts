@@ -15,8 +15,10 @@ const supabaseAnonKey =
   import.meta.env.VITE_SUPABASE_ANON_KEY ||
   FALLBACK_SUPABASE_PUBLISHABLE_KEY;
 
-export const isSupabaseConfigured =
-  Boolean(supabaseUrl && supabaseAnonKey);
+export const isSupabaseConfigured = Boolean(
+  import.meta.env.VITE_SUPABASE_URL &&
+  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY)
+);
 
 /**
  * Singleton Supabase Client for Sobaike Admin Operations.

@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { authService } from '@/services/auth/authService';
 
 export const CANONICAL_PERMISSIONS = [
   'dashboard.view',
@@ -69,13 +70,39 @@ export const permissionService = {
       throw new Error('Supabase client is not configured in production environment.');
     }
 
+    // Dev mode with mock/demo session
+    const currentUser = await authService.getCurrentUser();
+    if (
+      import.meta.env.DEV &&
+      currentUser &&
+      (currentUser.id.startsWith('dev-admin') || currentUser.id === 'mock-admin')
+    ) {
+      return {
+        role: {
+          id: 'dev_admin',
+          name_en: 'System Administrator (Dev)',
+          name_bn: 'সিস্টেম অ্যাডমিনিস্ট্রেটর (ডেভ)',
+          active: true,
+          is_system: true,
+        },
+        permissions: [...CANONICAL_PERMISSIONS],
+        isBootstrapMode: true,
+        isAdmin: true,
+      };
+    }
+
+    // In configured production, missing authenticated caller must fail closed
+    if (!currentUser?.id) {
+      throw new Error('No authenticated user session found for authorization resolution.');
+    }
+
     // Authoritative check: Database runtime context RPC using auth.uid() exclusively
     const { data: contextData, error: rpcError } = await supabase.rpc(
       'admin_get_my_authorization_context'
     );
 
     if (rpcError) {
-      console.error('Authorization context RPC failed:', rpcError.message || rpcError);
+      console.warn('Authorization context RPC failed:', rpcError.message || rpcError);
       throw new Error(
         rpcError.message || 'Failed to resolve administrative authorization context from server.'
       );

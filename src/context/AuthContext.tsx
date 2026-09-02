@@ -71,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return profile.permissions;
     } catch (err) {
-      console.error('Failed to load user permissions:', err);
+      console.warn('Failed to load user permissions:', err);
       if (isMountedRef.current) {
         setPermissions([]);
         setRole(null);
@@ -107,15 +107,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     isMountedRef.current = true;
 
-    if (!isSupabaseConfigured) {
-      setIsLoading(false);
-      // In unconfigured dev mode, resolve default admin permissions
-      loadUserPermissions();
-      return () => {
-        isMountedRef.current = false;
-      };
-    }
-
     // 1. Initial session check on mount
     const initAuth = async () => {
       try {
@@ -142,11 +133,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               authService.logout().catch(() => {});
             }, 0);
           }
+        } else if (!isSupabaseConfigured && import.meta.env.DEV) {
+          // In unconfigured dev mode, check if user explicitly signed out
+          const wasExplicitSignout =
+            typeof window !== 'undefined' &&
+            localStorage.getItem('sobaike_explicit_signout') === 'true';
+
+          if (!wasExplicitSignout) {
+            const defaultUser: User = {
+              id: 'dev-admin-id-0001',
+              app_metadata: { provider: 'email' },
+              user_metadata: { name: 'System Administrator', full_name: 'System Administrator' },
+              aud: 'authenticated',
+              created_at: new Date().toISOString(),
+              email: 'admin@sobaike.org',
+              role: 'authenticated',
+            };
+            const defaultSession: Session = {
+              access_token: 'mock-dev-token-sobaike-admin',
+              token_type: 'bearer',
+              expires_in: 86400,
+              refresh_token: 'mock-refresh-token',
+              user: defaultUser,
+            };
+            setSession(defaultSession);
+            setUser(defaultUser);
+            setIsAdmin(true);
+            userRef.current = defaultUser;
+            isAdminRef.current = true;
+            await loadUserPermissions();
+          } else {
+            resetAuthState();
+          }
         } else {
           resetAuthState();
         }
       } catch (err) {
-        console.error('Error during initial auth verification:', err);
+        console.warn('Error during initial auth verification:', err);
       } finally {
         if (isMountedRef.current) {
           setIsLoading(false);
@@ -216,6 +239,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [loadUserPermissions, resetAuthState]);
 
   const login = async (credentials: LoginCredentials): Promise<LoginResponse> => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('sobaike_explicit_signout');
+    }
     const result = await authService.login(credentials);
     if (result.success && result.session && result.user) {
       setSession(result.session);
@@ -231,6 +257,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async (): Promise<void> => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sobaike_explicit_signout', 'true');
+    }
     await authService.logout();
     resetAuthState();
   };
