@@ -63,27 +63,39 @@ const MapViewController: React.FC<{
       return;
     }
 
-    // Only auto-fit if the dataset signature actually changed
+    // Only auto-fit/fly if the dataset signature actually changed
     if (prevSignatureRef.current !== complaintsSignature) {
       prevSignatureRef.current = complaintsSignature;
 
-      if (complaints.length === 1) {
-        map.flyTo([complaints[0].latitude, complaints[0].longitude], 14, {
-          duration: 0.8,
-        });
-      } else {
-        const bounds = L.latLngBounds(
-          complaints.map((c) => [c.latitude, c.longitude])
+      // Priority: If a complaint is currently selected and remains in the filtered results, preserve focus on it
+      const isSelectedInResults =
+        selectedComplaint && complaints.some((c) => c.id === selectedComplaint.id);
+
+      if (isSelectedInResults && selectedComplaint) {
+        map.flyTo(
+          [selectedComplaint.latitude, selectedComplaint.longitude],
+          Math.max(map.getZoom(), 14),
+          { duration: 0.8 }
         );
-        if (bounds.isValid()) {
-          map.fitBounds(bounds, {
-            padding: [45, 45],
-            maxZoom: 15,
+      } else {
+        if (complaints.length === 1) {
+          map.flyTo([complaints[0].latitude, complaints[0].longitude], 14, {
+            duration: 0.8,
           });
+        } else {
+          const bounds = L.latLngBounds(
+            complaints.map((c) => [c.latitude, c.longitude])
+          );
+          if (bounds.isValid()) {
+            map.fitBounds(bounds, {
+              padding: [45, 45],
+              maxZoom: 15,
+            });
+          }
         }
       }
     }
-  }, [complaints, complaintsSignature, map]);
+  }, [complaints, complaintsSignature, map, selectedComplaint]);
 
   // Synchronize when a specific complaint is selected from the list or marker
   useEffect(() => {

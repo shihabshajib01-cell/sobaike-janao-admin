@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -44,6 +44,9 @@ export const MapPage: React.FC = () => {
 
   // Data & State
   const [dataset, setDataset] = useState<MapDataset | null>(null);
+  const datasetRef = useRef<MapDataset | null>(null);
+  datasetRef.current = dataset;
+
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +59,7 @@ export const MapPage: React.FC = () => {
   // Mobile View Switcher: 'map' | 'list'
   const [mobileView, setMobileView] = useState<'map' | 'list'>('map');
 
-  // Load Geospatial Data
+  // Load Geospatial Data - stable callback without dataset or language dependencies
   const loadData = useCallback(async (isRefresh = false) => {
     try {
       if (isRefresh) {
@@ -69,28 +72,24 @@ export const MapPage: React.FC = () => {
 
       const data = await mapApi.getMapDataset();
       setDataset(data);
+      datasetRef.current = data;
       setError(null);
       setRefreshError(null);
     } catch (err: any) {
       console.error('Failed to load map dataset:', err);
-      const msg = isBn
-        ? 'ম্যাপের তথ্য লোড করা যায়নি।'
-        : 'Map data could not be loaded.';
-      
-      // If we already have loaded dataset previously, keep it intact and show refresh notice
-      if (isRefresh && dataset) {
-        setRefreshError(msg);
+      if (isRefresh && datasetRef.current) {
+        setRefreshError('refresh_failed');
       } else {
-        setError(msg);
+        setError('load_failed');
       }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [dataset, isBn]);
+  }, []);
 
   useEffect(() => {
-    loadData();
+    loadData(false);
   }, [loadData]);
 
   // Client-Side Filtered Complaints
@@ -272,7 +271,9 @@ export const MapPage: React.FC = () => {
               {isBn ? 'ম্যাপের তথ্য লোড করা যায়নি।' : 'Map data could not be loaded.'}
             </h3>
             <p className="text-xs text-rose-700 dark:text-rose-300 max-w-md">
-              {error}
+              {isBn
+                ? 'অনুগ্রহ করে আপনার ইন্টারনেট বা সার্ভার সংযোগ পরীক্ষা করে পুনরায় চেষ্টা করুন।'
+                : 'Please verify your internet or server connection and try again.'}
             </p>
           </div>
           <Button
