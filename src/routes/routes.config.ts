@@ -2,15 +2,10 @@ import React from 'react';
 import {
   LayoutDashboard,
   AlertCircle,
-  Rss,
   MessageSquare,
   FolderTree,
   MapPin,
   MapPinned,
-  Users,
-  BarChart3,
-  ShieldCheck,
-  Settings,
 } from 'lucide-react';
 import { TranslationDictionary } from '@/context/LanguageContext';
 
@@ -37,12 +32,6 @@ export const ADMIN_NAVIGATION_ITEMS: RouteItem[] = [
     icon: AlertCircle,
   },
   {
-    path: '/feed',
-    labelKey: 'feed',
-    defaultLabel: 'Public Feed',
-    icon: Rss,
-  },
-  {
     path: '/responses',
     labelKey: 'responses',
     defaultLabel: 'Responses',
@@ -65,29 +54,5 @@ export const ADMIN_NAVIGATION_ITEMS: RouteItem[] = [
     labelKey: 'locationActivity',
     defaultLabel: 'Location Activity',
     icon: MapPinned,
-  },
-  {
-    path: '/users',
-    labelKey: 'users',
-    defaultLabel: 'Users',
-    icon: Users,
-  },
-  {
-    path: '/analytics',
-    labelKey: 'analytics',
-    defaultLabel: 'Analytics',
-    icon: BarChart3,
-  },
-  {
-    path: '/audit-logs',
-    labelKey: 'auditLogs',
-    defaultLabel: 'Audit Logs',
-    icon: ShieldCheck,
-  },
-  {
-    path: '/settings',
-    labelKey: 'settings',
-    defaultLabel: 'Settings',
-    icon: Settings,
   },
 ];

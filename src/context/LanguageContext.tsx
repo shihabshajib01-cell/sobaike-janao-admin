@@ -6,15 +6,10 @@ export interface TranslationDictionary {
   nav: {
     dashboard: string;
     complaints: string;
-    feed: string;
     responses: string;
     categories: string;
     map: string;
     locationActivity: string;
-    users: string;
-    analytics: string;
-    auditLogs: string;
-    settings: string;
   };
   header: {
     searchPlaceholder: string;
@@ -47,15 +42,10 @@ export const translations: Record<Language, TranslationDictionary> = {
     nav: {
       dashboard: 'Dashboard',
       complaints: 'Complaints',
-      feed: 'Public Feed',
       responses: 'Responses',
       categories: 'Categories',
       map: 'Map Monitoring',
       locationActivity: 'Location Activity',
-      users: 'Users',
-      analytics: 'Analytics',
-      auditLogs: 'Audit Logs',
-      settings: 'Settings',
     },
     header: {
       searchPlaceholder: 'Search complaints, IDs, wards...',
@@ -86,15 +76,10 @@ export const translations: Record<Language, TranslationDictionary> = {
     nav: {
       dashboard: 'ড্যাশবোর্ড',
       complaints: 'অভিযোগসমূহ',
-      feed: 'পাবলিক ফিড',
       responses: 'প্রতিক্রিয়া',
       categories: 'বিভাগসমূহ',
       map: 'ম্যাপ মনিটরিং',
       locationActivity: 'লোকেশন অ্যাক্টিভিটি',
-      users: 'ব্যবহারকারী',
-      analytics: 'অ্যানালিটিক্স',
-      auditLogs: 'অডিট লগ',
-      settings: 'সেটিংস',
     },
     header: {
       searchPlaceholder: 'অভিযোগ, আইডি, ওয়ার্ড অনুসন্ধান করুন...',

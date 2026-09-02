@@ -12,10 +12,6 @@ export * from './permissionService';
 export { mockPermissionService, default as permissionService } from './permissionService';
 export * from './workflowService';
 export { mockWorkflowService, default as workflowService } from './workflowService';
-export * from './feedService';
-export { mockFeedService, default as feedService } from './feedService';
-export * from './feedWorkflowService';
-export { mockFeedWorkflowService, default as feedWorkflowService } from './feedWorkflowService';
 export * from './responseService';
 export { mockResponseService } from './responseService';
 export * from './responseWorkflowService';
@@ -26,10 +22,5 @@ export * from './categoryService';
 export { mockCategoryService, default as categoryService } from './categoryService';
 export * from './mapService';
 export { mockMapService, default as mapService } from './mapService';
-export * from './userService';
-export { mockUserService, default as userService } from './userService';
-export * from './roleService';
-export { mockRoleService, default as roleService } from './roleService';
-export * from './analyticsService';
-export { mockAnalyticsService, default as analyticsService } from './analyticsService';
+
 

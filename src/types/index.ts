@@ -1,12 +1,9 @@
 export * from './Complaint';
-export * from './Post';
 export * from './Category';
 export * from './User';
 export * from './Response';
-export * from './AuditLog';
 export * from './Dashboard';
 export * from './Map';
-export * from './Analytics';
-export * from './Settings';
 export * from './LocationActivity';
 export * from './api';
+

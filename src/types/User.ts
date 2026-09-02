@@ -1,52 +1,38 @@
 /**
- * User, Role & Permission Foundation Types
- * Prepares user directory and RBAC data structures for admin operations.
+ * User & Permission Foundation Types
+ * Prepares authorization and actor identity data structures for admin operations.
  */
 
 export type UserStatus = 'active' | 'inactive' | 'pending' | 'suspended';
+
+export type AdminRole = 'admin' | 'moderator' | 'reviewer' | 'auditor';
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  role: AdminRole | string;
+  status?: UserStatus;
+}
 
 export interface User {
   id: string;
   name: string;
   email: string;
   status: UserStatus;
-  role: string; // role ID or name reference (e.g., 'admin', 'moderator', 'reviewer')
+  role: string;
   avatar?: string;
-  lastActive?: string; // ISO date string
-  createdAt: string; // ISO date string
-}
-
-export interface Role {
-  id: string;
-  name: string;
-  nameBn?: string;
-  description: string;
-  descriptionBn?: string;
-  permissions: string[]; // List of permission IDs (e.g., ['complaints.view', 'complaints.approve'])
-  isSystemDefault?: boolean;
+  lastActive?: string;
+  createdAt: string;
 }
 
 export interface Permission {
-  id: string; // e.g. 'complaints.approve'
-  module: 'complaints' | 'feed' | 'responses' | 'categories' | 'map' | 'users' | string;
-  action: string; // e.g. 'view', 'review', 'approve', 'publish'
+  id: string;
+  module: 'complaints' | 'responses' | 'categories' | 'map' | string;
+  action: string;
   name: string;
   nameBn?: string;
   description: string;
   descriptionBn?: string;
 }
 
-export interface UserFilterState {
-  search: string;
-  role: string;
-  status: string;
-  page?: number;
-  limit?: number;
-}
-
-export interface UserStats {
-  totalUsers: number;
-  activeUsers: number;
-  pendingUsers: number;
-  inactiveUsers: number;
-}
