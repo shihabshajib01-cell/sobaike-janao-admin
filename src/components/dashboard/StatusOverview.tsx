@@ -3,12 +3,13 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Badge } from '@/components/ui/Badge';
 import { useLanguage } from '@/context/LanguageContext';
 import { StatusSummaryItem, LifecycleStatusKey } from '@/types/Dashboard';
-import { Activity, ShieldAlert } from 'lucide-react';
+import { Activity } from 'lucide-react';
 import { cn } from '@/utils';
 
 const STATUS_COLOR_MAP: Record<LifecycleStatusKey, string> = {
   submitted: 'bg-amber-500 dark:bg-amber-400',
   published: 'bg-emerald-500 dark:bg-emerald-400',
+  unpublished: 'bg-slate-400 dark:bg-slate-500',
   rejected: 'bg-rose-500 dark:bg-rose-400',
   edited: 'bg-sky-500 dark:bg-sky-400',
 };
@@ -42,8 +43,8 @@ export const StatusOverview: React.FC<StatusOverviewProps> = ({ statusItems, loa
           <div className="h-3 w-60 bg-slate-100 dark:bg-slate-800 rounded animate-pulse mt-2" />
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="h-3 w-full bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
-          {[1, 2, 3, 4, 5, 6].map((i) => (
+          <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+          {[1, 2, 3, 4].map((i) => (
             <div key={i} className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
               <div className="h-4 w-28 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
               <div className="h-4 w-16 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
@@ -62,20 +63,20 @@ export const StatusOverview: React.FC<StatusOverviewProps> = ({ statusItems, loa
             <div className="flex items-center gap-2">
               <Activity className="w-4 h-4 text-sky-600 dark:text-sky-400" />
               <CardTitle className="text-sm font-semibold">
-                {isBn ? 'অভিযোগের লাইফসাইকেল স্ট্যাটাস' : 'Complaint Lifecycle Pipeline'}
+                {isBn ? 'অভিযোগের লাইফসাইকেল স্ট্যাটাস' : 'Complaint Lifecycle Status'}
               </CardTitle>
             </div>
             <CardDescription>
               {isBn
-                ? 'নাগরিক আবেদন থেকে চূড়ান্ত প্রকাশ পর্যন্ত ৪-ধাপের স্ট্যাটাস অগ্রগতি'
-                : 'Distribution across all 4 operational complaint lifecycle stages'}
+                ? 'দাখিলকৃত অভিযোগের বর্তমান মডারেশন ও প্রকাশনা অবস্থা'
+                : 'Current distribution of registered reports across lifecycle stages'}
             </CardDescription>
           </div>
           <div className="text-right">
             <span className="text-xs text-slate-400 dark:text-slate-500 font-medium block">
-              {isBn ? 'মোট ট্র্যাকিং' : 'Total Tracked'}
+              {isBn ? 'মোট' : 'Total'}
             </span>
-            <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
+            <span className="text-sm font-bold text-slate-800 dark:text-slate-200 font-mono">
               {formatNumber(totalComplaints)}
             </span>
           </div>
@@ -84,19 +85,21 @@ export const StatusOverview: React.FC<StatusOverviewProps> = ({ statusItems, loa
         <CardContent className="pt-3 space-y-4">
           {/* Segmented Visual Distribution Bar */}
           <div className="space-y-1.5">
-            <div className="h-2.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden flex shadow-inner">
-              {statusItems.map((item) => (
-                <div
-                  key={item.key}
-                  style={{ width: `${item.percentage}%` }}
-                  className={cn(STATUS_COLOR_MAP[item.key] || 'bg-slate-400', 'h-full transition-all duration-300 relative group')}
-                  title={`${isBn ? item.labelBn : item.labelEn}: ${item.count} (${item.percentage.toFixed(1)}%)`}
-                />
-              ))}
-            </div>
-            <div className="flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500 px-0.5">
-              <span>{isBn ? 'দাখিল (০%)' : 'Submitted (0%)'}</span>
-              <span>{isBn ? 'সমাধান (১০০%)' : 'Resolved (100%)'}</span>
+            <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden flex shadow-inner">
+              {statusItems.map((item) => {
+                if (item.percentage <= 0) return null;
+                return (
+                  <div
+                    key={item.key}
+                    style={{ width: `${item.percentage}%` }}
+                    className={cn(
+                      STATUS_COLOR_MAP[item.key] || 'bg-slate-400',
+                      'h-full transition-all duration-300 relative'
+                    )}
+                    title={`${isBn ? item.labelBn : item.labelEn}: ${item.count} (${item.percentage.toFixed(1)}%)`}
+                  />
+                );
+              })}
             </div>
           </div>
 
@@ -134,7 +137,7 @@ export const StatusOverview: React.FC<StatusOverviewProps> = ({ statusItems, loa
                       {formatNumber(item.count)}
                     </span>
                     <span className="text-[10px] text-slate-400 dark:text-slate-500 block">
-                      {isBn ? 'টি রিপোর্ট' : 'cases'}
+                      {isBn ? 'টি' : 'reports'}
                     </span>
                   </div>
                 </div>
@@ -142,21 +145,6 @@ export const StatusOverview: React.FC<StatusOverviewProps> = ({ statusItems, loa
             })}
           </div>
         </CardContent>
-      </div>
-
-      {/* Footer Insight Note */}
-      <div className="px-5 py-2.5 bg-slate-50/50 dark:bg-slate-900/60 border-t border-slate-100 dark:border-slate-800/80 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
-        <span className="flex items-center gap-1.5">
-          <ShieldAlert className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-          <span>
-            {isBn ? 'তাত্ক্ষণিক পর্যালোচনা অগ্রাধিকার' : 'Immediate review required'}:{' '}
-            <strong className="text-slate-700 dark:text-slate-300">
-              {formatNumber(statusItems.find((s) => s.key === 'submitted')?.count || 0)}{' '}
-              {isBn ? 'টি নতুন' : 'new'}
-            </strong>
-          </span>
-        </span>
-        <span className="text-[10px] text-slate-400">SLA: 24h</span>
       </div>
     </Card>
   );

@@ -1,5 +1,3 @@
-export * from './dashboardService';
-export { mockDashboardService, default as dashboardService } from './dashboardService';
 export * from './complaintService';
 export { mockComplaintService, default as complaintService } from './complaintService';
 export * from './complaintDetailService';

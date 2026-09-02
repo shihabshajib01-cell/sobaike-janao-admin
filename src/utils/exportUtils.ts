@@ -9,7 +9,6 @@ import autoTable, { UserOptions } from 'jspdf-autotable';
 import { Complaint } from '@/types/Complaint';
 import { ResponseItem } from '@/types/Response';
 import { MapComplaint } from '@/types/Map';
-import { DashboardStats, StatusSummaryItem, RecentComplaintItem } from '@/types/Dashboard';
 
 
 // Helper to sanitize text for standard PDF rendering
@@ -600,126 +599,6 @@ export function exportMapComplaintsToPdf(
     return true;
   } catch (error) {
     console.error('Failed to generate Map PDF:', error);
-    return false;
-  }
-}
-
-/* ==========================================================================
-   4. DASHBOARD OVERVIEW EXPORT (CSV & PDF)
-   ========================================================================== */
-
-export function exportDashboardToCsv(
-  stats: DashboardStats,
-  statuses: StatusSummaryItem[],
-  recentComplaints: RecentComplaintItem[],
-  customFilename?: string
-): boolean {
-  const filename = customFilename || `sobaike_dashboard_overview_${new Date().toISOString().slice(0, 10)}.csv`;
-  const headers = ['Category / Section', 'Item Name / ID', 'Details / Status', 'Value / Count', 'Change / Date'];
-  const rows: (string | number | boolean | null | undefined)[][] = [];
-
-  rows.push(['Core Metrics', 'Total Complaints', 'All time submissions', stats.totalComplaints, `${stats.trends?.totalComplaintsChange > 0 ? '+' : ''}${stats.trends?.totalComplaintsChange}%`]);
-  rows.push(['Core Metrics', 'Submitted', 'Awaiting administrative triage', stats.submitted, `${stats.trends?.submittedChange > 0 ? '+' : ''}${stats.trends?.submittedChange}%`]);
-  rows.push(['Core Metrics', 'Published', 'Visible on public feed', stats.published, `${stats.trends?.publishedChange > 0 ? '+' : ''}${stats.trends?.publishedChange}%`]);
-  rows.push(['Core Metrics', 'Rejected', 'Declined complaints', stats.rejected, `${stats.trends?.rejectedChange > 0 ? '+' : ''}${stats.trends?.rejectedChange}%`]);
-  rows.push(['Core Metrics', 'Edited', 'Administratively modified complaints', stats.edited, `${stats.trends?.editedChange > 0 ? '+' : ''}${stats.trends?.editedChange}%`]);
-
-  statuses.forEach((s) => {
-    rows.push(['Status Distribution', s.labelEn, s.descriptionEn, s.count, `${s.percentage}%`]);
-  });
-
-  recentComplaints.forEach((rc) => {
-    rows.push(['Recent Complaint', rc.id, rc.titleEn, rc.status, rc.date]);
-  });
-
-  return downloadCsv(filename, headers, rows);
-}
-
-export function exportDashboardToPdf(
-  stats: DashboardStats,
-  statuses: StatusSummaryItem[],
-  recentComplaints: RecentComplaintItem[],
-  dateRange?: string,
-  customFilename?: string
-): boolean {
-  try {
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const filename = customFilename || `sobaike_dashboard_overview_${new Date().toISOString().slice(0, 10)}.pdf`;
-
-    const filterItems: { label: string; value: string }[] = [];
-    if (dateRange) {
-      filterItems.push({ label: 'Time Horizon', value: dateRange.toUpperCase() });
-    }
-
-    const startY = setupPdfHeaderAndFooter(
-      doc,
-      'Civic Platform Operational Dashboard Snapshot',
-      'High-level metrics summary, triage workload distribution, and latest complaint activity.',
-      filterItems,
-      stats.totalComplaints,
-      false
-    );
-
-    // Section 1: Dashboard KPIs
-    const kpiHeaders = [['Metric', 'Volume', 'Trend vs Prior Period']];
-    const kpiBody = [
-      ['Total Complaints Submitted', String(stats.totalComplaints), `${stats.trends?.totalComplaintsChange > 0 ? '+' : ''}${stats.trends?.totalComplaintsChange || 0}%`],
-      ['Submitted (Pending Triage)', String(stats.submitted), `${stats.trends?.submittedChange > 0 ? '+' : ''}${stats.trends?.submittedChange || 0}%`],
-      ['Published to Public Feed', String(stats.published), `${stats.trends?.publishedChange > 0 ? '+' : ''}${stats.trends?.publishedChange || 0}%`],
-      ['Rejected Complaints', String(stats.rejected), `${stats.trends?.rejectedChange > 0 ? '+' : ''}${stats.trends?.rejectedChange || 0}%`],
-      ['Edited Complaints', String(stats.edited), `${stats.trends?.editedChange > 0 ? '+' : ''}${stats.trends?.editedChange || 0}%`],
-    ];
-
-    autoTable(doc, {
-      startY,
-      head: kpiHeaders,
-      body: kpiBody,
-      theme: 'grid',
-      styles: { fontSize: 8.5, cellPadding: 2.5, textColor: [51, 65, 85] },
-      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
-      margin: { left: 14, right: 14 },
-    });
-
-    // Section 2: Recent Activity
-    if (recentComplaints && recentComplaints.length > 0) {
-      const finalY = (doc as any).lastAutoTable.finalY + 8;
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.setTextColor(15, 23, 42);
-      doc.text('RECENT COMPLAINT SUBMISSIONS', 14, finalY);
-
-      const recentHeaders = [['ID', 'Title / Issue', 'Status', 'Date']];
-      const recentBody = recentComplaints.map((rc) => [
-        rc.id,
-        sanitizeText(rc.titleEn || rc.titleBn),
-        (rc.status || 'submitted').replace(/_/g, ' ').toUpperCase(),
-        rc.date || '-',
-      ]);
-
-      autoTable(doc, {
-        startY: finalY + 3,
-        head: recentHeaders,
-        body: recentBody,
-        theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 2.2, textColor: [51, 65, 85] },
-        headStyles: { fillColor: [51, 65, 85], textColor: [255, 255, 255], fontStyle: 'bold' },
-        alternateRowStyles: { fillColor: [248, 250, 252] },
-        columnStyles: {
-          0: { cellWidth: 25, fontStyle: 'bold' },
-          1: { cellWidth: 100 },
-          2: { cellWidth: 32, halign: 'center' },
-          3: { cellWidth: 25, halign: 'right' },
-        },
-        margin: { left: 14, right: 14, bottom: 16 },
-      });
-    }
-
-    attachPdfPageNumbers(doc);
-    doc.save(filename.endsWith('.pdf') ? filename : `${filename}.pdf`);
-    return true;
-  } catch (error) {
-    console.error('Failed to generate Dashboard PDF:', error);
     return false;
   }
 }

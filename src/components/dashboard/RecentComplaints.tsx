@@ -1,239 +1,201 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-  TableLoadingRow,
-  TableEmptyRow,
-} from '@/components/ui/Table';
 import { Badge, BadgeStatus } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useLanguage } from '@/context/LanguageContext';
 import { RecentComplaintItem, LifecycleStatusKey } from '@/types/Dashboard';
-import { AlertCircle, Eye, ArrowRight, MapPin } from 'lucide-react';
+import {
+  ListFilter,
+  ArrowRight,
+  MapPin,
+  Calendar,
+  FileText,
+} from 'lucide-react';
 
 export interface RecentComplaintsProps {
   complaints: RecentComplaintItem[];
   loading?: boolean;
 }
 
-export const RecentComplaints: React.FC<RecentComplaintsProps> = ({ complaints, loading }) => {
+export const RecentComplaints: React.FC<RecentComplaintsProps> = ({
+  complaints,
+  loading,
+}) => {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const isBn = language === 'bn';
 
-  const statusBadgeMap: Record<LifecycleStatusKey, { badgeStatus: BadgeStatus; labelEn: string; labelBn: string }> = {
-    submitted: { badgeStatus: 'pending', labelEn: 'Submitted', labelBn: 'দাখিলকৃত' },
+  const statusBadgeMap: Record<
+    LifecycleStatusKey,
+    { badgeStatus: BadgeStatus; labelEn: string; labelBn: string }
+  > = {
+    submitted: { badgeStatus: 'pending', labelEn: 'Submitted', labelBn: 'জমা পড়েছে' },
     published: { badgeStatus: 'published', labelEn: 'Published', labelBn: 'প্রকাশিত' },
-    rejected: { badgeStatus: 'rejected', labelEn: 'Rejected', labelBn: 'বাতিলকৃত' },
+    unpublished: { badgeStatus: 'default', labelEn: 'Unpublished', labelBn: 'অপ্রকাশিত' },
+    rejected: { badgeStatus: 'rejected', labelEn: 'Rejected', labelBn: 'প্রত্যাখ্যাত' },
     edited: { badgeStatus: 'info', labelEn: 'Edited', labelBn: 'সম্পাদিত' },
   };
 
-  const handleView = (id: string) => {
-    navigate(`/complaints/${id}`);
-  };
+  if (loading) {
+    return (
+      <Card variant="default">
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <div className="space-y-1">
+            <div className="h-4 w-44 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+            <div className="h-3 w-64 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+          </div>
+          <div className="h-8 w-24 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className="h-14 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 animate-pulse p-3"
+              />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <Card variant="default" className="w-full">
-      <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3">
+    <Card variant="default" className="overflow-hidden">
+      <CardHeader className="flex flex-row items-center justify-between pb-3">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+            <ListFilter className="w-4 h-4 text-sky-600 dark:text-sky-400" />
             <CardTitle className="text-sm font-semibold">
-              {isBn ? 'সাম্প্রতিক নাগরিক অভিযোগ তালিকা' : 'Recent Citizen Complaints'}
+              {isBn ? 'সাম্প্রতিক প্রতিবেদন' : 'Recent Reports'}
             </CardTitle>
           </div>
           <CardDescription>
             {isBn
-              ? 'সার্বক্ষণিক ইনকামিং অভিযোগ ট্রায়াজ ও প্রাথমিক নিরীক্ষণ'
-              : 'Latest operational complaint intake queue across metropolitan wards'}
+              ? 'প্ল্যাটফর্মে দাখিলকৃত সর্বশেষ অভিযোগসমূহ'
+              : 'Latest citizen submissions awaiting or under moderation'}
           </CardDescription>
         </div>
 
         <Button
-          variant="secondary"
+          variant="ghost"
           size="sm"
           onClick={() => navigate('/complaints')}
-          className="text-xs self-start sm:self-auto"
+          className="text-xs font-medium text-sky-600 dark:text-sky-400 hover:text-sky-700"
+          rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
         >
-          <span>{isBn ? 'সব অভিযোগ দেখুন' : 'View All Complaints'}</span>
-          <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+          {isBn ? 'সকল অভিযোগ দেখুন' : 'View All Complaints'}
         </Button>
       </CardHeader>
 
-      <CardContent className="pt-2">
-        {/* Desktop / Tablet Table View */}
-        <div className="hidden md:block overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[120px]">{isBn ? 'অভিযোগ আইডি' : 'Complaint ID'}</TableHead>
-                <TableHead>{isBn ? 'শিরোনাম ও বিভাগ' : 'Title & Category'}</TableHead>
-                <TableHead>{isBn ? 'অবস্থান' : 'Location'}</TableHead>
-                <TableHead className="w-[110px]">{isBn ? 'সময়' : 'Date'}</TableHead>
-                <TableHead className="w-[120px]">{isBn ? 'স্ট্যাটাস' : 'Status'}</TableHead>
-                <TableHead className="w-[80px] text-right">{isBn ? 'অ্যাকশন' : 'Action'}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableLoadingRow
-                  colSpan={6}
-                  message={isBn ? 'অভিযোগ লোড হচ্ছে...' : 'Loading recent complaints...'}
-                />
-              ) : complaints.length === 0 ? (
-                <TableEmptyRow
-                  colSpan={6}
-                  title={isBn ? 'কোন অভিযোগ নেই' : 'No recent complaints'}
-                  description={
-                    isBn
-                      ? 'বর্তমানে কোনো ইনকামিং অভিযোগ জমা হয়নি।'
-                      : 'No complaints have been logged in this timeframe.'
-                  }
-                />
-              ) : (
-                complaints.map((item) => {
-                  const statusConfig = statusBadgeMap[item.status] || {
+      <CardContent className="p-0">
+        {complaints.length === 0 ? (
+          <div className="p-8 text-center border-t border-slate-100 dark:border-slate-800">
+            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto mb-2">
+              <FileText className="w-5 h-5" />
+            </div>
+            <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              {isBn ? 'কোনো প্রতিবেদন নেই' : 'No Recent Reports'}
+            </p>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500">
+              {isBn
+                ? 'বর্তমানে পর্যালোচনার জন্য কোনো অভিযোগ নেই।'
+                : 'There are no active submissions in the system.'}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 dark:bg-slate-800/60 border-y border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-medium">
+                <tr>
+                  <th className="py-2.5 px-4">{isBn ? 'আইডি ও শিরোনাম' : 'ID & Title'}</th>
+                  <th className="py-2.5 px-4">{isBn ? 'বিভাগ' : 'Segment'}</th>
+                  <th className="py-2.5 px-4">{isBn ? 'অবস্থান' : 'Location'}</th>
+                  <th className="py-2.5 px-4">{isBn ? 'তারিখ' : 'Date'}</th>
+                  <th className="py-2.5 px-4 text-center">{isBn ? 'স্ট্যাটাস' : 'Status'}</th>
+                  <th className="py-2.5 px-4 text-right">{isBn ? 'পদক্ষেপ' : 'Action'}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
+                {complaints.map((c) => {
+                  const statusInfo = statusBadgeMap[c.status] || {
                     badgeStatus: 'default',
-                    labelEn: item.status,
-                    labelBn: item.status,
+                    labelEn: c.status,
+                    labelBn: c.status,
                   };
 
-                  const title = isBn ? item.titleBn : item.titleEn;
-                  const category = isBn ? item.categoryBn : item.categoryEn;
-                  const location = isBn ? item.locationBn : item.locationEn;
-
                   return (
-                    <TableRow key={item.id} className="group">
-                      {/* Complaint ID */}
-                      <TableCell className="font-mono font-semibold text-sky-700 dark:text-sky-400 text-xs">
-                        {item.id}
-                      </TableCell>
-
-                      {/* Title & Category */}
-                      <TableCell className="max-w-xs md:max-w-md">
-                        <div className="space-y-0.5">
-                          <p className="font-medium text-slate-800 dark:text-slate-200 line-clamp-1 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
-                            {title}
-                          </p>
-                          <span className="inline-block text-[11px] text-slate-500 dark:text-slate-400">
-                            {category}
+                    <tr
+                      key={c.id}
+                      onClick={() => navigate(`/complaints/${c.id}`)}
+                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 cursor-pointer transition-colors"
+                    >
+                      {/* ID & Title */}
+                      <td className="py-3 px-4 max-w-xs">
+                        <div className="flex flex-col">
+                          <span className="font-mono text-[11px] font-semibold text-sky-600 dark:text-sky-400">
+                            #{c.id.slice(0, 8)}
+                          </span>
+                          <span className="font-medium text-slate-900 dark:text-slate-100 truncate mt-0.5">
+                            {isBn ? c.titleBn : c.titleEn}
                           </span>
                         </div>
-                      </TableCell>
+                      </td>
+
+                      {/* Category */}
+                      <td className="py-3 px-4 text-slate-600 dark:text-slate-300">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-xs text-[11px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                          {isBn ? c.categoryBn : c.categoryEn}
+                        </span>
+                      </td>
 
                       {/* Location */}
-                      <TableCell>
-                        <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300 text-xs">
-                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span className="truncate">{location}</span>
+                      <td className="py-3 px-4 text-slate-500 dark:text-slate-400">
+                        <div className="flex items-center gap-1.5 truncate max-w-[180px]">
+                          <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                          <span className="truncate">
+                            {isBn ? c.locationBn : c.locationEn}
+                          </span>
                         </div>
-                      </TableCell>
+                      </td>
 
                       {/* Date */}
-                      <TableCell className="text-slate-500 dark:text-slate-400 text-xs whitespace-nowrap">
-                        {item.date}
-                      </TableCell>
+                      <td className="py-3 px-4 text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                        <div className="flex items-center gap-1 text-[11px]">
+                          <Calendar className="w-3 h-3 text-slate-400" />
+                          <span>{c.date}</span>
+                        </div>
+                      </td>
 
                       {/* Status */}
-                      <TableCell>
-                        <Badge status={statusConfig.badgeStatus} size="sm" dot>
-                          {isBn ? statusConfig.labelBn : statusConfig.labelEn}
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
+                        <Badge status={statusInfo.badgeStatus} size="sm">
+                          {isBn ? statusInfo.labelBn : statusInfo.labelEn}
                         </Badge>
-                      </TableCell>
+                      </td>
 
                       {/* Action */}
-                      <TableCell className="text-right">
+                      <td className="py-3 px-4 text-right">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleView(item.id)}
-                          className="h-7 px-2 text-xs text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400"
-                          title={isBn ? 'বিস্তারিত দেখুন' : 'View details'}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/complaints/${c.id}`);
+                          }}
+                          className="h-7 px-2 text-[11px] text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
                         >
-                          <Eye className="w-3.5 h-3.5 mr-1" />
-                          <span>{isBn ? 'দেখুন' : 'View'}</span>
+                          {isBn ? 'পর্যালোচনা' : 'Review'}
                         </Button>
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Mobile Card List View */}
-        <div className="md:hidden space-y-3">
-          {loading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 animate-pulse space-y-2">
-                  <div className="flex justify-between">
-                    <div className="h-3.5 w-20 bg-slate-200 dark:bg-slate-800 rounded" />
-                    <div className="h-3.5 w-16 bg-slate-200 dark:bg-slate-800 rounded" />
-                  </div>
-                  <div className="h-4 w-40 bg-slate-200 dark:bg-slate-800 rounded" />
-                </div>
-              ))}
-            </div>
-          ) : complaints.length === 0 ? (
-            <div className="p-6 text-center text-slate-500 dark:text-slate-400 text-xs border border-slate-200 dark:border-slate-800 rounded-lg">
-              {isBn ? 'বর্তমানে কোনো ইনকামিং অভিযোগ জমা হয়নি।' : 'No recent complaints logged.'}
-            </div>
-          ) : (
-            complaints.map((item) => {
-              const statusConfig = statusBadgeMap[item.status] || {
-                badgeStatus: 'default',
-                labelEn: item.status,
-                labelBn: item.status,
-              };
-
-              const title = isBn ? item.titleBn : item.titleEn;
-              const category = isBn ? item.categoryBn : item.categoryEn;
-              const location = isBn ? item.locationBn : item.locationEn;
-
-              return (
-                <div
-                  key={item.id}
-                  onClick={() => handleView(item.id)}
-                  className="p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 active:bg-slate-50/50 dark:active:bg-slate-800/50 cursor-pointer space-y-2.5 shadow-xs transition-all"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono font-bold text-sky-700 dark:text-sky-400 text-xs">
-                      {item.id}
-                    </span>
-                    <Badge status={statusConfig.badgeStatus} size="sm" dot>
-                      {isBn ? statusConfig.labelBn : statusConfig.labelEn}
-                    </Badge>
-                  </div>
-
-                  <div>
-                    <h4 className="text-xs font-semibold text-slate-900 dark:text-slate-100 line-clamp-1">
-                      {title}
-                    </h4>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
-                      {category}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <div className="flex items-center gap-1 truncate max-w-[180px]">
-                      <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                      <span className="truncate">{location}</span>
-                    </div>
-                    <span>{item.date}</span>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
