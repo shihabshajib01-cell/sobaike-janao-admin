@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   MapContainer as LeafletMapContainer,
@@ -49,15 +49,23 @@ const MapViewController: React.FC<{
 }> = ({ complaints, selectedComplaint }) => {
   const map = useMap();
   const prevSelectedIdRef = useRef<string | null>(null);
-  const prevCountRef = useRef<number>(-1);
+  const prevSignatureRef = useRef<string>('');
 
-  // Synchronize when the list of complaints changes (e.g. filtered)
+  const complaintsSignature = useMemo(
+    () => complaints.map((item) => `${item.id}:${item.latitude}:${item.longitude}`).join('|'),
+    [complaints]
+  );
+
+  // Synchronize when the list or coordinates of filtered complaints change
   useEffect(() => {
-    if (complaints.length === 0) return;
+    if (complaints.length === 0) {
+      prevSignatureRef.current = '';
+      return;
+    }
 
-    // Only auto-fit if the dataset count actually changed or it's first render
-    if (prevCountRef.current !== complaints.length) {
-      prevCountRef.current = complaints.length;
+    // Only auto-fit if the dataset signature actually changed
+    if (prevSignatureRef.current !== complaintsSignature) {
+      prevSignatureRef.current = complaintsSignature;
 
       if (complaints.length === 1) {
         map.flyTo([complaints[0].latitude, complaints[0].longitude], 14, {
@@ -75,7 +83,7 @@ const MapViewController: React.FC<{
         }
       }
     }
-  }, [complaints, map]);
+  }, [complaints, complaintsSignature, map]);
 
   // Synchronize when a specific complaint is selected from the list or marker
   useEffect(() => {
@@ -294,9 +302,10 @@ export const MapContainer: React.FC<MapContainerProps> = ({
                   <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 mb-1">
                     <Folder className="w-3 h-3 shrink-0 text-slate-400" />
                     <span className="truncate">
-                      {isBn ? item.segmentBn : item.segmentEn}
-                      {' • '}
-                      {isBn ? item.subcategoryBn : item.subcategoryEn}
+                      {(isBn ? item.segmentBn : item.segmentEn) || '—'}
+                      {(isBn ? item.subcategoryBn : item.subcategoryEn)
+                        ? ` • ${isBn ? item.subcategoryBn : item.subcategoryEn}`
+                        : ''}
                     </span>
                   </div>
 
@@ -367,7 +376,10 @@ export const MapContainer: React.FC<MapContainerProps> = ({
                 {isBn ? 'বিভাগ / উপ-শ্রেণি:' : 'Segment / Sub:'}
               </span>
               <span className="font-medium text-slate-800 dark:text-slate-200 truncate block">
-                {isBn ? selectedComplaint.segmentBn : selectedComplaint.segmentEn}
+                {(isBn ? selectedComplaint.segmentBn : selectedComplaint.segmentEn) || '—'}
+                {(isBn ? selectedComplaint.subcategoryBn : selectedComplaint.subcategoryEn)
+                  ? ` / ${isBn ? selectedComplaint.subcategoryBn : selectedComplaint.subcategoryEn}`
+                  : ''}
               </span>
             </div>
             <div>

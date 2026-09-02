@@ -65,6 +65,7 @@ export interface MapDataset {
   complaints: MapComplaint[];
   totalSourceCount: number;
   unmappedCount: number;
+  unsupportedStatusCount: number;
   segments: MapSegmentOption[];
   subcategories: MapSubcategoryOption[];
   districts: string[];

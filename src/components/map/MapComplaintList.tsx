@@ -151,9 +151,10 @@ export const MapComplaintList: React.FC<MapComplaintListProps> = ({
                 <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 mt-1">
                   <Folder className="w-3 h-3 text-slate-400 shrink-0" />
                   <span className="truncate">
-                    {isBn ? item.segmentBn : item.segmentEn}
-                    {' • '}
-                    {isBn ? item.subcategoryBn : item.subcategoryEn}
+                    {(isBn ? item.segmentBn : item.segmentEn) || '—'}
+                    {(isBn ? item.subcategoryBn : item.subcategoryEn)
+                      ? ` • ${isBn ? item.subcategoryBn : item.subcategoryEn}`
+                      : ''}
                   </span>
                 </div>
 

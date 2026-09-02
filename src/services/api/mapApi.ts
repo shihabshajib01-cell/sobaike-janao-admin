@@ -53,11 +53,8 @@ export class MapApi {
   async getMapDataset(): Promise<MapDataset> {
     this.checkConfig();
 
-    // 1. Fetch Taxonomy (segments & subcategories)
-    const taxonomyPromise = categoryApi.getTaxonomy().catch((err) => {
-      console.warn('Failed to fetch taxonomy via categoryApi:', err);
-      return { segments: [], subcategories: [] };
-    });
+    // 1. Fetch Taxonomy (segments & subcategories) - propagate any errors honestly
+    const taxonomyPromise = categoryApi.getTaxonomy();
 
     // 2. Fetch all complaints in deterministic pages (minimal select only)
     const fetchAllComplaints = async (): Promise<RawComplaintRow[]> => {
@@ -103,26 +100,43 @@ export class MapApi {
     // Build taxonomy lookup maps
     const segmentMap = new Map<string, { nameEn: string; nameBn: string }>();
     const segmentOptions: MapSegmentOption[] = taxonomy.segments.map((seg) => {
-      const nameEn = seg.nameEn || seg.nameBn || seg.id;
-      const nameBn = seg.nameBn || seg.nameEn || seg.id;
+      const nameEn = seg.nameEn || seg.nameBn || seg.id || '';
+      const nameBn = seg.nameBn || seg.nameEn || seg.id || '';
       segmentMap.set(seg.id, { nameEn, nameBn });
       return { id: seg.id, nameEn, nameBn };
     });
 
     const subcategoryMap = new Map<string, { nameEn: string; nameBn: string; segmentId: string }>();
     const subcategoryOptions: MapSubcategoryOption[] = taxonomy.subcategories.map((sub) => {
-      const nameEn = sub.nameEn || sub.nameBn || sub.id;
-      const nameBn = sub.nameBn || sub.nameEn || sub.id;
+      const nameEn = sub.nameEn || sub.nameBn || sub.id || '';
+      const nameBn = sub.nameBn || sub.nameEn || sub.id || '';
       subcategoryMap.set(sub.id, { nameEn, nameBn, segmentId: sub.segmentId });
       return { id: sub.id, segmentId: sub.segmentId, nameEn, nameBn };
     });
 
-    // 3. Process, validate coordinates, and transform complaints
+    // 3. Process, validate status & coordinates, and transform complaints
     const mappedComplaints: MapComplaint[] = [];
     const districtSet = new Set<string>();
     let unmappedCount = 0;
+    let unsupportedStatusCount = 0;
+
+    const validStatuses: ComplaintLifecycleStatus[] = [
+      'submitted',
+      'published',
+      'unpublished',
+      'rejected',
+      'edited',
+    ];
 
     for (const row of rawComplaints) {
+      // 1. Only include complaints with supported Admin status
+      if (!row.status || !validStatuses.includes(row.status as ComplaintLifecycleStatus)) {
+        unsupportedStatusCount++;
+        continue;
+      }
+      const status = row.status as ComplaintLifecycleStatus;
+
+      // 2. Validate coordinates among supported-status records
       const rawLat = row.latitude;
       const rawLng = row.longitude;
 
@@ -153,30 +167,16 @@ export class MapApi {
         districtSet.add(districtName);
       }
 
-      // Map verified status
-      const validStatuses: ComplaintLifecycleStatus[] = [
-        'submitted',
-        'published',
-        'unpublished',
-        'rejected',
-        'edited',
-      ];
-      const status: ComplaintLifecycleStatus = validStatuses.includes(
-        row.status as ComplaintLifecycleStatus
-      )
-        ? (row.status as ComplaintLifecycleStatus)
-        : 'submitted';
-
       mappedComplaints.push({
         id: row.id,
         titleEn: row.title_en || row.title || row.id,
         titleBn: row.title || row.title_en || row.id,
         segmentId,
-        segmentEn: segInfo?.nameEn || (segmentId ? segmentId : 'General'),
-        segmentBn: segInfo?.nameBn || (segmentId ? segmentId : 'সাধারণ'),
+        segmentEn: segInfo?.nameEn || segInfo?.nameBn || segmentId || '',
+        segmentBn: segInfo?.nameBn || segInfo?.nameEn || segmentId || '',
         subcategoryId,
-        subcategoryEn: subInfo?.nameEn || (subcategoryId ? subcategoryId : 'General'),
-        subcategoryBn: subInfo?.nameBn || (subcategoryId ? subcategoryId : 'সাধারণ'),
+        subcategoryEn: subInfo?.nameEn || subInfo?.nameBn || subcategoryId || '',
+        subcategoryBn: subInfo?.nameBn || subInfo?.nameEn || subcategoryId || '',
         status,
         latitude: latNum,
         longitude: lngNum,
@@ -199,6 +199,7 @@ export class MapApi {
       complaints: mappedComplaints,
       totalSourceCount: rawComplaints.length,
       unmappedCount,
+      unsupportedStatusCount,
       segments: segmentOptions,
       subcategories: subcategoryOptions,
       districts,

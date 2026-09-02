@@ -47,6 +47,7 @@ export const MapPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
 
   // Filters & Selection
   const [filters, setFilters] = useState<MapFilterState>(INITIAL_FILTERS);
@@ -60,21 +61,33 @@ export const MapPage: React.FC = () => {
     try {
       if (isRefresh) {
         setRefreshing(true);
+        setRefreshError(null);
       } else {
         setLoading(true);
+        setError(null);
       }
-      setError(null);
 
       const data = await mapApi.getMapDataset();
       setDataset(data);
+      setError(null);
+      setRefreshError(null);
     } catch (err: any) {
       console.error('Failed to load map dataset:', err);
-      setError(err?.message || 'Failed to load map data from Supabase.');
+      const msg = isBn
+        ? 'ম্যাপের তথ্য লোড করা যায়নি।'
+        : 'Map data could not be loaded.';
+      
+      // If we already have loaded dataset previously, keep it intact and show refresh notice
+      if (isRefresh && dataset) {
+        setRefreshError(msg);
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [dataset, isBn]);
 
   useEffect(() => {
     loadData();
@@ -160,6 +173,16 @@ export const MapPage: React.FC = () => {
     });
   }, [dataset, filters]);
 
+  // Clear selected complaint if filters remove it from filteredComplaints
+  useEffect(() => {
+    if (
+      selectedComplaint &&
+      !filteredComplaints.some((item) => item.id === selectedComplaint.id)
+    ) {
+      setSelectedComplaint(null);
+    }
+  }, [filteredComplaints, selectedComplaint]);
+
   // Computed Summary Metrics
   const summary: MapSummary = useMemo(() => {
     const mappedCount = filteredComplaints.length;
@@ -240,153 +263,221 @@ export const MapPage: React.FC = () => {
         }
       />
 
-      {/* 2. Unmapped Data Notice Banner */}
-      {!loading && dataset && dataset.unmappedCount > 0 && (
-        <div className="bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-900/60 rounded-xl p-3.5 flex items-start gap-3 shadow-2xs">
-          <Info className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-          <div className="text-xs text-amber-900 dark:text-amber-200 space-y-0.5">
-            <p className="font-semibold">
-              {isBn
-                ? `বৈধ স্থানাঙ্ক না থাকায় ${dataset.unmappedCount}টি অভিযোগ ম্যাপে দেখানো হয়নি।`
-                : `${dataset.unmappedCount} complaints are not shown on the map because valid coordinates are unavailable.`}
+      {/* 2. Error State: If initial load fails and NO dataset exists */}
+      {!loading && error && !dataset ? (
+        <div className="p-8 rounded-xl bg-rose-50/90 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 flex flex-col items-center justify-center text-center gap-3">
+          <AlertCircle className="w-8 h-8 text-rose-600 dark:text-rose-400 shrink-0" />
+          <div>
+            <h3 className="text-sm font-semibold text-rose-900 dark:text-rose-200 mb-1">
+              {isBn ? 'ম্যাপের তথ্য লোড করা যায়নি।' : 'Map data could not be loaded.'}
+            </h3>
+            <p className="text-xs text-rose-700 dark:text-rose-300 max-w-md">
+              {error}
             </p>
-            <p className="text-amber-700 dark:text-amber-300/90">
-              {isBn
-                ? 'এসব অভিযোগের তালিকা ও বিস্তারিত মূল অভিযোগ ব্যবস্থাপনা পেজ থেকে পর্যবেক্ষণ করা যাবে।'
-                : 'These unmapped records remain fully accessible in the main Complaints Workspace.'}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* 3. Error Alert */}
-      {error && (
-        <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 text-xs text-rose-800 dark:text-rose-200">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
-            <span>{error}</span>
           </div>
           <Button
-            variant="secondary"
+            variant="primary"
             size="sm"
-            onClick={() => loadData()}
-            className="text-xs shrink-0"
+            onClick={() => loadData(false)}
+            leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
           >
             {isBn ? 'পুনরায় চেষ্টা করুন' : 'Retry'}
           </Button>
         </div>
-      )}
-
-      {/* 4. KPI Summary Bar */}
-      <LocationSummary summary={summary} loading={loading} />
-
-      {/* 5. Filters Toolbar */}
-      <MapFilters
-        filters={filters}
-        onChange={setFilters}
-        onReset={handleResetFilters}
-        segments={dataset?.segments || []}
-        subcategories={dataset?.subcategories || []}
-        districts={dataset?.districts || []}
-        totalResultsCount={filteredComplaints.length}
-      />
-
-      {/* 6. Mobile Tab View Switcher (< lg) */}
-      <div className="lg:hidden flex items-center justify-center p-1 bg-slate-100 dark:bg-slate-800 rounded-lg max-w-xs mx-auto border border-slate-200 dark:border-slate-700">
-        <button
-          type="button"
-          onClick={() => setMobileView('map')}
-          className={cn(
-            'flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md text-xs font-medium transition-all',
-            mobileView === 'map'
-              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          )}
-        >
-          <MapIcon className="w-3.5 h-3.5" />
-          <span>{isBn ? 'মানচিত্র ভিউ' : 'Map View'}</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setMobileView('list')}
-          className={cn(
-            'flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md text-xs font-medium transition-all',
-            mobileView === 'list'
-              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          )}
-        >
-          <ListIcon className="w-3.5 h-3.5" />
-          <span>{isBn ? 'তালিকা ভিউ' : 'List View'}</span>
-          <span className="text-[10px] font-mono px-1 rounded bg-slate-200 dark:bg-slate-700">
-            {filteredComplaints.length}
-          </span>
-        </button>
-      </div>
-
-      {/* 7. Main Grid Layout */}
-      {loading ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <div className="lg:col-span-8 h-[500px] sm:h-[560px] lg:h-[640px] bg-slate-100 dark:bg-slate-800/60 rounded-xl animate-pulse flex items-center justify-center text-slate-400 text-xs">
-            {isBn ? 'মানচিত্র লোড হচ্ছে...' : 'Loading map intelligence...'}
+      ) : loading && !dataset ? (
+        /* 3. Initial Loading Skeleton */
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="h-24 bg-slate-100 dark:bg-slate-800/60 rounded-xl animate-pulse"
+              />
+            ))}
           </div>
-          <div className="lg:col-span-4 h-[500px] sm:h-[560px] lg:h-[640px] bg-slate-100 dark:bg-slate-800/60 rounded-xl animate-pulse" />
+          <div className="h-16 bg-slate-100 dark:bg-slate-800/60 rounded-xl animate-pulse" />
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            <div className="lg:col-span-8 h-[500px] sm:h-[560px] lg:h-[640px] bg-slate-100 dark:bg-slate-800/60 rounded-xl animate-pulse flex items-center justify-center text-slate-400 text-xs">
+              {isBn ? 'মানচিত্র লোড হচ্ছে...' : 'Loading map intelligence...'}
+            </div>
+            <div className="lg:col-span-4 h-[500px] sm:h-[560px] lg:h-[640px] bg-slate-100 dark:bg-slate-800/60 rounded-xl animate-pulse" />
+          </div>
         </div>
-      ) : !dataset || dataset.totalSourceCount === 0 ? (
-        <MapEmptyState type="no-data" />
-      ) : dataset.complaints.length === 0 ? (
-        <MapEmptyState
-          type="no-coords"
-          unmappedCount={dataset.unmappedCount}
-        />
-      ) : filteredComplaints.length === 0 ? (
-        <MapEmptyState
-          type="no-match"
-          onResetFilters={handleResetFilters}
-        />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-          {/* Left Column: Map + Legend */}
-          <div
-            className={cn(
-              'lg:col-span-8 space-y-3',
-              mobileView === 'list' ? 'hidden lg:block' : 'block'
+        /* 4. Connected Real Map View when valid dataset exists */
+        dataset && (
+          <>
+            {/* Non-destructive Refresh Error Banner if refresh failed */}
+            {refreshError && (
+              <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 flex items-center justify-between gap-3 shadow-2xs">
+                <div className="flex items-center gap-2.5 text-xs text-rose-800 dark:text-rose-200">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
+                  <span>
+                    {isBn
+                      ? 'সর্বশেষ তথ্যে রিফ্রেশ করা যায়নি। পূর্ববর্তী সক্রিয় তথ্য প্রদর্শিত হচ্ছে।'
+                      : 'Could not refresh latest map data. Displaying previously loaded dataset.'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => loadData(true)}
+                    className="text-xs h-7 px-2.5"
+                  >
+                    {isBn ? 'পুনরায় রিফ্রেশ' : 'Retry Refresh'}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setRefreshError(null)}
+                    className="text-xs h-7 px-2"
+                  >
+                    {isBn ? 'বাতিল' : 'Dismiss'}
+                  </Button>
+                </div>
+              </div>
             )}
-          >
-            <MapContainer
-              complaints={filteredComplaints}
-              selectedComplaint={selectedComplaint}
-              onSelectComplaint={setSelectedComplaint}
-              loading={loading}
+
+            {/* Unmapped Complaints Notice Banner */}
+            {dataset.unmappedCount > 0 && (
+              <div className="bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-900/60 rounded-xl p-3.5 flex items-start gap-3 shadow-2xs">
+                <Info className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className="text-xs text-amber-900 dark:text-amber-200 space-y-0.5">
+                  <p className="font-semibold">
+                    {isBn
+                      ? `বৈধ স্থানাঙ্ক না থাকায় ${dataset.unmappedCount}টি অভিযোগ ম্যাপে দেখানো হয়নি।`
+                      : `${dataset.unmappedCount} complaints are not shown on the map because valid coordinates are unavailable.`}
+                  </p>
+                  <p className="text-amber-700 dark:text-amber-300/90">
+                    {isBn
+                      ? 'এসব অভিযোগের তালিকা ও বিস্তারিত মূল অভিযোগ ব্যবস্থাপনা পেজ থেকে পর্যবেক্ষণ করা যাবে।'
+                      : 'These unmapped records remain fully accessible in the main Complaints Workspace.'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Unsupported Status Notice Banner */}
+            {dataset.unsupportedStatusCount > 0 && (
+              <div className="bg-slate-50/90 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 flex items-start gap-3 shadow-2xs">
+                <Info className="w-5 h-5 text-slate-500 dark:text-slate-400 shrink-0 mt-0.5" />
+                <div className="text-xs text-slate-700 dark:text-slate-300 space-y-0.5">
+                  <p className="font-medium">
+                    {isBn
+                      ? `বর্তমান স্ট্যাটাস ম্যাপ মনিটরিংয়ে সমর্থিত নয় বলে ${dataset.unsupportedStatusCount}টি অভিযোগ দেখানো হয়নি।`
+                      : `${dataset.unsupportedStatusCount} complaints are not shown because their current status is not supported by Map Monitoring.`}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Summary KPI Cards */}
+            <LocationSummary summary={summary} loading={refreshing} />
+
+            {/* Filters Toolbar */}
+            <MapFilters
+              filters={filters}
+              onChange={setFilters}
+              onReset={handleResetFilters}
+              segments={dataset.segments}
+              subcategories={dataset.subcategories}
+              districts={dataset.districts}
+              totalResultsCount={filteredComplaints.length}
             />
 
-            <MapLegend
-              selectedStatus={filters.status}
-              onSelectStatus={handleLegendStatusSelect}
-              counts={legendCounts}
-            />
-          </div>
+            {/* Mobile Tab View Switcher (< lg) */}
+            <div className="lg:hidden flex items-center justify-center p-1 bg-slate-100 dark:bg-slate-800 rounded-lg max-w-xs mx-auto border border-slate-200 dark:border-slate-700">
+              <button
+                type="button"
+                onClick={() => setMobileView('map')}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md text-xs font-medium transition-all',
+                  mobileView === 'map'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                )}
+              >
+                <MapIcon className="w-3.5 h-3.5" />
+                <span>{isBn ? 'মানচিত্র ভিউ' : 'Map View'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileView('list')}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md text-xs font-medium transition-all',
+                  mobileView === 'list'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                )}
+              >
+                <ListIcon className="w-3.5 h-3.5" />
+                <span>{isBn ? 'তালিকা ভিউ' : 'List View'}</span>
+                <span className="text-[10px] font-mono px-1 rounded bg-slate-200 dark:bg-slate-700">
+                  {filteredComplaints.length}
+                </span>
+              </button>
+            </div>
 
-          {/* Right Column: Complaint List */}
-          <div
-            className={cn(
-              'lg:col-span-4',
-              mobileView === 'map' ? 'hidden lg:block' : 'block'
+            {/* Main Interactive Geospatial View / Empty States */}
+            {dataset.totalSourceCount === 0 ? (
+              <MapEmptyState type="no-data" />
+            ) : dataset.complaints.length === 0 ? (
+              <MapEmptyState
+                type="no-coords"
+                unmappedCount={dataset.unmappedCount}
+              />
+            ) : filteredComplaints.length === 0 ? (
+              <MapEmptyState
+                type="no-match"
+                onResetFilters={handleResetFilters}
+              />
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                {/* Left Column: Map + Legend */}
+                <div
+                  className={cn(
+                    'lg:col-span-8 space-y-3',
+                    mobileView === 'list' ? 'hidden lg:block' : 'block'
+                  )}
+                >
+                  <MapContainer
+                    complaints={filteredComplaints}
+                    selectedComplaint={selectedComplaint}
+                    onSelectComplaint={setSelectedComplaint}
+                    loading={refreshing}
+                  />
+
+                  <MapLegend
+                    selectedStatus={filters.status}
+                    onSelectStatus={handleLegendStatusSelect}
+                    counts={legendCounts}
+                  />
+                </div>
+
+                {/* Right Column: Complaint List */}
+                <div
+                  className={cn(
+                    'lg:col-span-4',
+                    mobileView === 'map' ? 'hidden lg:block' : 'block'
+                  )}
+                >
+                  <MapComplaintList
+                    complaints={filteredComplaints}
+                    selectedId={selectedComplaint?.id || null}
+                    onSelectComplaint={(item) => {
+                      setSelectedComplaint(item);
+                      // On mobile, switch to map view upon selecting an item
+                      if (window.innerWidth < 1024) {
+                        setMobileView('map');
+                      }
+                    }}
+                  />
+                </div>
+              </div>
             )}
-          >
-            <MapComplaintList
-              complaints={filteredComplaints}
-              selectedId={selectedComplaint?.id || null}
-              onSelectComplaint={(item) => {
-                setSelectedComplaint(item);
-                // On mobile, switch to map view upon selecting an item
-                if (window.innerWidth < 1024) {
-                  setMobileView('map');
-                }
-              }}
-            />
-          </div>
-        </div>
+          </>
+        )
       )}
     </div>
   );
