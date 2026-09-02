@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   MapFilterState,
-  MapCategoryOption,
+  MapSegmentOption,
   MapSubcategoryOption,
 } from '@/types/Map';
 import { ComplaintLifecycleStatus } from '@/types/Complaint';
@@ -25,9 +25,9 @@ export interface MapFiltersProps {
   filters: MapFilterState;
   onChange: (filters: MapFilterState) => void;
   onReset: () => void;
-  categories: MapCategoryOption[];
+  segments: MapSegmentOption[];
   subcategories: MapSubcategoryOption[];
-  availableWards: string[];
+  districts: string[];
   totalResultsCount: number;
   className?: string;
 }
@@ -36,39 +36,40 @@ export const MapFilters: React.FC<MapFiltersProps> = ({
   filters,
   onChange,
   onReset,
-  categories,
+  segments,
   subcategories,
-  availableWards,
+  districts,
   totalResultsCount,
   className,
 }) => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
 
-  // Subcategories filtered by category
-  const filteredSubcategories = filters.category && filters.category !== 'all'
-    ? subcategories.filter((sub) => sub.categoryId === filters.category)
-    : subcategories;
+  // Subcategories filtered by selected segment
+  const filteredSubcategories =
+    filters.segment && filters.segment !== 'all'
+      ? subcategories.filter((sub) => sub.segmentId === filters.segment)
+      : subcategories;
 
-  // Active filters count
+  // Active filters presence check
   const hasActiveFilters = Boolean(
     filters.searchQuery ||
-    (filters.category && filters.category !== 'all') ||
-    (filters.subcategory && filters.subcategory !== 'all') ||
-    (filters.status && filters.status !== 'all') ||
-    (filters.ward && filters.ward !== 'all') ||
-    (filters.dateRange && filters.dateRange !== 'all')
+      (filters.segment && filters.segment !== 'all') ||
+      (filters.subcategory && filters.subcategory !== 'all') ||
+      (filters.status && filters.status !== 'all') ||
+      (filters.district && filters.district !== 'all') ||
+      (filters.dateRange && filters.dateRange !== 'all')
   );
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange({ ...filters, searchQuery: e.target.value });
   };
 
-  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleSegmentChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     onChange({
       ...filters,
-      category: e.target.value,
-      subcategory: 'all', // Reset subcategory when category changes
+      segment: e.target.value,
+      subcategory: 'all', // Reset subcategory when segment changes
     });
   };
 
@@ -83,8 +84,8 @@ export const MapFilters: React.FC<MapFiltersProps> = ({
     });
   };
 
-  const handleWardChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    onChange({ ...filters, ward: e.target.value });
+  const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    onChange({ ...filters, district: e.target.value });
   };
 
   const handleDateRangeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -98,6 +99,8 @@ export const MapFilters: React.FC<MapFiltersProps> = ({
         return isBn ? 'দাখিলকৃত' : 'Submitted';
       case 'published':
         return isBn ? 'প্রকাশিত' : 'Published';
+      case 'unpublished':
+        return isBn ? 'অপ্রকাশিত' : 'Unpublished';
       case 'rejected':
         return isBn ? 'বাতিলকৃত' : 'Rejected';
       case 'edited':
@@ -120,8 +123,10 @@ export const MapFilters: React.FC<MapFiltersProps> = ({
     }
   };
 
-  const selectedCategoryObj = categories.find((c) => c.id === filters.category);
-  const selectedSubcategoryObj = subcategories.find((s) => s.id === filters.subcategory);
+  const selectedSegmentObj = segments.find((s) => s.id === filters.segment);
+  const selectedSubcategoryObj = subcategories.find(
+    (s) => s.id === filters.subcategory
+  );
 
   return (
     <div
@@ -138,25 +143,29 @@ export const MapFilters: React.FC<MapFiltersProps> = ({
             id="map-search-input"
             value={filters.searchQuery}
             onChange={handleSearchChange}
-            placeholder={isBn ? 'অভিযোগ আইডি, এলাকা বা শিরোনাম খুঁজুন...' : 'Search ID, title, or address...'}
+            placeholder={
+              isBn
+                ? 'আইডি, শিরোনাম, জেলা বা ঠিকানা খুঁজুন...'
+                : 'Search ID, title, district, address...'
+            }
             isSearch
             onClear={() => onChange({ ...filters, searchQuery: '' })}
             className="h-9 text-xs"
           />
         </div>
 
-        {/* Category */}
+        {/* Segment */}
         <div>
           <Select
-            id="map-category-select"
-            value={filters.category}
-            onChange={handleCategoryChange}
+            id="map-segment-select"
+            value={filters.segment}
+            onChange={handleSegmentChange}
             className="h-9 text-xs"
           >
-            <option value="all">{isBn ? 'সকল ক্যাটাগরি' : 'All Categories'}</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {isBn ? cat.nameBn : cat.nameEn}
+            <option value="all">{isBn ? 'সকল খাত/বিভাগ' : 'All Segments'}</option>
+            {segments.map((seg) => (
+              <option key={seg.id} value={seg.id}>
+                {isBn ? seg.nameBn : seg.nameEn}
               </option>
             ))}
           </Select>
@@ -168,10 +177,12 @@ export const MapFilters: React.FC<MapFiltersProps> = ({
             id="map-subcategory-select"
             value={filters.subcategory}
             onChange={handleSubcategoryChange}
-            disabled={!filters.category || filters.category === 'all'}
+            disabled={!filters.segment || filters.segment === 'all'}
             className="h-9 text-xs"
           >
-            <option value="all">{isBn ? 'সকল সাব-ক্যাটাগরি' : 'All Subcategories'}</option>
+            <option value="all">
+              {isBn ? 'সকল উপ-শ্রেণি' : 'All Subcategories'}
+            </option>
             {filteredSubcategories.map((sub) => (
               <option key={sub.id} value={sub.id}>
                 {isBn ? sub.nameBn : sub.nameEn}
@@ -191,23 +202,26 @@ export const MapFilters: React.FC<MapFiltersProps> = ({
             <option value="all">{isBn ? 'সকল স্ট্যাটাস' : 'All Statuses'}</option>
             <option value="submitted">{isBn ? 'দাখিলকৃত' : 'Submitted'}</option>
             <option value="published">{isBn ? 'প্রকাশিত' : 'Published'}</option>
+            <option value="unpublished">
+              {isBn ? 'অপ্রকাশিত' : 'Unpublished'}
+            </option>
             <option value="rejected">{isBn ? 'বাতিলকৃত' : 'Rejected'}</option>
             <option value="edited">{isBn ? 'সম্পাদিত' : 'Edited'}</option>
           </Select>
         </div>
 
-        {/* Ward / Area */}
+        {/* District */}
         <div>
           <Select
-            id="map-ward-select"
-            value={filters.ward}
-            onChange={handleWardChange}
+            id="map-district-select"
+            value={filters.district}
+            onChange={handleDistrictChange}
             className="h-9 text-xs"
           >
-            <option value="all">{isBn ? 'সকল ওয়ার্ড / এলাকা' : 'All Wards'}</option>
-            {availableWards.map((w) => (
-              <option key={w} value={w}>
-                {w}
+            <option value="all">{isBn ? 'সকল জেলা' : 'All Districts'}</option>
+            {districts.map((d) => (
+              <option key={d} value={d}>
+                {d}
               </option>
             ))}
           </Select>
@@ -220,12 +234,14 @@ export const MapFilters: React.FC<MapFiltersProps> = ({
         <div className="flex flex-wrap items-center gap-1.5 min-w-0">
           <span className="text-slate-400 font-medium shrink-0 flex items-center gap-1">
             <SlidersHorizontal className="w-3.5 h-3.5" />
-            <span>{isBn ? 'সক্রিয় ফিল্টার:' : 'Active:'}</span>
+            <span>{isBn ? 'ফিল্টার:' : 'Active:'}</span>
           </span>
 
           {!hasActiveFilters ? (
             <span className="text-slate-400 italic text-[11px]">
-              {isBn ? 'কোনো ফিল্টার প্রয়োগ করা হয়নি (সকল অভিযোগ দৃশ্যমান)' : 'Showing all geographic points'}
+              {isBn
+                ? 'কোনো ফিল্টার প্রয়োগ করা হয়নি (সকল পয়েন্ট দৃশ্যমান)'
+                : 'Showing all mapped points'}
             </span>
           ) : (
             <>
@@ -243,15 +259,27 @@ export const MapFilters: React.FC<MapFiltersProps> = ({
                 </span>
               )}
 
-              {filters.category && filters.category !== 'all' && (
+              {filters.segment && filters.segment !== 'all' && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs">
                   <Folder className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                  <span>{selectedCategoryObj ? (isBn ? selectedCategoryObj.nameBn : selectedCategoryObj.nameEn) : filters.category}</span>
+                  <span>
+                    {selectedSegmentObj
+                      ? isBn
+                        ? selectedSegmentObj.nameBn
+                        : selectedSegmentObj.nameEn
+                      : filters.segment}
+                  </span>
                   <button
                     type="button"
-                    onClick={() => onChange({ ...filters, category: 'all', subcategory: 'all' })}
+                    onClick={() =>
+                      onChange({
+                        ...filters,
+                        segment: 'all',
+                        subcategory: 'all',
+                      })
+                    }
                     className="hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
-                    aria-label="Remove category filter"
+                    aria-label="Remove segment filter"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -260,7 +288,13 @@ export const MapFilters: React.FC<MapFiltersProps> = ({
 
               {filters.subcategory && filters.subcategory !== 'all' && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs">
-                  <span>{selectedSubcategoryObj ? (isBn ? selectedSubcategoryObj.nameBn : selectedSubcategoryObj.nameEn) : filters.subcategory}</span>
+                  <span>
+                    {selectedSubcategoryObj
+                      ? isBn
+                        ? selectedSubcategoryObj.nameBn
+                        : selectedSubcategoryObj.nameEn
+                      : filters.subcategory}
+                  </span>
                   <button
                     type="button"
                     onClick={() => onChange({ ...filters, subcategory: 'all' })}
@@ -287,15 +321,15 @@ export const MapFilters: React.FC<MapFiltersProps> = ({
                 </span>
               )}
 
-              {filters.ward && filters.ward !== 'all' && (
+              {filters.district && filters.district !== 'all' && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs">
                   <MapPin className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-                  <span>{filters.ward}</span>
+                  <span>{filters.district}</span>
                   <button
                     type="button"
-                    onClick={() => onChange({ ...filters, ward: 'all' })}
+                    onClick={() => onChange({ ...filters, district: 'all' })}
                     className="hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
-                    aria-label="Remove ward filter"
+                    aria-label="Remove district filter"
                   >
                     <X className="w-3 h-3" />
                   </button>

@@ -1,13 +1,13 @@
 import React from 'react';
 import { MapSummary } from '@/types/Map';
 import { useLanguage } from '@/context/LanguageContext';
-import { Card, CardContent } from '@/components/ui/Card';
+import { Card } from '@/components/ui/Card';
 import {
   MapPin,
   Layers,
-  TrendingUp,
   AlertCircle,
   CheckCircle2,
+  Navigation,
 } from 'lucide-react';
 import { cn } from '@/utils';
 
@@ -40,29 +40,25 @@ export const LocationSummary: React.FC<LocationSummaryProps> = ({
     );
   }
 
-  const mostReportedLabel = summary.mostReportedCategory
-    ? isBn
-      ? summary.mostReportedCategory.nameBn
-      : summary.mostReportedCategory.nameEn
-    : isBn
-    ? '—'
-    : 'None';
-
   return (
     <div className={cn('grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3', className)}>
-      {/* 1. Total Locations */}
-      <Card variant="default" padding="none" className="border border-slate-200/80 dark:border-slate-800/80 shadow-2xs">
+      {/* 1. Mapped Complaints */}
+      <Card
+        variant="default"
+        padding="none"
+        className="border border-slate-200/80 dark:border-slate-800/80 shadow-2xs"
+      >
         <div className="p-3.5 flex items-center justify-between">
           <div className="min-w-0">
             <p className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
-              {isBn ? 'মোট মানচিত্র অবস্থান' : 'Total Map Locations'}
+              {isBn ? 'ম্যাপে থাকা অভিযোগ' : 'Mapped Complaints'}
             </p>
             <div className="flex items-baseline gap-1.5 mt-0.5">
               <span className="text-xl font-bold text-slate-900 dark:text-slate-100 font-mono">
-                {summary.totalLocations}
+                {summary.mappedCount}
               </span>
               <span className="text-[11px] text-slate-400">
-                {isBn ? 'স্থান' : 'spots'}
+                {isBn ? 'টি' : 'items'}
               </span>
             </div>
           </div>
@@ -72,70 +68,80 @@ export const LocationSummary: React.FC<LocationSummaryProps> = ({
         </div>
       </Card>
 
-      {/* 2. Total Complaints on Map */}
-      <Card variant="default" padding="none" className="border border-slate-200/80 dark:border-slate-800/80 shadow-2xs">
+      {/* 2. Submitted */}
+      <Card
+        variant="default"
+        padding="none"
+        className="border border-slate-200/80 dark:border-slate-800/80 shadow-2xs"
+      >
         <div className="p-3.5 flex items-center justify-between">
           <div className="min-w-0">
             <p className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
-              {isBn ? 'ম্যাপে মোট অভিযোগ' : 'Total Complaints on Map'}
-            </p>
-            <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-xl font-bold text-slate-900 dark:text-slate-100 font-mono">
-                {summary.totalComplaints}
-              </span>
-              <span className="text-[11px] text-slate-400">
-                {isBn ? 'মোট' : 'items'}
-              </span>
-            </div>
-          </div>
-          <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 shrink-0">
-            <Layers className="w-4 h-4" />
-          </div>
-        </div>
-      </Card>
-
-      {/* 3. Most Reported Category */}
-      <Card variant="default" padding="none" className="border border-slate-200/80 dark:border-slate-800/80 shadow-2xs">
-        <div className="p-3.5 flex items-center justify-between">
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
-              {isBn ? 'সর্বাধিক অভিযোগের খাত' : 'Top Category'}
-            </p>
-            <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate block max-w-[130px] sm:max-w-[160px]">
-                {mostReportedLabel}
-              </span>
-              {summary.mostReportedCategory && (
-                <span className="text-[11px] font-mono text-amber-600 dark:text-amber-400 shrink-0">
-                  ({summary.mostReportedCategory.count})
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 shrink-0">
-            <TrendingUp className="w-4 h-4" />
-          </div>
-        </div>
-      </Card>
-
-      {/* 4. Active Complaints */}
-      <Card variant="default" padding="none" className="border border-slate-200/80 dark:border-slate-800/80 shadow-2xs">
-        <div className="p-3.5 flex items-center justify-between">
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
-              {isBn ? 'সক্রিয় প্রক্রিয়াধীন অভিযোগ' : 'Active In-Process'}
+              {isBn ? 'দাখিলকৃত' : 'Submitted'}
             </p>
             <div className="flex items-baseline gap-1.5 mt-0.5">
               <span className="text-xl font-bold text-amber-600 dark:text-amber-400 font-mono">
-                {summary.activeComplaints}
+                {summary.submittedCount}
               </span>
               <span className="text-[11px] text-slate-400">
-                / {summary.totalComplaints}
+                / {summary.mappedCount}
               </span>
             </div>
           </div>
           <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 shrink-0">
             <AlertCircle className="w-4 h-4" />
+          </div>
+        </div>
+      </Card>
+
+      {/* 3. Published */}
+      <Card
+        variant="default"
+        padding="none"
+        className="border border-slate-200/80 dark:border-slate-800/80 shadow-2xs"
+      >
+        <div className="p-3.5 flex items-center justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
+              {isBn ? 'প্রকাশিত' : 'Published'}
+            </p>
+            <div className="flex items-baseline gap-1.5 mt-0.5">
+              <span className="text-xl font-bold text-sky-600 dark:text-sky-400 font-mono">
+                {summary.publishedCount}
+              </span>
+              <span className="text-[11px] text-slate-400">
+                / {summary.mappedCount}
+              </span>
+            </div>
+          </div>
+          <div className="p-2 rounded-lg bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400 shrink-0">
+            <CheckCircle2 className="w-4 h-4" />
+          </div>
+        </div>
+      </Card>
+
+      {/* 4. Districts */}
+      <Card
+        variant="default"
+        padding="none"
+        className="border border-slate-200/80 dark:border-slate-800/80 shadow-2xs"
+      >
+        <div className="p-3.5 flex items-center justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
+              {isBn ? 'জেলা' : 'Districts'}
+            </p>
+            <div className="flex items-baseline gap-1.5 mt-0.5">
+              <span className="text-xl font-bold text-slate-900 dark:text-slate-100 font-mono">
+                {summary.districtsCount}
+              </span>
+              <span className="text-[11px] text-slate-400">
+                {isBn ? 'টি জেলা' : 'areas'}
+              </span>
+            </div>
+          </div>
+          <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 shrink-0">
+            <Navigation className="w-4 h-4" />
           </div>
         </div>
       </Card>

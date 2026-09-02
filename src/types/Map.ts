@@ -1,71 +1,54 @@
 /**
- * Map Monitoring & Location Intelligence Types
- * Prototype UI contract retained for future real geospatial integration; not backend-authoritative.
+ * Map Monitoring & Location Intelligence Domain Types
+ * Derived from real Supabase complaints, segments, and subcategories.
  */
 
-import {
-  ComplaintLocation,
-  ComplaintLifecycleStatus,
-} from './Complaint';
+import { ComplaintLifecycleStatus } from './Complaint';
+
+export interface MapComplaintLocation {
+  formattedAddress: string;
+  division: string;
+  district: string;
+  upazilaOrThana: string;
+  area: string;
+  road: string;
+  landmark: string;
+}
 
 export interface MapComplaint {
   id: string;
   titleEn: string;
   titleBn: string;
-  descriptionEn?: string;
-  descriptionBn?: string;
-  categoryId: string;
-  categoryEn: string;
-  categoryBn: string;
+  segmentId: string;
+  segmentEn: string;
+  segmentBn: string;
   subcategoryId: string;
   subcategoryEn: string;
   subcategoryBn: string;
   status: ComplaintLifecycleStatus;
-  location: ComplaintLocation;
   latitude: number;
   longitude: number;
+  location: MapComplaintLocation;
   createdAt: string; // ISO date string
 }
 
 export interface MapFilterState {
   searchQuery: string;
-  category: string;
+  segment: string;
   subcategory: string;
   status: ComplaintLifecycleStatus | 'all';
-  ward: string;
-  zone: string;
+  district: string;
   dateRange: string;
 }
 
-export interface MapCategoryReportCount {
-  id: string;
-  nameEn: string;
-  nameBn: string;
-  count: number;
-}
-
-export interface MapWardCount {
-  ward: string;
-  zone: string;
-  count: number;
-}
-
 export interface MapSummary {
-  totalLocations: number;
-  totalComplaints: number;
-  activeComplaints: number;
-  resolvedComplaints: number;
-  mostReportedCategory: MapCategoryReportCount | null;
-  wardBreakdown: MapWardCount[];
+  mappedCount: number;
+  submittedCount: number;
+  publishedCount: number;
+  districtsCount: number;
 }
 
-export interface MapLocationOption {
-  ward: string;
-  zone: string;
-  label: string;
-}
-
-export interface MapCategoryOption {
+export interface MapSegmentOption {
   id: string;
   nameEn: string;
   nameBn: string;
@@ -73,7 +56,17 @@ export interface MapCategoryOption {
 
 export interface MapSubcategoryOption {
   id: string;
-  categoryId: string;
+  segmentId: string;
   nameEn: string;
   nameBn: string;
 }
+
+export interface MapDataset {
+  complaints: MapComplaint[];
+  totalSourceCount: number;
+  unmappedCount: number;
+  segments: MapSegmentOption[];
+  subcategories: MapSubcategoryOption[];
+  districts: string[];
+}
+

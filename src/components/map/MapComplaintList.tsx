@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { MapComplaint } from '@/types/Map';
 import { useLanguage } from '@/context/LanguageContext';
 import { Badge, BadgeStatus } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
 import {
   MapPin,
   Folder,
@@ -30,7 +29,7 @@ export const MapComplaintList: React.FC<MapComplaintListProps> = ({
   const navigate = useNavigate();
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  // Auto-scroll selected item into view if selected from map
+  // Auto-scroll selected item into view if selected from map marker
   useEffect(() => {
     if (selectedId && itemRefs.current[selectedId]) {
       itemRefs.current[selectedId]?.scrollIntoView({
@@ -41,7 +40,10 @@ export const MapComplaintList: React.FC<MapComplaintListProps> = ({
   }, [selectedId]);
 
   const getStatusBadge = (status: MapComplaint['status']) => {
-    const map: Record<MapComplaint['status'], { badgeStatus: BadgeStatus; labelEn: string; labelBn: string }> = {
+    const map: Record<
+      MapComplaint['status'],
+      { badgeStatus: BadgeStatus; labelEn: string; labelBn: string }
+    > = {
       submitted: { badgeStatus: 'pending', labelEn: 'Submitted', labelBn: 'দাখিলকৃত' },
       published: { badgeStatus: 'published', labelEn: 'Published', labelBn: 'প্রকাশিত' },
       unpublished: { badgeStatus: 'default', labelEn: 'Unpublished', labelBn: 'অপ্রকাশিত' },
@@ -70,6 +72,15 @@ export const MapComplaintList: React.FC<MapComplaintListProps> = ({
     }
   };
 
+  const formatLocation = (item: MapComplaint) => {
+    const loc = item.location;
+    if (loc.formattedAddress) return loc.formattedAddress;
+    const parts = [loc.area, loc.road, loc.upazilaOrThana, loc.district].filter(
+      Boolean
+    );
+    return parts.length > 0 ? parts.join(', ') : isBn ? 'অবস্থান অনুল্লিখিত' : 'Location unspecified';
+  };
+
   return (
     <div
       className={cn(
@@ -82,12 +93,12 @@ export const MapComplaintList: React.FC<MapComplaintListProps> = ({
         <div>
           <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
             <MapPin className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-            <span>{isBn ? 'অভিযোগ তালিকা' : 'Geolocated Complaints'}</span>
+            <span>{isBn ? 'ম্যাপে তালিকাভুক্ত অভিযোগ' : 'Mapped Complaints'}</span>
           </h3>
           <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
             {isBn
               ? 'ম্যাপে চিহ্নিত সকল সক্রিয় অভিযোগ পয়েন্ট'
-              : 'Interactive markers visible in the current viewport'}
+              : 'Interactive markers visible on the map'}
           </p>
         </div>
 
@@ -97,7 +108,7 @@ export const MapComplaintList: React.FC<MapComplaintListProps> = ({
       </div>
 
       {/* List Container */}
-      <div className="divide-y divide-slate-100 dark:divide-slate-800 overflow-y-auto max-h-[600px] lg:max-h-[660px]">
+      <div className="divide-y divide-slate-100 dark:divide-slate-800 overflow-y-auto max-h-[500px] sm:max-h-[560px] lg:max-h-[590px]">
         {complaints.length === 0 ? (
           <div className="p-8 text-center text-slate-400 text-xs">
             {isBn ? 'কোনো অভিযোগ পাওয়া যায়নি' : 'No complaints match the filter'}
@@ -124,7 +135,7 @@ export const MapComplaintList: React.FC<MapComplaintListProps> = ({
                 <div className="flex items-center justify-between gap-2 mb-1.5">
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-mono font-bold text-slate-800 dark:text-slate-200">
-                      {item.id}
+                      #{item.id}
                     </span>
                   </div>
 
@@ -132,15 +143,15 @@ export const MapComplaintList: React.FC<MapComplaintListProps> = ({
                 </div>
 
                 {/* Row 2: Title */}
-                <h4 className="text-xs font-semibold text-slate-900 dark:text-slate-100 line-clamp-1 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+                <h4 className="text-xs font-semibold text-slate-900 dark:text-slate-100 line-clamp-2 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
                   {isBn ? item.titleBn : item.titleEn}
                 </h4>
 
-                {/* Row 3: Category & Subcategory */}
+                {/* Row 3: Segment & Subcategory */}
                 <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 mt-1">
                   <Folder className="w-3 h-3 text-slate-400 shrink-0" />
                   <span className="truncate">
-                    {isBn ? item.categoryBn : item.categoryEn}
+                    {isBn ? item.segmentBn : item.segmentEn}
                     {' • '}
                     {isBn ? item.subcategoryBn : item.subcategoryEn}
                   </span>
@@ -151,8 +162,7 @@ export const MapComplaintList: React.FC<MapComplaintListProps> = ({
                   <div className="flex items-center gap-1 min-w-0">
                     <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
                     <span className="truncate font-medium text-slate-700 dark:text-slate-300">
-                      {item.location.ward}
-                      {item.location.addressEn ? ` (${item.location.addressEn.split(',')[0]})` : ''}
+                      {formatLocation(item)}
                     </span>
                   </div>
 
