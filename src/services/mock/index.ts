@@ -10,5 +10,3 @@ export * from './permissionService';
 export { mockPermissionService, default as permissionService } from './permissionService';
 export * from './workflowService';
 export { mockWorkflowService, default as workflowService } from './workflowService';
-export * from './mapService';
-export { mockMapService, default as mapService } from './mapService';

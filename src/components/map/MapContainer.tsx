@@ -28,7 +28,7 @@ export interface MapContainerProps {
   className?: string;
 }
 
-// Bounding box for Dhaka Metropolitan mapping
+// Prototype-only Dhaka visualization retained for future redesign. Do not use with production complaint coordinates.
 const DHAKA_BOUNDS = {
   minLat: 23.685,
   maxLat: 23.895,
@@ -36,7 +36,7 @@ const DHAKA_BOUNDS = {
   maxLng: 90.455,
 };
 
-// Major landmarks and ward center anchors for cartographic context
+// Major landmarks and ward center anchors for cartographic context (Prototype-only)
 const DISTRICT_ANCHORS = [
   { nameEn: 'Uttara', nameBn: 'উত্তরা', lat: 23.872, lng: 90.395, zone: 'Zone 1' },
   { nameEn: 'Mirpur', nameBn: 'মিরপুর', lat: 23.805, lng: 90.365, zone: 'Zone 4' },

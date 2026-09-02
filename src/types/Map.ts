@@ -1,6 +1,6 @@
 /**
  * Map Monitoring & Location Intelligence Types
- * Reuses existing Complaint and Category data structures for location monitoring
+ * Prototype UI contract retained for future real geospatial integration; not backend-authoritative.
  */
 
 import {
