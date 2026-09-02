@@ -23,8 +23,8 @@ export const isSupabaseConfigured =
  * Configured with browser session persistence and auto token refresh.
  */
 export const supabase: SupabaseClient = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder-anon-key',
+  supabaseUrl,
+  supabaseAnonKey,
   {
     auth: {
       persistSession: true,
@@ -36,4 +36,3 @@ export const supabase: SupabaseClient = createClient(
 );
 
 export default supabase;
-
