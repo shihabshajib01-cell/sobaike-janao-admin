@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Shield, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useLanguage } from '@/context/LanguageContext';
@@ -9,6 +10,7 @@ export interface RoleEmptyStateProps {
 
 export const RoleEmptyState: React.FC<RoleEmptyStateProps> = ({ className = '' }) => {
   const { t } = useLanguage();
+  const navigate = useNavigate();
 
   return (
     <div
@@ -31,13 +33,10 @@ export const RoleEmptyState: React.FC<RoleEmptyStateProps> = ({ className = '' }
           id="empty-create-role-btn"
           variant="primary"
           size="sm"
-          disabled
-          aria-disabled="true"
+          onClick={() => navigate('/roles/create')}
           leftIcon={<Plus className="w-4 h-4" />}
-          title={t.roles.createRoleNotAvailable}
-          className="cursor-not-allowed opacity-60"
         >
-          {t.roles.createRole}
+          <span>{t.roles.createRole}</span>
         </Button>
       </div>
     </div>
@@ -45,4 +44,5 @@ export const RoleEmptyState: React.FC<RoleEmptyStateProps> = ({ className = '' }
 };
 
 export default RoleEmptyState;
+
 

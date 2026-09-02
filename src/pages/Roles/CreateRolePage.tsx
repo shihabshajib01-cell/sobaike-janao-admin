@@ -1,0 +1,236 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Plus } from 'lucide-react';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Button } from '@/components/ui/Button';
+import { useLanguage } from '@/context/LanguageContext';
+import { RoleStepper } from '@/components/roles/create/RoleStepper';
+import { StepRoleDetails } from '@/components/roles/create/StepRoleDetails';
+import { StepPermissions } from '@/components/roles/create/StepPermissions';
+import { StepReview } from '@/components/roles/create/StepReview';
+import { UnsavedChangesModal } from '@/components/roles/create/UnsavedChangesModal';
+import { roleApi } from '@/services/api';
+import { PermissionCatalogueItem, RoleApiError } from '@/types/Role';
+
+export const CreateRolePage: React.FC = () => {
+  const { t } = useLanguage();
+  const navigate = useNavigate();
+
+  // Form State
+  const [currentStep, setCurrentStep] = useState<number>(1);
+  const [roleName, setRoleName] = useState<string>('');
+  const [active, setActive] = useState<boolean>(true);
+  const [description, setDescription] = useState<string>('');
+  const [selectedPermissionIds, setSelectedPermissionIds] = useState<string[]>([]);
+
+  // Permissions catalogue cache for Step 3 review
+  const [catalogue, setCatalogue] = useState<PermissionCatalogueItem[]>([]);
+
+  // Submission State
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [submitError, setSubmitError] = useState<{
+    message: string;
+    isDuplicate: boolean;
+    isPermissionDenied: boolean;
+  } | null>(null);
+
+  // Unsaved changes confirmation modal
+  const [showDiscardModal, setShowDiscardModal] = useState<boolean>(false);
+
+  // Check if user has entered anything
+  const hasUnsavedChanges =
+    roleName.trim().length > 0 ||
+    description.trim().length > 0 ||
+    selectedPermissionIds.length > 0 ||
+    active === false;
+
+  // Pre-load catalogue in background so Step 3 has it ready
+  useEffect(() => {
+    roleApi
+      .getPermissionCatalogue()
+      .then((items) => setCatalogue(items))
+      .catch((err) => {
+        console.warn('Background permission catalogue fetch failed:', err);
+      });
+  }, []);
+
+  const handleCancelAttempt = () => {
+    if (hasUnsavedChanges) {
+      setShowDiscardModal(true);
+    } else {
+      navigate('/roles');
+    }
+  };
+
+  const handleConfirmDiscard = () => {
+    setShowDiscardModal(false);
+    navigate('/roles');
+  };
+
+  const handleStep1Next = () => {
+    if (roleName.trim().length === 0) return;
+    setCurrentStep(2);
+  };
+
+  const handleStep2Next = () => {
+    setCurrentStep(3);
+  };
+
+  const handleStepClick = (step: number) => {
+    if (step === 1) {
+      setCurrentStep(1);
+    } else if (step === 2) {
+      if (roleName.trim().length > 0) {
+        setCurrentStep(2);
+      }
+    } else if (step === 3) {
+      if (roleName.trim().length > 0) {
+        setCurrentStep(3);
+      }
+    }
+  };
+
+  const isStepValid = (step: number): boolean => {
+    if (step === 1) return true;
+    if (step === 2) return roleName.trim().length > 0;
+    if (step === 3) return roleName.trim().length > 0;
+    return false;
+  };
+
+  const handleSubmit = async () => {
+    if (roleName.trim().length === 0 || isSubmitting) return;
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      await roleApi.createRole({
+        name: roleName.trim(),
+        active,
+        permission_ids: selectedPermissionIds,
+        description: description.trim() ? description.trim() : null,
+      });
+
+      // Navigate back to /roles with success state
+      navigate('/roles', {
+        state: {
+          roleCreatedSuccess: true,
+          createdRoleName: roleName.trim(),
+        },
+      });
+    } catch (err: unknown) {
+      console.error('Create role failed:', err);
+
+      let msg = t.roles.generalCreateError;
+      let isDuplicate = false;
+      let isPermissionDenied = false;
+
+      if (err instanceof RoleApiError || err instanceof Error) {
+        msg = err.message;
+        const code = (err as { code?: string }).code;
+        if (code === '23505' || err.message.toLowerCase().includes('already exists') || err.message.toLowerCase().includes('duplicate')) {
+          isDuplicate = true;
+        } else if (code === '42501' || err.message.toLowerCase().includes('permission denied')) {
+          isPermissionDenied = true;
+        }
+      } else if (typeof err === 'object' && err !== null && 'code' in err) {
+        const code = String((err as { code: unknown }).code);
+        if (code === '23505') {
+          isDuplicate = true;
+        } else if (code === '42501') {
+          isPermissionDenied = true;
+        }
+      }
+
+      setSubmitError({
+        message: msg,
+        isDuplicate,
+        isPermissionDenied,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto pb-12">
+      {/* Page Header */}
+      <PageHeader
+        title={t.roles.createRoleTitle}
+        description={t.roles.createRoleSubtitle}
+        breadcrumbs={[
+          { label: t.roles.title, href: '/roles' },
+          { label: t.roles.createRoleTitle },
+        ]}
+        actions={
+          <Button
+            id="header-back-to-roles-btn"
+            variant="secondary"
+            size="sm"
+            onClick={handleCancelAttempt}
+            leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}
+          >
+            <span>{t.common.back}</span>
+          </Button>
+        }
+      />
+
+      {/* Stepper Progress */}
+      <RoleStepper
+        currentStep={currentStep}
+        onStepClick={handleStepClick}
+        isStepValid={isStepValid}
+      />
+
+      {/* Step Content */}
+      {currentStep === 1 && (
+        <StepRoleDetails
+          roleName={roleName}
+          active={active}
+          description={description}
+          onRoleNameChange={setRoleName}
+          onActiveChange={setActive}
+          onDescriptionChange={setDescription}
+          onNext={handleStep1Next}
+          onCancel={handleCancelAttempt}
+        />
+      )}
+
+      {currentStep === 2 && (
+        <StepPermissions
+          selectedPermissionIds={selectedPermissionIds}
+          onPermissionsChange={setSelectedPermissionIds}
+          onNext={handleStep2Next}
+          onBack={() => setCurrentStep(1)}
+          onCancel={handleCancelAttempt}
+        />
+      )}
+
+      {currentStep === 3 && (
+        <StepReview
+          roleName={roleName}
+          active={active}
+          description={description}
+          selectedPermissionIds={selectedPermissionIds}
+          permissionCatalogue={catalogue}
+          isSubmitting={isSubmitting}
+          submitError={submitError}
+          onEditDetails={() => setCurrentStep(1)}
+          onEditPermissions={() => setCurrentStep(2)}
+          onSubmit={handleSubmit}
+          onBack={() => setCurrentStep(2)}
+          onCancel={handleCancelAttempt}
+        />
+      )}
+
+      {/* Unsaved Changes Confirmation Modal */}
+      <UnsavedChangesModal
+        isOpen={showDiscardModal}
+        onClose={() => setShowDiscardModal(false)}
+        onConfirmDiscard={handleConfirmDiscard}
+      />
+    </div>
+  );
+};
+
+export default CreateRolePage;

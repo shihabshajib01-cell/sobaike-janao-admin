@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { useLanguage } from '@/context/LanguageContext';
@@ -16,18 +17,40 @@ import {
   RotateCcw,
   ShieldAlert,
   AlertCircle,
+  CheckCircle2,
+  X,
 } from 'lucide-react';
 import { cn } from '@/utils';
 
 export const RolesPage: React.FC = () => {
   const { t, language } = useLanguage();
   const isBn = language === 'bn';
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Data & loading states
   const [roles, setRoles] = useState<RoleListItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<{ message: string; isPermissionDenied: boolean } | null>(null);
+
+  // Success message from creation navigation state
+  const [successBanner, setSuccessBanner] = useState<string | null>(() => {
+    const state = location.state as { roleCreatedSuccess?: boolean; createdRoleName?: string } | null;
+    if (state?.roleCreatedSuccess) {
+      return state.createdRoleName
+        ? `${state.createdRoleName}: ${t.roles.roleCreatedSuccess}`
+        : t.roles.roleCreatedSuccess;
+    }
+    return null;
+  });
+
+  // Clear location state after reading
+  useEffect(() => {
+    if (location.state && (location.state as { roleCreatedSuccess?: boolean }).roleCreatedSuccess) {
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   /**
    * Fetch administrative roles exclusively via RPC `admin_list_roles`
@@ -126,17 +149,35 @@ export const RolesPage: React.FC = () => {
               id="header-create-role-btn"
               variant="primary"
               size="sm"
-              disabled
-              aria-disabled="true"
+              onClick={() => navigate('/roles/create')}
               leftIcon={<Plus className="w-3.5 h-3.5" />}
-              title={t.roles.createRoleNotAvailable}
-              className="cursor-not-allowed opacity-60"
             >
               <span>{t.roles.createRole}</span>
             </Button>
           </div>
         }
       />
+
+      {/* Success Banner */}
+      {successBanner && (
+        <div
+          role="status"
+          className="p-4 rounded-xl border bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 flex items-center justify-between gap-3 animate-in fade-in"
+        >
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span className="text-xs sm:text-sm font-medium">{successBanner}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSuccessBanner(null)}
+            className="p-1 rounded-md text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors"
+            aria-label="Dismiss message"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* 2. Error State */}
       {error && (

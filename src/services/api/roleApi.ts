@@ -5,7 +5,14 @@
  */
 
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { RoleListItem, RoleRpcRow, RoleApiError } from '@/types/Role';
+import {
+  RoleListItem,
+  RoleRpcRow,
+  PermissionCatalogueItem,
+  CreateRoleInput,
+  CreateRoleResult,
+  RoleApiError,
+} from '@/types/Role';
 
 export class RoleApi {
   /**
@@ -54,6 +61,70 @@ export class RoleApi {
       created_at: String(item.created_at || ''),
       updated_at: item.updated_at ? String(item.updated_at) : null,
     }));
+  }
+
+  /**
+   * Fetch the canonical 15 permissions catalogue via the secure `admin_get_permission_catalogue` database RPC.
+   * Returns permissions grouped/sorted by module and action.
+   */
+  async getPermissionCatalogue(): Promise<PermissionCatalogueItem[]> {
+    this.checkConfig();
+
+    const { data, error } = await supabase.rpc('admin_get_permission_catalogue');
+
+    if (error) {
+      console.error('Failed to load permission catalogue via RPC admin_get_permission_catalogue:', error);
+      throw new RoleApiError(
+        error.message || 'Failed to load permission catalogue',
+        error.code,
+        error.details,
+        error.hint
+      );
+    }
+
+    if (!data) {
+      return [];
+    }
+
+    const rows = data as unknown as PermissionCatalogueItem[];
+
+    return rows.map((p) => ({
+      id: String(p.id),
+      module: String(p.module),
+      action: String(p.action),
+      name_en: String(p.name_en || ''),
+      name_bn: p.name_bn ? String(p.name_bn) : null,
+      description: p.description ? String(p.description) : null,
+      created_at: String(p.created_at || ''),
+    }));
+  }
+
+  /**
+   * Atomically create a new administrative role with validated permission IDs via `admin_create_role` RPC.
+   * Creates role, assigns permissions, and generates audit log in a single transaction.
+   */
+  async createRole(input: CreateRoleInput): Promise<CreateRoleResult> {
+    this.checkConfig();
+
+    const { data, error } = await supabase.rpc('admin_create_role', {
+      p_name: input.name.trim(),
+      p_active: input.active,
+      p_permission_ids: input.permission_ids,
+      p_description: input.description && input.description.trim() ? input.description.trim() : null,
+    });
+
+    if (error) {
+      console.error('Failed to create role via RPC admin_create_role:', error);
+      throw new RoleApiError(
+        error.message || 'Failed to create role',
+        error.code,
+        error.details,
+        error.hint
+      );
+    }
+
+    const result = data as unknown as CreateRoleResult;
+    return result;
   }
 }
 

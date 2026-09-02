@@ -7,4 +7,5 @@ export * from './Categories/CategoriesPage';
 export * from './Map/MapPage';
 export * from './LocationActivity/LocationActivityPage';
 export * from './Roles/RolesPage';
+export * from './Roles/CreateRolePage';
 export * from './NotFound/NotFoundPage';
