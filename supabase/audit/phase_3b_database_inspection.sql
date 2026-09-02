@@ -3,12 +3,14 @@
 -- ==============================================================================
 -- Repository: shihabshajib01-cell/sobaike-janao-admin
 -- Target: Supabase PostgreSQL Database (Run in Supabase SQL Editor)
--- Purpose: Read-only inspection of existing public.admin_users schema, public.roles,
---          public.permissions, RLS policies, RPC security contexts, and table constraints.
--- Safety: Performs ONLY read-only SELECT queries against information_schema and pg_catalog.
+-- Purpose: Pre- and post-migration inspection of public.admin_users, public.roles,
+--          public.permissions, RLS policies, RPC security contexts, table constraints,
+--          and table grants.
+-- Safety: 100% safe read-only queries against information_schema and pg_catalog.
+--          Executes cleanly even when RBAC tables do not exist yet.
 -- ==============================================================================
 
--- 1. Check existing columns of public.admin_users and public.roles
+-- 1. Check existing columns of public.admin_users and RBAC tables (if present)
 SELECT 
     table_schema,
     table_name,
@@ -48,7 +50,8 @@ SELECT
     rowsecurity
 FROM pg_tables
 WHERE schemaname = 'public'
-  AND tablename IN ('admin_users', 'roles', 'permissions', 'role_permissions', 'user_roles', 'admin_audit_logs', 'complaints');
+  AND tablename IN ('admin_users', 'roles', 'permissions', 'role_permissions', 'user_roles', 'admin_audit_logs', 'complaints')
+ORDER BY tablename;
 
 -- 4. Check existing RLS policies on admin and RBAC tables
 SELECT 
@@ -94,10 +97,36 @@ WHERE n.nspname = 'public'
     'admin_reject_complaint',
     'is_active_admin',
     'has_permission'
-  );
+  )
+ORDER BY p.proname;
 
--- 7. Check total count of canonical permissions seeded
-SELECT 
-    COUNT(*) AS total_permissions,
-    ARRAY_AGG(id ORDER BY id) AS permission_ids
-FROM public.permissions;
+-- 7. Safe inspection of RBAC table presence, row counts, and permission IDs
+-- Uses dynamic execution via DO/PLpgSQL or to_regclass to prevent syntax/table missing errors.
+DO $$
+DECLARE
+    perm_count INT;
+    perm_ids TEXT;
+    role_count INT;
+    user_role_count INT;
+BEGIN
+    IF to_regclass('public.permissions') IS NOT NULL THEN
+        EXECUTE 'SELECT COUNT(*), string_agg(id, '', '' ORDER BY id) FROM public.permissions' INTO perm_count, perm_ids;
+        RAISE NOTICE 'public.permissions is PRESENT. Total permissions: %, IDs: %', perm_count, perm_ids;
+    ELSE
+        RAISE NOTICE 'public.permissions is NOT PRESENT yet.';
+    END IF;
+
+    IF to_regclass('public.roles') IS NOT NULL THEN
+        EXECUTE 'SELECT COUNT(*) FROM public.roles' INTO role_count;
+        RAISE NOTICE 'public.roles is PRESENT. Total roles: %', role_count;
+    ELSE
+        RAISE NOTICE 'public.roles is NOT PRESENT yet.';
+    END IF;
+
+    IF to_regclass('public.user_roles') IS NOT NULL THEN
+        EXECUTE 'SELECT COUNT(*) FROM public.user_roles' INTO user_role_count;
+        RAISE NOTICE 'public.user_roles is PRESENT. Total user_role assignments: %', user_role_count;
+    ELSE
+        RAISE NOTICE 'public.user_roles is NOT PRESENT yet.';
+    END IF;
+END $$;
