@@ -145,11 +145,10 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
   const availableActions = getAvailableComplaintActions(complaint.status);
   const statusGuidance = getComplaintStatusGuidance(complaint.status, language);
 
-  const { hasPermission, hasAnyPermission, isBootstrapMode } = useAuth();
+  const { hasPermission, hasAnyPermission } = useAuth();
 
   // Filter actions based on effective assigned permissions
   const isActionPermitted = (actionId: ComplaintActionId) => {
-    if (isBootstrapMode) return true;
     switch (actionId) {
       case 'publish':
         return hasPermission('complaints.publish');

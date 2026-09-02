@@ -36,10 +36,10 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
   onRetry,
 }) => {
   const { language, t } = useLanguage();
-  const { hasPermission, isBootstrapMode } = useAuth();
+  const { hasPermission } = useAuth();
   const isBn = language === 'bn';
 
-  const canViewEvidence = isBootstrapMode || hasPermission('complaints.evidence_view');
+  const canViewEvidence = hasPermission('complaints.evidence_view');
 
   const [activeMediaIndex, setActiveMediaIndex] = useState<number>(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState<boolean>(false);

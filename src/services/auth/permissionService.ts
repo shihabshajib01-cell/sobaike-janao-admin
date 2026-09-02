@@ -46,9 +46,17 @@ export interface UserPermissionProfile {
  */
 export const permissionService = {
   /**
+   * Resolves the effective authorization profile for the currently authenticated admin caller
+   */
+  async resolveCurrentUserAuthorization(): Promise<UserPermissionProfile> {
+    const { data: authData } = await supabase.auth.getUser();
+    return this.resolveUserPermissions(authData.user?.id || '');
+  },
+
+  /**
    * Resolves the effective permission profile for a user
    */
-  async resolveUserPermissions(userId: string): Promise<UserPermissionProfile> {
+  async resolveUserPermissions(userId?: string): Promise<UserPermissionProfile> {
     if (!isSupabaseConfigured || !userId) {
       return {
         role: {

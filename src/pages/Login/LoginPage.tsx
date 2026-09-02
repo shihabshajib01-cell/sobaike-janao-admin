@@ -72,7 +72,7 @@ export const LoginPage: React.FC = () => {
       if (response.success) {
         setLoginSuccess(true);
         setTimeout(() => {
-          const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard';
+          const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
           navigate(from, { replace: true });
         }, 500);
       } else {

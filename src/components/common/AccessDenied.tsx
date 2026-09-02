@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldAlert, ArrowLeft, Lock, RefreshCw, AlertCircle } from 'lucide-react';
+import { ShieldAlert, ArrowLeft, Lock, RefreshCw, AlertCircle, LogOut } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -24,8 +24,10 @@ export const AccessDenied: React.FC<AccessDeniedProps> = ({
 }) => {
   const navigate = useNavigate();
   const { language, t } = useLanguage();
-  const { role, isBootstrapMode, refreshPermissions, permissionsLoading } = useAuth();
+  const { role, isBootstrapMode, permissions, refreshPermissions, permissionsLoading, logout } = useAuth();
   const isBn = language === 'bn';
+
+  const hasZeroPermissions = !isBootstrapMode && permissions.length === 0;
 
   const roleName = isBootstrapMode
     ? isBn
@@ -34,6 +36,11 @@ export const AccessDenied: React.FC<AccessDeniedProps> = ({
     : role
     ? (isBn && role.name_bn ? role.name_bn : role.name_en)
     : t.access.noRoleAssigned;
+
+  const handleSignOut = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   return (
     <div id="access-denied-container" className="flex items-center justify-center min-h-[60vh] p-4">
@@ -51,7 +58,16 @@ export const AccessDenied: React.FC<AccessDeniedProps> = ({
 
           <div className="space-y-2">
             <h2 id="access-denied-title" className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-              {title || (isErrorState ? (isBn ? 'অনুমতি যাচাই ব্যর্থ হয়েছে' : 'Authorization Verification Failed') : t.access.restrictedTitle)}
+              {title ||
+                (isErrorState
+                  ? isBn
+                    ? 'অনুমতি যাচাই ব্যর্থ হয়েছে'
+                    : 'Authorization Verification Failed'
+                  : hasZeroPermissions
+                  ? isBn
+                    ? 'কোনো অনুমতি বরাদ্দ নেই'
+                    : 'No Permissions Assigned'
+                  : t.access.restrictedTitle)}
             </h2>
             <p id="access-denied-desc" className="text-sm text-slate-500 dark:text-slate-400">
               {message ||
@@ -59,6 +75,10 @@ export const AccessDenied: React.FC<AccessDeniedProps> = ({
                   ? isBn
                     ? 'আপনার প্রশাসনিক অ্যাকাউন্টের অনুমতি যাচাই করার সময় সমস্যা হয়েছে। অনুগ্রহ করে পুনরায় চেষ্টা করুন।'
                     : 'We could not securely verify your assigned administrative permissions from the server. Please retry.'
+                  : hasZeroPermissions
+                  ? isBn
+                    ? 'আপনার অ্যাডমিনিস্ট্রেটর অ্যাকাউন্টটি সক্রিয়, তবে বর্তমান ভূমিকায় কোনো মডিউলে প্রবেশের অনুমতি নেই।'
+                    : 'Your administrator account is active, but your current role does not grant access to any modules.'
                   : t.access.restrictedDescription)}
             </p>
           </div>
@@ -99,14 +119,25 @@ export const AccessDenied: React.FC<AccessDeniedProps> = ({
                 <span>{isBn ? 'পুনরায় চেষ্টা' : 'Retry Verification'}</span>
               </Button>
             )}
+            {!hasZeroPermissions && (
+              <Button
+                id="access-denied-back-btn"
+                variant="primary"
+                size="md"
+                onClick={() => navigate(fallbackPath)}
+                leftIcon={<ArrowLeft className="w-4 h-4" />}
+              >
+                <span>{t.access.backToDashboard}</span>
+              </Button>
+            )}
             <Button
-              id="access-denied-back-btn"
-              variant="primary"
+              id="access-denied-signout-btn"
+              variant={hasZeroPermissions ? 'primary' : 'secondary'}
               size="md"
-              onClick={() => navigate(fallbackPath)}
-              leftIcon={<ArrowLeft className="w-4 h-4" />}
+              onClick={handleSignOut}
+              leftIcon={<LogOut className="w-4 h-4" />}
             >
-              <span>{t.access.backToDashboard}</span>
+              <span>{t.header.signOut}</span>
             </Button>
           </div>
         </CardContent>

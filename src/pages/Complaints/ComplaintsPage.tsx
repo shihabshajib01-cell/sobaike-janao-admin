@@ -25,10 +25,10 @@ import { RefreshCw, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-
 
 export const ComplaintsPage: React.FC = () => {
   const { language } = useLanguage();
-  const { hasPermission, isBootstrapMode } = useAuth();
+  const { hasPermission } = useAuth();
   const isBn = language === 'bn';
 
-  const canExport = isBootstrapMode || hasPermission('complaints.export');
+  const canExport = hasPermission('complaints.export');
 
   // State
   const [loading, setLoading] = useState<boolean>(true);
