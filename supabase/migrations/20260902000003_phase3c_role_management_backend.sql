@@ -154,8 +154,8 @@ SECURITY DEFINER
 SET search_path = pg_catalog, public
 AS $$
 BEGIN
-    IF NOT public.is_active_admin() THEN
-        RAISE EXCEPTION 'Access denied. Active administrator membership required.'
+    IF NOT public.can_manage_roles() THEN
+        RAISE EXCEPTION 'Access denied. Role management authorization required.'
             USING ERRCODE = '42501';
     END IF;
 
@@ -200,8 +200,8 @@ SECURITY DEFINER
 SET search_path = pg_catalog, public
 AS $$
 BEGIN
-    IF NOT public.is_active_admin() THEN
-        RAISE EXCEPTION 'Access denied. Active administrator membership required.'
+    IF NOT public.can_manage_roles() THEN
+        RAISE EXCEPTION 'Access denied. Role management authorization required.'
             USING ERRCODE = '42501';
     END IF;
 
@@ -246,8 +246,8 @@ DECLARE
     v_user_count BIGINT;
     v_result JSONB;
 BEGIN
-    IF NOT public.is_active_admin() THEN
-        RAISE EXCEPTION 'Access denied. Active administrator membership required.'
+    IF NOT public.can_manage_roles() THEN
+        RAISE EXCEPTION 'Access denied. Role management authorization required.'
             USING ERRCODE = '42501';
     END IF;
 
@@ -344,9 +344,13 @@ BEGIN
     -- 3. Generate role slug ID
     v_role_id := public.generate_role_slug(v_clean_name);
 
-    -- 4. Check duplicate role
-    IF EXISTS (SELECT 1 FROM public.roles WHERE id = v_role_id) THEN
-        RAISE EXCEPTION 'A role with the identifier "%" already exists.', v_role_id
+    -- 4. Check duplicate role by slug ID or visible name (case-insensitive)
+    IF EXISTS (
+        SELECT 1 FROM public.roles 
+        WHERE id = v_role_id 
+           OR lower(btrim(name_en)) = lower(v_clean_name)
+    ) THEN
+        RAISE EXCEPTION 'A role with this name already exists.'
             USING ERRCODE = '23505';
     END IF;
 
@@ -450,7 +454,7 @@ GRANT EXECUTE ON FUNCTION public.admin_create_role(text, boolean, text[], text) 
 -- 8. WRITE RPC: public.admin_update_role(...)
 -- ------------------------------------------------------------------------------
 -- Updates role name, active status, description, and optionally replaces permission set.
--- Technical role ID remains stable on rename.
+-- Technical role ID remains stable on rename. Duplicate visible role names are rejected.
 CREATE OR REPLACE FUNCTION public.admin_update_role(
     p_role_id text,
     p_name text,
@@ -509,7 +513,17 @@ BEGIN
 
     v_clean_active := COALESCE(p_active, v_existing_role.active);
 
-    -- 5. Update role table (keeping technical ID stable)
+    -- 5. Check duplicate visible role name against all other roles
+    IF EXISTS (
+        SELECT 1 FROM public.roles
+        WHERE id <> v_clean_role_id
+          AND lower(btrim(name_en)) = lower(v_clean_name)
+    ) THEN
+        RAISE EXCEPTION 'A role with this name already exists.'
+            USING ERRCODE = '23505';
+    END IF;
+
+    -- 6. Update role table (keeping technical ID stable)
     UPDATE public.roles
     SET 
         name_en = v_clean_name,
@@ -520,7 +534,7 @@ BEGIN
     WHERE id = v_clean_role_id
     RETURNING * INTO v_updated_role;
 
-    -- 6. If permission_ids supplied, replace permission set atomically
+    -- 7. If permission_ids supplied, replace permission set atomically
     IF p_permission_ids IS NOT NULL THEN
         SELECT array_agg(DISTINCT btrim(elem))
         INTO v_distinct_perms
@@ -562,7 +576,7 @@ BEGIN
         WHERE role_id = v_clean_role_id;
     END IF;
 
-    -- 7. Audit log
+    -- 8. Audit log
     INSERT INTO public.admin_audit_logs (
         actor_id,
         action,

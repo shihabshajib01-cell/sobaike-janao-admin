@@ -68,3 +68,36 @@ SELECT
     COUNT(*) AS total_permissions,
     ARRAY_AGG(id ORDER BY id) AS permission_ids
 FROM public.permissions;
+
+-- ==============================================================================
+-- 5. DOCUMENTED BEHAVIORAL TEST SUITE (MANUAL EXECUTION IN TEST ENVIRONMENT)
+-- ==============================================================================
+
+-- TEST CASE A: READ AUTHORIZATION ENFORCEMENT
+-- ------------------------------------------------------------------------------
+-- 1. Bootstrap mode (COUNT(user_roles) = 0):
+--    Authenticated active Admin invokes public.admin_list_roles() -> SUCCESS (empty array).
+--    Authenticated active Admin invokes public.admin_get_permission_catalogue() -> SUCCESS (15 rows).
+-- 2. Normal RBAC mode (COUNT(user_roles) > 0):
+--    Active Admin WITHOUT 'roles.manage' invokes public.admin_list_roles() -> FAILS with code 42501.
+--    Active Admin WITHOUT 'roles.manage' invokes public.admin_get_permission_catalogue() -> FAILS with code 42501.
+--    Active Admin WITH 'roles.manage' invokes public.admin_list_roles() -> SUCCESS.
+
+-- TEST CASE B: CASE-INSENSITIVE DUPLICATE ROLE NAME VALIDATION
+-- ------------------------------------------------------------------------------
+-- 1. Create initial role "Admin 2":
+--    SELECT public.admin_create_role('Admin 2', true, ARRAY['dashboard.view']);
+--    -> SUCCESS (role_id = 'admin-2', name_en = 'Admin 2')
+-- 2. Attempt duplicate create with lowercase/mixed-case name "admin 2":
+--    SELECT public.admin_create_role('admin 2', true, ARRAY['dashboard.view']);
+--    -> FAILS with 23505 ('A role with this name already exists.')
+-- 3. Create a distinct role "Reviewer":
+--    SELECT public.admin_create_role('Reviewer', true, ARRAY['complaints.view']);
+--    -> SUCCESS (role_id = 'reviewer', name_en = 'Reviewer')
+-- 4. Attempt rename of "Reviewer" to "ADMIN 2" (duplicate visible name of other role):
+--    SELECT public.admin_update_role('reviewer', 'ADMIN 2', true);
+--    -> FAILS with 23505 ('A role with this name already exists.')
+-- 5. Safe rename of "Admin 2" to "Admin Level 2":
+--    SELECT public.admin_update_role('admin-2', 'Admin Level 2', true);
+--    -> SUCCESS (role_id remains 'admin-2', name_en = 'Admin Level 2')
+

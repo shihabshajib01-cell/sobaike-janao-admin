@@ -40,11 +40,11 @@ This directory contains the database migrations, audit scripts, and security def
 
 | RPC Function | Type | Parameters | Access Requirement | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| `public.admin_get_permission_catalogue()` | STABLE | *(none)* | Active Admin | Returns 15 canonical permissions sorted by module & action. |
-| `public.admin_list_roles()` | STABLE | *(none)* | Active Admin | Returns role summaries with permission counts and assigned user counts. |
-| `public.admin_get_role_detail(p_role_id)` | STABLE | `p_role_id: text` | Active Admin | Returns full role detail, assigned permission IDs array, and user count. |
-| `public.admin_create_role(...)` | VOLATILE | `p_name: text, p_active: boolean, p_permission_ids: text[], p_description: text` | `can_manage_roles()` | Atomically creates role, inserts mappings, records audit log, and returns created role JSON. |
-| `public.admin_update_role(...)` | VOLATILE | `p_role_id: text, p_name: text, p_active: boolean, p_permission_ids: text[], p_description: text` | `can_manage_roles()` | Updates role name, active state, description, and atomically replaces permission mappings if provided. |
+| `public.admin_get_permission_catalogue()` | STABLE | *(none)* | `can_manage_roles()` | Returns 15 canonical permissions sorted by module & action. |
+| `public.admin_list_roles()` | STABLE | *(none)* | `can_manage_roles()` | Returns role summaries with permission counts and assigned user counts. |
+| `public.admin_get_role_detail(p_role_id)` | STABLE | `p_role_id: text` | `can_manage_roles()` | Returns full role detail, assigned permission IDs array, and user count. |
+| `public.admin_create_role(...)` | VOLATILE | `p_name: text, p_active: boolean, p_permission_ids: text[], p_description: text` | `can_manage_roles()` | Atomically creates role, inserts mappings, records audit log, and returns created role JSON. Enforces case-insensitive uniqueness on visible name. |
+| `public.admin_update_role(...)` | VOLATILE | `p_role_id: text, p_name: text, p_active: boolean, p_permission_ids: text[], p_description: text` | `can_manage_roles()` | Updates role name, active state, description, and atomically replaces permission mappings if provided. Technical ID remains immutable. Rejects duplicate visible names. |
 | `public.admin_replace_role_permissions(...)` | VOLATILE | `p_role_id: text, p_permission_ids: text[]` | `can_manage_roles()` | Dedicated atomic RPC to replace a role's permission set with audit logging. |
 
 ---
