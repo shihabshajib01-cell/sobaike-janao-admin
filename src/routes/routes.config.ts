@@ -15,6 +15,7 @@ export interface RouteItem {
   labelKey: keyof TranslationDictionary['nav'];
   defaultLabel: string;
   icon: React.ComponentType<{ className?: string }>;
+  requiredPermission?: string;
   badge?: string;
   exact?: boolean;
 }
@@ -25,41 +26,48 @@ export const ADMIN_NAVIGATION_ITEMS: RouteItem[] = [
     labelKey: 'dashboard',
     defaultLabel: 'Dashboard',
     icon: LayoutDashboard,
+    requiredPermission: 'dashboard.view',
   },
   {
     path: '/complaints',
     labelKey: 'complaints',
     defaultLabel: 'Complaints',
     icon: AlertCircle,
+    requiredPermission: 'complaints.view',
   },
   {
     path: '/responses',
     labelKey: 'responses',
     defaultLabel: 'Responses',
     icon: MessageSquare,
+    requiredPermission: 'responses.view',
   },
   {
     path: '/categories',
     labelKey: 'categories',
     defaultLabel: 'Categories',
     icon: FolderTree,
+    requiredPermission: 'categories.view',
   },
   {
     path: '/map',
     labelKey: 'map',
     defaultLabel: 'Map Monitoring',
     icon: MapPin,
+    requiredPermission: 'map.view',
   },
   {
     path: '/location-activity',
     labelKey: 'locationActivity',
     defaultLabel: 'Location Activity',
     icon: MapPinned,
+    requiredPermission: 'location_activity.view',
   },
   {
     path: '/roles',
     labelKey: 'roles',
     defaultLabel: 'Roles & Permissions',
     icon: ShieldCheck,
+    requiredPermission: 'roles.manage',
   },
 ];

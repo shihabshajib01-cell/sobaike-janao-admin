@@ -36,6 +36,18 @@ export interface TranslationDictionary {
     save: string;
     cancel: string;
   };
+  access: {
+    restrictedTitle: string;
+    restrictedDescription: string;
+    requiredPermission: string;
+    assignedRole: string;
+    noRoleAssigned: string;
+    backToDashboard: string;
+    evidenceRestricted: string;
+    evidenceRestrictedDesc: string;
+    noActionsAllowed: string;
+    exportRestricted: string;
+  };
   roles: {
     title: string;
     description: string;
@@ -150,6 +162,18 @@ export const translations: Record<Language, TranslationDictionary> = {
       save: 'Save',
       cancel: 'Cancel',
     },
+    access: {
+      restrictedTitle: 'Access Restricted',
+      restrictedDescription: 'You do not have administrative permission to access this module.',
+      requiredPermission: 'Required Permission:',
+      assignedRole: 'Your Assigned Role:',
+      noRoleAssigned: 'No Role Assigned (Zero Permissions)',
+      backToDashboard: 'Back to Overview',
+      evidenceRestricted: 'Evidence Inspection Restricted',
+      evidenceRestrictedDesc: 'Your assigned role does not have the "complaints.evidence_view" permission to view citizen-submitted media.',
+      noActionsAllowed: 'No triage actions permitted. (Read-only access)',
+      exportRestricted: 'You do not have permission to export complaints.',
+    },
     roles: {
       title: 'Roles & Permissions',
       description: 'Manage administrative roles and their system permissions.',
@@ -262,6 +286,18 @@ export const translations: Record<Language, TranslationDictionary> = {
       close: 'বন্ধ করুন',
       save: 'সংরক্ষণ',
       cancel: 'বাতিল',
+    },
+    access: {
+      restrictedTitle: 'অ্যাক্সেস সীমাবদ্ধ',
+      restrictedDescription: 'এই মডিউলে প্রবেশ করার জন্য আপনার প্রশাসনিক অনুমতি নেই।',
+      requiredPermission: 'প্রয়োজনীয় অনুমতি:',
+      assignedRole: 'আপনার বর্তমান ভূমিকা:',
+      noRoleAssigned: 'কোনো ভূমিকা বরাদ্দ নেই (অনুমতি শূন্য)',
+      backToDashboard: 'ওভারভিউতে ফিরে যান',
+      evidenceRestricted: 'সংবেদনশীল প্রমাণাদি দেখার অনুমতি নেই',
+      evidenceRestrictedDesc: 'নাগরিকদের জমা দেওয়া প্রমাণ বা ছবি দেখতে আপনার অ্যাকাউন্টে "complaints.evidence_view" অনুমতি প্রয়োজন।',
+      noActionsAllowed: 'পদক্ষেপ গ্রহণের অনুমতি নেই (শুধুমাত্র দর্শনযোগ্য)',
+      exportRestricted: 'অভিযোগ এক্সপোর্ট করার অনুমতি নেই।',
     },
     roles: {
       title: 'ভূমিকা ও অনুমতি',

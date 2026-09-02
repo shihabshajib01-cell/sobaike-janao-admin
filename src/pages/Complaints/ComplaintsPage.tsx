@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { DownloadMenu } from '@/components/ui/DownloadMenu';
 import { Card, CardContent } from '@/components/ui/Card';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
 import {
   ComplaintStatusTabs,
   ComplaintSearch,
@@ -24,7 +25,10 @@ import { RefreshCw, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-
 
 export const ComplaintsPage: React.FC = () => {
   const { language } = useLanguage();
+  const { hasPermission, isBootstrapMode } = useAuth();
   const isBn = language === 'bn';
+
+  const canExport = isBootstrapMode || hasPermission('complaints.export');
 
   // State
   const [loading, setLoading] = useState<boolean>(true);
@@ -236,15 +240,17 @@ export const ComplaintsPage: React.FC = () => {
             >
               <span>{isBn ? 'রিফ্রেশ' : 'Refresh'}</span>
             </Button>
-            <DownloadMenu
-              onExportCsv={handleExportCsv}
-              onExportPdf={handleExportPdf}
-              isExporting={isExporting}
-              exportMessage={exportMessage}
-              label={isBn ? 'এক্সপোর্ট' : 'Export'}
-              variant="primary"
-              size="sm"
-            />
+            {canExport && (
+              <DownloadMenu
+                onExportCsv={handleExportCsv}
+                onExportPdf={handleExportPdf}
+                isExporting={isExporting}
+                exportMessage={exportMessage}
+                label={isBn ? 'এক্সপোর্ট' : 'Export'}
+                variant="primary"
+                size="sm"
+              />
+            )}
           </div>
         }
       />

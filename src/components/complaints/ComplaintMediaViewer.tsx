@@ -4,6 +4,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
 import { ComplaintMedia } from '@/types/Complaint';
 import {
   Image as ImageIcon,
@@ -17,6 +18,7 @@ import {
   ChevronRight,
   RotateCcw,
   ZoomIn,
+  Lock,
 } from 'lucide-react';
 import { cn } from '@/utils';
 
@@ -33,8 +35,11 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
   error,
   onRetry,
 }) => {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
+  const { hasPermission, isBootstrapMode } = useAuth();
   const isBn = language === 'bn';
+
+  const canViewEvidence = isBootstrapMode || hasPermission('complaints.evidence_view');
 
   const [activeMediaIndex, setActiveMediaIndex] = useState<number>(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState<boolean>(false);
@@ -76,8 +81,26 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
         </CardHeader>
 
         <CardContent className="pt-4 space-y-4">
-          {/* 1. Error State when evidence fails to load */}
-          {error ? (
+          {/* 0. Access Restricted State */}
+          {!canViewEvidence ? (
+            <div className="flex flex-col items-center justify-center p-8 rounded-lg border border-slate-200 dark:border-slate-800 text-center bg-slate-50/70 dark:bg-slate-900/40 space-y-3">
+              <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400">
+                <Lock className="w-6 h-6" />
+              </div>
+              <div className="space-y-1 max-w-sm">
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                  {t.access.evidenceRestricted}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {t.access.evidenceRestrictedDesc}
+                </p>
+              </div>
+              <Badge variant="subtle" size="sm" className="font-mono text-[11px]">
+                complaints.evidence_view
+              </Badge>
+            </div>
+          ) : error ? (
+            /* 1. Error State when evidence fails to load */
             <div className="flex flex-col items-center justify-center p-8 rounded-lg border border-amber-200 dark:border-amber-900/40 text-center bg-amber-50/50 dark:bg-amber-950/20 space-y-3">
               <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
                 <AlertCircle className="w-6 h-6 text-amber-600 dark:text-amber-400" />

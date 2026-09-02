@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
 import { Complaint, ComplaintTimelineEvent, ComplaintUrgency } from '@/types/Complaint';
 import { complaintApi } from '@/services';
 import {
@@ -23,6 +24,7 @@ import {
   Info,
   Check,
   AlertTriangle,
+  Lock,
 } from 'lucide-react';
 import { cn } from '@/utils';
 
@@ -142,6 +144,27 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
   // Available actions strictly derived from centralized status rule function
   const availableActions = getAvailableComplaintActions(complaint.status);
   const statusGuidance = getComplaintStatusGuidance(complaint.status, language);
+
+  const { hasPermission, hasAnyPermission, isBootstrapMode } = useAuth();
+
+  // Filter actions based on effective assigned permissions
+  const isActionPermitted = (actionId: ComplaintActionId) => {
+    if (isBootstrapMode) return true;
+    switch (actionId) {
+      case 'publish':
+        return hasPermission('complaints.publish');
+      case 'unpublish':
+        return hasPermission('complaints.unpublish');
+      case 'reject':
+        return hasPermission('complaints.reject');
+      case 'edit':
+        return hasAnyPermission(['complaints.publish', 'complaints.unpublish', 'complaints.reject']);
+      default:
+        return false;
+    }
+  };
+
+  const permittedActions = availableActions.filter((action) => isActionPermitted(action.id));
 
   const closeModal = () => {
     if (isSubmitting) return;
@@ -347,10 +370,10 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
               </span>
             </div>
 
-            {/* Dynamic Button Rendering Driven by Central Rule Function */}
-            {availableActions.length > 0 ? (
+            {/* Dynamic Button Rendering Driven by Central Rule Function and Permissions */}
+            {permittedActions.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {availableActions.map((action) => (
+                {permittedActions.map((action) => (
                   <Button
                     key={action.id}
                     variant={action.variant}
@@ -365,12 +388,21 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
                     className={cn(
                       'justify-start h-9 text-xs',
                       action.id === 'publish' && 'bg-sky-600 hover:bg-sky-700 text-white shadow-xs',
-                      availableActions.length === 1 && 'col-span-full'
+                      permittedActions.length === 1 && 'col-span-full'
                     )}
                   >
                     <span>{isBn ? action.labelBn : action.labelEn}</span>
                   </Button>
                 ))}
+              </div>
+            ) : availableActions.length > 0 ? (
+              <div className="p-3 text-center text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200/60 dark:border-slate-800 flex items-center justify-center gap-2">
+                <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span>
+                  {isBn
+                    ? 'আপনার ভূমিকা অনুযায়ী পদক্ষেপ গ্রহণের অনুমতি নেই (শুধুমাত্র দর্শনযোগ্য)।'
+                    : 'Your role has read-only access. No triage actions permitted.'}
+                </span>
               </div>
             ) : (
               <div className="p-3 text-center text-xs text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200/60 dark:border-slate-800">
@@ -724,10 +756,10 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
         </div>
       </Modal>
 
-      {/* Mobile Fixed Bottom Action Bar: Driven dynamically by availableActions */}
-      {availableActions.length > 0 && (
+      {/* Mobile Fixed Bottom Action Bar: Driven dynamically by permittedActions */}
+      {permittedActions.length > 0 && (
         <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] shadow-lg flex items-center gap-2">
-          {availableActions.map((action) => (
+          {permittedActions.map((action) => (
             <Button
               key={action.id}
               variant={action.variant}

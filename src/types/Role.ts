@@ -57,4 +57,19 @@ export class RoleApiError extends Error {
   }
 }
 
+export interface UserAssignedRole {
+  id: string;
+  name_en: string;
+  name_bn: string | null;
+  description?: string | null;
+  active: boolean;
+  is_system?: boolean;
+}
+
+export interface UserPermissionProfile {
+  role: UserAssignedRole | null;
+  permissions: string[];
+  isBootstrapMode: boolean;
+}
+
 

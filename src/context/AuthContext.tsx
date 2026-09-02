@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { authService, checkAdminStatus, LoginCredentials, LoginResponse } from '@/services/auth/authService';
+import { permissionService, UserAssignedRole } from '@/services/auth/permissionService';
 
 export interface AuthContextType {
   user: User | null;
@@ -9,6 +10,17 @@ export interface AuthContextType {
   isAdmin: boolean;
   isLoading: boolean;
   isConfigured: boolean;
+  // RBAC State
+  permissions: string[];
+  role: UserAssignedRole | null;
+  isBootstrapMode: boolean;
+  permissionsLoading: boolean;
+  // RBAC Helpers
+  hasPermission: (permissionId: string) => boolean;
+  hasAnyPermission: (permissionIds: string[]) => boolean;
+  hasAllPermissions: (permissionIds: string[]) => boolean;
+  refreshPermissions: () => Promise<string[]>;
+  // Auth Operations
   login: (credentials: LoginCredentials) => Promise<LoginResponse>;
   logout: () => Promise<void>;
   refreshAdminStatus: () => Promise<boolean>;
@@ -22,21 +34,77 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  // RBAC permissions state
+  const [permissions, setPermissions] = useState<string[]>([]);
+  const [role, setRole] = useState<UserAssignedRole | null>(null);
+  const [isBootstrapMode, setIsBootstrapMode] = useState<boolean>(false);
+  const [permissionsLoading, setPermissionsLoading] = useState<boolean>(false);
+
   const isMountedRef = useRef<boolean>(true);
   const userRef = useRef<User | null>(null);
   const isAdminRef = useRef<boolean>(false);
+  const permissionsRef = useRef<string[]>([]);
 
   // Keep refs synchronized with state
   useEffect(() => {
     userRef.current = user;
     isAdminRef.current = isAdmin;
-  }, [user, isAdmin]);
+    permissionsRef.current = permissions;
+  }, [user, isAdmin, permissions]);
+
+  /**
+   * Resolves role and effective permissions for the given admin user ID
+   */
+  const loadUserPermissions = useCallback(async (userId: string) => {
+    setPermissionsLoading(true);
+    try {
+      const profile = await permissionService.resolveUserPermissions(userId);
+      if (isMountedRef.current) {
+        setPermissions(profile.permissions);
+        setRole(profile.role);
+        setIsBootstrapMode(profile.isBootstrapMode);
+        permissionsRef.current = profile.permissions;
+      }
+      return profile.permissions;
+    } catch (err) {
+      console.error('Failed to load user permissions:', err);
+      if (isMountedRef.current) {
+        setPermissions([]);
+        setRole(null);
+        setIsBootstrapMode(false);
+        permissionsRef.current = [];
+      }
+      return [];
+    } finally {
+      if (isMountedRef.current) {
+        setPermissionsLoading(false);
+      }
+    }
+  }, []);
+
+  /**
+   * Resets all auth and permission state
+   */
+  const resetAuthState = useCallback(() => {
+    setSession(null);
+    setUser(null);
+    setIsAdmin(false);
+    setPermissions([]);
+    setRole(null);
+    setIsBootstrapMode(false);
+    setPermissionsLoading(false);
+    userRef.current = null;
+    isAdminRef.current = false;
+    permissionsRef.current = [];
+  }, []);
 
   useEffect(() => {
     isMountedRef.current = true;
 
     if (!isSupabaseConfigured) {
       setIsLoading(false);
+      // In unconfigured dev mode, resolve default admin permissions
+      loadUserPermissions('dev_admin');
       return () => {
         isMountedRef.current = false;
       };
@@ -58,23 +126,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setIsAdmin(true);
             userRef.current = initialSession.user;
             isAdminRef.current = true;
+
+            // Load permissions in parallel
+            await loadUserPermissions(initialSession.user.id);
           } else {
-            setSession(null);
-            setUser(null);
-            setIsAdmin(false);
-            userRef.current = null;
-            isAdminRef.current = false;
+            resetAuthState();
             // Defer sign-out outside
             setTimeout(() => {
               authService.logout().catch(() => {});
             }, 0);
           }
         } else {
-          setSession(null);
-          setUser(null);
-          setIsAdmin(false);
-          userRef.current = null;
-          isAdminRef.current = false;
+          resetAuthState();
         }
       } catch (err) {
         console.error('Error during initial auth verification:', err);
@@ -94,11 +157,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!isMountedRef.current) return;
 
       if (event === 'SIGNED_OUT' || !newSession?.user) {
-        setSession(null);
-        setUser(null);
-        setIsAdmin(false);
-        userRef.current = null;
-        isAdminRef.current = false;
+        resetAuthState();
         setIsLoading(false);
         return;
       }
@@ -125,23 +184,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setIsAdmin(true);
             userRef.current = newSession.user;
             isAdminRef.current = true;
+
+            await loadUserPermissions(newSession.user.id);
           } else {
-            setSession(null);
-            setUser(null);
-            setIsAdmin(false);
-            userRef.current = null;
-            isAdminRef.current = false;
+            resetAuthState();
             // Safely sign out non-admin user outside the callback
             await authService.logout();
           }
         } catch (err) {
           console.error('Error during deferred admin verification:', err);
           if (!isMountedRef.current) return;
-          setSession(null);
-          setUser(null);
-          setIsAdmin(false);
-          userRef.current = null;
-          isAdminRef.current = false;
+          resetAuthState();
         } finally {
           if (isMountedRef.current) {
             setIsLoading(false);
@@ -154,7 +207,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isMountedRef.current = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [loadUserPermissions, resetAuthState]);
 
   const login = async (credentials: LoginCredentials): Promise<LoginResponse> => {
     const result = await authService.login(credentials);
@@ -164,23 +217,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsAdmin(true);
       userRef.current = result.user;
       isAdminRef.current = true;
+      await loadUserPermissions(result.user.id);
     } else {
-      setSession(null);
-      setUser(null);
-      setIsAdmin(false);
-      userRef.current = null;
-      isAdminRef.current = false;
+      resetAuthState();
     }
     return result;
   };
 
   const logout = async (): Promise<void> => {
     await authService.logout();
-    setSession(null);
-    setUser(null);
-    setIsAdmin(false);
-    userRef.current = null;
-    isAdminRef.current = false;
+    resetAuthState();
   };
 
   const refreshAdminStatus = async (): Promise<boolean> => {
@@ -190,9 +236,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAdminRef.current = active;
     if (!active) {
       await logout();
+    } else {
+      await loadUserPermissions(user.id);
     }
     return active;
   };
+
+  const refreshPermissions = async (): Promise<string[]> => {
+    if (!user) return [];
+    return loadUserPermissions(user.id);
+  };
+
+  /**
+   * Permission checking helper:
+   * Returns true if user has the specific permission ID or is in bootstrap mode.
+   */
+  const hasPermission = useCallback(
+    (permissionId: string): boolean => {
+      if (!isAdmin) return false;
+      if (isBootstrapMode) return true;
+      return permissions.includes(permissionId);
+    },
+    [isAdmin, isBootstrapMode, permissions]
+  );
+
+  /**
+   * Returns true if user has AT LEAST ONE of the specified permission IDs
+   */
+  const hasAnyPermission = useCallback(
+    (permissionIds: string[]): boolean => {
+      if (!isAdmin) return false;
+      if (isBootstrapMode) return true;
+      if (!permissionIds || permissionIds.length === 0) return true;
+      return permissionIds.some((p) => permissions.includes(p));
+    },
+    [isAdmin, isBootstrapMode, permissions]
+  );
+
+  /**
+   * Returns true if user has ALL of the specified permission IDs
+   */
+  const hasAllPermissions = useCallback(
+    (permissionIds: string[]): boolean => {
+      if (!isAdmin) return false;
+      if (isBootstrapMode) return true;
+      if (!permissionIds || permissionIds.length === 0) return true;
+      return permissionIds.every((p) => permissions.includes(p));
+    },
+    [isAdmin, isBootstrapMode, permissions]
+  );
 
   return (
     <AuthContext.Provider
@@ -202,6 +294,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAdmin,
         isLoading,
         isConfigured: isSupabaseConfigured,
+        permissions,
+        role,
+        isBootstrapMode,
+        permissionsLoading,
+        hasPermission,
+        hasAnyPermission,
+        hasAllPermissions,
+        refreshPermissions,
         login,
         logout,
         refreshAdminStatus,

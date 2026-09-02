@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { ADMIN_NAVIGATION_ITEMS } from '@/routes/routes.config';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
 import { Shield, ChevronRight, X, Sparkles } from 'lucide-react';
 import { cn } from '@/utils';
 
@@ -18,7 +19,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isCollapsed = false,
 }) => {
   const { t, language } = useLanguage();
+  const { hasPermission, isBootstrapMode } = useAuth();
   const location = useLocation();
+
+  // Filter navigation items by assigned permissions
+  const accessibleNavItems = ADMIN_NAVIGATION_ITEMS.filter((item) => {
+    if (isBootstrapMode) return true;
+    if (!item.requiredPermission) return true;
+    return hasPermission(item.requiredPermission);
+  });
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -104,7 +113,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
 
-          {ADMIN_NAVIGATION_ITEMS.map((item) => {
+          {accessibleNavItems.map((item) => {
             const Icon = item.icon;
             const label = t.nav[item.labelKey] || item.defaultLabel;
 
