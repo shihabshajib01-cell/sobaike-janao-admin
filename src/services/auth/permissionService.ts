@@ -51,72 +51,66 @@ export const permissionService = {
    */
   async resolveCurrentUserAuthorization(): Promise<UserPermissionProfile> {
     if (!isSupabaseConfigured) {
-      // Local dev mode without Supabase connection
-      return {
-        role: {
-          id: 'dev_admin',
-          name_en: 'System Administrator',
-          name_bn: 'সিস্টেম অ্যাডমিনিস্ট্রেটর',
-          active: true,
-          is_system: true,
-        },
-        permissions: [...CANONICAL_PERMISSIONS],
-        isBootstrapMode: true,
-        isAdmin: true,
-      };
-    }
-
-    // 1. Authoritative approach: Database runtime context RPC using auth.uid()
-    try {
-      const { data: contextData, error: rpcError } = await supabase.rpc(
-        'admin_get_my_authorization_context'
-      );
-
-      if (!rpcError && contextData && typeof contextData === 'object') {
-        const parsed = contextData as {
-          is_admin?: boolean;
-          is_bootstrap?: boolean;
-          role?: UserAssignedRole | null;
-          permission_ids?: string[];
-        };
-
-        const isAdmin = Boolean(parsed.is_admin);
-        const isBootstrap = Boolean(parsed.is_bootstrap);
-        const role = parsed.role || null;
-        const permissions = Array.isArray(parsed.permission_ids) ? parsed.permission_ids : [];
-
+      // Local development only when Supabase credentials are not configured in environment
+      if (import.meta.env.DEV) {
         return {
-          isAdmin,
-          isBootstrapMode: isBootstrap,
-          role: role
-            ? {
-                id: String(role.id),
-                name_en: String(role.name_en || ''),
-                name_bn: role.name_bn ? String(role.name_bn) : null,
-                description: role.description ? String(role.description) : null,
-                active: Boolean(role.active),
-                is_system: Boolean(role.is_system),
-              }
-            : null,
-          permissions,
+          role: {
+            id: 'dev_admin',
+            name_en: 'System Administrator (Dev)',
+            name_bn: 'সিস্টেম অ্যাডমিনিস্ট্রেটর (ডেভ)',
+            active: true,
+            is_system: true,
+          },
+          permissions: [...CANONICAL_PERMISSIONS],
+          isBootstrapMode: true,
+          isAdmin: true,
         };
       }
-    } catch (err) {
-      console.warn('Authorization context RPC failed, using admin fallback:', err);
+      throw new Error('Supabase client is not configured in production environment.');
     }
 
-    // Resilient fallback for dev/demo mode
+    // Authoritative check: Database runtime context RPC using auth.uid() exclusively
+    const { data: contextData, error: rpcError } = await supabase.rpc(
+      'admin_get_my_authorization_context'
+    );
+
+    if (rpcError) {
+      console.error('Authorization context RPC failed:', rpcError.message || rpcError);
+      throw new Error(
+        rpcError.message || 'Failed to resolve administrative authorization context from server.'
+      );
+    }
+
+    if (!contextData || typeof contextData !== 'object') {
+      throw new Error('Invalid authorization context response received from database.');
+    }
+
+    const parsed = contextData as {
+      is_admin?: boolean;
+      is_bootstrap?: boolean;
+      role?: UserAssignedRole | null;
+      permission_ids?: string[];
+    };
+
+    const isAdmin = Boolean(parsed.is_admin);
+    const isBootstrap = Boolean(parsed.is_bootstrap);
+    const role = parsed.role || null;
+    const permissions = Array.isArray(parsed.permission_ids) ? parsed.permission_ids : [];
+
     return {
-      role: {
-        id: 'super_admin',
-        name_en: 'System Administrator',
-        name_bn: 'সিস্টেম অ্যাডমিনিস্ট্রেটর',
-        active: true,
-        is_system: true,
-      },
-      permissions: [...CANONICAL_PERMISSIONS],
-      isBootstrapMode: false,
-      isAdmin: true,
+      isAdmin,
+      isBootstrapMode: isBootstrap,
+      role: role
+        ? {
+            id: String(role.id),
+            name_en: String(role.name_en || ''),
+            name_bn: role.name_bn ? String(role.name_bn) : null,
+            description: role.description ? String(role.description) : null,
+            active: Boolean(role.active),
+            is_system: Boolean(role.is_system),
+          }
+        : null,
+      permissions,
     };
   },
 
