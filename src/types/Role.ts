@@ -110,6 +110,14 @@ export class RoleApiError extends Error {
       this.message.toLowerCase().includes('not configured')
     );
   }
+
+  get isCompatibilityError(): boolean {
+    return (
+      this.code === 'COMPATIBILITY_ERROR' ||
+      this.message.toLowerCase().includes('missing migration 00008') ||
+      this.message.toLowerCase().includes('p_update_description')
+    );
+  }
 }
 
 export interface RoleDetail {

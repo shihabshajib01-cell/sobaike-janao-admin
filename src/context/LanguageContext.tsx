@@ -164,6 +164,11 @@ export interface TranslationDictionary {
     idCopied: string;
     activeStatusHelper: string;
     inactiveStatusHelper: string;
+    viewRole: string;
+    noDescriptionProvided: string;
+    descriptionEditHelper: string;
+    configurationError: string;
+    dismissMessage: string;
   };
 }
 
@@ -331,6 +336,11 @@ export const translations: Record<Language, TranslationDictionary> = {
       idCopied: 'ID Copied',
       activeStatusHelper: 'Active roles grant their permissions to assigned users.',
       inactiveStatusHelper: 'Inactive roles do not grant permissions to assigned users.',
+      viewRole: 'View',
+      noDescriptionProvided: 'No description provided for this role.',
+      descriptionEditHelper: 'Brief summary of the role responsibilities.',
+      configurationError: 'Role management is not configured in this environment.',
+      dismissMessage: 'Dismiss message',
     },
   },
   bn: {
@@ -496,6 +506,11 @@ export const translations: Record<Language, TranslationDictionary> = {
       idCopied: 'আইডি কপি করা হয়েছে',
       activeStatusHelper: 'সক্রিয় ভূমিকার অনুমতিগুলো বরাদ্দকৃত ব্যবহারকারীরা ব্যবহার করতে পারেন।',
       inactiveStatusHelper: 'নিষ্ক্রিয় ভূমিকার অনুমতিগুলো বরাদ্দকৃত ব্যবহারকারীরা ব্যবহার করতে পারেন না।',
+      viewRole: 'দেখুন',
+      noDescriptionProvided: 'কোনো বিবরণ প্রদান করা হয়নি।',
+      descriptionEditHelper: 'ভূমিকার উদ্দেশ্য বা দায়িত্বের সংক্ষিপ্ত বিবরণ।',
+      configurationError: 'এই পরিবেশে ভূমিকা ব্যবস্থাপনা কনফিগার করা নেই।',
+      dismissMessage: 'বার্তাটি বন্ধ করুন',
     },
   },
 };

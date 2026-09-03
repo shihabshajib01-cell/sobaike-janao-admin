@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useParams, useNavigate, useBlocker } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
@@ -141,10 +141,36 @@ export const EditRolePage: React.FC = () => {
     return isNameChanged || isActiveChanged || isDescChanged || isPermsChanged;
   }, [role, name, active, description, permissionIds]);
 
+  const isSavingRef = useRef(false);
+
+  // Block internal navigation when form has unsaved changes
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      !isSavingRef.current && isDirty && currentLocation.pathname !== nextLocation.pathname
+  );
+
+  const isBlocked = blocker.state === 'blocked' || showDiscardModal;
+
+  const handleKeepEditing = () => {
+    setShowDiscardModal(false);
+    if (blocker.state === 'blocked') {
+      blocker.reset();
+    }
+  };
+
+  const handleDiscardChanges = () => {
+    setShowDiscardModal(false);
+    if (blocker.state === 'blocked') {
+      blocker.proceed();
+    } else {
+      navigate(role ? `/roles/${role.id}` : '/roles');
+    }
+  };
+
   // Warn on browser unload if form is dirty
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isDirty) {
+      if (isDirty && !isSavingRef.current) {
         e.preventDefault();
         e.returnValue = '';
       }
@@ -202,6 +228,8 @@ export const EditRolePage: React.FC = () => {
 
       await roleApi.updateRole(payload);
 
+      isSavingRef.current = true;
+
       // Navigate back to Role Detail with success notification
       navigate(`/roles/${role.id}`, {
         state: {
@@ -210,22 +238,32 @@ export const EditRolePage: React.FC = () => {
         },
       });
     } catch (err: unknown) {
+      isSavingRef.current = false;
       console.error('Role update failed:', err);
       let errorMsg = t.roles.generalCreateError;
 
-      if (err instanceof RoleApiError || err instanceof Error) {
-        errorMsg = err.message;
-        const code = (err as { code?: string }).code;
+      const roleErr =
+        err instanceof RoleApiError
+          ? err
+          : new RoleApiError(
+              err instanceof Error ? err.message : String(err),
+              (err as { code?: string })?.code || 'UNKNOWN_ERROR'
+            );
 
-        if (code === '23514') {
-          errorMsg = t.roles.lastManagerError;
-        } else if (code === '42501') {
-          errorMsg = t.roles.systemRoleError;
-        } else if (code === '23505') {
-          errorMsg = t.roles.duplicateNameError;
-        } else if ((err as RoleApiError).isConfigError) {
-          errorMsg = t.roles.compatibilityError;
-        }
+      if (roleErr.isLastManagerLockout) {
+        errorMsg = t.roles.lastManagerError;
+      } else if (roleErr.isDuplicate) {
+        errorMsg = t.roles.duplicateNameError;
+      } else if (roleErr.isCompatibilityError) {
+        errorMsg = t.roles.compatibilityError;
+      } else if (roleErr.isConfigError) {
+        errorMsg = t.roles.configurationError;
+      } else if (roleErr.isSystemProtected) {
+        errorMsg = t.roles.systemRoleError;
+      } else if (roleErr.isPermissionDenied) {
+        errorMsg = t.roles.permissionDeniedMessage;
+      } else if (roleErr.message) {
+        errorMsg = roleErr.message;
       }
 
       setSubmitError(errorMsg);

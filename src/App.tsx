@@ -1,5 +1,4 @@
 import React from 'react';
-import { HashRouter } from 'react-router-dom';
 import { ThemeProvider } from '@/themes';
 import { LanguageProvider } from '@/context/LanguageContext';
 import { AuthProvider } from '@/context/AuthContext';
@@ -12,9 +11,7 @@ export const App: React.FC = () => {
       <ThemeProvider defaultTheme="system">
         <LanguageProvider>
           <AuthProvider>
-            <HashRouter>
-              <AppRoutes />
-            </HashRouter>
+            <AppRoutes />
           </AuthProvider>
         </LanguageProvider>
       </ThemeProvider>
