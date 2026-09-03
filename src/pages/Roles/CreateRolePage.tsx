@@ -29,6 +29,7 @@ export const CreateRolePage: React.FC = () => {
   const [catalogue, setCatalogue] = useState<PermissionCatalogueItem[]>([]);
   const [isLoadingCatalogue, setIsLoadingCatalogue] = useState<boolean>(true);
   const [catalogueError, setCatalogueError] = useState<{ message: string; isPermissionDenied: boolean } | string | null>(null);
+  const [catalogueLoadSucceeded, setCatalogueLoadSucceeded] = useState<boolean>(false);
 
   // Guard refs for single-fetch lifecycle and race-condition safety
   const catalogueFetchedRef = useRef<boolean>(false);
@@ -60,10 +61,12 @@ export const CreateRolePage: React.FC = () => {
     const requestId = ++requestIdRef.current;
     setIsLoadingCatalogue(true);
     setCatalogueError(null);
+    setCatalogueLoadSucceeded(false);
     try {
       const items = await roleApi.getPermissionCatalogue();
       if (requestId !== requestIdRef.current) return;
       setCatalogue(items);
+      setCatalogueLoadSucceeded(true);
     } catch (err: unknown) {
       if (requestId !== requestIdRef.current) return;
       console.warn('Permission catalogue fetch failed:', err);
@@ -72,6 +75,7 @@ export const CreateRolePage: React.FC = () => {
         (err.isPermissionDenied || (err as { code?: string }).code === '42501');
       const message = err instanceof Error ? err.message : tRef.current.roles.loadPermissionsError;
       setCatalogueError({ message, isPermissionDenied: Boolean(isPermissionDenied) });
+      setCatalogueLoadSucceeded(false);
     } finally {
       if (requestId === requestIdRef.current) {
         setIsLoadingCatalogue(false);
@@ -106,12 +110,18 @@ export const CreateRolePage: React.FC = () => {
     return generateRoleSlug(trimmedEn).length > 0;
   };
 
+  const isCatalogueReady =
+    catalogueLoadSucceeded &&
+    !isLoadingCatalogue &&
+    catalogueError === null;
+
   const handleStep1Next = () => {
     if (!isStep1Valid()) return;
     setCurrentStep(2);
   };
 
   const handleStep2Next = () => {
+    if (!isCatalogueReady) return;
     setCurrentStep(3);
   };
 
@@ -123,7 +133,7 @@ export const CreateRolePage: React.FC = () => {
         setCurrentStep(2);
       }
     } else if (step === 3) {
-      if (isStep1Valid()) {
+      if (isStep1Valid() && isCatalogueReady) {
         setCurrentStep(3);
       }
     }
@@ -132,7 +142,7 @@ export const CreateRolePage: React.FC = () => {
   const isStepValid = (step: number): boolean => {
     if (step === 1) return true;
     if (step === 2) return isStep1Valid();
-    if (step === 3) return isStep1Valid();
+    if (step === 3) return isStep1Valid() && isCatalogueReady;
     return false;
   };
 
