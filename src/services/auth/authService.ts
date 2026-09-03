@@ -19,6 +19,8 @@ export interface LoginResponse {
 const REMEMBERED_EMAIL_KEY = 'sobaike_remembered_email';
 const MOCK_SESSION_KEY = 'sobaike_mock_session';
 
+const isDev = Boolean(typeof import.meta !== 'undefined' && import.meta.env?.DEV);
+
 const createDevMockSession = (email: string): { user: User; session: Session } => {
   const user: User = {
     id: 'dev-admin-id-0001',
@@ -44,16 +46,16 @@ const createDevMockSession = (email: string): { user: User; session: Session } =
  * Strict fail-closed semantics:
  * - Returns true ONLY if Supabase is configured, user exists in admin_users, and active === true.
  * - Returns false on missing userId, query error, network error, missing row, or inactive status.
- * - In unconfigured environment: returns true for mock admin session.
+ * - Dev mock exception strictly isolated to (!isSupabaseConfigured && import.meta.env.DEV).
  */
 export async function checkAdminStatus(userId: string): Promise<boolean> {
   if (!userId) {
     return false;
   }
 
-  // Unconfigured fallback
+  // Local development fallback strictly isolated to DEV
   if (!isSupabaseConfigured) {
-    return true;
+    return isDev;
   }
 
   try {
@@ -95,13 +97,15 @@ export const authService = {
       }
     }
 
-    // Fallback when unconfigured
-    try {
-      const stored = typeof window !== 'undefined' ? localStorage.getItem(MOCK_SESSION_KEY) : null;
-      if (stored) {
-        return JSON.parse(stored) as Session;
-      }
-    } catch {}
+    // Fallback strictly isolated to unconfigured DEV; ignored in production
+    if (isDev) {
+      try {
+        const stored = typeof window !== 'undefined' ? localStorage.getItem(MOCK_SESSION_KEY) : null;
+        if (stored) {
+          return JSON.parse(stored) as Session;
+        }
+      } catch {}
+    }
 
     return null;
   },
@@ -116,14 +120,16 @@ export const authService = {
       }
     }
 
-    // Fallback when unconfigured
-    try {
-      const stored = typeof window !== 'undefined' ? localStorage.getItem(MOCK_SESSION_KEY) : null;
-      if (stored) {
-        const parsed = JSON.parse(stored) as Session;
-        return parsed.access_token || null;
-      }
-    } catch {}
+    // Fallback strictly isolated to unconfigured DEV; ignored in production
+    if (isDev) {
+      try {
+        const stored = typeof window !== 'undefined' ? localStorage.getItem(MOCK_SESSION_KEY) : null;
+        if (stored) {
+          const parsed = JSON.parse(stored) as Session;
+          return parsed.access_token || null;
+        }
+      } catch {}
+    }
 
     return null;
   },
@@ -138,14 +144,16 @@ export const authService = {
       }
     }
 
-    // Fallback when unconfigured
-    try {
-      const stored = typeof window !== 'undefined' ? localStorage.getItem(MOCK_SESSION_KEY) : null;
-      if (stored) {
-        const parsed = JSON.parse(stored) as Session;
-        return parsed.user || null;
-      }
-    } catch {}
+    // Fallback strictly isolated to unconfigured DEV; ignored in production
+    if (isDev) {
+      try {
+        const stored = typeof window !== 'undefined' ? localStorage.getItem(MOCK_SESSION_KEY) : null;
+        if (stored) {
+          const parsed = JSON.parse(stored) as Session;
+          return parsed.user || null;
+        }
+      } catch {}
+    }
 
     return null;
   },
@@ -238,7 +246,17 @@ export const authService = {
       }
     }
 
-    // Unconfigured environment: mock login
+    // Unconfigured environment:
+    // Production MUST fail closed: no login, no mock session
+    if (!isDev) {
+      return {
+        success: false,
+        isUnconfigured: true,
+        error: 'Authentication service is not configured in this environment.',
+      };
+    }
+
+    // Dev-only local mock login
     const { user, session } = createDevMockSession(email || 'admin@sobaike.org');
     try {
       if (typeof window !== 'undefined') {

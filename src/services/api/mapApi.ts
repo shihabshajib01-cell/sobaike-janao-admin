@@ -17,6 +17,8 @@ import { MOCK_COMPLAINTS } from '@/services/mock/complaintService';
 
 export const MAP_MONITORING_CONNECTED = true;
 
+const isDev = Boolean(typeof import.meta !== 'undefined' && import.meta.env?.DEV);
+
 function getFallbackMapDataset(): MapDataset {
   const mappedComplaints: MapComplaint[] = MOCK_COMPLAINTS.map((c) => ({
     id: c.id,
@@ -85,7 +87,10 @@ export class MapApi {
    */
   async getMapDataset(): Promise<MapDataset> {
     if (!isSupabaseConfigured) {
-      return getFallbackMapDataset();
+      if (isDev) {
+        return getFallbackMapDataset();
+      }
+      throw new Error('Supabase map service is not configured in this environment.');
     }
 
     // Call controlled SECURITY DEFINER Map RPC

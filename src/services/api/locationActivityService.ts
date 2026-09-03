@@ -89,6 +89,8 @@ const DEV_MOCK_STATS: LocationActivityStats = {
   recentSessionsCount: 14,
 };
 
+const isDev = Boolean(typeof import.meta !== 'undefined' && import.meta.env?.DEV);
+
 /**
  * Service for querying visitor location sessions and device context.
  * Read-only operations against public.public_visit_sessions.
@@ -104,13 +106,16 @@ export const locationActivityService = {
     pageSize = 20
   ): Promise<LocationActivityResponse> {
     if (!isSupabaseConfigured) {
-      return {
-        sessions: DEV_MOCK_SESSIONS,
-        total: DEV_MOCK_SESSIONS.length,
-        page: 1,
-        pageSize,
-        totalPages: 1,
-      };
+      if (isDev) {
+        return {
+          sessions: DEV_MOCK_SESSIONS,
+          total: DEV_MOCK_SESSIONS.length,
+          page: 1,
+          pageSize,
+          totalPages: 1,
+        };
+      }
+      throw new Error('Supabase location activity service is not configured in this environment.');
     }
 
     const fromIndex = (page - 1) * pageSize;
@@ -189,7 +194,10 @@ export const locationActivityService = {
    */
   async getLocationActivityStats(): Promise<LocationActivityStats> {
     if (!isSupabaseConfigured) {
-      return DEV_MOCK_STATS;
+      if (isDev) {
+        return DEV_MOCK_STATS;
+      }
+      throw new Error('Supabase location activity service is not configured in this environment.');
     }
 
     const fifteenMinutesAgoIso = new Date(Date.now() - 15 * 60 * 1000).toISOString();
@@ -247,7 +255,10 @@ export const locationActivityService = {
    */
   async getDistinctBrowsers(): Promise<string[]> {
     if (!isSupabaseConfigured) {
-      return ['Chrome', 'Chrome Mobile', 'Safari'];
+      if (isDev) {
+        return ['Chrome', 'Chrome Mobile', 'Safari'];
+      }
+      throw new Error('Supabase location activity service is not configured in this environment.');
     }
 
     const { data, error } = await supabase

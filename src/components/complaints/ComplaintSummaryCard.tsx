@@ -12,7 +12,6 @@ import {
   Building2,
   ThumbsUp,
   MessageSquare,
-  Image as ImageIcon,
 } from 'lucide-react';
 import { cn } from '@/utils';
 
@@ -99,12 +98,6 @@ export const ComplaintSummaryCard: React.FC<ComplaintSummaryCardProps> = ({
                 <AlertTriangle className="w-3 h-3 mr-1" />
                 {isBn ? urgencyCfg.labelBn : urgencyCfg.labelEn}
               </Badge>
-              {(complaint.hasSupportingInfo || (complaint.evidenceCount && complaint.evidenceCount > 0) || (complaint.media && complaint.media.length > 0)) && (
-                <Badge variant="subtle" size="sm" className="bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
-                  <ImageIcon className="w-3 h-3 mr-1 text-sky-500" />
-                  <span>{complaint.evidenceCount ? complaint.evidenceCount : (complaint.media?.length || 1)} {isBn ? 'টি প্রমাণ ফাইল' : 'Evidence File(s)'}</span>
-                </Badge>
-              )}
             </div>
           </div>
 

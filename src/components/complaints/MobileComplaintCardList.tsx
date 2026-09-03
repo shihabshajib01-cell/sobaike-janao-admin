@@ -15,7 +15,6 @@ import {
   ExternalLink,
   ChevronRight,
   User,
-  Image as ImageIcon,
 } from 'lucide-react';
 import { cn } from '@/utils';
 
@@ -145,15 +144,6 @@ export const MobileComplaintCardList: React.FC<MobileComplaintCardListProps> = (
                       <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 dark:text-slate-400">
                         <Tag className="w-3 h-3 text-slate-400" />
                         <span className="truncate max-w-[110px]">{category}</span>
-                      </span>
-                    )}
-                    {(complaint.hasSupportingInfo || (complaint.evidenceCount && complaint.evidenceCount > 0) || (complaint.media && complaint.media.length > 0)) && (
-                      <span
-                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-sky-50 dark:bg-sky-950/70 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 shrink-0"
-                        title={isBn ? 'সংযুক্ত প্রমাণাদি রয়েছে' : 'Evidence Attached'}
-                      >
-                        <ImageIcon className="w-2.5 h-2.5 text-sky-500" />
-                        <span>{complaint.evidenceCount ? complaint.evidenceCount : (complaint.media?.length || 1)}</span>
                       </span>
                     )}
                   </div>
