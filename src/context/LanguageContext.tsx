@@ -251,7 +251,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       map: 'Map Monitoring',
       locationActivity: 'Location Activity',
       roles: 'Roles & Permissions',
-      users: 'Admin Users',
+      users: 'User Management',
     },
     header: {
       searchPlaceholder: 'Search complaints, IDs, wards...',
@@ -490,7 +490,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       map: 'ম্যাপ মনিটরিং',
       locationActivity: 'লোকেশন অ্যাক্টিভিটি',
       roles: 'ভূমিকা ও অনুমতি',
-      users: 'অ্যাডমিন ইউজার',
+      users: 'ব্যবহারকারী ব্যবস্থাপনা',
     },
     header: {
       searchPlaceholder: 'অভিযোগ, আইডি, ওয়ার্ড অনুসন্ধান করুন...',

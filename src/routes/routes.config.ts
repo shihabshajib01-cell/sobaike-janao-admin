@@ -65,18 +65,18 @@ export const ADMIN_NAVIGATION_ITEMS: RouteItem[] = [
     requiredPermission: 'location_activity.view',
   },
   {
+    path: '/users',
+    labelKey: 'users',
+    defaultLabel: 'User Management',
+    icon: Users,
+    requiredPermission: 'admin_users.view',
+  },
+  {
     path: '/roles',
     labelKey: 'roles',
     defaultLabel: 'Roles & Permissions',
     icon: ShieldCheck,
     requiredPermission: 'roles.manage',
-  },
-  {
-    path: '/users',
-    labelKey: 'users',
-    defaultLabel: 'Admin Users',
-    icon: Users,
-    requiredPermission: 'admin_users.view',
   },
 ];
 
