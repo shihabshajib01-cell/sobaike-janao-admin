@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -25,8 +25,16 @@ export const CreateRolePage: React.FC = () => {
   const [description, setDescription] = useState<string>('');
   const [selectedPermissionIds, setSelectedPermissionIds] = useState<string[]>([]);
 
-  // Permissions catalogue cache for Step 3 review
+  // Permissions catalogue cache for Step 2 and Step 3 review
   const [catalogue, setCatalogue] = useState<PermissionCatalogueItem[]>([]);
+  const [isLoadingCatalogue, setIsLoadingCatalogue] = useState<boolean>(true);
+  const [catalogueError, setCatalogueError] = useState<{ message: string; isPermissionDenied: boolean } | string | null>(null);
+
+  // Guard refs for single-fetch lifecycle and race-condition safety
+  const catalogueFetchedRef = useRef<boolean>(false);
+  const requestIdRef = useRef<number>(0);
+  const tRef = useRef(t);
+  tRef.current = t;
 
   // Submission State
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -48,15 +56,36 @@ export const CreateRolePage: React.FC = () => {
     selectedPermissionIds.length > 0 ||
     active === false;
 
-  // Pre-load catalogue in background so Step 3 has it ready
-  useEffect(() => {
-    roleApi
-      .getPermissionCatalogue()
-      .then((items) => setCatalogue(items))
-      .catch((err) => {
-        console.warn('Background permission catalogue fetch failed:', err);
-      });
+  const fetchCatalogue = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
+    setIsLoadingCatalogue(true);
+    setCatalogueError(null);
+    try {
+      const items = await roleApi.getPermissionCatalogue();
+      if (requestId !== requestIdRef.current) return;
+      setCatalogue(items);
+    } catch (err: unknown) {
+      if (requestId !== requestIdRef.current) return;
+      console.warn('Permission catalogue fetch failed:', err);
+      const isPermissionDenied =
+        err instanceof RoleApiError &&
+        (err.isPermissionDenied || (err as { code?: string }).code === '42501');
+      const message = err instanceof Error ? err.message : tRef.current.roles.loadPermissionsError;
+      setCatalogueError({ message, isPermissionDenied: Boolean(isPermissionDenied) });
+    } finally {
+      if (requestId === requestIdRef.current) {
+        setIsLoadingCatalogue(false);
+      }
+    }
   }, []);
+
+  // Pre-load catalogue in background on mount once
+  useEffect(() => {
+    if (!catalogueFetchedRef.current) {
+      catalogueFetchedRef.current = true;
+      fetchCatalogue();
+    }
+  }, [fetchCatalogue]);
 
   const handleCancelAttempt = () => {
     if (hasUnsavedChanges) {
@@ -227,6 +256,10 @@ export const CreateRolePage: React.FC = () => {
         <StepPermissions
           selectedPermissionIds={selectedPermissionIds}
           onPermissionsChange={setSelectedPermissionIds}
+          permissionCatalogue={catalogue}
+          isLoadingCatalogue={isLoadingCatalogue}
+          catalogueError={catalogueError}
+          onRetryCatalogue={fetchCatalogue}
           onNext={handleStep2Next}
           onBack={() => setCurrentStep(1)}
           onCancel={handleCancelAttempt}

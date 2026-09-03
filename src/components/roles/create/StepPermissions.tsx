@@ -170,35 +170,61 @@ export const StepPermissions: React.FC<StepPermissionsProps> = ({
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-sky-100 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
-              <Lock className="w-4 h-4 animate-pulse" />
-            </div>
-            <div>
-              <CardTitle>{t.roles.step2Title}</CardTitle>
-              <CardDescription>{t.roles.step2Description}</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[1, 2, 3, 4].map((n) => (
-              <div
-                key={n}
-                className="p-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 animate-pulse space-y-3"
-              >
-                <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-1/3" />
-                <div className="space-y-2">
-                  <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-3/4" />
-                  <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-1/2" />
-                </div>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-sky-100 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+                <Lock className="w-4 h-4 animate-pulse" />
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              <div>
+                <CardTitle>{t.roles.step2Title}</CardTitle>
+                <CardDescription>{t.roles.step2Description}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[1, 2, 3, 4].map((n) => (
+                <div
+                  key={n}
+                  className="p-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 animate-pulse space-y-3"
+                >
+                  <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-1/3" />
+                  <div className="space-y-2">
+                    <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-3/4" />
+                    <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex items-center justify-between gap-3">
+          <Button
+            id="step2-loading-back-btn"
+            type="button"
+            variant="secondary"
+            size="md"
+            onClick={onBack}
+            leftIcon={<ArrowLeft className="w-4 h-4" />}
+          >
+            <span>{t.roles.back}</span>
+          </Button>
+
+          <Button
+            id="step2-loading-cancel-btn"
+            type="button"
+            variant="ghost"
+            size="md"
+            onClick={onCancel}
+            leftIcon={<X className="w-4 h-4" />}
+          >
+            <span>{t.roles.cancel}</span>
+          </Button>
+        </div>
+      </div>
     );
   }
 
