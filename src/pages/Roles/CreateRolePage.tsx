@@ -118,7 +118,6 @@ export const CreateRolePage: React.FC = () => {
 
     try {
       await roleApi.createRole({
-        name: trimmedEn,
         name_en: trimmedEn,
         name_bn: trimmedBn.length > 0 ? trimmedBn : null,
         active,

@@ -255,7 +255,7 @@ export class RoleApi {
    * - Bengali name is optional and stored separately (never affects the slug, never auto-translated).
    */
   async createRole(input: CreateRoleInput): Promise<CreateRoleResult> {
-    const cleanNameEn = input.name_en ? input.name_en.trim() : input.name ? input.name.trim() : '';
+    const cleanNameEn = (input.name_en || '').trim();
     if (!cleanNameEn) {
       throw new RoleApiError('English role name is required and cannot be blank.', '22000');
     }
@@ -364,12 +364,7 @@ export class RoleApi {
    */
   async updateRole(input: RoleUpdateInput): Promise<RoleDetail> {
     const cleanId = input.id ? input.id.trim() : '';
-    const cleanNameEn =
-      input.name_en !== undefined
-        ? input.name_en.trim()
-        : input.name !== undefined
-        ? input.name.trim()
-        : '';
+    const cleanNameEn = (input.name_en || '').trim();
 
     if (!cleanId) {
       throw new RoleApiError('Role ID cannot be empty.', '22000');

@@ -24,8 +24,7 @@ export interface PermissionCatalogueItem {
 }
 
 export interface CreateRoleInput {
-  name_en?: string;
-  name?: string;
+  name_en: string;
   name_bn?: string | null;
   active: boolean;
   permission_ids: string[];
@@ -147,8 +146,7 @@ export interface RolePermission {
 
 export interface RoleUpdateInput {
   id: string;
-  name_en?: string;
-  name?: string;
+  name_en: string;
   name_bn?: string | null;
   active: boolean;
   permission_ids?: string[] | null;

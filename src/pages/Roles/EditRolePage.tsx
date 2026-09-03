@@ -221,7 +221,6 @@ export const EditRolePage: React.FC = () => {
 
       const payload: UpdateRoleInput = {
         id: role.id,
-        name: role.is_system ? role.name_en : nameEn.trim(),
         name_en: role.is_system ? role.name_en : nameEn.trim(),
         name_bn: role.is_system
           ? undefined
