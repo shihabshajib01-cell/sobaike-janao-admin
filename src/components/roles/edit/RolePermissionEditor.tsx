@@ -294,19 +294,19 @@ export const RolePermissionEditor: React.FC<RolePermissionEditorProps> = ({
                             : 'bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                         )}
                       >
-                        <Checkbox
-                          id={`perm-${perm.id}`}
-                          checked={isChecked}
-                          onChange={() => handleTogglePermission(perm.id)}
-                          disabled={isSystem}
-                          className="mt-0.5 shrink-0"
-                          aria-label={permName}
-                        />
+                        <div onClick={(e) => e.stopPropagation()} className="shrink-0 mt-0.5">
+                          <Checkbox
+                            id={`perm-${perm.id}`}
+                            checked={isChecked}
+                            onChange={() => handleTogglePermission(perm.id)}
+                            disabled={isSystem}
+                            aria-label={permName}
+                          />
+                        </div>
 
                         <div className="min-w-0 space-y-0.5">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <label
-                              htmlFor={`perm-${perm.id}`}
+                            <span
                               className={cn(
                                 'text-xs font-semibold block leading-snug',
                                 isChecked
@@ -314,10 +314,9 @@ export const RolePermissionEditor: React.FC<RolePermissionEditorProps> = ({
                                   : 'text-slate-700 dark:text-slate-300',
                                 isSystem ? 'cursor-default' : 'cursor-pointer'
                               )}
-                              onClick={(e) => isSystem && e.preventDefault()}
                             >
                               {permName}
-                            </label>
+                            </span>
                             <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500 px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800">
                               {perm.id}
                             </span>

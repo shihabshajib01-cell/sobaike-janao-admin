@@ -246,7 +246,7 @@ export const router = createHashRouter(routes);
 export const AppRoutes: React.FC = () => {
   return (
     <Suspense fallback={<LoadingState fullHeight message="Loading view..." />}>
-      <RouterProvider router={router} fallbackElement={<LoadingState fullHeight message="Loading view..." />} />
+      <RouterProvider router={router} />
     </Suspense>
   );
 };

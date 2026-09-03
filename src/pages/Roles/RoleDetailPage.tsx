@@ -298,7 +298,7 @@ export const RoleDetailPage: React.FC = () => {
             type="button"
             onClick={() => setSuccessBanner(null)}
             className="p-1 rounded-md text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors"
-            aria-label="Dismiss message"
+            aria-label={t.roles.dismissMessage}
           >
             <X className="w-4 h-4" />
           </button>

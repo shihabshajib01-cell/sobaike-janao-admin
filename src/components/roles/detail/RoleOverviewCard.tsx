@@ -155,7 +155,7 @@ export const RoleOverviewCard: React.FC<RoleOverviewCardProps> = ({ role }) => {
                 )}
               </Button>
             </div>
-            <p className="font-mono text-xs font-semibold text-sky-700 dark:text-sky-300 truncate" title={role.id}>
+            <p className="font-mono text-xs font-semibold text-sky-700 dark:text-sky-300 break-all select-all" title={role.id}>
               {role.id}
             </p>
           </div>
@@ -173,7 +173,7 @@ export const RoleOverviewCard: React.FC<RoleOverviewCardProps> = ({ role }) => {
             </p>
           ) : (
             <p className="text-xs text-slate-400 dark:text-slate-500 italic">
-              {isBn ? 'কোনো বিবরণ প্রদান করা হয়নি।' : 'No description provided for this role.'}
+              {t.roles.noDescriptionProvided}
             </p>
           )}
         </div>

@@ -166,7 +166,7 @@ export const RoleTable: React.FC<RoleTableProps> = ({ roles }) => {
                     aria-label={`${t.roles.viewDetails}: ${displayName}`}
                   >
                     <Eye className="w-3.5 h-3.5 mr-1" />
-                    <span>{isBn ? 'দেখুন' : 'View'}</span>
+                    <span>{t.roles.viewRole}</span>
                   </Button>
                 </TableCell>
               </TableRow>

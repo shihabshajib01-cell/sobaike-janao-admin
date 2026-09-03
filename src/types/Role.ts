@@ -106,8 +106,9 @@ export class RoleApiError extends Error {
 
   get isConfigError(): boolean {
     return (
-      this.code === 'CONFIG_ERROR' ||
-      this.message.toLowerCase().includes('not configured')
+      (this.code === 'CONFIG_ERROR' ||
+        this.message.toLowerCase().includes('not configured')) &&
+      !this.isCompatibilityError
     );
   }
 

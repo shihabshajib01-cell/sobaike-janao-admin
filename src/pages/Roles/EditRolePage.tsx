@@ -141,12 +141,12 @@ export const EditRolePage: React.FC = () => {
     return isNameChanged || isActiveChanged || isDescChanged || isPermsChanged;
   }, [role, name, active, description, permissionIds]);
 
-  const isSavingRef = useRef(false);
+  const isSavingOrDiscardingRef = useRef(false);
 
   // Block internal navigation when form has unsaved changes
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
-      !isSavingRef.current && isDirty && currentLocation.pathname !== nextLocation.pathname
+      !isSavingOrDiscardingRef.current && isDirty && currentLocation.pathname !== nextLocation.pathname
   );
 
   const isBlocked = blocker.state === 'blocked' || showDiscardModal;
@@ -163,6 +163,7 @@ export const EditRolePage: React.FC = () => {
     if (blocker.state === 'blocked') {
       blocker.proceed();
     } else {
+      isSavingOrDiscardingRef.current = true;
       navigate(role ? `/roles/${role.id}` : '/roles');
     }
   };
@@ -170,7 +171,7 @@ export const EditRolePage: React.FC = () => {
   // Warn on browser unload if form is dirty
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isDirty && !isSavingRef.current) {
+      if (isDirty && !isSavingOrDiscardingRef.current) {
         e.preventDefault();
         e.returnValue = '';
       }
@@ -228,7 +229,7 @@ export const EditRolePage: React.FC = () => {
 
       await roleApi.updateRole(payload);
 
-      isSavingRef.current = true;
+      isSavingOrDiscardingRef.current = true;
 
       // Navigate back to Role Detail with success notification
       navigate(`/roles/${role.id}`, {
@@ -238,7 +239,7 @@ export const EditRolePage: React.FC = () => {
         },
       });
     } catch (err: unknown) {
-      isSavingRef.current = false;
+      isSavingOrDiscardingRef.current = false;
       console.error('Role update failed:', err);
       let errorMsg = t.roles.generalCreateError;
 
@@ -583,7 +584,7 @@ export const EditRolePage: React.FC = () => {
             </div>
 
             {/* 3. Technical Role ID */}
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <label className="text-xs font-semibold text-slate-900 dark:text-slate-100 flex items-center justify-between">
                 <span className="flex items-center gap-1">
                   <Hash className="w-3 h-3 text-slate-400" />
@@ -593,14 +594,15 @@ export const EditRolePage: React.FC = () => {
                   <Lock className="w-3 h-3" /> {t.roles.readOnlyField}
                 </span>
               </label>
-              <div className="relative">
-                <Input
+              <div className="relative min-w-0">
+                <div
                   id="edit-role-id"
-                  value={role.id}
-                  disabled
-                  className="bg-slate-100/80 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 font-mono text-xs cursor-not-allowed"
-                />
-                <Lock className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-3" />
+                  className="w-full min-h-[36px] py-2 px-3 pr-8 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-100/80 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 font-mono text-xs cursor-not-allowed select-all break-all"
+                  aria-readonly="true"
+                >
+                  {role.id}
+                </div>
+                <Lock className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 {t.roles.technicalRoleIdHelper}
@@ -610,7 +612,7 @@ export const EditRolePage: React.FC = () => {
 
           {/* Status Selection */}
           <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-            <label className="text-xs font-semibold text-slate-900 dark:text-slate-100 flex items-center justify-between">
+            <label id="edit-role-status-label" className="text-xs font-semibold text-slate-900 dark:text-slate-100 flex items-center justify-between">
               <span>{t.roles.status}</span>
               {role.is_system && (
                 <span className="text-[11px] text-slate-400 flex items-center gap-1 font-normal">
@@ -629,18 +631,31 @@ export const EditRolePage: React.FC = () => {
                 </span>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div
+                role="radiogroup"
+                aria-labelledby="edit-role-status-label"
+                className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+              >
                 {/* Active Option */}
-                <div
-                  onClick={() => setActive(true)}
+                <label
+                  htmlFor="edit-role-status-active"
                   className={cn(
-                    'p-3.5 rounded-lg border transition-all cursor-pointer flex items-start gap-3 select-none',
+                    'p-3.5 rounded-lg border transition-all cursor-pointer flex items-start gap-3 select-none focus-within:ring-2 focus-within:ring-sky-500 focus-within:ring-offset-2 dark:focus-within:ring-offset-slate-950',
                     active
                       ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800'
                       : 'bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                   )}
                 >
-                  <div className="mt-0.5 shrink-0">
+                  <input
+                    type="radio"
+                    id="edit-role-status-active"
+                    name="edit-role-status"
+                    value="active"
+                    checked={active}
+                    onChange={() => setActive(true)}
+                    className="sr-only"
+                  />
+                  <div className="mt-0.5 shrink-0" aria-hidden="true">
                     {active ? (
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     ) : (
@@ -655,19 +670,28 @@ export const EditRolePage: React.FC = () => {
                       {t.roles.statusActiveDesc}
                     </p>
                   </div>
-                </div>
+                </label>
 
                 {/* Inactive Option */}
-                <div
-                  onClick={() => setActive(false)}
+                <label
+                  htmlFor="edit-role-status-inactive"
                   className={cn(
-                    'p-3.5 rounded-lg border transition-all cursor-pointer flex items-start gap-3 select-none',
+                    'p-3.5 rounded-lg border transition-all cursor-pointer flex items-start gap-3 select-none focus-within:ring-2 focus-within:ring-sky-500 focus-within:ring-offset-2 dark:focus-within:ring-offset-slate-950',
                     !active
                       ? 'bg-rose-50/40 dark:bg-rose-950/20 border-rose-300 dark:border-rose-800'
                       : 'bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                   )}
                 >
-                  <div className="mt-0.5 shrink-0">
+                  <input
+                    type="radio"
+                    id="edit-role-status-inactive"
+                    name="edit-role-status"
+                    value="inactive"
+                    checked={!active}
+                    onChange={() => setActive(false)}
+                    className="sr-only"
+                  />
+                  <div className="mt-0.5 shrink-0" aria-hidden="true">
                     {!active ? (
                       <XCircle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
                     ) : (
@@ -682,7 +706,7 @@ export const EditRolePage: React.FC = () => {
                       {t.roles.statusInactiveDesc}
                     </p>
                   </div>
-                </div>
+                </label>
               </div>
             )}
           </div>
@@ -712,7 +736,7 @@ export const EditRolePage: React.FC = () => {
               className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
             />
             <div className="flex justify-between items-center text-[11px] text-slate-400">
-              <span>{isBn ? 'ভূমিকার উদ্দেশ্য বা দায়িত্বের সংক্ষিপ্ত বিবরণ।' : 'Brief summary of the role responsibilities.'}</span>
+              <span>{t.roles.descriptionEditHelper}</span>
               <span>{description.length}/500</span>
             </div>
           </div>
@@ -764,12 +788,9 @@ export const EditRolePage: React.FC = () => {
 
       {/* 7. Unsaved Changes Discard Confirmation Modal */}
       <UnsavedChangesModal
-        isOpen={showDiscardModal}
-        onClose={() => setShowDiscardModal(false)}
-        onConfirmDiscard={() => {
-          setShowDiscardModal(false);
-          navigate(role ? `/roles/${role.id}` : '/roles');
-        }}
+        isOpen={isBlocked}
+        onClose={handleKeepEditing}
+        onConfirmDiscard={handleDiscardChanges}
       />
     </div>
   );
