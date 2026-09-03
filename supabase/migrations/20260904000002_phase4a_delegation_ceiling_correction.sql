@@ -332,6 +332,7 @@ ALTER TABLE public.roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.role_permissions ENABLE ROW LEVEL SECURITY;
 
 -- permissions: Normal admins can only direct SELECT permissions within their effective ceiling
+DROP POLICY IF EXISTS "Active admins can read permissions" ON public.permissions;
 DROP POLICY IF EXISTS "Scope-safe permissions direct read" ON public.permissions;
 DROP POLICY IF EXISTS "Allow authenticated read permissions" ON public.permissions;
 DROP POLICY IF EXISTS "Authenticated read permissions" ON public.permissions;
@@ -346,6 +347,7 @@ CREATE POLICY "Scope-safe permissions direct read"
     );
 
 -- roles: Normal admins can direct SELECT caller's own assigned roles, or roles within their ceiling
+DROP POLICY IF EXISTS "Active admins can read roles" ON public.roles;
 DROP POLICY IF EXISTS "Scope-safe roles direct read" ON public.roles;
 DROP POLICY IF EXISTS "Allow authenticated read roles" ON public.roles;
 DROP POLICY IF EXISTS "Authenticated read roles" ON public.roles;
@@ -369,6 +371,7 @@ CREATE POLICY "Scope-safe roles direct read"
     );
 
 -- role_permissions: Normal admins can direct SELECT their own mappings or mappings within their ceiling
+DROP POLICY IF EXISTS "Active admins can read role_permissions" ON public.role_permissions;
 DROP POLICY IF EXISTS "Scope-safe role_permissions direct read" ON public.role_permissions;
 DROP POLICY IF EXISTS "Allow authenticated read role_permissions" ON public.role_permissions;
 DROP POLICY IF EXISTS "Authenticated read role_permissions" ON public.role_permissions;
@@ -555,8 +558,8 @@ RETURNS TABLE (
     description TEXT,
     active BOOLEAN,
     is_system BOOLEAN,
-    permission_count INT,
-    assigned_user_count INT,
+    permission_count BIGINT,
+    assigned_user_count BIGINT,
     created_at TIMESTAMPTZ,
     updated_at TIMESTAMPTZ
 )
@@ -590,8 +593,8 @@ BEGIN
         r.description,
         r.active,
         r.is_system,
-        COUNT(DISTINCT rp.permission_id)::INT AS permission_count,
-        COUNT(DISTINCT ur.user_id)::INT AS assigned_user_count,
+        COUNT(DISTINCT rp.permission_id)::BIGINT AS permission_count,
+        COUNT(DISTINCT ur.user_id)::BIGINT AS assigned_user_count,
         r.created_at,
         r.updated_at
     FROM public.roles r
@@ -923,20 +926,6 @@ BEGIN
             RAISE EXCEPTION 'Access denied. You cannot grant permissions that you do not possess.'
                 USING ERRCODE = '42501';
         END IF;
-
-        -- Last effective manager safety check:
-        -- If roles.manage is currently in this role and is now being removed
-        IF NOT ('roles.manage' = ANY(v_distinct_perms)) THEN
-            IF EXISTS (
-                SELECT 1 FROM public.role_permissions
-                WHERE role_id = v_clean_id AND permission_id = 'roles.manage'
-            ) THEN
-                IF public.count_effective_role_managers() = 0 THEN
-                    RAISE EXCEPTION 'Cannot remove roles.manage from this role because doing so would leave no active administrators capable of managing roles.'
-                        USING ERRCODE = '23514';
-                END IF;
-            END IF;
-        END IF;
     END IF;
 
     -- Update role table
@@ -968,6 +957,17 @@ BEGIN
         INTO v_final_perms
         FROM public.role_permissions
         WHERE role_id = v_clean_id;
+    END IF;
+
+    -- RESULTING STATE LAST-MANAGER SAFETY CHECK:
+    -- When user_roles assignments exist, no mutation may leave zero active administrators capable of managing roles.
+    -- Atomically rolls back if either removing roles.manage or deactivating an active role containing roles.manage
+    -- results in zero effective role managers.
+    IF EXISTS (SELECT 1 FROM public.user_roles) THEN
+        IF public.count_effective_role_managers() = 0 THEN
+            RAISE EXCEPTION 'Cannot update or deactivate this role because doing so would leave no active administrators capable of managing roles.'
+                USING ERRCODE = '23514';
+        END IF;
     END IF;
 
     -- Count assigned users
@@ -1084,19 +1084,6 @@ BEGIN
             USING ERRCODE = '42501';
     END IF;
 
-    -- Last effective manager safety check
-    IF NOT ('roles.manage' = ANY(v_deduped_perms)) THEN
-        IF EXISTS (
-            SELECT 1 FROM public.role_permissions
-            WHERE role_id = v_clean_role_id AND permission_id = 'roles.manage'
-        ) THEN
-            IF public.count_effective_role_managers() = 0 THEN
-                RAISE EXCEPTION 'Cannot remove roles.manage from this role because doing so would leave no active administrators capable of managing roles.'
-                    USING ERRCODE = '23514';
-            END IF;
-        END IF;
-    END IF;
-
     -- Replace permissions
     DELETE FROM public.role_permissions WHERE role_id = v_clean_role_id;
 
@@ -1111,6 +1098,15 @@ BEGIN
     v_updated_at := clock_timestamp();
     UPDATE public.roles SET updated_at = v_updated_at WHERE id = v_clean_role_id;
     v_new_count := cardinality(v_deduped_perms);
+
+    -- RESULTING STATE LAST-MANAGER SAFETY CHECK:
+    -- When user_roles assignments exist, no mutation may leave zero active administrators capable of managing roles.
+    IF EXISTS (SELECT 1 FROM public.user_roles) THEN
+        IF public.count_effective_role_managers() = 0 THEN
+            RAISE EXCEPTION 'Cannot remove roles.manage from this role because doing so would leave no active administrators capable of managing roles.'
+                USING ERRCODE = '23514';
+        END IF;
+    END IF;
 
     -- Audit log
     PERFORM public.log_role_audit_event(
