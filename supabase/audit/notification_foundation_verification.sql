@@ -292,6 +292,7 @@ DECLARE
     v_test_role_id TEXT := 'test-audit-role-' || substr(gen_random_uuid()::text, 1, 8);
     v_target_role_id TEXT := 'test-target-role-' || substr(gen_random_uuid()::text, 1, 8);
     v_dedupe_key TEXT := 'audit-dedupe-' || gen_random_uuid()::text;
+    v_original_role_id TEXT;
 
     -- Operational test variables
     v_emit_res JSONB;
@@ -457,6 +458,8 @@ BEGIN
         END IF;
 
         RAISE NOTICE 'TEST PASS (Test C - Actor Exclusion): Actor excluded when p_exclude_actor is true.';
+    ELSE
+        RAISE NOTICE 'SKIPPED: Active super administrator fixture not found. Test C (Actor Exclusion) skipped.';
     END IF;
 
     -- --------------------------------------------------------------------------
@@ -492,21 +495,30 @@ BEGIN
         END IF;
 
         RAISE NOTICE 'TEST PASS (Test B - Super Admin Dynamic Permissions & Isolation): Verified dynamic complete permission set.';
+    ELSE
+        RAISE NOTICE 'SKIPPED: Active super administrator fixture not found. Test B (Super Admin Dynamic Permissions & Isolation) skipped.';
     END IF;
 
     -- --------------------------------------------------------------------------
     -- TEMPORARY FIXTURE ASSIGNMENT (Safe Transactional Replacement)
     -- --------------------------------------------------------------------------
     IF v_normal_admin_id IS NOT NULL THEN
-        -- Create a temporary test role
+        -- 1. Capture existing role mapping for v_normal_admin_id if present (for diagnostic logging)
+        SELECT role_id INTO v_original_role_id
+        FROM public.user_roles
+        WHERE user_id = v_normal_admin_id;
+
+        -- 2. Create a temporary test role
         INSERT INTO public.roles (id, name_en, name_bn, active, is_system)
         VALUES (v_test_role_id, 'Audit Test Role', 'অডিট টেস্ট রোল', true, false);
 
         INSERT INTO public.role_permissions (role_id, permission_id)
         VALUES (v_test_role_id, 'complaints.view');
 
-        -- Safely reassign temporary role to normal admin for transaction duration
+        -- 3. Safely delete current user_roles mapping for the test normal admin
         DELETE FROM public.user_roles WHERE user_id = v_normal_admin_id;
+
+        -- 4. Deterministically insert temporary test role
         INSERT INTO public.user_roles (user_id, role_id)
         VALUES (v_normal_admin_id, v_test_role_id);
 
@@ -606,6 +618,8 @@ BEGIN
             END IF;
 
             RAISE NOTICE 'TEST PASS (Test G - Protected Super Admin Target): Normal admin cannot target Super Admin user scope.';
+        ELSE
+            RAISE NOTICE 'SKIPPED: Active super administrator fixture not found. Test G (Protected Super Admin Target) skipped.';
         END IF;
 
         -- ----------------------------------------------------------------------
@@ -686,9 +700,11 @@ BEGIN
             IF v_is_visible IS TRUE THEN
                 RAISE EXCEPTION 'TEST I FAILED (Stale Notification Visibility): Stale notification should be hidden when target role exceeds ceiling!';
             END IF;
-        END IF;
 
-        RAISE NOTICE 'TEST PASS (Test I - Stale Target-Scope Revocation): Historical role notifications disappear when target exceeds ceiling.';
+            RAISE NOTICE 'TEST PASS (Test I - Stale Target-Scope Revocation): Historical role notifications disappear when target exceeds ceiling.';
+        ELSE
+            RAISE NOTICE 'SKIPPED: auth.uid() simulation unavailable for stale role-target visibility test';
+        END IF;
 
         -- ----------------------------------------------------------------------
         -- TEST J: Stale Permission Revocation
@@ -726,6 +742,8 @@ BEGIN
             END IF;
 
             RAISE NOTICE 'TEST PASS (Test J - Stale Permission Revocation): Stale privileged notifications dynamically hidden after permission loss.';
+        ELSE
+            RAISE NOTICE 'SKIPPED: auth.uid() simulation unavailable for stale permission revocation test';
         END IF;
 
         -- ----------------------------------------------------------------------
@@ -758,12 +776,17 @@ BEGIN
             IF v_is_visible IS TRUE THEN
                 RAISE EXCEPTION 'TEST A FAILED: Deactivated admin granted caller-bound visibility!';
             END IF;
+
+            -- Restore active flag
+            UPDATE public.admin_users SET active = true WHERE user_id = v_normal_admin_id;
+
+            RAISE NOTICE 'TEST PASS (Test A - Active/Inactive Current Visibility): Inactive admins possess no effective permissions and cannot view.';
+        ELSE
+            -- Restore active flag
+            UPDATE public.admin_users SET active = true WHERE user_id = v_normal_admin_id;
+
+            RAISE NOTICE 'TEST PASS (Test A - Active/Inactive Effective Permissions): Inactive admins possess no effective permissions. Caller-bound visibility check SKIPPED (auth.uid() simulation unavailable).';
         END IF;
-
-        -- Restore active flag
-        UPDATE public.admin_users SET active = true WHERE user_id = v_normal_admin_id;
-
-        RAISE NOTICE 'TEST PASS (Test A - Active/Inactive Current Visibility): Inactive admins possess no effective permissions and cannot view.';
     END IF;
 
     -- --------------------------------------------------------------------------
