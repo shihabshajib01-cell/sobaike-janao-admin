@@ -25,3 +25,6 @@ export { default as reverseGeocodingService } from './reverseGeocodingService';
 export * from './roleApi';
 export { default as roleApi } from './roleApi';
 
+export * from './adminUserApi';
+export { adminUserApi } from './adminUserApi';
+

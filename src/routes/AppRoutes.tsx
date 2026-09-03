@@ -25,6 +25,10 @@ import {
   CreateRolePage,
   RoleDetailPage,
   EditRolePage,
+  UsersPage,
+  CreateUserPage,
+  UserDetailPage,
+  EditUserPage,
   NotFoundPage,
 } from '@/pages';
 
@@ -231,6 +235,38 @@ const routes = createRoutesFromElements(
         element={
           <PermissionGuard requiredPermission="roles.manage">
             <EditRolePage />
+          </PermissionGuard>
+        }
+      />
+      <Route
+        path="/users"
+        element={
+          <PermissionGuard requiredPermission="admin_users.view">
+            <UsersPage />
+          </PermissionGuard>
+        }
+      />
+      <Route
+        path="/users/create"
+        element={
+          <PermissionGuard requiredPermission="admin_users.manage">
+            <CreateUserPage />
+          </PermissionGuard>
+        }
+      />
+      <Route
+        path="/users/:userId"
+        element={
+          <PermissionGuard requiredPermission="admin_users.view">
+            <UserDetailPage />
+          </PermissionGuard>
+        }
+      />
+      <Route
+        path="/users/:userId/edit"
+        element={
+          <PermissionGuard requiredPermission="admin_users.manage">
+            <EditUserPage />
           </PermissionGuard>
         }
       />

@@ -11,6 +11,7 @@ export interface TranslationDictionary {
     map: string;
     locationActivity: string;
     roles: string;
+    users: string;
   };
   header: {
     searchPlaceholder: string;
@@ -186,6 +187,58 @@ export interface TranslationDictionary {
     configurationError: string;
     dismissMessage: string;
   };
+  users: {
+    title: string;
+    description: string;
+    createUser: string;
+    editUser: string;
+    viewUser: string;
+    searchPlaceholder: string;
+    filterRole: string;
+    filterStatus: string;
+    allRoles: string;
+    allStatuses: string;
+    active: string;
+    inactive: string;
+    displayName: string;
+    email: string;
+    password: string;
+    confirmPassword: string;
+    role: string;
+    selectRole: string;
+    status: string;
+    superAdmin: string;
+    standardAdmin: string;
+    accountType: string;
+    created: string;
+    lastUpdated: string;
+    protectedAccount: string;
+    protectedAccountNotice: string;
+    protectedAccountDesc: string;
+    noUsersFound: string;
+    noUsersFoundDesc: string;
+    createUserTitle: string;
+    createUserDesc: string;
+    editUserTitle: string;
+    editUserDesc: string;
+    passwordMismatch: string;
+    passwordLengthError: string;
+    emailRequired: string;
+    roleRequired: string;
+    userCreatedSuccess: string;
+    userUpdatedSuccess: string;
+    saveUser: string;
+    savingUser: string;
+    creatingUser: string;
+    superAdminCannotBeEdited: string;
+    superAdminCannotBeDeactivated: string;
+    effectivePermissions: string;
+    fullSystemAccess: string;
+    roleBasedAccess: string;
+    emailImmutableNotice: string;
+    backToUsers: string;
+    configurationError: string;
+  };
 }
 
 export const translations: Record<Language, TranslationDictionary> = {
@@ -198,6 +251,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       map: 'Map Monitoring',
       locationActivity: 'Location Activity',
       roles: 'Roles & Permissions',
+      users: 'Admin Users',
     },
     header: {
       searchPlaceholder: 'Search complaints, IDs, wards...',
@@ -374,6 +428,58 @@ export const translations: Record<Language, TranslationDictionary> = {
       configurationError: 'Role management is not configured in this environment.',
       dismissMessage: 'Dismiss message',
     },
+    users: {
+      title: 'Administrator Accounts',
+      description: 'Manage administrative users, credentials, assigned roles, and operational access.',
+      createUser: 'Create Administrator',
+      editUser: 'Edit Administrator',
+      viewUser: 'View Details',
+      searchPlaceholder: 'Search administrators by name or email...',
+      filterRole: 'Filter by Role',
+      filterStatus: 'Filter by Status',
+      allRoles: 'All Roles',
+      allStatuses: 'All Statuses',
+      active: 'Active',
+      inactive: 'Inactive',
+      displayName: 'Display Name',
+      email: 'Email Address',
+      password: 'Initial Password',
+      confirmPassword: 'Confirm Password',
+      role: 'Assigned Role',
+      selectRole: 'Select a role...',
+      status: 'Account Status',
+      superAdmin: 'Super Administrator',
+      standardAdmin: 'Administrator',
+      accountType: 'Account Type',
+      created: 'Created',
+      lastUpdated: 'Last Updated',
+      protectedAccount: 'Protected System Account',
+      protectedAccountNotice: 'Protected System Account',
+      protectedAccountDesc: 'This account is designated as the primary Super Administrator with irrevocable full access. It cannot be edited, reassigned, deactivated, or deleted.',
+      noUsersFound: 'No administrators found',
+      noUsersFoundDesc: 'No administrator accounts match your active search or filter criteria.',
+      createUserTitle: 'Create Administrator',
+      createUserDesc: 'Provision a new administrative user with Supabase credentials and an assigned role.',
+      editUserTitle: 'Edit Administrator',
+      editUserDesc: 'Modify display name, assigned role, or active status for this administrator.',
+      passwordMismatch: 'Passwords do not match.',
+      passwordLengthError: 'Password must be at least 6 characters.',
+      emailRequired: 'A valid email address is required.',
+      roleRequired: 'A role assignment is required.',
+      userCreatedSuccess: 'Administrator created successfully.',
+      userUpdatedSuccess: 'Administrator updated successfully.',
+      saveUser: 'Save Changes',
+      savingUser: 'Saving Changes...',
+      creatingUser: 'Creating Administrator...',
+      superAdminCannotBeEdited: 'Super Administrator accounts are protected and cannot be edited.',
+      superAdminCannotBeDeactivated: 'Super Administrator accounts cannot be deactivated.',
+      effectivePermissions: 'Effective System Permissions',
+      fullSystemAccess: 'Full System Access (Irrevocable)',
+      roleBasedAccess: 'Permissions derived from assigned role:',
+      emailImmutableNotice: 'Login email address is immutable and cannot be modified.',
+      backToUsers: 'Back to Administrators',
+      configurationError: 'User management is not configured in this environment.',
+    },
   },
   bn: {
     nav: {
@@ -384,6 +490,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       map: 'ম্যাপ মনিটরিং',
       locationActivity: 'লোকেশন অ্যাক্টিভিটি',
       roles: 'ভূমিকা ও অনুমতি',
+      users: 'অ্যাডমিন ইউজার',
     },
     header: {
       searchPlaceholder: 'অভিযোগ, আইডি, ওয়ার্ড অনুসন্ধান করুন...',
@@ -559,6 +666,58 @@ export const translations: Record<Language, TranslationDictionary> = {
       descriptionEditHelper: 'ভূমিকার উদ্দেশ্য বা দায়িত্বের সংক্ষিপ্ত বিবরণ।',
       configurationError: 'এই পরিবেশে ভূমিকা ব্যবস্থাপনা কনফিগার করা নেই।',
       dismissMessage: 'বার্তাটি বন্ধ করুন',
+    },
+    users: {
+      title: 'প্রশাসক অ্যাকাউন্টসমূহ',
+      description: 'প্রশাসনিক ব্যবহারকারী, পরিচয়পত্র, বরাদ্দকৃত ভূমিকা এবং কার্যক্রমের অনুমতি পরিচালনা করুন।',
+      createUser: 'প্রশাসক তৈরি করুন',
+      editUser: 'প্রশাসক সম্পাদনা করুন',
+      viewUser: 'বিস্তারিত দেখুন',
+      searchPlaceholder: 'নাম বা ইমেইল দিয়ে প্রশাসক অনুসন্ধান করুন...',
+      filterRole: 'ভূমিকা অনুযায়ী ফিল্টার',
+      filterStatus: 'স্ট্যাটাস অনুযায়ী ফিল্টার',
+      allRoles: 'সকল ভূমিকা',
+      allStatuses: 'সকল স্ট্যাটাস',
+      active: 'সক্রিয়',
+      inactive: 'নিষ্ক্রিয়',
+      displayName: 'প্রদর্শিত নাম',
+      email: 'ইমেইল ঠিকানা',
+      password: 'প্রাথমিক পাসওয়ার্ড',
+      confirmPassword: 'পাসওয়ার্ড নিশ্চিত করুন',
+      role: 'বরাদ্দকৃত ভূমিকা',
+      selectRole: 'একটি ভূমিকা নির্বাচন করুন...',
+      status: 'অ্যাকাউন্টের স্ট্যাটাস',
+      superAdmin: 'সুপার অ্যাডমিনিস্ট্রেটর',
+      standardAdmin: 'অ্যাডমিনিস্ট্রেটর',
+      accountType: 'অ্যাকাউন্টের ধরন',
+      created: 'তৈরি হয়েছে',
+      lastUpdated: 'সর্বশেষ পরিবর্তন',
+      protectedAccount: 'সুরক্ষিত সিস্টেম অ্যাকাউন্ট',
+      protectedAccountNotice: 'সুরক্ষিত সিস্টেম অ্যাকাউন্ট',
+      protectedAccountDesc: 'এই অ্যাকাউন্টটি প্রাথমিক সুপার অ্যাডমিনিস্ট্রেটর হিসেবে নির্ধারিত এবং এর সম্পূর্ণ অপরিবর্তনীয় অ্যাক্সেস রয়েছে। এটি সম্পাদনা, পুনর্বরাদ্দ, নিষ্ক্রিয় বা মুছে ফেলা যাবে না।',
+      noUsersFound: 'কোনো প্রশাসক পাওয়া যায়নি',
+      noUsersFoundDesc: 'আপনার অনুসন্ধান বা ফিল্টারের সাথে কোনো প্রশাসক অ্যাকাউন্ট মেলেনি।',
+      createUserTitle: 'প্রশাসক তৈরি করুন',
+      createUserDesc: 'সুপাবেস লগইন শংসাপত্র এবং বরাদ্দকৃত ভূমিকাসহ একজন নতুন প্রশাসক যুক্ত করুন।',
+      editUserTitle: 'প্রশাসক সম্পাদনা করুন',
+      editUserDesc: 'এই প্রশাসকের প্রদর্শিত নাম, বরাদ্দকৃত ভূমিকা বা সক্রিয় অবস্থা পরিবর্তন করুন।',
+      passwordMismatch: 'পাসওয়ার্ড দুটি মেলেনি।',
+      passwordLengthError: 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।',
+      emailRequired: 'একটি বৈধ ইমেইল ঠিকানা প্রয়োজন।',
+      roleRequired: 'একটি ভূমিকা বরাদ্দ করা আবশ্যক।',
+      userCreatedSuccess: 'প্রশাসক সফলভাবে তৈরি করা হয়েছে।',
+      userUpdatedSuccess: 'প্রশাসক তথ্য সফলভাবে হালনাগাদ হয়েছে।',
+      saveUser: 'সংরক্ষণ করুন',
+      savingUser: 'সংরক্ষণ করা হচ্ছে...',
+      creatingUser: 'তৈরি করা হচ্ছে...',
+      superAdminCannotBeEdited: 'সুপার অ্যাডমিনিস্ট্রেটর অ্যাকাউন্ট সুরক্ষিত এবং এটি সম্পাদনা করা যাবে না।',
+      superAdminCannotBeDeactivated: 'সুপার অ্যাডমিনিস্ট্রেটর অ্যাকাউন্ট নিষ্ক্রিয় করা যাবে না।',
+      effectivePermissions: 'কার্যকর সিস্টেম অনুমতিসমূহ',
+      fullSystemAccess: 'সম্পূর্ণ সিস্টেম অ্যাক্সেস (স্থায়ী)',
+      roleBasedAccess: 'বরাদ্দকৃত ভূমিকা থেকে প্রাপ্ত অনুমতি:',
+      emailImmutableNotice: 'লগইন ইমেইল ঠিকানা অপরিবর্তনীয় এবং এটি পরিবর্তন করা যাবে না।',
+      backToUsers: 'প্রশাসক তালিকায় ফিরুন',
+      configurationError: 'এই পরিবেশে ব্যবহারকারী ব্যবস্থাপনা কনফিগার করা নেই।',
     },
   },
 };

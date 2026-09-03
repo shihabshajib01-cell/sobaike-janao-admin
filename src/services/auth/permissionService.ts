@@ -35,6 +35,7 @@ export interface UserPermissionProfile {
   permissions: string[];
   isBootstrapMode: boolean;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
 }
 
 const isDev = Boolean(typeof import.meta !== 'undefined' && import.meta.env?.DEV);
@@ -50,6 +51,7 @@ const DEV_MOCK_PROFILE: UserPermissionProfile = {
   permissions: [...CANONICAL_PERMISSIONS],
   isBootstrapMode: false,
   isAdmin: true,
+  isSuperAdmin: true,
 };
 
 /**
@@ -94,18 +96,21 @@ export const permissionService = {
 
     const parsed = contextData as {
       is_admin?: boolean;
+      is_super_admin?: boolean;
       is_bootstrap?: boolean;
       role?: UserAssignedRole | null;
       permission_ids?: string[];
     };
 
     const isAdmin = Boolean(parsed.is_admin);
+    const isSuperAdmin = Boolean(parsed.is_super_admin);
     const isBootstrap = Boolean(parsed.is_bootstrap);
     const role = parsed.role || null;
     const permissions = Array.isArray(parsed.permission_ids) ? parsed.permission_ids : [];
 
     return {
       isAdmin,
+      isSuperAdmin,
       isBootstrapMode: isBootstrap,
       role: role
         ? {

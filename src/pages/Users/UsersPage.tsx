@@ -1,0 +1,252 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Button } from '@/components/ui/Button';
+import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
+import { adminUserApi } from '@/services/api/adminUserApi';
+import { AdminUserListItem, AssignableRole } from '@/types/AdminUser';
+import { UsersTable } from '@/components/users/UsersTable';
+import { UserLoadingSkeleton } from '@/components/users/UserLoadingSkeleton';
+import {
+  UserPlus,
+  RefreshCw,
+  Search,
+  Filter,
+  AlertCircle,
+  CheckCircle2,
+  X,
+  Users as UsersIcon,
+} from 'lucide-react';
+
+export const UsersPage: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { t, language } = useLanguage();
+  const { hasPermission } = useAuth();
+  const isBn = language === 'bn';
+
+  const canManageUsers = hasPermission('admin_users.manage');
+
+  // State
+  const [users, setUsers] = useState<AdminUserListItem[]>([]);
+  const [roles, setRoles] = useState<AssignableRole[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Filters
+  const [search, setSearch] = useState<string>('');
+  const [selectedRole, setSelectedRole] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'inactive'>('all');
+
+  // Success Banner from Navigation state (e.g., after Create or Edit)
+  const [successMessage, setSuccessMessage] = useState<string | null>(() => {
+    const state = location.state as {
+      userCreatedSuccess?: boolean;
+      userUpdatedSuccess?: boolean;
+      userName?: string;
+    } | null;
+
+    if (state?.userCreatedSuccess) {
+      return state.userName
+        ? `${state.userName}: ${t.users.userCreatedSuccess}`
+        : t.users.userCreatedSuccess;
+    }
+    if (state?.userUpdatedSuccess) {
+      return state.userName
+        ? `${state.userName}: ${t.users.userUpdatedSuccess}`
+        : t.users.userUpdatedSuccess;
+    }
+    return null;
+  });
+
+  // Clear location state after reading
+  useEffect(() => {
+    if (location.state && ((location.state as any).userCreatedSuccess || (location.state as any).userUpdatedSuccess)) {
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
+  /**
+   * Load users list
+   */
+  const loadUsers = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await adminUserApi.getUsers({
+        search: search.trim() || undefined,
+        role_id: selectedRole !== 'all' ? selectedRole : undefined,
+        status: selectedStatus !== 'all' ? selectedStatus : undefined,
+      });
+
+      setUsers(response.users);
+    } catch (err: unknown) {
+      console.error('Failed to load administrators:', err);
+      const msg = err instanceof Error ? err.message : t.users.configurationError;
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, [search, selectedRole, selectedStatus, t]);
+
+  /**
+   * Load assignable roles for filter dropdown
+   */
+  useEffect(() => {
+    if (canManageUsers) {
+      adminUserApi
+        .getAssignableRoles()
+        .then((data) => setRoles(data))
+        .catch((err) => console.warn('Could not load roles for user filter:', err));
+    }
+  }, [canManageUsers]);
+
+  // Fetch users on filter change
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
+
+  return (
+    <div className="space-y-6 pb-12" id="admin-users-page">
+      {/* Page Header */}
+      <PageHeader
+        title={t.users.title}
+        description={t.users.description}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button
+              id="btn-refresh-users"
+              variant="secondary"
+              size="sm"
+              onClick={loadUsers}
+              disabled={loading}
+              className="h-9"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              {t.common.refresh}
+            </Button>
+
+            {canManageUsers && (
+              <Button
+                id="btn-create-user"
+                variant="primary"
+                size="sm"
+                onClick={() => navigate('/users/create')}
+                className="h-9"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                {t.users.createUser}
+              </Button>
+            )}
+          </div>
+        }
+      />
+
+      {/* Success Notification Banner */}
+      {successMessage && (
+        <div
+          id="user-success-banner"
+          className="flex items-center justify-between p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 shadow-xs animate-in fade-in duration-200"
+        >
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <p className="text-sm font-medium">{successMessage}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSuccessMessage(null)}
+            className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-100 p-1 rounded-md"
+            aria-label="Close message"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Filters Bar */}
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Search Input */}
+          <div className="relative lg:col-span-2">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              id="input-search-users"
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t.users.searchPlaceholder}
+              className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-400 text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
+            />
+          </div>
+
+          {/* Role Filter */}
+          <div>
+            <select
+              id="select-filter-role"
+              value={selectedRole}
+              onChange={(e) => setSelectedRole(e.target.value)}
+              className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-400 text-slate-900 dark:text-slate-100"
+            >
+              <option value="all">{t.users.allRoles}</option>
+              {roles.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {isBn ? r.name_bn || r.name_en : r.name_en}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Status Filter */}
+          <div>
+            <select
+              id="select-filter-status"
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value as 'all' | 'active' | 'inactive')}
+              className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-400 text-slate-900 dark:text-slate-100"
+            >
+              <option value="all">{t.users.allStatuses}</option>
+              <option value="active">{t.users.active}</option>
+              <option value="inactive">{t.users.inactive}</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Content Area */}
+      {loading ? (
+        <UserLoadingSkeleton />
+      ) : error ? (
+        <div
+          id="users-error-card"
+          className="p-8 text-center bg-white dark:bg-slate-900 rounded-xl border border-rose-200 dark:border-rose-900/60 shadow-xs"
+        >
+          <AlertCircle className="w-10 h-10 text-rose-500 mx-auto mb-3" />
+          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+            {isBn ? 'প্রশাসক তালিকা লোড করতে ব্যর্থ হয়েছে' : 'Failed to Load Administrators'}
+          </h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
+            {error}
+          </p>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={loadUsers}
+            className="mt-4"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            {t.common.refresh}
+          </Button>
+        </div>
+      ) : (
+        <UsersTable
+          users={users}
+          canManage={canManageUsers}
+          onView={(id) => navigate(`/users/${id}`)}
+          onEdit={(id) => navigate(`/users/${id}/edit`)}
+        />
+      )}
+    </div>
+  );
+};

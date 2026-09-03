@@ -8,6 +8,7 @@ export interface AuthContextType {
   user: User | null;
   session: Session | null;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   isLoading: boolean;
   isConfigured: boolean;
   // RBAC State
@@ -33,6 +34,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // RBAC permissions state
@@ -45,14 +47,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isMountedRef = useRef<boolean>(true);
   const userRef = useRef<User | null>(null);
   const isAdminRef = useRef<boolean>(false);
+  const isSuperAdminRef = useRef<boolean>(false);
   const permissionsRef = useRef<string[]>([]);
 
   // Keep refs synchronized with state
   useEffect(() => {
     userRef.current = user;
     isAdminRef.current = isAdmin;
+    isSuperAdminRef.current = isSuperAdmin;
     permissionsRef.current = permissions;
-  }, [user, isAdmin, permissions]);
+  }, [user, isAdmin, isSuperAdmin, permissions]);
 
   /**
    * Resolves role and effective permissions for the currently authenticated admin caller
@@ -66,7 +70,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!profile.isAdmin) {
           // Authoritative backend context denied admin status - fail closed
           setIsAdmin(false);
+          setIsSuperAdmin(false);
           isAdminRef.current = false;
+          isSuperAdminRef.current = false;
           setPermissions([]);
           setRole(null);
           setIsBootstrapMode(false);
@@ -77,7 +83,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         setIsAdmin(true);
+        setIsSuperAdmin(profile.isSuperAdmin);
         isAdminRef.current = true;
+        isSuperAdminRef.current = profile.isSuperAdmin;
         setPermissions(profile.permissions);
         setRole(profile.role);
         setIsBootstrapMode(profile.isBootstrapMode);
@@ -89,7 +97,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.warn('Failed to load user permissions:', err);
       if (isMountedRef.current) {
         setIsAdmin(false);
+        setIsSuperAdmin(false);
         isAdminRef.current = false;
+        isSuperAdminRef.current = false;
         setPermissions([]);
         setRole(null);
         setIsBootstrapMode(false);
@@ -349,6 +359,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         session,
         isAdmin,
+        isSuperAdmin,
         isLoading,
         isConfigured: isSupabaseConfigured,
         permissions,

@@ -7,6 +7,7 @@ import {
   MapPin,
   MapPinned,
   ShieldCheck,
+  Users,
 } from 'lucide-react';
 import { TranslationDictionary } from '@/context/LanguageContext';
 
@@ -69,6 +70,13 @@ export const ADMIN_NAVIGATION_ITEMS: RouteItem[] = [
     defaultLabel: 'Roles & Permissions',
     icon: ShieldCheck,
     requiredPermission: 'roles.manage',
+  },
+  {
+    path: '/users',
+    labelKey: 'users',
+    defaultLabel: 'Admin Users',
+    icon: Users,
+    requiredPermission: 'admin_users.view',
   },
 ];
 
