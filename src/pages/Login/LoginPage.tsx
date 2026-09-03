@@ -171,6 +171,23 @@ export const LoginPage: React.FC = () => {
               </h2>
             </div>
 
+            {/* Demo Mode Notice */}
+            {!authService.isConfigured() && (
+              <div className="mb-5 p-3 rounded-lg bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 flex items-start gap-2.5 text-xs text-sky-800 dark:text-sky-300">
+                <Shield className="w-4 h-4 shrink-0 mt-0.5 text-sky-600 dark:text-sky-400" />
+                <div>
+                  <span className="font-semibold block">
+                    {language === 'bn' ? 'ডেমো মোড সক্রিয়' : 'Demo Mode Active'}
+                  </span>
+                  <span className="text-[11px] text-sky-700 dark:text-sky-400">
+                    {language === 'bn'
+                      ? 'অ্যাডমিনিস্ট্রেটর হিসেবে প্রবেশ করতে যেকোনো ইমেল ও পাসওয়ার্ড ব্যবহার করুন।'
+                      : 'Enter any email and password to sign in as System Administrator.'}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* General Error Notification */}
             {errors.general && (
               <div className="mb-5 p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 flex items-start gap-2.5 text-xs text-red-700 dark:text-red-400">
