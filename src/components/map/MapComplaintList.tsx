@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapComplaint } from '@/types/Map';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
 import { Badge, BadgeStatus } from '@/components/ui/Badge';
 import {
   MapPin,
@@ -26,6 +27,8 @@ export const MapComplaintList: React.FC<MapComplaintListProps> = ({
 }) => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
+  const { hasPermission } = useAuth();
+  const canViewComplaints = hasPermission('complaints.view');
   const navigate = useNavigate();
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -171,17 +174,20 @@ export const MapComplaintList: React.FC<MapComplaintListProps> = ({
                     <span className="text-[10px] text-slate-400 font-mono">
                       {formatDate(item.createdAt)}
                     </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/complaints/${item.id}`);
-                      }}
-                      className="p-1 rounded text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                      title={isBn ? 'অভিযোগের বিস্তারিত দেখুন' : 'Open full complaint workspace'}
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </button>
+                    {canViewComplaints && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/complaints/${item.id}`);
+                        }}
+                        className="p-1 rounded text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        title={isBn ? 'অভিযোগের বিস্তারিত দেখুন' : 'Open full complaint workspace'}
+                        aria-label={isBn ? `অভিযোগ #${item.id}-এর বিস্তারিত দেখুন` : `Open full complaint workspace for #${item.id}`}
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

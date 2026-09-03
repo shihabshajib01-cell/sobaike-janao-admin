@@ -13,6 +13,7 @@ import 'leaflet/dist/leaflet.css';
 import { MapComplaint } from '@/types/Map';
 import { useLanguage } from '@/context/LanguageContext';
 import { useTheme } from '@/themes/ThemeProvider';
+import { useAuth } from '@/context/AuthContext';
 import { Badge, BadgeStatus } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
@@ -183,6 +184,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 }) => {
   const { language } = useLanguage();
   const { resolvedTheme } = useTheme();
+  const { hasPermission } = useAuth();
+  const canViewComplaints = hasPermission('complaints.view');
   const isDark = resolvedTheme === 'dark';
   const isBn = language === 'bn';
   const navigate = useNavigate();
@@ -336,14 +339,17 @@ export const MapContainer: React.FC<MapContainerProps> = ({
                         year: 'numeric',
                       })}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/complaints/${item.id}`)}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-white bg-sky-600 hover:bg-sky-700 rounded transition-colors"
-                    >
-                      <span>{isBn ? 'বিস্তারিত' : 'Open'}</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </button>
+                    {canViewComplaints && (
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/complaints/${item.id}`)}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-white bg-sky-600 hover:bg-sky-700 rounded transition-colors"
+                        aria-label={isBn ? `অভিযোগ #${item.id}-এর বিস্তারিত দেখুন` : `Open details for #${item.id}`}
+                      >
+                        <span>{isBn ? 'বিস্তারিত' : 'Open'}</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </Popup>
@@ -428,15 +434,17 @@ export const MapContainer: React.FC<MapContainerProps> = ({
               </span>
             </div>
 
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => navigate(`/complaints/${selectedComplaint.id}`)}
-              rightIcon={<ExternalLink className="w-3.5 h-3.5" />}
-              className="h-7 text-xs px-3"
-            >
-              {isBn ? 'অভিযোগ খুলুন' : 'Open Complaint'}
-            </Button>
+            {canViewComplaints && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => navigate(`/complaints/${selectedComplaint.id}`)}
+                rightIcon={<ExternalLink className="w-3.5 h-3.5" />}
+                className="h-7 text-xs px-3"
+              >
+                {isBn ? 'অভিযোগ খুলুন' : 'Open Complaint'}
+              </Button>
+            )}
           </div>
         </div>
       )}

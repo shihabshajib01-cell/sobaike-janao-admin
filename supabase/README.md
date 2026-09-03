@@ -50,6 +50,10 @@ This directory contains the database migrations, audit scripts, and security def
    - **Phase:** Phase 2E Map Authorization Correction
    - **Contents:** Provides controlled `SECURITY DEFINER` RPC `public.admin_get_map_dataset()` requiring active admin session and `map.view` permission; returns sanitized geospatial fields and taxonomy filters; avoids broad complaint table exposure; and idempotently reaffirms explicit RLS policies on `public.complaints`.
 
+9. **`20260903000006_phase2e_map_status_and_navigation_correction.sql`**
+   - **Phase:** Phase 2E Map Status Filter & Navigation Correction
+   - **Contents:** Updates `public.admin_get_map_dataset()` to filter complaints server-side to supported lifecycle statuses only, and returns server-computed `unsupportedStatusCount` numeric aggregate without returning unsupported row content.
+
 ---
 
 ## Role Management Backend API Specification

@@ -108,6 +108,9 @@ export class MapApi {
     const rawSegments = Array.isArray(data.segments) ? data.segments : [];
     const rawSubcategories = Array.isArray(data.subcategories) ? data.subcategories : [];
     const rawComplaints = Array.isArray(data.complaints) ? data.complaints : [];
+    const serverUnsupportedStatusCount = typeof data.unsupportedStatusCount === 'number'
+      ? data.unsupportedStatusCount
+      : 0;
 
     // Build taxonomy lookup maps from returned RPC contract
     const segmentMap = new Map<string, { nameEn: string; nameBn: string }>();
@@ -133,7 +136,7 @@ export class MapApi {
     const mappedComplaints: MapComplaint[] = [];
     const districtSet = new Set<string>();
     let unmappedCount = 0;
-    let unsupportedStatusCount = 0;
+    let clientUnsupportedStatusCount = 0;
 
     const validStatuses: ComplaintLifecycleStatus[] = [
       'submitted',
@@ -144,9 +147,9 @@ export class MapApi {
     ];
 
     for (const row of rawComplaints) {
-      // 1. Only include complaints with supported Admin status
+      // 1. Defensive status check (server already filters, but maintain client-side contract integrity)
       if (!row.status || !validStatuses.includes(row.status as ComplaintLifecycleStatus)) {
-        unsupportedStatusCount++;
+        clientUnsupportedStatusCount++;
         continue;
       }
       const status = row.status as ComplaintLifecycleStatus;
@@ -209,10 +212,12 @@ export class MapApi {
     }
 
     const districts = Array.from(districtSet).sort((a, b) => a.localeCompare(b));
+    const unsupportedStatusCount = serverUnsupportedStatusCount + clientUnsupportedStatusCount;
+    const totalSourceCount = rawComplaints.length - clientUnsupportedStatusCount;
 
     return {
       complaints: mappedComplaints,
-      totalSourceCount: rawComplaints.length,
+      totalSourceCount,
       unmappedCount,
       unsupportedStatusCount,
       segments: segmentOptions,

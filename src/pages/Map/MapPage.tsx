@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -41,6 +42,8 @@ const INITIAL_FILTERS: MapFilterState = {
 export const MapPage: React.FC = () => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
+  const { hasPermission } = useAuth();
+  const canViewComplaints = hasPermission('complaints.view');
 
   // Data & State
   const [dataset, setDataset] = useState<MapDataset | null>(null);
@@ -351,9 +354,13 @@ export const MapPage: React.FC = () => {
                       : `${dataset.unmappedCount} complaints are not shown on the map because valid coordinates are unavailable.`}
                   </p>
                   <p className="text-amber-700 dark:text-amber-300/90">
-                    {isBn
-                      ? 'এসব অভিযোগের তালিকা ও বিস্তারিত মূল অভিযোগ ব্যবস্থাপনা পেজ থেকে পর্যবেক্ষণ করা যাবে।'
-                      : 'These unmapped records remain fully accessible in the main Complaints Workspace.'}
+                    {canViewComplaints
+                      ? (isBn
+                          ? 'এসব অভিযোগের তালিকা ও বিস্তারিত মূল অভিযোগ ব্যবস্থাপনা পেজ থেকে পর্যবেক্ষণ করা যাবে।'
+                          : 'These unmapped records remain accessible in the Complaints Workspace.')
+                      : (isBn
+                          ? 'বৈধ স্থানাঙ্ক না থাকার কারণে এই রেকর্ডগুলো মানচিত্রে প্রদর্শিত হচ্ছে না।'
+                          : 'These records are not shown on the map because valid coordinates are unavailable.')}
                   </p>
                 </div>
               </div>

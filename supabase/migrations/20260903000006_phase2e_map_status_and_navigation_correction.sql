@@ -1,49 +1,24 @@
 -- ==============================================================================
--- SOBAIKE JANAO ADMIN — PHASE 2E: MAP MONITORING AUTHORIZATION CORRECTION
+-- SOBAIKE JANAO ADMIN — PHASE 2E: MAP STATUS FILTER & NAVIGATION CORRECTION
 -- ==============================================================================
--- Migration: 20260903000005_phase2e_map_authorization_correction.sql
+-- Migration: 20260903000006_phase2e_map_status_and_navigation_correction.sql
 -- Target: Supabase PostgreSQL Database (Public Schema)
 --
 -- Objective:
---   1. Provide a dedicated SECURITY DEFINER RPC: public.admin_get_map_dataset()
---      allowing callers with 'map.view' permission to retrieve controlled geospatial
---      and taxonomy filter data without granting arbitrary direct SELECT on public.complaints.
---   2. Explicitly verify active admin session and 'map.view' permission.
---   3. Return strictly sanitized fields required for map markers, filters, and clusters:
---      excludes reporter identities, contact details, private evidence, and audit logs.
---   4. Idempotently reaffirm Row-Level Security on public.complaints with explicit known
---      policies:
---      - anon: published complaints only (status = 'published')
---      - authenticated: requires 'complaints.view' (Super Admin passes dynamically)
+--   1. Update public.admin_get_map_dataset() to strictly filter complaint rows
+--      server-side to supported lifecycle statuses ('submitted', 'published',
+--      'unpublished', 'rejected', 'edited').
+--   2. Calculate unsupportedStatusCount server-side and return only numeric aggregate,
+--      preventing map.view users from receiving row-level data for unsupported complaints.
+--   3. Maintain SECURITY DEFINER, search_path = pg_catalog, public, active admin check,
+--      and map.view permission requirement.
+--   4. Preserve execution grants strictly for authenticated, revoked from PUBLIC and anon.
 -- ==============================================================================
 
 BEGIN;
 
 -- ------------------------------------------------------------------------------
--- 1. ROW LEVEL SECURITY REAFFIRMATION ON public.complaints
--- ------------------------------------------------------------------------------
-ALTER TABLE public.complaints ENABLE ROW LEVEL SECURITY;
-
--- Reaffirm Policy 1: Public Citizen Feed (anon)
-DROP POLICY IF EXISTS "complaints_public_anon_select_published" ON public.complaints;
-CREATE POLICY "complaints_public_anon_select_published" ON public.complaints
-    FOR SELECT
-    TO anon
-    USING (status = 'published');
-
--- Reaffirm Policy 2: Administrative Complaint Access (authenticated)
-DROP POLICY IF EXISTS "complaints_admin_authenticated_select" ON public.complaints;
-CREATE POLICY "complaints_admin_authenticated_select" ON public.complaints
-    FOR SELECT
-    TO authenticated
-    USING (
-        public.has_permission('complaints.view')
-    );
-
--- ------------------------------------------------------------------------------
--- 2. CONTROLLED SECURITY DEFINER MAP RPC: public.admin_get_map_dataset()
---    Provides geospatial complaint data and taxonomy options strictly to active
---    administrators holding 'map.view' permission.
+-- 1. REPLACE CONTROLLED SECURITY DEFINER MAP RPC
 -- ------------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.admin_get_map_dataset()
 RETURNS jsonb
