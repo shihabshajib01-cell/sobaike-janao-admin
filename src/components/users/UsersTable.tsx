@@ -107,7 +107,7 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                         <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm truncate">
                           {user.display_name || (
                             <span className="italic text-slate-400">
-                              {isBn ? 'নাম প্রদান করা হয়নি' : 'No display name'}
+                              {t.users.noDisplayName}
                             </span>
                           )}
                         </p>
@@ -133,7 +133,7 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                   <td className="px-5 py-4 whitespace-nowrap">
                     {user.is_super_admin ? (
                       <span className="text-xs font-medium text-purple-700 dark:text-purple-300 italic">
-                        {isBn ? 'সিস্টেম অ্যাক্সেস (স্থায়ী)' : 'System Access (Permanent)'}
+                        {t.users.systemAccessPermanent}
                       </span>
                     ) : (
                       <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
@@ -178,7 +178,7 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                             title={t.users.superAdminCannotBeEdited}
                           >
                             <Lock className="w-3 h-3" />
-                            {isBn ? 'সুরক্ষিত' : 'Locked'}
+                            {t.users.locked}
                           </div>
                         ) : (
                           <Button
@@ -235,7 +235,7 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                     <h4 className="font-semibold text-slate-900 dark:text-slate-100 text-sm truncate">
                       {user.display_name || (
                         <span className="italic text-slate-400">
-                          {isBn ? 'নাম প্রদান করা হয়নি' : 'No display name'}
+                          {t.users.noDisplayName}
                         </span>
                       )}
                     </h4>
@@ -289,7 +289,7 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                   user.is_super_admin ? (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-slate-400 dark:text-slate-500 rounded bg-slate-50 dark:bg-slate-800/60">
                       <Lock className="w-3 h-3" />
-                      {isBn ? 'সুরক্ষিত' : 'Locked'}
+                      {t.users.locked}
                     </span>
                   ) : (
                     <Button

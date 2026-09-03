@@ -214,15 +214,51 @@ serve(async (req: Request) => {
 
     // 10. COMPENSATING ROLLBACK: If membership finalization fails, delete the created Auth user
     if (finalizeError) {
-      console.error("admin_finalize_user_membership failed, executing compensating rollback:", finalizeError);
+      console.error(
+        `admin_finalize_user_membership failed for user ${newUserId}, executing compensating rollback:`,
+        finalizeError
+      );
+
+      let rollbackFailed = false;
+      let rollbackErrorMessage: string | null = null;
+
       try {
-        await supabaseAdmin.auth.admin.deleteUser(newUserId);
-      } catch (rollbackErr) {
-        console.error("Rollback failed to delete orphaned user:", rollbackErr);
+        const { error: deleteUserError } = await supabaseAdmin.auth.admin.deleteUser(newUserId);
+        if (deleteUserError) {
+          rollbackFailed = true;
+          rollbackErrorMessage = deleteUserError.message || "deleteUser returned error";
+          console.error(
+            `Rollback deleteUser returned error for user ${newUserId}:`,
+            deleteUserError
+          );
+        }
+      } catch (rollbackThrown) {
+        rollbackFailed = true;
+        rollbackErrorMessage =
+          rollbackThrown instanceof Error ? rollbackThrown.message : "Unknown thrown error during deleteUser";
+        console.error(`Rollback threw exception for user ${newUserId}:`, rollbackThrown);
       }
 
+      if (rollbackFailed) {
+        // CASE B: Rollback failed - critical error
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error:
+              "Critical system error: Failed to finalize user profile, and automatic rollback could not remove the authentication record.",
+            code: "MEMBERSHIP_FINALIZATION_ROLLBACK_FAILED",
+            original_code: finalizeError.code || "MEMBERSHIP_FINALIZATION_FAILED",
+            original_error: finalizeError.message,
+            rollback_error: rollbackErrorMessage,
+          }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // CASE A: Rollback succeeded - return original finalization failure truthfully
       return new Response(
         JSON.stringify({
+          success: false,
           error: finalizeError.message || "Failed to finalize administrative user profile.",
           code: finalizeError.code || "MEMBERSHIP_FINALIZATION_FAILED",
           details: finalizeError.details,

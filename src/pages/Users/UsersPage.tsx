@@ -5,18 +5,18 @@ import { Button } from '@/components/ui/Button';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { adminUserApi } from '@/services/api/adminUserApi';
-import { AdminUserListItem, AssignableRole } from '@/types/AdminUser';
+import { AdminUserListItem, UserFilterRole } from '@/types/AdminUser';
 import { UsersTable } from '@/components/users/UsersTable';
 import { UserLoadingSkeleton } from '@/components/users/UserLoadingSkeleton';
 import {
   UserPlus,
   RefreshCw,
   Search,
-  Filter,
   AlertCircle,
   CheckCircle2,
   X,
-  Users as UsersIcon,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 export const UsersPage: React.FC = () => {
@@ -24,15 +24,19 @@ export const UsersPage: React.FC = () => {
   const location = useLocation();
   const { t, language } = useLanguage();
   const { hasPermission } = useAuth();
-  const isBn = language === 'bn';
 
   const canManageUsers = hasPermission('admin_users.manage');
 
   // State
   const [users, setUsers] = useState<AdminUserListItem[]>([]);
-  const [roles, setRoles] = useState<AssignableRole[]>([]);
+  const [roles, setRoles] = useState<UserFilterRole[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Pagination State
+  const [page, setPage] = useState<number>(1);
+  const [pageSize] = useState<number>(10);
+  const [totalCount, setTotalCount] = useState<number>(0);
 
   // Filters
   const [search, setSearch] = useState<string>('');
@@ -62,26 +66,42 @@ export const UsersPage: React.FC = () => {
 
   // Clear location state after reading
   useEffect(() => {
-    if (location.state && ((location.state as any).userCreatedSuccess || (location.state as any).userUpdatedSuccess)) {
+    if (location.state && ((location.state as { userCreatedSuccess?: boolean; userUpdatedSuccess?: boolean }).userCreatedSuccess || (location.state as { userCreatedSuccess?: boolean; userUpdatedSuccess?: boolean }).userUpdatedSuccess)) {
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
 
+  const formatNumber = (num: number): string => {
+    if (language !== 'bn') return String(num);
+    const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    return String(num).replace(/\d/g, (d) => bnDigits[Number(d)]);
+  };
+
   /**
-   * Load users list
+   * Load users list with server-side pagination and filters
    */
   const loadUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
+      const offset = (page - 1) * pageSize;
       const response = await adminUserApi.getUsers({
         search: search.trim() || undefined,
         role_id: selectedRole !== 'all' ? selectedRole : undefined,
         status: selectedStatus !== 'all' ? selectedStatus : undefined,
+        limit: pageSize,
+        offset,
       });
 
       setUsers(response.users);
+      setTotalCount(response.total_count);
+
+      // Guard: if current page is invalid due to filter contraction, clamp safely
+      if (response.total_count > 0 && offset >= response.total_count) {
+        const maxPage = Math.ceil(response.total_count / pageSize);
+        setPage(maxPage);
+      }
     } catch (err: unknown) {
       console.error('Failed to load administrators:', err);
       const msg = err instanceof Error ? err.message : t.users.configurationError;
@@ -89,24 +109,45 @@ export const UsersPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [search, selectedRole, selectedStatus, t]);
+  }, [page, pageSize, search, selectedRole, selectedStatus, t]);
 
   /**
-   * Load assignable roles for filter dropdown
+   * Load role choices for filter dropdown using read-safe endpoint (admin_users.view required)
+   * Available to all users authorized to view User Management.
    */
   useEffect(() => {
-    if (canManageUsers) {
-      adminUserApi
-        .getAssignableRoles()
-        .then((data) => setRoles(data))
-        .catch((err) => console.warn('Could not load roles for user filter:', err));
-    }
-  }, [canManageUsers]);
+    adminUserApi
+      .getUserFilterRoles()
+      .then((data) => setRoles(data))
+      .catch((err) => console.warn('Could not load roles for user filter:', err));
+  }, []);
 
-  // Fetch users on filter change
+  // Fetch users when page or filters change
   useEffect(() => {
     loadUsers();
   }, [loadUsers]);
+
+  // Reset to page 1 on search change
+  const handleSearchChange = (val: string) => {
+    setSearch(val);
+    setPage(1);
+  };
+
+  // Reset to page 1 on role filter change
+  const handleRoleChange = (val: string) => {
+    setSelectedRole(val);
+    setPage(1);
+  };
+
+  // Reset to page 1 on status filter change
+  const handleStatusChange = (val: 'all' | 'active' | 'inactive') => {
+    setSelectedStatus(val);
+    setPage(1);
+  };
+
+  const totalPages = Math.ceil(totalCount / pageSize);
+  const startItem = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
+  const endItem = Math.min(page * pageSize, totalCount);
 
   return (
     <div className="space-y-6 pb-12" id="admin-users-page">
@@ -158,7 +199,7 @@ export const UsersPage: React.FC = () => {
             type="button"
             onClick={() => setSuccessMessage(null)}
             className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-100 p-1 rounded-md"
-            aria-label="Close message"
+            aria-label={t.common.close}
           >
             <X className="w-4 h-4" />
           </button>
@@ -175,7 +216,7 @@ export const UsersPage: React.FC = () => {
               id="input-search-users"
               type="text"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder={t.users.searchPlaceholder}
               className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-400 text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
             />
@@ -186,13 +227,13 @@ export const UsersPage: React.FC = () => {
             <select
               id="select-filter-role"
               value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value)}
+              onChange={(e) => handleRoleChange(e.target.value)}
               className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-400 text-slate-900 dark:text-slate-100"
             >
               <option value="all">{t.users.allRoles}</option>
               {roles.map((r) => (
                 <option key={r.id} value={r.id}>
-                  {isBn ? r.name_bn || r.name_en : r.name_en}
+                  {language === 'bn' ? r.name_bn || r.name_en : r.name_en}
                 </option>
               ))}
             </select>
@@ -203,7 +244,7 @@ export const UsersPage: React.FC = () => {
             <select
               id="select-filter-status"
               value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value as 'all' | 'active' | 'inactive')}
+              onChange={(e) => handleStatusChange(e.target.value as 'all' | 'active' | 'inactive')}
               className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-400 text-slate-900 dark:text-slate-100"
             >
               <option value="all">{t.users.allStatuses}</option>
@@ -224,7 +265,7 @@ export const UsersPage: React.FC = () => {
         >
           <AlertCircle className="w-10 h-10 text-rose-500 mx-auto mb-3" />
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-            {isBn ? 'প্রশাসক তালিকা লোড করতে ব্যর্থ হয়েছে' : 'Failed to Load Administrators'}
+            {t.users.failedToLoadUsers}
           </h3>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
             {error}
@@ -236,17 +277,84 @@ export const UsersPage: React.FC = () => {
             className="mt-4"
           >
             <RefreshCw className="w-4 h-4 mr-2" />
-            {t.common.refresh}
+            {t.users.retry}
           </Button>
         </div>
       ) : (
-        <UsersTable
-          users={users}
-          canManage={canManageUsers}
-          onView={(id) => navigate(`/users/${id}`)}
-          onEdit={(id) => navigate(`/users/${id}/edit`)}
-        />
+        <div className="space-y-3">
+          {/* Item Count & Page Summary Header */}
+          <div className="flex items-center justify-between px-1 text-xs text-slate-500 dark:text-slate-400">
+            <span>
+              {t.users.showingUsers
+                .replace('{start}', formatNumber(startItem))
+                .replace('{end}', formatNumber(endItem))
+                .replace('{total}', formatNumber(totalCount))}
+            </span>
+            {totalPages > 1 && (
+              <span>
+                {t.users.pageIndicator
+                  .replace('{current}', formatNumber(page))
+                  .replace('{total}', formatNumber(totalPages))}
+              </span>
+            )}
+          </div>
+
+          {/* Table & Mobile Cards */}
+          <UsersTable
+            users={users}
+            canManage={canManageUsers}
+            onView={(id) => navigate(`/users/${id}`)}
+            onEdit={(id) => navigate(`/users/${id}/edit`)}
+          />
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 px-1 w-full max-w-full">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1 || loading}
+                leftIcon={<ChevronLeft className="w-4 h-4" />}
+              >
+                <span>{t.users.previous}</span>
+              </Button>
+
+              <div className="flex items-center gap-1 overflow-x-auto max-w-full py-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                  const isCurrent = p === page;
+                  return (
+                    <button
+                      key={p}
+                      onClick={() => setPage(p)}
+                      disabled={loading}
+                      className={`w-8 h-8 rounded-md text-xs font-mono font-medium transition-colors ${
+                        isCurrent
+                          ? 'bg-sky-600 text-white font-bold'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      {formatNumber(p)}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages || loading}
+                rightIcon={<ChevronRight className="w-4 h-4" />}
+              >
+                <span>{t.users.next}</span>
+              </Button>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
 };
+
+export default UsersPage;

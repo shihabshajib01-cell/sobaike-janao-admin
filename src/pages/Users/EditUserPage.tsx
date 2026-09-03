@@ -11,16 +11,12 @@ import {
   Lock,
   Shield,
   AlertCircle,
-  CheckCircle2,
-  Mail,
-  User as UserIcon,
 } from 'lucide-react';
 
 export const EditUserPage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { t, language } = useLanguage();
-  const isBn = language === 'bn';
 
   // State
   const [initialUser, setInitialUser] = useState<AdminUserDetail | null>(null);
@@ -36,7 +32,7 @@ export const EditUserPage: React.FC = () => {
   // Load user and roles
   useEffect(() => {
     if (!userId) {
-      setError(isBn ? 'ইউজার আইডি পাওয়া যায়নি।' : 'User ID not provided.');
+      setError(t.users.userIdMissing);
       setLoading(false);
       return;
     }
@@ -55,7 +51,7 @@ export const EditUserPage: React.FC = () => {
       .catch((err) => {
         if (!mounted) return;
         console.error('Failed to load edit user data:', err);
-        const msg = err instanceof Error ? err.message : 'Failed to load user information.';
+        const msg = err instanceof Error ? err.message : t.users.failedToLoadUser;
         setError(msg);
         setLoading(false);
       });
@@ -63,7 +59,7 @@ export const EditUserPage: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, [userId, isBn]);
+  }, [userId, t.users.userIdMissing, t.users.failedToLoadUser]);
 
   const isSuperAdmin = initialUser?.is_super_admin ?? false;
 
@@ -108,7 +104,7 @@ export const EditUserPage: React.FC = () => {
       });
     } catch (err: unknown) {
       console.error('Update user failed:', err);
-      const msg = err instanceof Error ? err.message : 'Failed to update administrator.';
+      const msg = err instanceof Error ? err.message : t.users.configurationError;
       setError(msg);
       setSubmitting(false);
     }
@@ -139,7 +135,7 @@ export const EditUserPage: React.FC = () => {
         <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-xl border border-rose-200 dark:border-rose-900/60 shadow-xs">
           <AlertCircle className="w-10 h-10 text-rose-500 mx-auto mb-3" />
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-            {isBn ? 'ব্যবহারকারী তথ্য পাওয়া যায়নি' : 'Failed to Load Administrator'}
+            {t.users.failedToLoadUser}
           </h3>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
             {error}
@@ -210,7 +206,7 @@ export const EditUserPage: React.FC = () => {
         >
           <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
           <div className="text-sm text-rose-800 dark:text-rose-200">
-            <p className="font-semibold">{isBn ? 'ত্রুটি' : 'Error'}</p>
+            <p className="font-semibold">{t.users.error}</p>
             <p className="mt-0.5 text-xs">{error}</p>
           </div>
         </div>
@@ -223,7 +219,7 @@ export const EditUserPage: React.FC = () => {
       >
         <div className="space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-2">
-            {isBn ? 'অ্যাকাউন্ট তথ্য' : 'Account Details'}
+            {t.users.accountDetails}
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -242,7 +238,7 @@ export const EditUserPage: React.FC = () => {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 maxLength={100}
-                placeholder={isBn ? 'যেমন: তানভীর আহমেদ' : 'e.g. Tanvir Ahmed'}
+                placeholder={t.users.displayNamePlaceholder}
                 className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-400 text-slate-900 dark:text-slate-100 disabled:opacity-50"
               />
             </div>
@@ -253,7 +249,7 @@ export const EditUserPage: React.FC = () => {
                 htmlFor="input-edit-email"
                 className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
               >
-                {t.users.email} <span className="text-slate-400 font-normal">({isBn ? 'অপরিবর্তনীয়' : 'Immutable'})</span>
+                {t.users.email} <span className="text-slate-400 font-normal">({t.users.immutable})</span>
               </label>
               <div className="relative">
                 <input
@@ -290,19 +286,25 @@ export const EditUserPage: React.FC = () => {
             >
               {roles.map((r) => (
                 <option key={r.id} value={r.id}>
-                  {isBn ? r.name_bn || r.name_en : r.name_en}
+                  {language === 'bn' ? r.name_bn || r.name_en : r.name_en}
                 </option>
               ))}
             </select>
+
+            {roles.length === 0 && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                {t.users.noAssignableRoles}
+              </p>
+            )}
 
             {selectedRoleObj && (
               <div className="mt-2.5 p-3 rounded-lg bg-sky-50/70 dark:bg-sky-950/40 border border-sky-100 dark:border-sky-900/60 text-xs text-sky-800 dark:text-sky-200 flex items-start gap-2">
                 <Shield className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0 mt-0.5" />
                 <div>
                   <span className="font-semibold">
-                    {isBn ? selectedRoleObj.name_bn || selectedRoleObj.name_en : selectedRoleObj.name_en}:
+                    {language === 'bn' ? selectedRoleObj.name_bn || selectedRoleObj.name_en : selectedRoleObj.name_en}:
                   </span>{' '}
-                  <span>{selectedRoleObj.description || (isBn ? 'কোনো বিবরণ নেই।' : 'No description available.')}</span>
+                  <span>{selectedRoleObj.description || t.users.noDescription}</span>
                 </div>
               </div>
             )}
@@ -363,7 +365,7 @@ export const EditUserPage: React.FC = () => {
               type="submit"
               variant="primary"
               size="md"
-              disabled={submitting || !isDirty}
+              disabled={submitting || !isDirty || roles.length === 0}
             >
               <Save className="w-4 h-4 mr-2" />
               {submitting ? t.users.savingUser : t.users.saveUser}
@@ -374,3 +376,5 @@ export const EditUserPage: React.FC = () => {
     </div>
   );
 };
+
+export default EditUserPage;

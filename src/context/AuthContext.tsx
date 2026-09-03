@@ -121,6 +121,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSession(null);
     setUser(null);
     setIsAdmin(false);
+    setIsSuperAdmin(false);
+    isSuperAdminRef.current = false;
     setPermissions([]);
     setRole(null);
     setIsBootstrapMode(false);

@@ -238,6 +238,38 @@ export interface TranslationDictionary {
     emailImmutableNotice: string;
     backToUsers: string;
     configurationError: string;
+    error: string;
+    optional: string;
+    immutable: string;
+    displayNamePlaceholder: string;
+    accountDetails: string;
+    initialPassword: string;
+    passwordHelper: string;
+    emailInvalid: string;
+    noDescription: string;
+    noDisplayName: string;
+    profileOverview: string;
+    assignedRoleAndPermissions: string;
+    noEffectivePermissions: string;
+    systemAccessPermanent: string;
+    locked: string;
+    protectedBadge: string;
+    failedToLoadUsers: string;
+    failedToLoadUser: string;
+    userNotFound: string;
+    userIdMissing: string;
+    failedToLoadRoles: string;
+    noAssignableRoles: string;
+    noAssignableRolesDesc: string;
+    manageRolesLink: string;
+    retry: string;
+    showingUsers: string;
+    pageIndicator: string;
+    previous: string;
+    next: string;
+    showPassword: string;
+    hidePassword: string;
+    rolesLoading: string;
   };
 }
 
@@ -479,6 +511,38 @@ export const translations: Record<Language, TranslationDictionary> = {
       emailImmutableNotice: 'Login email address is immutable and cannot be modified.',
       backToUsers: 'Back to Administrators',
       configurationError: 'User management is not configured in this environment.',
+      error: 'Error',
+      optional: 'Optional',
+      immutable: 'Immutable',
+      displayNamePlaceholder: 'e.g. Tanvir Ahmed',
+      accountDetails: 'Account Details',
+      initialPassword: 'Initial Password',
+      passwordHelper: 'Must be at least 6 characters.',
+      emailInvalid: 'Please enter a valid email address.',
+      noDescription: 'No description available.',
+      noDisplayName: 'No display name set',
+      profileOverview: 'Profile Overview',
+      assignedRoleAndPermissions: 'Assigned Role & Effective Permissions',
+      noEffectivePermissions: 'No effective permissions assigned',
+      systemAccessPermanent: 'System Access (Permanent)',
+      locked: 'Locked',
+      protectedBadge: 'Protected Account',
+      failedToLoadUsers: 'Failed to Load Administrators',
+      failedToLoadUser: 'Failed to Load Administrator',
+      userNotFound: 'Administrator account could not be found.',
+      userIdMissing: 'User ID not provided.',
+      failedToLoadRoles: 'Failed to load assignable roles.',
+      noAssignableRoles: 'No active assignable roles are available.',
+      noAssignableRolesDesc: 'There are no active roles available to assign to this administrator.',
+      manageRolesLink: 'Manage Roles & Permissions',
+      retry: 'Retry',
+      showingUsers: 'Showing {start}–{end} of {total} administrators',
+      pageIndicator: 'Page {current} of {total}',
+      previous: 'Previous',
+      next: 'Next',
+      showPassword: 'Show password',
+      hidePassword: 'Hide password',
+      rolesLoading: 'Loading roles...',
     },
   },
   bn: {
@@ -718,6 +782,38 @@ export const translations: Record<Language, TranslationDictionary> = {
       emailImmutableNotice: 'লগইন ইমেইল ঠিকানা অপরিবর্তনীয় এবং এটি পরিবর্তন করা যাবে না।',
       backToUsers: 'প্রশাসক তালিকায় ফিরুন',
       configurationError: 'এই পরিবেশে ব্যবহারকারী ব্যবস্থাপনা কনফিগার করা নেই।',
+      error: 'ত্রুটি',
+      optional: 'ঐচ্ছিক',
+      immutable: 'অপরিবর্তনীয়',
+      displayNamePlaceholder: 'যেমন: তানভীর আহমেদ',
+      accountDetails: 'মৌলিক তথ্য',
+      initialPassword: 'নিরাপত্তা শংসাপত্র',
+      passwordHelper: 'কমপক্ষে ৬ অক্ষরের পাসওয়ার্ড হতে হবে।',
+      emailInvalid: 'একটি সঠিক ইমেইল ঠিকানা দিন।',
+      noDescription: 'কোনো বিবরণ নেই।',
+      noDisplayName: 'নাম প্রদান করা হয়নি',
+      profileOverview: 'অ্যাকাউন্ট বিবরণ',
+      assignedRoleAndPermissions: 'ভূমিকা ও সিস্টেম অ্যাক্সেস',
+      noEffectivePermissions: 'কোনো কার্যকরী অনুমতি নেই',
+      systemAccessPermanent: 'সিস্টেম অ্যাক্সেস (স্থায়ী)',
+      locked: 'সুরক্ষিত',
+      protectedBadge: 'সুরক্ষিত অ্যাকাউন্ট',
+      failedToLoadUsers: 'প্রশাসক তালিকা লোড করতে ব্যর্থ হয়েছে',
+      failedToLoadUser: 'প্রশাসক তথ্য পাওয়া যায়নি',
+      userNotFound: 'প্রশাসক অ্যাকাউন্ট পাওয়া যায়নি।',
+      userIdMissing: 'ইউজার আইডি পাওয়া যায়নি।',
+      failedToLoadRoles: 'ভূমিকা তালিকা লোড করতে ব্যর্থ হয়েছে।',
+      noAssignableRoles: 'কোনো সক্রিয় বরাদ্দযোগ্য ভূমিকা নেই।',
+      noAssignableRolesDesc: 'এই প্রশাসকের জন্য বরাদ্দ করার মতো কোনো সক্রিয় ভূমিকা উপলব্ধ নেই।',
+      manageRolesLink: 'ভূমিকা ও অনুমতি পরিচালনা করুন',
+      retry: 'পুনরায় চেষ্টা করুন',
+      showingUsers: 'মোট {total} জনের মধ্যে {start}–{end} জন প্রশাসক প্রদর্শিত হচ্ছে',
+      pageIndicator: 'পৃষ্ঠা {current} / {total}',
+      previous: 'পূর্ববর্তী',
+      next: 'পরবর্তী',
+      showPassword: 'পাসওয়ার্ড দেখান',
+      hidePassword: 'পাসওয়ার্ড লুকান',
+      rolesLoading: 'ভূমিকা লোড হচ্ছে...',
     },
   },
 };

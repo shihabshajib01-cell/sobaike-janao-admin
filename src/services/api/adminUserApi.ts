@@ -14,6 +14,7 @@ import {
   AdminUserListItem,
   AdminUserDetail,
   AssignableRole,
+  UserFilterRole,
   CreateAdminUserInput,
   UpdateAdminUserInput,
   AdminUsersListResponse,
@@ -219,6 +220,7 @@ export const adminUserApi = {
 
   /**
    * Fetch active roles assignable to normal administrators
+   * Requires admin_users.manage permission
    */
   async getAssignableRoles(): Promise<AssignableRole[]> {
     const mode = assertAdminUserApiConfigured();
@@ -231,6 +233,32 @@ export const adminUserApi = {
 
     if (error) {
       console.error('admin_get_assignable_roles RPC failed:', error);
+      throw new AdminUserApiError(error.message, error.code, error.details);
+    }
+
+    return Array.isArray(data) ? data : [];
+  },
+
+  /**
+   * Fetch roles for filter dropdown on User Management list
+   * Requires admin_users.view permission (does not require admin_users.manage)
+   */
+  async getUserFilterRoles(): Promise<UserFilterRole[]> {
+    const mode = assertAdminUserApiConfigured();
+
+    if (mode === 'dev_fallback') {
+      return FALLBACK_ASSIGNABLE_ROLES.map((r) => ({
+        id: r.id,
+        name_en: r.name_en,
+        name_bn: r.name_bn,
+        active: r.active,
+      }));
+    }
+
+    const { data, error } = await supabase.rpc('admin_get_user_filter_roles');
+
+    if (error) {
+      console.error('admin_get_user_filter_roles RPC failed:', error);
       throw new AdminUserApiError(error.message, error.code, error.details);
     }
 

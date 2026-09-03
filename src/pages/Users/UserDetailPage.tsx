@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { adminUserApi } from '@/services/api/adminUserApi';
@@ -14,7 +13,6 @@ import {
   ShieldCheck,
   Lock,
   Mail,
-  User as UserIcon,
   CheckCircle2,
   XCircle,
   AlertCircle,
@@ -38,7 +36,7 @@ export const UserDetailPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Success Banner from Edit navigation
-  const [successBanner, setSuccessBanner] = useState<string | null>(() => {
+  const [successBanner] = useState<string | null>(() => {
     const state = location.state as { userUpdatedSuccess?: boolean; userName?: string } | null;
     if (state?.userUpdatedSuccess) {
       return state.userName
@@ -49,14 +47,20 @@ export const UserDetailPage: React.FC = () => {
   });
 
   useEffect(() => {
-    if (location.state && (location.state as any).userUpdatedSuccess) {
+    if (location.state && (location.state as { userUpdatedSuccess?: boolean }).userUpdatedSuccess) {
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
 
+  const formatNumber = (num: number): string => {
+    if (language !== 'bn') return String(num);
+    const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    return String(num).replace(/\d/g, (d) => bnDigits[Number(d)]);
+  };
+
   const loadUser = useCallback(async () => {
     if (!userId) {
-      setError(isBn ? 'ইউজার আইডি পাওয়া যায়নি।' : 'User ID not provided.');
+      setError(t.users.userIdMissing);
       setLoading(false);
       return;
     }
@@ -69,12 +73,12 @@ export const UserDetailPage: React.FC = () => {
       setUser(data);
     } catch (err: unknown) {
       console.error('Failed to load user details:', err);
-      const msg = err instanceof Error ? err.message : 'Failed to load user details.';
+      const msg = err instanceof Error ? err.message : t.users.failedToLoadUser;
       setError(msg);
     } finally {
       setLoading(false);
     }
-  }, [userId, isBn]);
+  }, [userId, t.users.userIdMissing, t.users.failedToLoadUser]);
 
   useEffect(() => {
     loadUser();
@@ -105,10 +109,10 @@ export const UserDetailPage: React.FC = () => {
         <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-xl border border-rose-200 dark:border-rose-900/60 shadow-xs">
           <AlertCircle className="w-10 h-10 text-rose-500 mx-auto mb-3" />
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-            {isBn ? 'ব্যবহারকারী তথ্য লোড করা যায়নি' : 'User Account Not Found'}
+            {t.users.failedToLoadUser}
           </h3>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
-            {error || (isBn ? 'প্রশাসক অ্যাকাউন্ট পাওয়া যায়নি।' : 'Administrator account could not be found.')}
+            {error || t.users.userNotFound}
           </p>
         </div>
       </div>
@@ -160,7 +164,7 @@ export const UserDetailPage: React.FC = () => {
               title={t.users.superAdminCannotBeEdited}
             >
               <Lock className="w-3.5 h-3.5" />
-              {isBn ? 'সুপার অ্যাডমিন অপরিবর্তনীয়' : 'Protected Account'}
+              {t.users.protectedBadge}
             </div>
           ) : (
             <Button
@@ -211,7 +215,7 @@ export const UserDetailPage: React.FC = () => {
       {/* Account Overview Card */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs space-y-6">
         <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-2">
-          {isBn ? 'অ্যাকাউন্ট বিবরণ' : 'Profile Overview'}
+          {t.users.profileOverview}
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -223,7 +227,7 @@ export const UserDetailPage: React.FC = () => {
             <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 mt-1">
               {user.display_name || (
                 <span className="italic text-slate-400">
-                  {isBn ? 'নাম প্রদান করা হয়নি' : 'No display name set'}
+                  {t.users.noDisplayName}
                 </span>
               )}
             </p>
@@ -306,7 +310,7 @@ export const UserDetailPage: React.FC = () => {
       {/* Role & Permissions Card */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs space-y-6">
         <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-2">
-          {isBn ? 'ভূমিকা ও সিস্টেম অ্যাক্সেস' : 'Assigned Role & Effective Permissions'}
+          {t.users.assignedRoleAndPermissions}
         </h3>
 
         {user.is_super_admin ? (
@@ -324,7 +328,7 @@ export const UserDetailPage: React.FC = () => {
 
             <div>
               <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">
-                {t.users.effectivePermissions} ({user.effective_permissions.length})
+                {t.users.effectivePermissions} ({formatNumber(user.effective_permissions.length)})
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {user.effective_permissions.map((perm) => (
@@ -370,7 +374,7 @@ export const UserDetailPage: React.FC = () => {
 
             <div>
               <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">
-                {t.users.effectivePermissions} ({user.effective_permissions.length})
+                {t.users.effectivePermissions} ({formatNumber(user.effective_permissions.length)})
               </p>
               {user.effective_permissions.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5">
@@ -386,7 +390,7 @@ export const UserDetailPage: React.FC = () => {
                 </div>
               ) : (
                 <p className="text-xs italic text-slate-400">
-                  {isBn ? 'কোনো কার্যকরী অনুমতি নেই' : 'No effective permissions assigned'}
+                  {t.users.noEffectivePermissions}
                 </p>
               )}
             </div>
@@ -396,3 +400,5 @@ export const UserDetailPage: React.FC = () => {
     </div>
   );
 };
+
+export default UserDetailPage;

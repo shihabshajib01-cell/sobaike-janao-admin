@@ -1,25 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { useLanguage } from '@/context/LanguageContext';
 import { adminUserApi } from '@/services/api/adminUserApi';
 import { AssignableRole } from '@/types/AdminUser';
 import {
   ArrowLeft,
-  UserPlus,
   Eye,
   EyeOff,
   AlertCircle,
   Shield,
-  CheckCircle2,
-  Lock,
 } from 'lucide-react';
 
 export const CreateUserPage: React.FC = () => {
   const navigate = useNavigate();
   const { t, language } = useLanguage();
-  const isBn = language === 'bn';
 
   // Form State
   const [displayName, setDisplayName] = useState<string>('');
@@ -54,7 +49,7 @@ export const CreateUserPage: React.FC = () => {
       .catch((err) => {
         if (mounted) {
           console.error('Failed to load assignable roles:', err);
-          setError(isBn ? 'ভূমিকা তালিকা লোড করতে ব্যর্থ হয়েছে।' : 'Failed to load assignable roles.');
+          setError(t.users.failedToLoadRoles);
           setRolesLoading(false);
         }
       });
@@ -65,7 +60,7 @@ export const CreateUserPage: React.FC = () => {
       setPassword('');
       setConfirmPassword('');
     };
-  }, [isBn]);
+  }, [t.users.failedToLoadRoles]);
 
   const selectedRoleObj = roles.find((r) => r.id === roleId);
 
@@ -84,7 +79,7 @@ export const CreateUserPage: React.FC = () => {
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(cleanEmail)) {
-      setError(isBn ? 'একটি সঠিক ইমেইল ঠিকানা দিন।' : 'Please enter a valid email address.');
+      setError(t.users.emailInvalid);
       return;
     }
 
@@ -126,7 +121,7 @@ export const CreateUserPage: React.FC = () => {
       });
     } catch (err: unknown) {
       console.error('Create user failed:', err);
-      const msg = err instanceof Error ? err.message : 'Failed to create user.';
+      const msg = err instanceof Error ? err.message : t.users.failedToLoadUsers;
       setError(msg);
       setSubmitting(false);
     }
@@ -164,7 +159,7 @@ export const CreateUserPage: React.FC = () => {
         >
           <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
           <div className="text-sm text-rose-800 dark:text-rose-200">
-            <p className="font-semibold">{isBn ? 'ত্রুটি' : 'Error'}</p>
+            <p className="font-semibold">{t.users.error}</p>
             <p className="mt-0.5 text-xs">{error}</p>
           </div>
         </div>
@@ -178,7 +173,7 @@ export const CreateUserPage: React.FC = () => {
         {/* Basic Information */}
         <div className="space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-2">
-            {isBn ? 'মৌলিক তথ্য' : 'Account Details'}
+            {t.users.accountDetails}
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -188,14 +183,14 @@ export const CreateUserPage: React.FC = () => {
                 htmlFor="input-display-name"
                 className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
               >
-                {t.users.displayName} <span className="text-slate-400 font-normal">({isBn ? 'ঐচ্ছিক' : 'Optional'})</span>
+                {t.users.displayName} <span className="text-slate-400 font-normal">({t.users.optional})</span>
               </label>
               <input
                 id="input-display-name"
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                placeholder={isBn ? 'যেমন: তানভীর আহমেদ' : 'e.g. Tanvir Ahmed'}
+                placeholder={t.users.displayNamePlaceholder}
                 maxLength={100}
                 className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-400 text-slate-900 dark:text-slate-100"
               />
@@ -226,7 +221,7 @@ export const CreateUserPage: React.FC = () => {
         {/* Credentials */}
         <div className="space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-2">
-            {isBn ? 'নিরাপত্তা শংসাপত্র' : 'Initial Password'}
+            {t.users.initialPassword}
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -254,13 +249,13 @@ export const CreateUserPage: React.FC = () => {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? t.users.hidePassword : t.users.showPassword}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
               <p className="text-[11px] text-slate-400 mt-1">
-                {isBn ? 'কমপক্ষে ৬ অক্ষরের পাসওয়ার্ড হতে হবে।' : 'Must be at least 6 characters.'}
+                {t.users.passwordHelper}
               </p>
             </div>
 
@@ -288,7 +283,7 @@ export const CreateUserPage: React.FC = () => {
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showConfirmPassword ? t.users.hidePassword : t.users.showPassword}
                 >
                   {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -314,19 +309,25 @@ export const CreateUserPage: React.FC = () => {
             >
               {roles.map((r) => (
                 <option key={r.id} value={r.id}>
-                  {isBn ? r.name_bn || r.name_en : r.name_en}
+                  {language === 'bn' ? r.name_bn || r.name_en : r.name_en}
                 </option>
               ))}
             </select>
+
+            {roles.length === 0 && !rolesLoading && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                {t.users.noAssignableRoles}
+              </p>
+            )}
 
             {selectedRoleObj && (
               <div className="mt-2.5 p-3 rounded-lg bg-sky-50/70 dark:bg-sky-950/40 border border-sky-100 dark:border-sky-900/60 text-xs text-sky-800 dark:text-sky-200 flex items-start gap-2">
                 <Shield className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0 mt-0.5" />
                 <div>
                   <span className="font-semibold">
-                    {isBn ? selectedRoleObj.name_bn || selectedRoleObj.name_en : selectedRoleObj.name_en}:
+                    {language === 'bn' ? selectedRoleObj.name_bn || selectedRoleObj.name_en : selectedRoleObj.name_en}:
                   </span>{' '}
-                  <span>{selectedRoleObj.description || (isBn ? 'কোনো বিবরণ নেই।' : 'No description available.')}</span>
+                  <span>{selectedRoleObj.description || t.users.noDescription}</span>
                 </div>
               </div>
             )}
@@ -383,7 +384,7 @@ export const CreateUserPage: React.FC = () => {
             type="submit"
             variant="primary"
             size="md"
-            disabled={submitting || rolesLoading}
+            disabled={submitting || rolesLoading || roles.length === 0}
           >
             {submitting ? t.users.creatingUser : t.users.createUser}
           </Button>
@@ -392,3 +393,5 @@ export const CreateUserPage: React.FC = () => {
     </div>
   );
 };
+
+export default CreateUserPage;

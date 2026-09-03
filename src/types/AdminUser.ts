@@ -42,6 +42,13 @@ export interface AssignableRole {
   is_system: boolean;
 }
 
+export interface UserFilterRole {
+  id: string;
+  name_en: string;
+  name_bn: string | null;
+  active?: boolean;
+}
+
 export interface CreateAdminUserInput {
   email: string;
   password: string;
