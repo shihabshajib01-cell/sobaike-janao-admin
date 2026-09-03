@@ -997,9 +997,9 @@ BEGIN
     RAISE NOTICE '==============================================================================';
     IF v_skip_count = 0 THEN
         RAISE NOTICE 'NOTIFICATION FOUNDATION VERIFICATION PASSED';
-        RAISE NOTICE 'All executable A-N tests completed successfully.';
         RAISE NOTICE 'Passed: %', v_pass_count;
         RAISE NOTICE 'Skipped: 0';
+        RAISE NOTICE 'All executable verification checks completed successfully.';
     ELSE
         RAISE NOTICE 'NOTIFICATION FOUNDATION VERIFICATION COMPLETED WITH SKIPPED TESTS';
         RAISE NOTICE 'Passed: %', v_pass_count;
