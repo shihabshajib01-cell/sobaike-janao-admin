@@ -28,8 +28,6 @@ export interface ComplaintDetailData {
   evidenceError?: string | null;
 }
 
-const isDev = Boolean(typeof import.meta !== 'undefined' && import.meta.env?.DEV);
-
 export class ComplaintApi {
   private client: ApiClient;
 
@@ -44,17 +42,14 @@ export class ComplaintApi {
     if (isSupabaseConfigured) {
       return await getTaxonomySegments();
     }
-    if (isDev) {
-      return [
-        { id: 'roads_traffic', name_en: 'Roads & Traffic', name_bn: 'রাস্তাঘাট ও ট্রাফিক', active: true },
-        { id: 'waste_management', name_en: 'Waste Management', name_bn: 'বর্জ্য ব্যবস্থাপনা', active: true },
-        { id: 'extortion', name_en: 'Extortion & Illegal Tolls', name_bn: 'চাঁদাবাজি ও অবৈধ টোল', active: true },
-        { id: 'harassment', name_en: 'Public Harassment', name_bn: 'পাবলিক হয়রানি', active: true },
-        { id: 'civic_issues', name_en: 'Civic Problems & Drainage', name_bn: 'নাগরিক সমস্যা ও ড্রেনেজ', active: true },
-        { id: 'corruption', name_en: 'Public Office Irregularities', name_bn: 'সরকারি দপ্তরের অনিয়ম', active: true },
-      ];
-    }
-    throw new Error('Supabase complaint service is not configured in this environment.');
+    return [
+      { id: 'roads_traffic', name_en: 'Roads & Traffic', name_bn: 'রাস্তাঘাট ও ট্রাফিক', active: true },
+      { id: 'waste_management', name_en: 'Waste Management', name_bn: 'বর্জ্য ব্যবস্থাপনা', active: true },
+      { id: 'extortion', name_en: 'Extortion & Illegal Tolls', name_bn: 'চাঁদাবাজি ও অবৈধ টোল', active: true },
+      { id: 'harassment', name_en: 'Public Harassment', name_bn: 'পাবলিক হয়রানি', active: true },
+      { id: 'civic_issues', name_en: 'Civic Problems & Drainage', name_bn: 'নাগরিক সমস্যা ও ড্রেনেজ', active: true },
+      { id: 'corruption', name_en: 'Public Office Irregularities', name_bn: 'সরকারি দপ্তরের অনিয়ম', active: true },
+    ];
   }
 
   /**
@@ -64,21 +59,18 @@ export class ComplaintApi {
     if (isSupabaseConfigured) {
       return await getDistinctLocations();
     }
-    if (isDev) {
-      return [
-        'Dhaka',
-        'Chattogram',
-        'Gazipur',
-        'Narayanganj',
-        'Sylhet',
-        'Rajshahi',
-        'Khulna',
-        'Barishal',
-        'Rangpur',
-        'Mymensingh',
-      ];
-    }
-    throw new Error('Supabase complaint service is not configured in this environment.');
+    return [
+      'Dhaka',
+      'Chattogram',
+      'Gazipur',
+      'Narayanganj',
+      'Sylhet',
+      'Rajshahi',
+      'Khulna',
+      'Barishal',
+      'Rangpur',
+      'Mymensingh',
+    ];
   }
 
   /**
@@ -94,10 +86,7 @@ export class ComplaintApi {
     if (isSupabaseConfigured) {
       return await supabaseComplaintService.getComplaints(filters, page, pageSize);
     }
-    if (isDev) {
-      return complaintFallback.getComplaints(filters, page, pageSize);
-    }
-    throw new Error('Supabase complaint service is not configured in this environment.');
+    return complaintFallback.getComplaints(filters, page, pageSize);
   }
 
   /**
@@ -107,10 +96,7 @@ export class ComplaintApi {
     if (isSupabaseConfigured) {
       return await supabaseComplaintService.getComplaintStats();
     }
-    if (isDev) {
-      return complaintFallback.getComplaintStats();
-    }
-    throw new Error('Supabase complaint service is not configured in this environment.');
+    return complaintFallback.getComplaintStats();
   }
 
   /**
@@ -120,10 +106,7 @@ export class ComplaintApi {
     if (isSupabaseConfigured) {
       return await supabaseComplaintService.getComplaintById(id);
     }
-    if (isDev) {
-      return complaintFallback.getComplaintById(id);
-    }
-    throw new Error('Supabase complaint service is not configured in this environment.');
+    return complaintFallback.getComplaintById(id);
   }
 
   /**
@@ -136,10 +119,7 @@ export class ComplaintApi {
     if (isSupabaseConfigured) {
       return await supabaseComplaintService.getComplaintDetail(id, options);
     }
-    if (isDev) {
-      return complaintFallback.getComplaintDetail(id);
-    }
-    throw new Error('Supabase complaint service is not configured in this environment.');
+    return complaintFallback.getComplaintDetail(id);
   }
 
   /**
@@ -149,10 +129,7 @@ export class ComplaintApi {
     if (isSupabaseConfigured) {
       return await supabaseComplaintService.getComplaintTimeline(id);
     }
-    if (isDev) {
-      return complaintFallback.getComplaintTimeline(id);
-    }
-    throw new Error('Supabase complaint service is not configured in this environment.');
+    return complaintFallback.getComplaintTimeline(id);
   }
 
   /**
@@ -166,10 +143,7 @@ export class ComplaintApi {
     if (isSupabaseConfigured) {
       throw new Error('Direct complaint editing is not supported on configured backend.');
     }
-    if (isDev) {
-      return complaintFallback.editComplaint(complaintId, updates, notes);
-    }
-    throw new Error('Supabase complaint service is not configured in this environment.');
+    return complaintFallback.editComplaint(complaintId, updates, notes);
   }
 
   async rejectComplaint(
@@ -180,40 +154,28 @@ export class ComplaintApi {
     if (isSupabaseConfigured) {
       return await supabaseComplaintService.rejectComplaint(complaintId, reason, explanation);
     }
-    if (isDev) {
-      return complaintFallback.rejectComplaint(complaintId, reason, explanation);
-    }
-    throw new Error('Supabase complaint service is not configured in this environment.');
+    return complaintFallback.rejectComplaint(complaintId, reason, explanation);
   }
 
   async publishComplaint(complaintId: string): Promise<WorkflowActionResult> {
     if (isSupabaseConfigured) {
       return await supabaseComplaintService.publishComplaint(complaintId);
     }
-    if (isDev) {
-      return complaintFallback.publishComplaint(complaintId);
-    }
-    throw new Error('Supabase complaint service is not configured in this environment.');
+    return complaintFallback.publishComplaint(complaintId);
   }
 
   async unpublishComplaint(complaintId: string): Promise<WorkflowActionResult> {
     if (isSupabaseConfigured) {
       return await supabaseComplaintService.unpublishComplaint(complaintId);
     }
-    if (isDev) {
-      return complaintFallback.unpublishComplaint(complaintId);
-    }
-    throw new Error('Supabase complaint service is not configured in this environment.');
+    return complaintFallback.unpublishComplaint(complaintId);
   }
 
   async addComplaintUpdate(complaintId: string, message: string): Promise<WorkflowActionResult> {
     if (isSupabaseConfigured) {
       throw new Error('Complaint update messages must be added via authenticated database procedures.');
     }
-    if (isDev) {
-      return complaintFallback.addComplaintUpdate(complaintId, message);
-    }
-    throw new Error('Supabase complaint service is not configured in this environment.');
+    return complaintFallback.addComplaintUpdate(complaintId, message);
   }
 }
 

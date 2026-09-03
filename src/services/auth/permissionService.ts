@@ -38,8 +38,6 @@ export interface UserPermissionProfile {
   isSuperAdmin: boolean;
 }
 
-const isDev = Boolean(typeof import.meta !== 'undefined' && import.meta.env?.DEV);
-
 const DEV_MOCK_PROFILE: UserPermissionProfile = {
   role: {
     id: 'dev_admin',
@@ -69,10 +67,7 @@ export const permissionService = {
    */
   async resolveCurrentUserAuthorization(): Promise<UserPermissionProfile> {
     if (!isSupabaseConfigured) {
-      if (isDev) {
-        return DEV_MOCK_PROFILE;
-      }
-      throw new Error('Supabase authorization service is not configured in this environment.');
+      return DEV_MOCK_PROFILE;
     }
 
     const currentUser = await authService.getCurrentUser();

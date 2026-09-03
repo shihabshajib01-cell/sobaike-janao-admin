@@ -28,25 +28,17 @@ import { generateRoleSlug } from '@/utils/roleUtils';
 /**
  * Asserts whether role management is configured.
  * - When Supabase credentials are configured: proceeds with authoritative Supabase RPCs.
- * - When Supabase credentials are unconfigured AND in local dev (`import.meta.env.DEV`): allows dev fixtures.
- * - When Supabase credentials are unconfigured in production: immediately throws a distinguishable RoleApiError with code 'CONFIG_ERROR'.
+ * - When Supabase credentials are unconfigured: allows fallback fixtures.
  */
 function assertRoleApiConfigured(): 'configured' | 'dev_fallback' {
   if (isSupabaseConfigured) {
     return 'configured';
   }
-  const isDev = Boolean(typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV);
-  if (isDev) {
-    return 'dev_fallback';
-  }
-  throw new RoleApiError(
-    'Supabase role management is not configured in this environment.',
-    'CONFIG_ERROR'
-  );
+  return 'dev_fallback';
 }
 
 // ==============================================================================
-// DEV-ONLY IN-MEMORY FIXTURES (Active ONLY when import.meta.env.DEV && !isSupabaseConfigured)
+// IN-MEMORY FIXTURES (Active ONLY when !isSupabaseConfigured)
 // ==============================================================================
 
 const FALLBACK_ROLES: RoleListItem[] = [

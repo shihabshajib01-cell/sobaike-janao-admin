@@ -40,8 +40,6 @@ const DEV_FALLBACK_SUBCATEGORIES: TaxonomySubcategory[] = [
   { id: 'broken_streetlamp', segmentId: 'public_lighting', nameEn: 'Broken Streetlamp', nameBn: 'অকেজো সড়কবাতি', status: 'active', order: 1 },
 ];
 
-const isDev = Boolean(typeof import.meta !== 'undefined' && import.meta.env?.DEV);
-
 function createDevFallbackTaxonomyBundle(): TaxonomyBundle {
   const fullTree: TaxonomySegmentNode[] = DEV_FALLBACK_SEGMENTS.map((seg) => ({
     ...seg,
@@ -70,10 +68,7 @@ export class CategoryApi {
    */
   async getTaxonomy(): Promise<TaxonomyBundle> {
     if (!isSupabaseConfigured) {
-      if (isDev) {
-        return createDevFallbackTaxonomyBundle();
-      }
-      throw new Error('Supabase taxonomy service is not configured in this environment.');
+      return createDevFallbackTaxonomyBundle();
     }
 
     const [segmentsRes, subcategoriesRes] = await Promise.all([
