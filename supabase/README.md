@@ -70,6 +70,15 @@ This directory contains the database migrations, audit scripts, and security def
     - **Phase:** Notification Project Phase 1 — Notification Backend Foundation & Recipient Engine (Targeted Correction Pass)
     - **Contents:** Establishes canonical notification event catalogue (12 approved keys), per-recipient notifications table with persisted `audience_mode` ('permission', 'super_admin_only', 'personal'), partial unread index, idempotency deduplication, fail-closed server-side recipient resolution (`admin_notification_resolve_recipients`), dedicated read-time authority evaluator (`admin_notification_can_currently_view`) ensuring revoked permissions dynamically hide stale notifications, canonical internal emitter (`admin_emit_notification`) with strict contract validation (SQLSTATE `22000`), and user-facing protected RPCs (`admin_list_notifications`, `admin_get_unread_notification_count`, `admin_mark_notification_read`, `admin_mark_all_notifications_read`) with defense-in-depth RLS.
 
+14. **`20260904000005_notification_producer_wiring.sql`**
+    - **Phase:** Notification Project Phase 2 — Notification Producer Wiring Across All 12 Canonical Events
+    - **Contents:** Wires real production business routines to emit notifications through `public.admin_emit_notification()`:
+      - **Public Submissions:** `submit_public_complaint` (`complaint.submitted`) and `register_public_complaint_evidence` (`complaint.evidence_attached`).
+      - **Complaint Moderation:** `admin_publish_complaint` (`complaint.published`), `admin_unpublish_complaint` (`complaint.unpublished`), and `admin_reject_complaint` (`complaint.rejected`).
+      - **User Management (Dual-Stream):** `admin_finalize_user_membership` (`admin.created`), `admin_update_user` (`admin.activated`, `admin.deactivated`, `admin.role_changed`), delivering broadcast oversight to permissioned administrators and personal notices to the target account.
+      - **Role Management:** `admin_create_role` (`role.created`), `admin_update_role` (`role.updated`, `role.permissions_changed`), and `admin_replace_role_permissions` (`role.permissions_changed`).
+      - **Supporting Upgrades:** Adjusted `admin_notification_resolve_recipients` for personal audience delivery, and enhanced `log_role_audit_event` to return audit record UUIDs for deterministic deduplication.
+
 ---
 
 ## Role Management Backend API Specification
@@ -123,3 +132,4 @@ This directory contains the database migrations, audit scripts, and security def
 - `supabase/audit/phase_3b_database_inspection.sql` — Schema and table constraint inspection (safe pre- and post-migration).
 - `supabase/audit/phase_3c_role_backend_verification.sql` — Verifies Role Management RPCs, function security definer modes, and execution grants.
 - `supabase/audit/notification_foundation_verification.sql` — Verifies Notification event catalogue keys (exact 12-key set assertion), tables, audience_mode and target_type constraints, caller-bound visibility evaluator signatures, privilege lockdowns, and transactional runtime deduplication & dynamic revocation safety.
+- `supabase/audit/notification_producer_wiring_verification.sql` — Verifies static producer definitions, security definer flags, audit logging UUIDs, and executes full dynamic transactional test suite across all 12 events (public submission, evidence attachment, complaint moderation, user lifecycle dual streams, and role management).
