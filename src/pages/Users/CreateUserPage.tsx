@@ -101,8 +101,8 @@ export const CreateUserPage: React.FC = () => {
       return;
     }
 
-    if (!roleId) {
-      setError(t.users.roleRequired);
+    if (rolesLoading || Boolean(rolesError) || roles.length === 0 || !roleId) {
+      setError(rolesError || t.users.roleRequired);
       return;
     }
 
