@@ -354,19 +354,27 @@ export const UserDetailPage: React.FC = () => {
 
             <div>
               <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">
-                {t.users.effectivePermissions} ({formatNumber(user.effective_permissions.length)})
+                {t.users.effectivePermissions}
+                {user.effective_permissions.length > 0 && ` (${formatNumber(user.effective_permissions.length)})`}
               </p>
-              <div className="flex flex-wrap gap-1.5">
-                {user.effective_permissions.map((perm) => (
-                  <span
-                    key={perm}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-mono bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
-                  >
-                    <Key className="w-3 h-3" />
-                    {perm}
-                  </span>
-                ))}
-              </div>
+              {user.effective_permissions.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {user.effective_permissions.map((perm) => (
+                    <span
+                      key={perm}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-mono bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
+                    >
+                      <Key className="w-3 h-3" />
+                      {perm}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs italic text-amber-700 dark:text-amber-400/90 flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5" />
+                  {t.users.permissionDetailsRestricted}
+                </p>
+              )}
             </div>
           </div>
         ) : (
@@ -398,7 +406,8 @@ export const UserDetailPage: React.FC = () => {
 
             <div>
               <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">
-                {t.users.effectivePermissions} ({formatNumber(user.effective_permissions.length)})
+                {t.users.effectivePermissions}
+                {user.effective_permissions.length > 0 && ` (${formatNumber(user.effective_permissions.length)})`}
               </p>
               {user.effective_permissions.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5">
@@ -412,6 +421,11 @@ export const UserDetailPage: React.FC = () => {
                     </span>
                   ))}
                 </div>
+              ) : user.can_manage_target === false ? (
+                <p className="text-xs italic text-amber-700 dark:text-amber-400/90 flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5" />
+                  {t.users.permissionDetailsRestricted}
+                </p>
               ) : (
                 <p className="text-xs italic text-slate-400">
                   {t.users.noEffectivePermissions}

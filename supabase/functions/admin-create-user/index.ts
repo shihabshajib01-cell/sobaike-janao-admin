@@ -172,6 +172,22 @@ serve(async (req: Request) => {
       );
     }
 
+    // 7b. ENFORCE DELEGATION CEILING: Verify caller can manage/assign this role
+    const { data: canManageRole, error: roleScopeError } = await supabaseCaller.rpc(
+      "can_manage_role_scope",
+      { p_role_id: cleanRoleId }
+    );
+
+    if (roleScopeError || !canManageRole) {
+      return new Response(
+        JSON.stringify({
+          error: "Access denied. You cannot assign a role containing permissions that you do not possess.",
+          code: "FORBIDDEN",
+        }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // 8. Create Supabase Auth user with confirmed email via Admin API
     const { data: authUser, error: createAuthError } = await supabaseAdmin.auth.admin.createUser({
       email: cleanEmail,

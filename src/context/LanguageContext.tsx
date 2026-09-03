@@ -252,6 +252,7 @@ export interface TranslationDictionary {
     profileOverview: string;
     assignedRoleAndPermissions: string;
     noEffectivePermissions: string;
+    permissionDetailsRestricted: string;
     systemAccessPermanent: string;
     locked: string;
     protectedBadge: string;
@@ -534,6 +535,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       profileOverview: 'Profile Overview',
       assignedRoleAndPermissions: 'Assigned Role & Effective Permissions',
       noEffectivePermissions: 'No effective permissions assigned',
+      permissionDetailsRestricted: 'Permission details are restricted.',
       systemAccessPermanent: 'System Access (Permanent)',
       locked: 'Locked',
       protectedBadge: 'Protected Account',
@@ -814,6 +816,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       profileOverview: 'অ্যাকাউন্ট বিবরণ',
       assignedRoleAndPermissions: 'ভূমিকা ও সিস্টেম অ্যাক্সেস',
       noEffectivePermissions: 'কোনো কার্যকরী অনুমতি নেই',
+      permissionDetailsRestricted: 'অনুমতির বিবরণ সীমাবদ্ধ।',
       systemAccessPermanent: 'সিস্টেম অ্যাক্সেস (স্থায়ী)',
       locked: 'সুরক্ষিত',
       protectedBadge: 'সুরক্ষিত অ্যাকাউন্ট',
