@@ -45,7 +45,19 @@ export const EditUserPage: React.FC = () => {
         setDisplayName(userData.display_name || '');
         setRoleId(userData.role?.id || (rolesData[0]?.id ?? ''));
         setActive(userData.active);
-        setRoles(rolesData);
+
+        const combinedRoles = [...rolesData];
+        if (userData.role && !combinedRoles.some((r) => r.id === userData.role?.id)) {
+          combinedRoles.unshift({
+            id: userData.role.id,
+            name_en: userData.role.name_en,
+            name_bn: userData.role.name_bn,
+            description: userData.role.description,
+            active: userData.role.active,
+            is_system: Boolean(userData.role.is_system),
+          });
+        }
+        setRoles(combinedRoles);
         setLoading(false);
       })
       .catch((err) => {

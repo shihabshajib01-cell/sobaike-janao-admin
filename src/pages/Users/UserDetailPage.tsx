@@ -320,9 +320,7 @@ export const UserDetailPage: React.FC = () => {
                 {t.users.fullSystemAccess}
               </p>
               <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">
-                {isBn
-                  ? 'এই ব্যবহারকারীর কোনো নির্দিষ্ট ভূমিকার ওপর নির্ভরতা নেই; তিনি সিস্টেমের প্রতিটি প্রশাসনিক অনুমতি স্বয়ংক্রিয়ভাবে ধারণ করেন।'
-                  : 'This user holds dynamic full administrative privileges across the platform and is exempt from role assignment constraints.'}
+                {t.users.superAdminAccessExplanation}
               </p>
             </div>
 
@@ -354,7 +352,7 @@ export const UserDetailPage: React.FC = () => {
                   </span>
                   {user.role.is_system && (
                     <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300">
-                      System Role
+                      {t.users.systemRoleBadge}
                     </span>
                   )}
                 </div>
@@ -366,9 +364,7 @@ export const UserDetailPage: React.FC = () => {
               </div>
             ) : (
               <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300">
-                {isBn
-                  ? 'এই ব্যবহারকারীর কোনো ভূমিকা বরাদ্দ করা নেই (০ অনুমতি)।'
-                  : 'This administrator currently has no role assigned (0 effective permissions).'}
+                {t.users.noRoleAssigned}
               </div>
             )}
 

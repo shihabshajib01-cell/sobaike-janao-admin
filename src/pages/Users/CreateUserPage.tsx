@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
 import { adminUserApi } from '@/services/api/adminUserApi';
 import { AssignableRole } from '@/types/AdminUser';
 import {
@@ -10,11 +11,16 @@ import {
   EyeOff,
   AlertCircle,
   Shield,
+  RefreshCw,
+  ExternalLink,
+  ShieldAlert,
 } from 'lucide-react';
 
 export const CreateUserPage: React.FC = () => {
   const navigate = useNavigate();
   const { t, language } = useLanguage();
+  const { hasPermission } = useAuth();
+  const canManageRoles = hasPermission('roles.manage');
 
   // Form State
   const [displayName, setDisplayName] = useState<string>('');
@@ -29,38 +35,40 @@ export const CreateUserPage: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
   const [roles, setRoles] = useState<AssignableRole[]>([]);
   const [rolesLoading, setRolesLoading] = useState<boolean>(true);
+  const [rolesError, setRolesError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   // Load assignable roles
+  const loadRoles = useCallback(async () => {
+    setRolesLoading(true);
+    setRolesError(null);
+    try {
+      const data = await adminUserApi.getAssignableRoles();
+      setRoles(data);
+      if (data.length > 0) {
+        setRoleId((prev) => (prev && data.some((r) => r.id === prev) ? prev : data[0].id));
+      } else {
+        setRoleId('');
+      }
+    } catch (err: unknown) {
+      console.error('Failed to load assignable roles:', err);
+      const msg = err instanceof Error ? err.message : t.users.loadRolesError;
+      setRolesError(msg);
+    } finally {
+      setRolesLoading(false);
+    }
+  }, [t.users.loadRolesError]);
+
   useEffect(() => {
-    let mounted = true;
-    adminUserApi
-      .getAssignableRoles()
-      .then((data) => {
-        if (mounted) {
-          setRoles(data);
-          if (data.length > 0) {
-            setRoleId(data[0].id);
-          }
-          setRolesLoading(false);
-        }
-      })
-      .catch((err) => {
-        if (mounted) {
-          console.error('Failed to load assignable roles:', err);
-          setError(t.users.failedToLoadRoles);
-          setRolesLoading(false);
-        }
-      });
+    loadRoles();
 
     return () => {
-      mounted = false;
       // Sensitive field security: clear password from memory on unmount
       setPassword('');
       setConfirmPassword('');
     };
-  }, [t.users.failedToLoadRoles]);
+  }, [loadRoles]);
 
   const selectedRoleObj = roles.find((r) => r.id === roleId);
 
@@ -294,42 +302,109 @@ export const CreateUserPage: React.FC = () => {
 
         {/* Role Assignment */}
         <div className="space-y-4">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-2">
-            {t.users.role} <span className="text-rose-500">*</span>
-          </h3>
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
+              {t.users.role} <span className="text-rose-500">*</span>
+            </h3>
+            {rolesError && (
+              <button
+                type="button"
+                onClick={loadRoles}
+                disabled={rolesLoading}
+                className="text-xs text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1"
+              >
+                <RefreshCw className={`w-3 h-3 ${rolesLoading ? 'animate-spin' : ''}`} />
+                {t.users.retry}
+              </button>
+            )}
+          </div>
 
           <div>
-            <select
-              id="select-user-role"
-              required
-              value={roleId}
-              onChange={(e) => setRoleId(e.target.value)}
-              disabled={rolesLoading || roles.length === 0}
-              className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-400 text-slate-900 dark:text-slate-100"
-            >
-              {roles.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {language === 'bn' ? r.name_bn || r.name_en : r.name_en}
-                </option>
-              ))}
-            </select>
+            {rolesError ? (
+              <div className="p-3.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-xs text-rose-800 dark:text-rose-200 flex items-start justify-between gap-2">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold">{t.users.failedToLoadRoles}</p>
+                    <p className="mt-0.5 text-slate-600 dark:text-slate-300">{rolesError}</p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={loadRoles}
+                  disabled={rolesLoading}
+                  className="h-7 px-2 text-xs shrink-0"
+                >
+                  <RefreshCw className={`w-3 h-3 mr-1 ${rolesLoading ? 'animate-spin' : ''}`} />
+                  {t.users.retry}
+                </Button>
+              </div>
+            ) : !rolesLoading && roles.length === 0 ? (
+              <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 text-xs text-amber-900 dark:text-amber-200 space-y-2">
+                <div className="flex items-start gap-2.5">
+                  <ShieldAlert className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-sm text-amber-950 dark:text-amber-100">
+                      {t.users.noAssignableRoles}
+                    </p>
+                    <p className="text-amber-800 dark:text-amber-300/90 mt-0.5 leading-relaxed">
+                      {t.users.noAssignableRolesWarning}
+                    </p>
+                  </div>
+                </div>
 
-            {roles.length === 0 && !rolesLoading && (
-              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                {t.users.noAssignableRoles}
-              </p>
-            )}
-
-            {selectedRoleObj && (
-              <div className="mt-2.5 p-3 rounded-lg bg-sky-50/70 dark:bg-sky-950/40 border border-sky-100 dark:border-sky-900/60 text-xs text-sky-800 dark:text-sky-200 flex items-start gap-2">
-                <Shield className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-semibold">
-                    {language === 'bn' ? selectedRoleObj.name_bn || selectedRoleObj.name_en : selectedRoleObj.name_en}:
-                  </span>{' '}
-                  <span>{selectedRoleObj.description || t.users.noDescription}</span>
+                <div className="flex items-center gap-3 pt-1 pl-7">
+                  {canManageRoles && (
+                    <Link
+                      to="/roles"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-amber-200/80 dark:bg-amber-900/60 text-amber-900 dark:text-amber-100 font-semibold hover:bg-amber-300 dark:hover:bg-amber-800 transition-colors"
+                    >
+                      <span>{t.users.manageRolesLink}</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </Link>
+                  )}
+                  <button
+                    type="button"
+                    onClick={loadRoles}
+                    className="text-amber-700 dark:text-amber-300 hover:underline flex items-center gap-1 font-medium"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    {t.users.retry}
+                  </button>
                 </div>
               </div>
+            ) : (
+              <>
+                <select
+                  id="select-user-role"
+                  required
+                  value={roleId}
+                  onChange={(e) => setRoleId(e.target.value)}
+                  disabled={rolesLoading || roles.length === 0}
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-400 text-slate-900 dark:text-slate-100 disabled:opacity-50"
+                >
+                  {rolesLoading && <option value="">{t.users.rolesLoading}</option>}
+                  {roles.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {language === 'bn' ? r.name_bn || r.name_en : r.name_en}
+                    </option>
+                  ))}
+                </select>
+
+                {selectedRoleObj && (
+                  <div className="mt-2.5 p-3 rounded-lg bg-sky-50/70 dark:bg-sky-950/40 border border-sky-100 dark:border-sky-900/60 text-xs text-sky-800 dark:text-sky-200 flex items-start gap-2">
+                    <Shield className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-semibold">
+                        {language === 'bn' ? selectedRoleObj.name_bn || selectedRoleObj.name_en : selectedRoleObj.name_en}:
+                      </span>{' '}
+                      <span>{selectedRoleObj.description || t.users.noDescription}</span>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

@@ -261,6 +261,11 @@ export interface TranslationDictionary {
     failedToLoadRoles: string;
     noAssignableRoles: string;
     noAssignableRolesDesc: string;
+    noAssignableRolesWarning: string;
+    loadRolesError: string;
+    superAdminAccessExplanation: string;
+    noRoleAssigned: string;
+    systemRoleBadge: string;
     manageRolesLink: string;
     retry: string;
     showingUsers: string;
@@ -534,6 +539,11 @@ export const translations: Record<Language, TranslationDictionary> = {
       failedToLoadRoles: 'Failed to load assignable roles.',
       noAssignableRoles: 'No active assignable roles are available.',
       noAssignableRolesDesc: 'There are no active roles available to assign to this administrator.',
+      noAssignableRolesWarning: 'No active assignable roles were found. An administrator must have a role assigned before creation.',
+      loadRolesError: 'Could not load assignable roles. Please check your connection and retry.',
+      superAdminAccessExplanation: 'This user holds dynamic full administrative privileges across the platform and is exempt from role assignment constraints.',
+      noRoleAssigned: 'This administrator currently has no role assigned (0 effective permissions).',
+      systemRoleBadge: 'System Role',
       manageRolesLink: 'Manage Roles & Permissions',
       retry: 'Retry',
       showingUsers: 'Showing {start}–{end} of {total} administrators',
@@ -805,6 +815,11 @@ export const translations: Record<Language, TranslationDictionary> = {
       failedToLoadRoles: 'ভূমিকা তালিকা লোড করতে ব্যর্থ হয়েছে।',
       noAssignableRoles: 'কোনো সক্রিয় বরাদ্দযোগ্য ভূমিকা নেই।',
       noAssignableRolesDesc: 'এই প্রশাসকের জন্য বরাদ্দ করার মতো কোনো সক্রিয় ভূমিকা উপলব্ধ নেই।',
+      noAssignableRolesWarning: 'কোনো সক্রিয় বরাদ্দযোগ্য ভূমিকা পাওয়া যায়নি। নতুন প্রশাসক তৈরির পূর্বে একটি ভূমিকা তৈরি বা সক্রিয় করা আবশ্যক।',
+      loadRolesError: 'বরাদ্দযোগ্য ভূমিকা লোড করা যায়নি। অনুগ্রহ করে সংযোগ পরীক্ষা করে পুনরায় চেষ্টা করুন।',
+      superAdminAccessExplanation: 'এই ব্যবহারকারীর কোনো নির্দিষ্ট ভূমিকার ওপর নির্ভরতা নেই; তিনি সিস্টেমের প্রতিটি প্রশাসনিক অনুমতি স্বয়ংক্রিয়ভাবে ধারণ করেন।',
+      noRoleAssigned: 'এই প্রশাসকের কোনো ভূমিকা বরাদ্দ করা নেই (০ কার্যকরী অনুমতি)।',
+      systemRoleBadge: 'সিস্টেম ভূমিকা',
       manageRolesLink: 'ভূমিকা ও অনুমতি পরিচালনা করুন',
       retry: 'পুনরায় চেষ্টা করুন',
       showingUsers: 'মোট {total} জনের মধ্যে {start}–{end} জন প্রশাসক প্রদর্শিত হচ্ছে',
