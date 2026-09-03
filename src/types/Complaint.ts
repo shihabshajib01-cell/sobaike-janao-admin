@@ -73,6 +73,10 @@ export interface Complaint {
   citizenPhone?: string;
   isAnonymous?: boolean;
   assignedDepartment?: string;
+  hasSupportingInfo?: boolean;
+  evidenceCount?: number;
+  evidenceTypes?: string[];
+  evidenceDescription?: string;
   upvotesCount: number;
   commentsCount: number;
   versions?: ComplaintVersion[];

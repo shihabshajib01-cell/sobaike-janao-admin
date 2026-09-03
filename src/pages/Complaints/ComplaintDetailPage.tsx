@@ -51,7 +51,7 @@ export const ComplaintDetailPage: React.FC = () => {
     setEvidenceError(null);
     try {
       const detailRes = await complaintApi.getComplaintDetail(id, {
-        loadEvidence: canViewEvidence,
+        loadEvidence: true,
       });
 
       if (!detailRes || !detailRes.complaint) {

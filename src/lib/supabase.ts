@@ -18,8 +18,7 @@ const supabaseAnonKey =
   FALLBACK_SUPABASE_PUBLISHABLE_KEY;
 
 export const isSupabaseConfigured = Boolean(
-  metaEnv?.VITE_SUPABASE_URL &&
-  (metaEnv?.VITE_SUPABASE_PUBLISHABLE_KEY || metaEnv?.VITE_SUPABASE_ANON_KEY)
+  supabaseUrl && supabaseAnonKey
 );
 
 /**

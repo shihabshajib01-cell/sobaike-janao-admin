@@ -79,6 +79,7 @@ export interface SupabaseComplaintRow {
   longitude: number | null;
   place_id: string | null;
   has_supporting_info: boolean | null;
+  evidence_count?: number | null;
   evidence_types: string[] | null;
   evidence_description: string | null;
   publication_preferences: Record<string, unknown> | null;
@@ -299,6 +300,16 @@ export function mapSupabaseRowToComplaint(
   const createdAt = row.created_at || new Date().toISOString();
   const updatedAt = row.updated_at || row.created_at || createdAt;
 
+  const hasSupportingInfo = Boolean(
+    row.has_supporting_info || (row.evidence_count && row.evidence_count > 0)
+  );
+  const evidenceCount =
+    typeof row.evidence_count === 'number'
+      ? row.evidence_count
+      : (row.has_supporting_info ? 1 : 0);
+  const evidenceTypes = row.evidence_types || [];
+  const evidenceDescription = row.evidence_description?.trim() || undefined;
+
   return {
     id: row.id,
     titleEn,
@@ -318,6 +329,10 @@ export function mapSupabaseRowToComplaint(
     citizenName,
     citizenPhone,
     isAnonymous,
+    hasSupportingInfo,
+    evidenceCount,
+    evidenceTypes,
+    evidenceDescription,
     upvotesCount: 0,
     commentsCount: 0,
     createdAt,
@@ -411,6 +426,138 @@ export function mapComplaintUpdatesToTimeline(
       toStatus,
     };
   });
+}
+
+/**
+ * Resolves a storage path or file url to a viewable signed or direct URL.
+ * Resilient against:
+ * - leading slashes ('/complaints/...')
+ * - bucket prefix in path ('complaint-evidence/complaints/...' or 'evidence/...')
+ * - full Supabase storage URLs ('https://.../storage/v1/object/public/...')
+ * - data URIs ('data:image/...') and blob URIs
+ * - batch signing failures / object path normalization
+ */
+async function resolveEvidenceFileUrl(
+  storagePath: string | null | undefined,
+  directFileUrl: string | null | undefined
+): Promise<string> {
+  // 1. If directFileUrl is data: or blob: or already a full non-storage URL, use immediately
+  if (directFileUrl) {
+    const trimmed = directFileUrl.trim();
+    if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
+      return trimmed;
+    }
+    if (
+      (trimmed.startsWith('http://') || trimmed.startsWith('https://')) &&
+      !trimmed.includes('/storage/v1/object/')
+    ) {
+      return trimmed;
+    }
+  }
+
+  // 2. Derive object path from storagePath or directFileUrl
+  let raw = (storagePath || directFileUrl || '').trim();
+  if (!raw) return '';
+
+  // Extract from full Supabase URL if needed
+  if (raw.includes('/storage/v1/object/')) {
+    const afterObject = raw.split('/storage/v1/object/')[1] || '';
+    raw = afterObject.replace(/^(public|authenticated|sign)\//, '');
+  }
+
+  // Strip query strings
+  if (raw.includes('?')) {
+    raw = raw.split('?')[0];
+  }
+
+  // Normalize slashes
+  raw = raw.replace(/^\/+/, '');
+
+  // Detect bucket candidate
+  let bucketName = 'complaint-evidence';
+  let objectPath = raw;
+
+  if (raw.startsWith('complaint-evidence/')) {
+    bucketName = 'complaint-evidence';
+    objectPath = raw.substring('complaint-evidence/'.length);
+  } else if (raw.startsWith('evidence/')) {
+    bucketName = 'evidence';
+    objectPath = raw.substring('evidence/'.length);
+  } else if (raw.startsWith('complaints/')) {
+    bucketName = 'complaint-evidence';
+    objectPath = raw;
+  }
+
+  objectPath = objectPath.replace(/^\/+/, '');
+  if (!objectPath) return directFileUrl || '';
+
+  // 3. Attempt signing with primary bucket
+  try {
+    const { data: signed, error: signErr } = await supabase.storage
+      .from(bucketName)
+      .createSignedUrl(objectPath, 3600);
+
+    if (!signErr && signed?.signedUrl) {
+      return signed.signedUrl;
+    }
+  } catch (err) {
+    console.warn(`Sign error on bucket ${bucketName} for path ${objectPath}:`, err);
+  }
+
+  // 4. Try alternative bucket or path variations if primary attempt didn't produce URL
+  const bucketCandidates = ['complaint-evidence', 'evidence', 'complaints'].filter(
+    (b) => b !== bucketName
+  );
+
+  for (const altBucket of bucketCandidates) {
+    try {
+      const { data: altSigned, error: altErr } = await supabase.storage
+        .from(altBucket)
+        .createSignedUrl(objectPath, 3600);
+
+      if (!altErr && altSigned?.signedUrl) {
+        return altSigned.signedUrl;
+      }
+    } catch {}
+  }
+
+  // 5. If objectPath had 'complaints/' stripped or not stripped, try with 'complaints/' prepended/removed
+  if (!objectPath.startsWith('complaints/')) {
+    const altPathWithComplaints = `complaints/${objectPath}`;
+    try {
+      const { data: signedWithComplaints, error: errC } = await supabase.storage
+        .from('complaint-evidence')
+        .createSignedUrl(altPathWithComplaints, 3600);
+      if (!errC && signedWithComplaints?.signedUrl) {
+        return signedWithComplaints.signedUrl;
+      }
+    } catch {}
+  } else {
+    const altPathWithoutComplaints = objectPath.substring('complaints/'.length);
+    try {
+      const { data: signedWithout, error: errW } = await supabase.storage
+        .from('complaint-evidence')
+        .createSignedUrl(altPathWithoutComplaints, 3600);
+      if (!errW && signedWithout?.signedUrl) {
+        return signedWithout.signedUrl;
+      }
+    } catch {}
+  }
+
+  // 6. Fallback to public URL
+  try {
+    const { data: pubData } = supabase.storage.from(bucketName).getPublicUrl(objectPath);
+    if (pubData?.publicUrl) {
+      return pubData.publicUrl;
+    }
+  } catch {}
+
+  // 7. Last resort fallback: directFileUrl if it starts with http
+  if (directFileUrl && (directFileUrl.startsWith('http://') || directFileUrl.startsWith('https://'))) {
+    return directFileUrl;
+  }
+
+  return '';
 }
 
 /**
@@ -658,94 +805,68 @@ export const supabaseComplaintService = {
   ): Promise<{ media: ComplaintMedia[]; error?: string | null }> {
     try {
       let evidenceRows: SupabaseComplaintEvidenceRow[] = [];
+      let permissionDenied = false;
 
-      // 1. First attempt secure RPC admin_get_complaint_evidence
-      const { data: rpcRows, error: rpcError } = await supabase.rpc('admin_get_complaint_evidence', {
-        p_complaint_id: complaintId,
-      });
+      // 1. Primary path: authoritative RPC admin_get_complaint_evidence
+      try {
+        const { data: rpcRows, error: rpcError } = await supabase.rpc('admin_get_complaint_evidence', {
+          p_complaint_id: complaintId,
+        });
 
-      if (!rpcError && Array.isArray(rpcRows)) {
-        evidenceRows = rpcRows as SupabaseComplaintEvidenceRow[];
-      } else {
-        if (rpcError && (rpcError.code === '42501' || rpcError.message?.includes('42501'))) {
-          return {
-            media: [],
-            error: 'You do not have permission to view private complaint evidence.',
-          };
+        if (!rpcError && Array.isArray(rpcRows) && rpcRows.length > 0) {
+          evidenceRows = rpcRows as SupabaseComplaintEvidenceRow[];
+        } else if (rpcError) {
+          if (rpcError.code === '42501' || rpcError.message?.includes('42501')) {
+            permissionDenied = true;
+          } else {
+            console.warn(`RPC admin_get_complaint_evidence returned error for ${complaintId}:`, rpcError.message);
+          }
         }
+      } catch (rpcEx) {
+        console.warn('RPC admin_get_complaint_evidence call exception:', rpcEx);
+      }
 
-        console.warn(`Error loading evidence via RPC for complaint ${complaintId}:`, rpcError?.message);
+      // 2. Fallback path: direct query on public.complaint_evidence table
+      // (RLS policy complaint_evidence_admin_view_policy authorizes active admins with complaints.evidence_view)
+      if (evidenceRows.length === 0 && !permissionDenied) {
+        try {
+          const { data: tableRows, error: tableError } = await supabase
+            .from('complaint_evidence')
+            .select('*')
+            .eq('complaint_id', complaintId)
+            .order('created_at', { ascending: true });
+
+          if (!tableError && Array.isArray(tableRows) && tableRows.length > 0) {
+            evidenceRows = tableRows as SupabaseComplaintEvidenceRow[];
+          } else if (tableError) {
+            if (tableError.code === '42501' || tableError.message?.includes('42501')) {
+              permissionDenied = true;
+            } else {
+              console.warn(`Direct complaint_evidence query returned error for ${complaintId}:`, tableError.message);
+            }
+          }
+        } catch (tableEx) {
+          console.warn('Direct complaint_evidence query exception:', tableEx);
+        }
+      }
+
+      if (permissionDenied) {
         return {
           media: [],
-          error: 'Evidence images could not be loaded. Please retry.',
+          error: 'You do not have permission to view private complaint evidence.',
         };
       }
 
-      if (!evidenceRows || evidenceRows.length === 0) {
+      if (evidenceRows.length === 0) {
         return { media: [] };
       }
 
-      // Collect storage paths to batch sign from private 'complaint-evidence' storage bucket
-      const rowsWithStoragePath = evidenceRows.filter((r) => Boolean(r.storage_path));
-      const pathsToSign = rowsWithStoragePath.map((r) => r.storage_path as string);
-
-      const signedUrlMap = new Map<string, string>();
-
-      if (pathsToSign.length > 0) {
-        try {
-          const { data: signedData, error: signError } = await supabase.storage
-            .from('complaint-evidence')
-            .createSignedUrls(pathsToSign, 3600);
-
-          if (signError) {
-            console.error(`Error generating batch signed URLs for complaint ${complaintId}:`, signError);
-            // Fallback to individual signing if batch fails
-            for (const path of pathsToSign) {
-              try {
-                const { data: singleSigned, error: singleError } = await supabase.storage
-                  .from('complaint-evidence')
-                  .createSignedUrl(path, 3600);
-                if (!singleError && singleSigned?.signedUrl) {
-                  signedUrlMap.set(path, singleSigned.signedUrl);
-                }
-              } catch (err) {
-                console.warn(`Failed to sign individual path ${path}:`, err);
-              }
-            }
-          } else if (signedData && Array.isArray(signedData)) {
-            signedData.forEach((item) => {
-              if (item.signedUrl && item.path) {
-                signedUrlMap.set(item.path, item.signedUrl);
-              }
-            });
-          }
-        } catch (signErr) {
-          console.error(`Storage signing exception for complaint ${complaintId}:`, signErr);
-        }
-      }
-
-      // Map real evidence rows to existing ComplaintMedia objects
+      // 3. Resolve each evidence row into ComplaintMedia
       const mediaList: ComplaintMedia[] = [];
-      let signingFailures = 0;
 
       for (const row of evidenceRows) {
-        let finalUrl = '';
-        if (row.storage_path && signedUrlMap.has(row.storage_path)) {
-          finalUrl = signedUrlMap.get(row.storage_path)!;
-        } else if (
-          row.file_url &&
-          (row.file_url.startsWith('http://') ||
-            row.file_url.startsWith('https://') ||
-            row.file_url.startsWith('blob:'))
-        ) {
-          finalUrl = row.file_url;
-        }
-
-        if (!finalUrl && row.storage_path) {
-          signingFailures++;
-        }
-
-        if (finalUrl) {
+        const url = await resolveEvidenceFileUrl(row.storage_path, row.file_url);
+        if (url) {
           let mediaType: 'image' | 'video' | 'document' = 'image';
           if (row.media_type === 'video' || row.mime_type?.startsWith('video/')) {
             mediaType = 'video';
@@ -760,18 +881,11 @@ export const supabaseComplaintService = {
           mediaList.push({
             id: row.id,
             type: mediaType,
-            url: finalUrl,
-            thumbnailUrl: finalUrl,
-            caption: row.caption || undefined,
+            url,
+            thumbnailUrl: url,
+            caption: row.caption || row.file_name || undefined,
           });
         }
-      }
-
-      if (evidenceRows.length > 0 && mediaList.length === 0 && signingFailures > 0) {
-        return {
-          media: [],
-          error: 'Evidence images could not be loaded. Please retry.',
-        };
       }
 
       return { media: mediaList };

@@ -36,10 +36,10 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
   onRetry,
 }) => {
   const { language, t } = useLanguage();
-  const { hasPermission } = useAuth();
+  const { hasPermission, isAdmin } = useAuth();
   const isBn = language === 'bn';
 
-  const canViewEvidence = hasPermission('complaints.evidence_view');
+  const canViewEvidence = isAdmin || hasPermission('complaints.evidence_view');
 
   const [activeMediaIndex, setActiveMediaIndex] = useState<number>(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState<boolean>(false);
@@ -150,12 +150,25 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
               <div className="relative rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-950 flex items-center justify-center min-h-[260px] max-h-[360px]">
                 {currentItem?.type === 'image' ? (
                   imageError[currentItem.id] ? (
-                    <div className="flex flex-col items-center justify-center p-8 text-center text-slate-400 space-y-2">
+                    <div className="flex flex-col items-center justify-center p-8 text-center text-slate-400 space-y-3">
                       <AlertCircle className="w-8 h-8 text-amber-500" />
-                      <p className="text-xs font-medium">
-                        {isBn ? 'ছবি লোড করা যায়নি' : 'Image preview unavailable'}
-                      </p>
-                      <span className="text-[11px] text-slate-500">{currentItem.url}</span>
+                      <div>
+                        <p className="text-xs font-medium text-slate-300">
+                          {isBn ? 'ছবি প্রিভিউ লোড করা যায়নি' : 'Image preview unavailable'}
+                        </p>
+                        <p className="text-[11px] text-slate-500 mt-1 max-w-sm break-all font-mono">
+                          {currentItem.url}
+                        </p>
+                      </div>
+                      <a
+                        href={currentItem.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-slate-800 hover:bg-slate-700 text-sky-400 transition-colors"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>{isBn ? 'সরাসরি লিঙ্কে দেখুন' : 'Open Direct Link'}</span>
+                      </a>
                     </div>
                   ) : (
                     <div className="relative w-full h-full flex items-center justify-center group">
@@ -188,9 +201,15 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
                       <p className="text-sm font-semibold">{isBn ? 'ভিডিও প্রমাণ ফাইল' : 'Video Footage Attachment'}</p>
                       <p className="text-xs text-slate-400 mt-0.5">{currentItem.caption || currentItem.url}</p>
                     </div>
-                    <Button variant="secondary" size="sm" leftIcon={<ExternalLink className="w-3.5 h-3.5" />}>
+                    <a
+                      href={currentItem.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md text-xs font-medium bg-slate-800 hover:bg-slate-700 text-white transition-colors"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
                       <span>{isBn ? 'প্লেয়ারে চালান' : 'Open in Media Player'}</span>
-                    </Button>
+                    </a>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center p-8 text-center text-slate-300 space-y-3">
@@ -201,9 +220,16 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
                       <p className="text-sm font-semibold">{isBn ? 'পিডিএফ / ডকুমেন্ট ফাইল' : 'Official Document PDF'}</p>
                       <p className="text-xs text-slate-400 mt-0.5">{currentItem?.caption || currentItem?.url}</p>
                     </div>
-                    <Button variant="secondary" size="sm" leftIcon={<Download className="w-3.5 h-3.5" />}>
-                      <span>{isBn ? 'ডকুমেন্ট দেখুন' : 'View Document'}</span>
-                    </Button>
+                    <a
+                      href={currentItem?.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md text-xs font-medium bg-slate-800 hover:bg-slate-700 text-white transition-colors"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>{isBn ? 'ডকুমেন্ট ডাউনলোড বা দেখুন' : 'View / Download Document'}</span>
+                    </a>
                   </div>
                 )}
 
@@ -294,14 +320,15 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
                 {activeMediaIndex + 1} / {media.length}
               </span>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => window.open(currentItem.url, '_blank')}
-                  leftIcon={<ExternalLink className="w-3.5 h-3.5" />}
+                <a
+                  href={currentItem.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition-colors"
                 >
+                  <ExternalLink className="w-3.5 h-3.5" />
                   <span>{isBn ? 'নতুন ট্যাবে খুলুন' : 'Open in New Tab'}</span>
-                </Button>
+                </a>
                 <Button
                   variant="primary"
                   size="sm"

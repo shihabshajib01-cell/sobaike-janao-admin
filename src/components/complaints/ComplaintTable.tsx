@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { useLanguage } from '@/context/LanguageContext';
 import { Complaint, ComplaintLifecycleStatus } from '@/types/Complaint';
 import { ComplaintEmptyState } from './ComplaintEmptyState';
-import { Eye, MapPin, Calendar, Tag } from 'lucide-react';
+import { Eye, MapPin, Calendar, Tag, Image as ImageIcon } from 'lucide-react';
 
 export interface ComplaintTableProps {
   complaints: Complaint[];
@@ -143,9 +143,20 @@ export const ComplaintTable: React.FC<ComplaintTableProps> = ({
                 {/* Subcategory & Title preview */}
                 <TableCell className="max-w-xs lg:max-w-md">
                   <div className="space-y-0.5">
-                    <p className="text-xs font-medium text-slate-900 dark:text-slate-100 line-clamp-1 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
-                      {title}
-                    </p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="text-xs font-medium text-slate-900 dark:text-slate-100 line-clamp-1 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+                        {title}
+                      </p>
+                      {(c.hasSupportingInfo || (c.evidenceCount && c.evidenceCount > 0) || (c.media && c.media.length > 0)) && (
+                        <span
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-sky-50 dark:bg-sky-950/70 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 shrink-0"
+                          title={isBn ? 'সংযুক্ত প্রমাণাদি রয়েছে' : 'Evidence Attached'}
+                        >
+                          <ImageIcon className="w-2.5 h-2.5 text-sky-500" />
+                          <span>{c.evidenceCount ? c.evidenceCount : (c.media?.length || 1)}</span>
+                        </span>
+                      )}
+                    </div>
                     <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
                       {subcategory}
                     </span>
