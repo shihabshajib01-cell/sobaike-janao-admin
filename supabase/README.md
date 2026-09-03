@@ -96,8 +96,30 @@ This directory contains the database migrations, audit scripts, and security def
 
 ---
 
+## Notification Backend Foundation API Specification (Phase 1)
+
+| RPC / Internal Function | Type | Security | Executable By | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `public.admin_emit_notification(...)` | VOLATILE | `SECURITY DEFINER` | `service_role` only | Canonical entry point for creating notifications. Validates event key against active catalogue, enforces `audience_mode` ('permission', 'super_admin_only', 'personal'), validates target scoping & UUID formats (SQLSTATE `22000`), resolves recipients server-side, and inserts deduplicated per-recipient records. |
+| `public.admin_notification_resolve_recipients(...)` | STABLE | `SECURITY DEFINER` | `service_role` only | Server-side recipient resolver. Filters active administrators based on audience mode, required all/any permissions, target scoping (`admin_user`, `role`, `complaint`), actor exclusion, and super admin inclusion. Fails closed on unknown target types. |
+| `public.admin_notification_can_currently_view(...)` | STABLE | `SECURITY DEFINER` | `authenticated`, `service_role` | Dedicated read-time authority evaluator hard-bound to `auth.uid()`. Dynamically checks current active status, effective permissions, and target scoping so revoked access immediately hides stale notifications from both RLS and read RPCs. |
+| `public.admin_list_notifications(...)` | STABLE | `SECURITY DEFINER` | `authenticated` | Returns paginated list of authorized notifications for the caller (`auth.uid()`). Supports filtering by unread status, category, and keyset cursor (`p_before_created_at`, `p_before_id`). Enforces read-time visibility on every row. |
+| `public.admin_get_unread_notification_count()` | STABLE | `SECURITY DEFINER` | `authenticated` | Returns accurate unread count of currently visible notifications for the active admin caller (`auth.uid()`). Stale unread items are excluded dynamically. |
+| `public.admin_mark_notification_read(p_notification_id)` | VOLATILE | `SECURITY DEFINER` | `authenticated` | Marks a single notification as read (`read_at = now()`) if addressed to caller, currently visible, and caller is an active administrator. |
+| `public.admin_mark_all_notifications_read()` | VOLATILE | `SECURITY DEFINER` | `authenticated` | Marks all currently unread and visible notifications for caller as read. Returns count of modified rows. |
+
+### Notification Security Boundaries
+
+1. **Strict Client Revocations:** Direct table mutations (`INSERT`, `UPDATE`, `DELETE`, `TRUNCATE`) on `admin_notifications` and `admin_notification_event_catalogue` are completely revoked for `authenticated`, `anon`, and `PUBLIC`. All emission is mediated via `admin_emit_notification` by `service_role`.
+2. **Caller Identity Binding:** Read-time visibility evaluation is strictly bound to `auth.uid()`. Callers cannot supply an arbitrary caller ID to inspect notifications for other users.
+3. **No Unsolicited Permissions:** Notification viewing is a baseline capability for active administrators; no synthetic `notifications.view` permission exists in `public.permissions`.
+4. **Canonical Event Catalogue:** Exactly 12 approved Phase 1 event keys across complaint, admin lifecycle, and role domains. Unlisted keys are rejected at emit time.
+5. **Fail-Closed Target Scoping:** Unknown target types, malformed UUIDs, and unknown audience modes fail closed (returning 0 recipients in resolver or raising SQLSTATE `22000` in emitter).
+
+---
+
 ## Verification & Audit Scripts
 
 - `supabase/audit/phase_3b_database_inspection.sql` — Schema and table constraint inspection (safe pre- and post-migration).
 - `supabase/audit/phase_3c_role_backend_verification.sql` — Verifies Role Management RPCs, function security definer modes, and execution grants.
-- `supabase/audit/notification_foundation_verification.sql` — Verifies Notification event catalogue keys, tables, RLS policies, execute privileges, and transactional deduplication.
+- `supabase/audit/notification_foundation_verification.sql` — Verifies Notification event catalogue keys (exact 12-key set assertion), tables, audience_mode and target_type constraints, caller-bound visibility evaluator signatures, privilege lockdowns, and transactional runtime deduplication & dynamic revocation safety.

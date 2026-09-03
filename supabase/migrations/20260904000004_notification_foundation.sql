@@ -124,6 +124,9 @@ CREATE TABLE IF NOT EXISTS public.admin_notifications (
     CONSTRAINT chk_notifications_audience_mode CHECK (
         audience_mode IN ('permission', 'super_admin_only', 'personal')
     ),
+    CONSTRAINT chk_notifications_target_type CHECK (
+        target_type IS NULL OR target_type IN ('complaint', 'admin_user', 'role')
+    ),
     CONSTRAINT chk_notifications_titles CHECK (
         length(trim(title_en)) > 0 AND length(trim(title_bn)) > 0
     ),
@@ -365,19 +368,23 @@ END;
 $$;
 
 -- ------------------------------------------------------------------------------
--- 6. Dedicated Internal Read-Time Visibility Evaluator
+-- 6. Dedicated Internal Read-Time Visibility Evaluator (Caller-Bound to auth.uid())
 -- ------------------------------------------------------------------------------
--- Evaluates whether a candidate caller currently possesses the authority to view
--- a notification. Applied across RLS and all read/mark-read RPCs so that
+-- Evaluates whether the currently authenticated caller possesses the authority to view
+-- a notification addressed to them. Applied across RLS and all read/mark-read RPCs so that
 -- revoked permissions or demotions immediately hide historical notifications.
+-- Hard-bound to auth.uid(): the caller can NEVER supply an arbitrary user ID.
+
+DROP FUNCTION IF EXISTS public.admin_notification_can_currently_view(UUID, TEXT, TEXT[], TEXT[], TEXT, TEXT, UUID);
+DROP FUNCTION IF EXISTS public.admin_notification_can_currently_view(UUID, UUID);
+
 CREATE OR REPLACE FUNCTION public.admin_notification_can_currently_view(
     p_recipient_user_id UUID,
     p_audience_mode TEXT,
     p_required_all_permissions TEXT[],
     p_required_any_permissions TEXT[],
     p_target_type TEXT,
-    p_target_id TEXT,
-    p_caller_id UUID
+    p_target_id TEXT
 )
 RETURNS BOOLEAN
 LANGUAGE plpgsql
@@ -386,22 +393,24 @@ SECURITY DEFINER
 SET search_path = pg_catalog, public
 AS $$
 DECLARE
+    v_caller_id UUID;
     v_is_active BOOLEAN;
     v_is_super_admin BOOLEAN;
     v_eff_perms TEXT[];
     v_target_uuid UUID;
     v_scope_ok BOOLEAN;
 BEGIN
-    -- 1. Caller identity must match recipient
-    IF p_caller_id IS NULL OR p_recipient_user_id IS NULL OR p_caller_id <> p_recipient_user_id THEN
+    -- 1. Caller identity derived strictly from auth.uid()
+    v_caller_id := auth.uid();
+    IF v_caller_id IS NULL OR p_recipient_user_id IS NULL OR v_caller_id <> p_recipient_user_id THEN
         RETURN FALSE;
     END IF;
 
-    -- 2. Caller must be an active administrator
+    -- 2. Recipient/Caller must exist in admin_users and currently be active
     SELECT COALESCE(au.active, false), COALESCE(au.is_super_admin, false)
     INTO v_is_active, v_is_super_admin
     FROM public.admin_users au
-    WHERE au.user_id = p_caller_id;
+    WHERE au.user_id = v_caller_id;
 
     IF v_is_active IS NOT TRUE THEN
         RETURN FALSE;
@@ -414,6 +423,8 @@ BEGIN
 
     -- 4. Normal administrator: evaluate based on audience_mode
     IF p_audience_mode = 'personal' THEN
+        -- Active personal recipient is allowed (e.g., role changed, personal alert)
+        -- Does not require roles.manage or admin_users.manage
         RETURN TRUE;
     ELSIF p_audience_mode = 'super_admin_only' THEN
         -- Normal administrator must NEVER see super_admin_only notifications
@@ -421,7 +432,7 @@ BEGIN
     ELSIF p_audience_mode = 'permission' THEN
         -- Fetch current effective permissions for caller
         v_eff_perms := ARRAY(
-            SELECT p_id FROM public.admin_notification_get_effective_permissions(p_caller_id) AS p_id
+            SELECT p_id FROM public.admin_notification_get_effective_permissions(v_caller_id) AS p_id
         );
 
         -- Check required_all_permissions (caller must possess all listed permissions)
@@ -440,30 +451,33 @@ BEGIN
 
         -- Check target scoping
         IF p_target_type = 'admin_user' THEN
-            IF p_target_id IS NULL THEN
+            IF p_target_id IS NULL OR length(btrim(p_target_id)) = 0 THEN
                 RETURN FALSE;
             END IF;
             BEGIN
-                v_target_uuid := p_target_id::UUID;
-                v_scope_ok := public.admin_notification_can_view_user_scope(p_caller_id, v_target_uuid);
+                v_target_uuid := btrim(p_target_id)::UUID;
             EXCEPTION WHEN OTHERS THEN
-                v_scope_ok := FALSE;
+                RETURN FALSE;
             END;
+            v_scope_ok := public.admin_notification_can_view_user_scope(v_caller_id, v_target_uuid);
             IF v_scope_ok IS NOT TRUE THEN
                 RETURN FALSE;
             END IF;
         ELSIF p_target_type = 'role' THEN
-            IF p_target_id IS NULL THEN
+            IF p_target_id IS NULL OR length(btrim(p_target_id)) = 0 THEN
                 RETURN FALSE;
             END IF;
-            v_scope_ok := public.admin_notification_can_view_role_scope(p_caller_id, p_target_id);
+            v_scope_ok := public.admin_notification_can_view_role_scope(v_caller_id, btrim(p_target_id));
             IF v_scope_ok IS NOT TRUE THEN
                 RETURN FALSE;
             END IF;
         ELSIF p_target_type = 'complaint' THEN
             -- Complaint authorization is governed by required permissions
             NULL;
-        ELSIF p_target_type IS NOT NULL THEN
+        ELSIF p_target_type IS NULL THEN
+            -- No target-specific scope
+            NULL;
+        ELSE
             -- Unknown target type: fail-closed!
             RETURN FALSE;
         END IF;
@@ -473,45 +487,6 @@ BEGIN
 
     -- Unknown audience mode -> fail-closed
     RETURN FALSE;
-END;
-$$;
-
--- Overload taking notification ID and caller ID for convenient evaluation
-CREATE OR REPLACE FUNCTION public.admin_notification_can_currently_view(
-    p_notification_id UUID,
-    p_caller_id UUID
-)
-RETURNS BOOLEAN
-LANGUAGE plpgsql
-STABLE
-SECURITY DEFINER
-SET search_path = pg_catalog, public
-AS $$
-DECLARE
-    v_n RECORD;
-BEGIN
-    IF p_notification_id IS NULL OR p_caller_id IS NULL THEN
-        RETURN FALSE;
-    END IF;
-
-    SELECT recipient_user_id, audience_mode, required_all_permissions, required_any_permissions, target_type, target_id
-    INTO v_n
-    FROM public.admin_notifications
-    WHERE id = p_notification_id;
-
-    IF v_n.recipient_user_id IS NULL THEN
-        RETURN FALSE;
-    END IF;
-
-    RETURN public.admin_notification_can_currently_view(
-        v_n.recipient_user_id,
-        v_n.audience_mode,
-        v_n.required_all_permissions,
-        v_n.required_any_permissions,
-        v_n.target_type,
-        v_n.target_id,
-        p_caller_id
-    );
 END;
 $$;
 
@@ -572,6 +547,27 @@ BEGIN
 
     -- 3. Permission audience mode
     IF p_audience_mode = 'permission' THEN
+        -- Defense in depth: validate supported target types
+        IF p_target_type IS NOT NULL AND p_target_type NOT IN ('complaint', 'admin_user', 'role') THEN
+            RETURN;
+        END IF;
+
+        -- Defense in depth: validate target_id for scoped target types
+        IF p_target_type = 'admin_user' THEN
+            IF p_target_id IS NULL OR length(btrim(p_target_id)) = 0 THEN
+                RETURN;
+            END IF;
+            BEGIN
+                v_target_uuid := btrim(p_target_id)::UUID;
+            EXCEPTION WHEN OTHERS THEN
+                RETURN;
+            END;
+        ELSIF p_target_type = 'role' THEN
+            IF p_target_id IS NULL OR length(btrim(p_target_id)) = 0 THEN
+                RETURN;
+            END IF;
+        END IF;
+
         FOR v_cand IN
             SELECT au.user_id, au.is_super_admin
             FROM public.admin_users au
@@ -611,30 +607,22 @@ BEGIN
 
             -- Check target scoping
             IF p_target_type = 'admin_user' THEN
-                IF p_target_id IS NULL THEN
-                    CONTINUE;
-                END IF;
-                BEGIN
-                    v_target_uuid := p_target_id::UUID;
-                    v_scope_ok := public.admin_notification_can_view_user_scope(v_cand.user_id, v_target_uuid);
-                EXCEPTION WHEN OTHERS THEN
-                    v_scope_ok := FALSE;
-                END;
+                v_scope_ok := public.admin_notification_can_view_user_scope(v_cand.user_id, v_target_uuid);
                 IF v_scope_ok IS NOT TRUE THEN
                     CONTINUE;
                 END IF;
             ELSIF p_target_type = 'role' THEN
-                IF p_target_id IS NULL THEN
-                    CONTINUE;
-                END IF;
-                v_scope_ok := public.admin_notification_can_view_role_scope(v_cand.user_id, p_target_id);
+                v_scope_ok := public.admin_notification_can_view_role_scope(v_cand.user_id, btrim(p_target_id));
                 IF v_scope_ok IS NOT TRUE THEN
                     CONTINUE;
                 END IF;
             ELSIF p_target_type = 'complaint' THEN
                 -- Complaint authorization is governed by required permissions
                 NULL;
-            ELSIF p_target_type IS NOT NULL THEN
+            ELSIF p_target_type IS NULL THEN
+                -- No target-specific scope
+                NULL;
+            ELSE
                 -- Unknown target type: fail-closed!
                 CONTINUE;
             END IF;
@@ -722,13 +710,22 @@ BEGIN
                 USING ERRCODE = '22000';
         END IF;
 
-        IF p_target_type = 'admin_user' AND p_target_id IS NOT NULL THEN
+        IF p_target_type = 'admin_user' THEN
+            IF p_target_id IS NULL OR length(btrim(p_target_id)) = 0 THEN
+                RAISE EXCEPTION 'target_id is required and must be a valid UUID for admin_user target'
+                    USING ERRCODE = '22000';
+            END IF;
             BEGIN
-                PERFORM p_target_id::UUID;
+                PERFORM btrim(p_target_id)::UUID;
             EXCEPTION WHEN OTHERS THEN
                 RAISE EXCEPTION 'Invalid target_id for admin_user: must be a valid UUID'
                     USING ERRCODE = '22000';
             END;
+        ELSIF p_target_type = 'role' THEN
+            IF p_target_id IS NULL OR length(btrim(p_target_id)) = 0 THEN
+                RAISE EXCEPTION 'target_id is required and must be non-empty for role target'
+                    USING ERRCODE = '22000';
+            END IF;
         END IF;
     END IF;
 
@@ -904,8 +901,7 @@ BEGIN
           n.required_all_permissions,
           n.required_any_permissions,
           n.target_type,
-          n.target_id,
-          v_caller_id
+          n.target_id
       )
       AND (p_unread_only IS NOT TRUE OR n.read_at IS NULL)
       AND (p_category IS NULL OR n.category = p_category)
@@ -951,8 +947,7 @@ BEGIN
           n.required_all_permissions,
           n.required_any_permissions,
           n.target_type,
-          n.target_id,
-          v_caller_id
+          n.target_id
       );
 
     RETURN v_count;
@@ -994,8 +989,7 @@ BEGIN
           n.required_all_permissions,
           n.required_any_permissions,
           n.target_type,
-          n.target_id,
-          v_caller_id
+          n.target_id
       );
 
     GET DIAGNOSTICS v_updated_count = ROW_COUNT;
@@ -1036,8 +1030,7 @@ BEGIN
           n.required_all_permissions,
           n.required_any_permissions,
           n.target_type,
-          n.target_id,
-          v_caller_id
+          n.target_id
       );
 
     GET DIAGNOSTICS v_updated_count = ROW_COUNT;
@@ -1072,8 +1065,7 @@ USING (
         required_all_permissions,
         required_any_permissions,
         target_type,
-        target_id,
-        auth.uid()
+        target_id
     )
 );
 
@@ -1100,15 +1092,10 @@ REVOKE ALL ON FUNCTION public.admin_notification_can_view_role_scope(UUID, TEXT)
 GRANT EXECUTE ON FUNCTION public.admin_notification_can_view_role_scope(UUID, TEXT) TO service_role;
 
 -- Read-Time Visibility Helper: Grant execute to authenticated (needed for RLS evaluation) & service_role
-REVOKE ALL ON FUNCTION public.admin_notification_can_currently_view(UUID, TEXT, TEXT[], TEXT[], TEXT, TEXT, UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.admin_notification_can_currently_view(UUID, TEXT, TEXT[], TEXT[], TEXT, TEXT, UUID) FROM anon;
-GRANT EXECUTE ON FUNCTION public.admin_notification_can_currently_view(UUID, TEXT, TEXT[], TEXT[], TEXT, TEXT, UUID) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_notification_can_currently_view(UUID, TEXT, TEXT[], TEXT[], TEXT, TEXT, UUID) TO service_role;
-
-REVOKE ALL ON FUNCTION public.admin_notification_can_currently_view(UUID, UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.admin_notification_can_currently_view(UUID, UUID) FROM anon;
-GRANT EXECUTE ON FUNCTION public.admin_notification_can_currently_view(UUID, UUID) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_notification_can_currently_view(UUID, UUID) TO service_role;
+REVOKE ALL ON FUNCTION public.admin_notification_can_currently_view(UUID, TEXT, TEXT[], TEXT[], TEXT, TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.admin_notification_can_currently_view(UUID, TEXT, TEXT[], TEXT[], TEXT, TEXT) FROM anon;
+GRANT EXECUTE ON FUNCTION public.admin_notification_can_currently_view(UUID, TEXT, TEXT[], TEXT[], TEXT, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_notification_can_currently_view(UUID, TEXT, TEXT[], TEXT[], TEXT, TEXT) TO service_role;
 
 -- Server-Side Resolver & Emitter: Service role only
 REVOKE ALL ON FUNCTION public.admin_notification_resolve_recipients(TEXT, TEXT[], TEXT[], TEXT, TEXT, UUID, UUID, BOOLEAN, BOOLEAN) FROM PUBLIC;
