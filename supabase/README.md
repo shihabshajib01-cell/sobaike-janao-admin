@@ -68,7 +68,7 @@ This directory contains the database migrations, audit scripts, and security def
 
 13. **`20260904000004_notification_foundation.sql`**
     - **Phase:** Notification Project Phase 1 — Notification Backend Foundation & Recipient Engine
-    - **Contents:** Establishes canonical notification event catalogue (12 approved keys), per-recipient notifications table with deduplication and partial unread indexes, server-side recipient resolution (`admin_notification_resolve_recipients`) respecting delegation ceilings and target scoping, canonical internal emitter (`admin_emit_notification`), and user-facing read/count/mark-read RPCs with strict RLS.
+    - **Contents:** Establishes canonical notification event catalogue (12 approved keys), per-recipient notifications table with persisted `audience_mode`, deduplication and partial unread indexes, server-side recipient resolution (`admin_notification_resolve_recipients`) respecting delegation ceilings and fail-closed target scoping, current-visibility re-evaluator (`admin_notification_can_currently_view`), canonical internal emitter (`admin_emit_notification`), and user-facing read/count/mark-read RPCs with strict read-time re-authorization and direct RLS protection.
 
 ---
 

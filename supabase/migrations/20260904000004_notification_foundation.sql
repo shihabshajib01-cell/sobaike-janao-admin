@@ -6,22 +6,24 @@
 -- 1. Canonical Notification Event Catalogue (admin_notification_event_catalogue)
 --    with 12 approved seed keys, categorized, layered, and severity-assigned.
 -- 2. Main Per-Recipient Notification Table (admin_notifications) with strict
---    domain constraints, deduplication protection, and performance indexes.
--- 3. Dedicated Internal Recipient-Evaluation Helpers:
+--    domain constraints, deduplication protection, persisted audience_mode,
+--    and performance indexes.
+-- 3. Dedicated Internal Recipient-Evaluation & Current-Visibility Helpers:
 --    - admin_notification_get_effective_permissions(p_user_id UUID)
 --    - admin_notification_can_view_user_scope(p_recipient_user_id UUID, p_target_user_id UUID)
 --    - admin_notification_can_view_role_scope(p_recipient_user_id UUID, p_role_id TEXT)
--- 4. Generic Server-Side Recipient Resolver:
+--    - admin_notification_can_currently_view(p_recipient_user_id UUID, p_audience_mode TEXT, ...)
+-- 4. Generic Server-Side Recipient Resolver with Fail-Closed Scoping:
 --    - admin_notification_resolve_recipients(...)
--- 5. Canonical Internal Notification Emitter:
+-- 5. Canonical Internal Notification Emitter with Full Contract Validation:
 --    - admin_emit_notification(...)
--- 6. User-Facing Protected Notification RPCs:
+-- 6. User-Facing Protected Notification RPCs with Read-Time Re-Authorization:
 --    - admin_list_notifications(...)
 --    - admin_get_unread_notification_count()
 --    - admin_mark_notification_read(p_notification_id UUID)
 --    - admin_mark_all_notifications_read()
 -- 7. Defense-in-Depth RLS & Privilege Lockdown:
---    - Authenticated users can only SELECT their own notifications via RLS.
+--    - Authenticated users can only SELECT their own currently authorized notifications.
 --    - Direct table INSERT/UPDATE/DELETE revoked from authenticated & anon.
 --    - Internal helpers & emitter revoked from PUBLIC/anon/authenticated.
 --    - No notifications.view permission added.
@@ -89,6 +91,7 @@ CREATE TABLE IF NOT EXISTS public.admin_notifications (
     category TEXT NOT NULL,
     layer TEXT NOT NULL,
     severity TEXT NOT NULL,
+    audience_mode TEXT NOT NULL,
     actor_user_id UUID NULL,
     actor_display_name TEXT NULL,
     target_type TEXT NULL,
@@ -112,6 +115,12 @@ CREATE TABLE IF NOT EXISTS public.admin_notifications (
     ),
     CONSTRAINT chk_notifications_severity CHECK (
         severity IN ('info', 'action_required', 'warning', 'security')
+    ),
+    CONSTRAINT chk_notifications_audience_mode CHECK (
+        audience_mode IN ('permission', 'personal', 'super_admin_only')
+    ),
+    CONSTRAINT chk_notifications_target_type CHECK (
+        target_type IS NULL OR target_type IN ('complaint', 'admin_user', 'role')
     ),
     CONSTRAINT chk_notifications_titles CHECK (
         length(trim(title_en)) > 0 AND length(trim(title_bn)) > 0
@@ -139,6 +148,9 @@ CREATE INDEX IF NOT EXISTS idx_admin_notifications_event_key
 
 CREATE INDEX IF NOT EXISTS idx_admin_notifications_category 
     ON public.admin_notifications(category);
+
+CREATE INDEX IF NOT EXISTS idx_admin_notifications_audience_mode 
+    ON public.admin_notifications(recipient_user_id, audience_mode);
 
 -- Partial index for fast unread count and queries
 CREATE INDEX IF NOT EXISTS idx_admin_notifications_unread 
@@ -351,7 +363,112 @@ END;
 $$;
 
 -- ------------------------------------------------------------------------------
--- 6. Generic Server-Side Recipient Resolver
+-- 6. Dedicated Internal Recipient-Evaluation Helper: Current Visibility Check
+-- ------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.admin_notification_can_currently_view(
+    p_recipient_user_id UUID,
+    p_audience_mode TEXT,
+    p_required_all_permissions TEXT[],
+    p_required_any_permissions TEXT[],
+    p_target_type TEXT,
+    p_target_id TEXT
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog, public
+AS $$
+DECLARE
+    v_is_active BOOLEAN;
+    v_is_super_admin BOOLEAN;
+    v_eff_perms TEXT[];
+    v_target_uuid UUID;
+    v_scope_ok BOOLEAN;
+BEGIN
+    IF p_recipient_user_id IS NULL THEN
+        RETURN FALSE;
+    END IF;
+
+    -- Verify recipient exists and is active
+    SELECT COALESCE(active, false), COALESCE(is_super_admin, false)
+    INTO v_is_active, v_is_super_admin
+    FROM public.admin_users
+    WHERE user_id = p_recipient_user_id;
+
+    IF v_is_active IS NOT TRUE THEN
+        RETURN FALSE;
+    END IF;
+
+    -- A. Personal audience mode: Visible to affected active administrator
+    IF p_audience_mode = 'personal' THEN
+        RETURN TRUE;
+    END IF;
+
+    -- B. Super Admin only audience mode: Visible only if currently Super Admin
+    IF p_audience_mode = 'super_admin_only' THEN
+        RETURN (v_is_super_admin IS TRUE);
+    END IF;
+
+    -- C. Permission audience mode: Must re-evaluate against current permissions & scoping
+    IF p_audience_mode = 'permission' THEN
+        IF v_is_super_admin IS TRUE THEN
+            RETURN TRUE;
+        END IF;
+
+        -- Resolve recipient's current effective permissions
+        v_eff_perms := ARRAY(
+            SELECT p_id FROM public.admin_notification_get_effective_permissions(p_recipient_user_id) AS p_id
+        );
+
+        -- If required_all_permissions has values: recipient must currently possess every permission
+        IF p_required_all_permissions IS NOT NULL AND cardinality(p_required_all_permissions) > 0 THEN
+            IF NOT (p_required_all_permissions <@ v_eff_perms) THEN
+                RETURN FALSE;
+            END IF;
+        END IF;
+
+        -- If required_any_permissions has values: recipient must currently possess at least one
+        IF p_required_any_permissions IS NOT NULL AND cardinality(p_required_any_permissions) > 0 THEN
+            IF NOT (p_required_any_permissions && v_eff_perms) THEN
+                RETURN FALSE;
+            END IF;
+        END IF;
+
+        -- Re-evaluate current target scope
+        IF p_target_type = 'admin_user' THEN
+            IF p_target_id IS NULL OR length(trim(p_target_id)) = 0 THEN
+                RETURN FALSE;
+            END IF;
+            BEGIN
+                v_target_uuid := p_target_id::UUID;
+                v_scope_ok := public.admin_notification_can_view_user_scope(p_recipient_user_id, v_target_uuid);
+            EXCEPTION WHEN OTHERS THEN
+                v_scope_ok := FALSE;
+            END;
+            RETURN COALESCE(v_scope_ok, FALSE);
+        ELSIF p_target_type = 'role' THEN
+            IF p_target_id IS NULL OR length(trim(p_target_id)) = 0 THEN
+                RETURN FALSE;
+            END IF;
+            v_scope_ok := public.admin_notification_can_view_role_scope(p_recipient_user_id, p_target_id);
+            RETURN COALESCE(v_scope_ok, FALSE);
+        ELSIF p_target_type = 'complaint' OR p_target_type IS NULL THEN
+            -- No target-specific ceiling scoping beyond required permissions
+            RETURN TRUE;
+        ELSE
+            -- Any unsupported non-null target_type: FAIL CLOSED
+            RETURN FALSE;
+        END IF;
+    END IF;
+
+    -- Unknown audience mode: FAIL CLOSED
+    RETURN FALSE;
+END;
+$$;
+
+-- ------------------------------------------------------------------------------
+-- 7. Generic Server-Side Recipient Resolver with Fail-Closed Scoping
 -- ------------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.admin_notification_resolve_recipients(
     p_audience_mode TEXT DEFAULT 'permission',
@@ -376,6 +493,16 @@ DECLARE
     v_target_uuid UUID;
     v_scope_ok BOOLEAN;
 BEGIN
+    -- Fail-closed defense: Validate supported audience mode
+    IF p_audience_mode NOT IN ('permission', 'personal', 'super_admin_only') THEN
+        RETURN;
+    END IF;
+
+    -- Fail-closed defense: Validate supported target type
+    IF p_target_type IS NOT NULL AND p_target_type NOT IN ('complaint', 'admin_user', 'role') THEN
+        RETURN;
+    END IF;
+
     -- 1. Personal audience mode
     IF p_audience_mode = 'personal' THEN
         IF p_personal_recipient_id IS NULL THEN
@@ -444,8 +571,11 @@ BEGIN
                 END IF;
             END IF;
 
-            -- Check target scoping
-            IF p_target_type = 'admin_user' AND p_target_id IS NOT NULL THEN
+            -- Check target scoping with fail-closed validation
+            IF p_target_type = 'admin_user' THEN
+                IF p_target_id IS NULL OR length(trim(p_target_id)) = 0 THEN
+                    CONTINUE;
+                END IF;
                 BEGIN
                     v_target_uuid := p_target_id::UUID;
                     v_scope_ok := public.admin_notification_can_view_user_scope(v_cand.user_id, v_target_uuid);
@@ -455,11 +585,20 @@ BEGIN
                 IF v_scope_ok IS NOT TRUE THEN
                     CONTINUE;
                 END IF;
-            ELSIF p_target_type = 'role' AND p_target_id IS NOT NULL THEN
+            ELSIF p_target_type = 'role' THEN
+                IF p_target_id IS NULL OR length(trim(p_target_id)) = 0 THEN
+                    CONTINUE;
+                END IF;
                 v_scope_ok := public.admin_notification_can_view_role_scope(v_cand.user_id, p_target_id);
                 IF v_scope_ok IS NOT TRUE THEN
                     CONTINUE;
                 END IF;
+            ELSIF p_target_type = 'complaint' OR p_target_type IS NULL THEN
+                -- Allowed without target-specific scope
+                NULL;
+            ELSE
+                -- Unknown non-null target type: fail closed
+                CONTINUE;
             END IF;
 
             RETURN NEXT v_cand.user_id;
@@ -473,7 +612,7 @@ END;
 $$;
 
 -- ------------------------------------------------------------------------------
--- 7. Canonical Internal Notification Emitter
+-- 8. Canonical Internal Notification Emitter with Full Contract Validation
 -- ------------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.admin_emit_notification(
     p_event_key TEXT,
@@ -508,7 +647,44 @@ DECLARE
     v_event_group_id UUID;
     v_inserted_count INTEGER := 0;
 BEGIN
-    -- 1. Validate event_key against active catalogue
+    -- 1. Validate audience mode contract
+    IF p_audience_mode IS NULL OR p_audience_mode NOT IN ('permission', 'personal', 'super_admin_only') THEN
+        RAISE EXCEPTION 'Invalid audience mode: %. Must be one of: permission, personal, super_admin_only', p_audience_mode
+            USING ERRCODE = '22000';
+    END IF;
+
+    -- 2. Validate personal recipient requirement
+    IF p_audience_mode = 'personal' AND p_personal_recipient_id IS NULL THEN
+        RAISE EXCEPTION 'Personal recipient ID (p_personal_recipient_id) is required when audience_mode is personal'
+            USING ERRCODE = '22000';
+    END IF;
+
+    -- 3. Validate target type contract
+    IF p_target_type IS NOT NULL AND p_target_type NOT IN ('complaint', 'admin_user', 'role') THEN
+        RAISE EXCEPTION 'Invalid target type: %. Must be NULL or one of: complaint, admin_user, role', p_target_type
+            USING ERRCODE = '22000';
+    END IF;
+
+    -- 4. Validate target ID specifics
+    IF p_target_type = 'admin_user' THEN
+        IF p_target_id IS NULL OR length(trim(p_target_id)) = 0 THEN
+            RAISE EXCEPTION 'Target ID (p_target_id) is required for admin_user target type'
+                USING ERRCODE = '22000';
+        END IF;
+        BEGIN
+            PERFORM p_target_id::UUID;
+        EXCEPTION WHEN OTHERS THEN
+            RAISE EXCEPTION 'Target ID for admin_user must be a valid UUID: %', p_target_id
+                USING ERRCODE = '22000';
+        END;
+    ELSIF p_target_type = 'role' THEN
+        IF p_target_id IS NULL OR length(trim(p_target_id)) = 0 THEN
+            RAISE EXCEPTION 'Target ID (p_target_id) is required for role target type'
+                USING ERRCODE = '22000';
+        END IF;
+    END IF;
+
+    -- 5. Validate event_key against active catalogue
     SELECT event_key, category, default_layer, default_severity, active
     INTO v_cat
     FROM public.admin_notification_event_catalogue
@@ -519,7 +695,7 @@ BEGIN
             USING ERRCODE = '22000';
     END IF;
 
-    -- 2. Validate EN and BN titles
+    -- 6. Validate EN and BN titles
     IF p_title_en IS NULL OR length(trim(p_title_en)) = 0 THEN
         RAISE EXCEPTION 'English title (title_en) must not be empty' USING ERRCODE = '22000';
     END IF;
@@ -527,12 +703,12 @@ BEGIN
         RAISE EXCEPTION 'Bengali title (title_bn) must not be empty' USING ERRCODE = '22000';
     END IF;
 
-    -- 3. Validate internal route if provided
+    -- 7. Validate internal route if provided
     IF p_route IS NOT NULL AND NOT (p_route ~ '^/[^\s]*$') THEN
         RAISE EXCEPTION 'Route must be an internal path beginning with /' USING ERRCODE = '22000';
     END IF;
 
-    -- 4. Snapshot actor display name
+    -- 8. Snapshot actor display name
     IF p_actor_display_name IS NOT NULL AND length(trim(p_actor_display_name)) > 0 THEN
         v_actor_display_name := trim(p_actor_display_name);
     ELSIF p_actor_user_id IS NOT NULL THEN
@@ -541,10 +717,10 @@ BEGIN
         WHERE user_id = p_actor_user_id;
     END IF;
 
-    -- 5. Generate event_group_id
+    -- 9. Generate event_group_id
     v_event_group_id := gen_random_uuid();
 
-    -- 6. Insert one notification row per resolved authorized recipient
+    -- 10. Insert one notification row per resolved authorized recipient
     INSERT INTO public.admin_notifications (
         event_group_id,
         dedupe_key,
@@ -553,6 +729,7 @@ BEGIN
         category,
         layer,
         severity,
+        audience_mode,
         actor_user_id,
         actor_display_name,
         target_type,
@@ -575,6 +752,7 @@ BEGIN
         v_cat.category,
         v_cat.default_layer,
         v_cat.default_severity,
+        p_audience_mode,
         p_actor_user_id,
         v_actor_display_name,
         p_target_type,
@@ -615,7 +793,7 @@ END;
 $$;
 
 -- ------------------------------------------------------------------------------
--- 8. User-Facing Authenticated RPC: List Notifications (Keyset Pagination)
+-- 9. User-Facing Authenticated RPC: List Notifications (Keyset Pagination)
 -- ------------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.admin_list_notifications(
     p_limit INTEGER DEFAULT 20,
@@ -631,6 +809,7 @@ RETURNS TABLE (
     category TEXT,
     layer TEXT,
     severity TEXT,
+    audience_mode TEXT,
     actor_user_id UUID,
     actor_display_name TEXT,
     target_type TEXT,
@@ -674,6 +853,7 @@ BEGIN
         n.category,
         n.layer,
         n.severity,
+        n.audience_mode,
         n.actor_user_id,
         n.actor_display_name,
         n.target_type,
@@ -695,13 +875,21 @@ BEGIN
           p_before_created_at IS NULL
           OR (n.created_at, n.id) < (p_before_created_at, COALESCE(p_before_id, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid))
       )
+      AND public.admin_notification_can_currently_view(
+          n.recipient_user_id,
+          n.audience_mode,
+          n.required_all_permissions,
+          n.required_any_permissions,
+          n.target_type,
+          n.target_id
+      )
     ORDER BY n.created_at DESC, n.id DESC
     LIMIT v_safe_limit;
 END;
 $$;
 
 -- ------------------------------------------------------------------------------
--- 9. User-Facing Authenticated RPC: Unread Notification Count
+-- 10. User-Facing Authenticated RPC: Unread Notification Count
 -- ------------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.admin_get_unread_notification_count()
 RETURNS BIGINT
@@ -724,16 +912,24 @@ BEGIN
     END IF;
 
     SELECT COUNT(*) INTO v_count
-    FROM public.admin_notifications
-    WHERE recipient_user_id = v_caller_id
-      AND read_at IS NULL;
+    FROM public.admin_notifications n
+    WHERE n.recipient_user_id = v_caller_id
+      AND n.read_at IS NULL
+      AND public.admin_notification_can_currently_view(
+          n.recipient_user_id,
+          n.audience_mode,
+          n.required_all_permissions,
+          n.required_any_permissions,
+          n.target_type,
+          n.target_id
+      );
 
     RETURN v_count;
 END;
 $$;
 
 -- ------------------------------------------------------------------------------
--- 10. User-Facing Authenticated RPC: Mark Single Notification Read
+-- 11. User-Facing Authenticated RPC: Mark Single Notification Read
 -- ------------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.admin_mark_notification_read(
     p_notification_id UUID
@@ -757,10 +953,18 @@ BEGIN
         RETURN FALSE;
     END IF;
 
-    UPDATE public.admin_notifications
-    SET read_at = COALESCE(read_at, now())
-    WHERE id = p_notification_id
-      AND recipient_user_id = v_caller_id;
+    UPDATE public.admin_notifications n
+    SET read_at = COALESCE(n.read_at, now())
+    WHERE n.id = p_notification_id
+      AND n.recipient_user_id = v_caller_id
+      AND public.admin_notification_can_currently_view(
+          n.recipient_user_id,
+          n.audience_mode,
+          n.required_all_permissions,
+          n.required_any_permissions,
+          n.target_type,
+          n.target_id
+      );
 
     GET DIAGNOSTICS v_updated_count = ROW_COUNT;
     RETURN (v_updated_count > 0);
@@ -768,7 +972,7 @@ END;
 $$;
 
 -- ------------------------------------------------------------------------------
--- 11. User-Facing Authenticated RPC: Mark All Notifications Read
+-- 12. User-Facing Authenticated RPC: Mark All Notifications Read
 -- ------------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.admin_mark_all_notifications_read()
 RETURNS INTEGER
@@ -790,10 +994,18 @@ BEGIN
         RETURN 0;
     END IF;
 
-    UPDATE public.admin_notifications
+    UPDATE public.admin_notifications n
     SET read_at = now()
-    WHERE recipient_user_id = v_caller_id
-      AND read_at IS NULL;
+    WHERE n.recipient_user_id = v_caller_id
+      AND n.read_at IS NULL
+      AND public.admin_notification_can_currently_view(
+          n.recipient_user_id,
+          n.audience_mode,
+          n.required_all_permissions,
+          n.required_any_permissions,
+          n.target_type,
+          n.target_id
+      );
 
     GET DIAGNOSTICS v_updated_count = ROW_COUNT;
     RETURN v_updated_count;
@@ -801,7 +1013,7 @@ END;
 $$;
 
 -- ------------------------------------------------------------------------------
--- 12. Row Level Security & Privilege Lockdown
+-- 13. Row Level Security & Privilege Lockdown
 -- ------------------------------------------------------------------------------
 -- Event Catalogue Table: Infrastructure only
 ALTER TABLE public.admin_notification_event_catalogue ENABLE ROW LEVEL SECURITY;
@@ -821,6 +1033,14 @@ TO authenticated
 USING (
     recipient_user_id = auth.uid()
     AND public.is_active_admin()
+    AND public.admin_notification_can_currently_view(
+        recipient_user_id,
+        audience_mode,
+        required_all_permissions,
+        required_any_permissions,
+        target_type,
+        target_id
+    )
 );
 
 REVOKE ALL ON TABLE public.admin_notifications FROM PUBLIC;
@@ -829,7 +1049,7 @@ REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE public.adm
 GRANT SELECT ON TABLE public.admin_notifications TO authenticated;
 GRANT ALL ON TABLE public.admin_notifications TO service_role;
 
--- Internal Helpers & Emitter: Revoke from browser clients
+-- Internal Helpers & Emitter: Revoke from browser clients, Grant to service_role
 REVOKE ALL ON FUNCTION public.admin_notification_get_effective_permissions(UUID) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.admin_notification_get_effective_permissions(UUID) FROM anon;
 REVOKE ALL ON FUNCTION public.admin_notification_get_effective_permissions(UUID) FROM authenticated;
@@ -844,6 +1064,11 @@ REVOKE ALL ON FUNCTION public.admin_notification_can_view_role_scope(UUID, TEXT)
 REVOKE ALL ON FUNCTION public.admin_notification_can_view_role_scope(UUID, TEXT) FROM anon;
 REVOKE ALL ON FUNCTION public.admin_notification_can_view_role_scope(UUID, TEXT) FROM authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_notification_can_view_role_scope(UUID, TEXT) TO service_role;
+
+REVOKE ALL ON FUNCTION public.admin_notification_can_currently_view(UUID, TEXT, TEXT[], TEXT[], TEXT, TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.admin_notification_can_currently_view(UUID, TEXT, TEXT[], TEXT[], TEXT, TEXT) FROM anon;
+REVOKE ALL ON FUNCTION public.admin_notification_can_currently_view(UUID, TEXT, TEXT[], TEXT[], TEXT, TEXT) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_notification_can_currently_view(UUID, TEXT, TEXT[], TEXT[], TEXT, TEXT) TO service_role;
 
 REVOKE ALL ON FUNCTION public.admin_notification_resolve_recipients(TEXT, TEXT[], TEXT[], TEXT, TEXT, UUID, UUID, BOOLEAN, BOOLEAN) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.admin_notification_resolve_recipients(TEXT, TEXT[], TEXT[], TEXT, TEXT, UUID, UUID, BOOLEAN, BOOLEAN) FROM anon;
