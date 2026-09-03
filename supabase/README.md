@@ -67,8 +67,8 @@ This directory contains the database migrations, audit scripts, and security def
     - **Contents:** Grants narrow `USAGE` on schema `public` and `SELECT` on `public.admin_users` and `public.roles` to `service_role` for server-side user provisioning verification.
 
 13. **`20260904000004_notification_foundation.sql`**
-    - **Phase:** Notification Project Phase 1 — Notification Backend Foundation & Recipient Engine
-    - **Contents:** Establishes canonical notification event catalogue (12 approved keys), per-recipient notifications table with persisted `audience_mode`, deduplication and partial unread indexes, server-side recipient resolution (`admin_notification_resolve_recipients`) respecting delegation ceilings and fail-closed target scoping, current-visibility re-evaluator (`admin_notification_can_currently_view`), canonical internal emitter (`admin_emit_notification`), and user-facing read/count/mark-read RPCs with strict read-time re-authorization and direct RLS protection.
+    - **Phase:** Notification Project Phase 1 — Notification Backend Foundation & Recipient Engine (Targeted Correction Pass)
+    - **Contents:** Establishes canonical notification event catalogue (12 approved keys), per-recipient notifications table with persisted `audience_mode` ('permission', 'super_admin_only', 'personal'), partial unread index, idempotency deduplication, fail-closed server-side recipient resolution (`admin_notification_resolve_recipients`), dedicated read-time authority evaluator (`admin_notification_can_currently_view`) ensuring revoked permissions dynamically hide stale notifications, canonical internal emitter (`admin_emit_notification`) with strict contract validation (SQLSTATE `22000`), and user-facing protected RPCs (`admin_list_notifications`, `admin_get_unread_notification_count`, `admin_mark_notification_read`, `admin_mark_all_notifications_read`) with defense-in-depth RLS.
 
 ---
 
