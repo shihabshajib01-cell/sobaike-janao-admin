@@ -1,18 +1,16 @@
 -- ==============================================================================
 -- SOBAIKE JANAO ADMIN — PHASE 2 NOTIFICATION PRODUCER WIRING AUDIT SCRIPT
 -- ==============================================================================
--- Target: Supabase PostgreSQL Database (sobaike-production)
+-- Target: Supabase PostgreSQL Database (sobaike-production / Supabase SQL Editor)
 -- Purpose: Complete static and dynamic verification of Phase 2 Notification Producer Wiring
 --          across all 12 catalogue events, producer contracts, RLS safety,
 --          audience mode routing, deduplication idempotency, and transactional safety.
--- Schema: Phase 1 Notification Foundation + Phase 3f RBAC + Phase 2 Producer Wiring.
+-- Schema: Real Phase 1 Notification Foundation + Phase 3f RBAC + Phase 2 Producer Wiring.
 -- Safety: Non-destructive; dynamic simulation tests execute inside a rolled-back transaction.
 --         No synthetic rows inserted into auth.users; dynamic tests discover safe fixtures
 --         or gracefully log SKIPPED when fixtures are unavailable.
 -- Expected Final Output: === PHASE 2 NOTIFICATION WIRING AUDIT: SUCCESS ===
 -- ==============================================================================
-
-\set ON_ERROR_STOP on
 
 -- ------------------------------------------------------------------------------
 -- 1. STATIC ASSERTIONS: Catalogue Definitions, Producers, and Event Keys
@@ -39,7 +37,6 @@ DECLARE
     v_proc_name TEXT;
     v_ret_type TEXT;
     v_anon_grant_count INT;
-    v_deprecated_perm_count INT;
     v_canonical_perms TEXT[] := ARRAY[
         'dashboard.view',
         'complaints.view',
@@ -59,8 +56,11 @@ DECLARE
     ];
     v_missing_canonical TEXT[];
     v_unexpected_perms TEXT[];
+    v_count INT;
 BEGIN
-    RAISE NOTICE '>>> [AUDIT 1.1] Inspecting Notification Event Catalogue Definitions...';
+    RAISE NOTICE '==============================================================================';
+    RAISE NOTICE '>>> [AUDIT 1.1] Inspecting Notification Event Catalogue Definitions (Real Phase 1 Schema)...';
+    RAISE NOTICE '==============================================================================';
 
     -- Check all 12 events exist in admin_notification_event_catalogue
     SELECT ARRAY(
@@ -73,23 +73,37 @@ BEGIN
         RAISE EXCEPTION 'Catalogue Verification FAILED: Missing event keys: %', array_to_string(v_missing_events, ', ');
     END IF;
 
-    -- Verify default severity, audience mode, category, descriptions
+    -- Verify all 12 events have valid Real Phase 1 catalogue attributes:
+    -- Columns: event_key, category, default_layer, default_severity, description, active
+    -- Valid categories: complaint, administration, role, security, personal, system
+    -- Valid severities: info, action_required, warning, security
     FOR v_ev IN SELECT unnest(v_expected_events)
     LOOP
         IF NOT EXISTS (
             SELECT 1 FROM public.admin_notification_event_catalogue
             WHERE event_key = v_ev
-              AND category IN ('complaints', 'admin_users', 'roles', 'system')
-              AND default_severity IN ('info', 'warning', 'critical')
-              AND default_audience_mode IN ('permission', 'personal', 'super_admin_only')
-              AND length(btrim(description_en)) > 0
-              AND length(btrim(description_bn)) > 0
+              AND category IN ('complaint', 'administration', 'role', 'security', 'personal', 'system')
+              AND default_severity IN ('info', 'action_required', 'warning', 'security')
+              AND default_layer IN ('action_required', 'workflow_activity', 'administrative_oversight', 'security_privilege', 'personal_account', 'system_operational')
+              AND description IS NOT NULL
+              AND length(btrim(description)) > 0
+              AND active = true
         ) THEN
-            RAISE EXCEPTION 'Catalogue Verification FAILED: Event % has incomplete catalogue metadata!', v_ev;
+            RAISE EXCEPTION 'Catalogue Verification FAILED: Event % has missing or invalid catalogue metadata!', v_ev;
         END IF;
     END LOOP;
 
-    RAISE NOTICE '>>> [AUDIT 1.1 SUCCESS] All 12 catalogue definitions verified.';
+    -- Assert nonexistent columns (default_audience_mode, description_en, description_bn) do not exist
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'admin_notification_event_catalogue'
+          AND column_name IN ('default_audience_mode', 'description_en', 'description_bn')
+    ) THEN
+        RAISE EXCEPTION 'Catalogue Verification FAILED: Nonexistent columns (default_audience_mode, description_en, description_bn) found on catalogue!';
+    END IF;
+
+    RAISE NOTICE '>>> [AUDIT 1.1 SUCCESS] All 12 catalogue definitions verified against Real Phase 1 Schema.';
 
     -- Check producers exist as SECURITY DEFINER
     RAISE NOTICE '>>> [AUDIT 1.2] Inspecting Producer Routines & Security Definer Status...';
@@ -118,7 +132,7 @@ BEGIN
         END IF;
     END LOOP;
 
-    -- Verify log_role_audit_event returns UUID
+    -- Verify log_role_audit_event returns UUID for deterministic deduplication
     SELECT t.typname INTO v_ret_type
     FROM pg_proc p
     JOIN pg_namespace n ON n.oid = p.pronamespace
@@ -134,7 +148,6 @@ BEGIN
 
     -- Verify execute permissions
     RAISE NOTICE '>>> [AUDIT 1.3] Inspecting Routine Privilege Grants & Revocations...';
-    -- Admin functions must NOT be callable by anon or PUBLIC
     SELECT COUNT(*) INTO v_anon_grant_count
     FROM information_schema.routine_privileges
     WHERE routine_schema = 'public'
@@ -157,88 +170,157 @@ BEGIN
 
     RAISE NOTICE '>>> [AUDIT 1.3 SUCCESS] Strict RBAC execute grants confirmed.';
 
-    -- Check source code contains expected event keys and proper permission wiring
-    RAISE NOTICE '>>> [AUDIT 1.4] Inspecting Function Source Codes for Canonical Event Keys & Granular RBAC...';
-    
-    -- submit_public_complaint -> complaint.submitted
-    SELECT prosrc INTO v_func_src FROM pg_proc WHERE proname = 'submit_public_complaint' LIMIT 1;
+    -- --------------------------------------------------------------------------
+    -- 1.4 STATIC ASSERTIONS WITH pg_get_functiondef() ACROSS ALL 12 EVENTS
+    -- --------------------------------------------------------------------------
+    RAISE NOTICE '>>> [AUDIT 1.4] Static Inspection of All 12 Producer Events via pg_get_functiondef()...';
+
+    -- Event 1: complaint.submitted (submit_public_complaint)
+    SELECT pg_get_functiondef(p.oid) INTO v_func_src
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'submit_public_complaint' LIMIT 1;
+
     IF v_func_src NOT LIKE '%complaint.submitted%' THEN
-        RAISE EXCEPTION 'Source Code Audit FAILED: submit_public_complaint does not emit complaint.submitted';
+        RAISE EXCEPTION 'Static Check 1 FAILED: submit_public_complaint does not emit complaint.submitted';
+    END IF;
+    IF v_func_src NOT LIKE '%EXCEPTION WHEN OTHERS THEN%' THEN
+        RAISE EXCEPTION 'Static Check 1 FAILED: submit_public_complaint must wrap notification emission in fail-safe handler';
     END IF;
 
-    -- register_public_complaint_evidence -> complaint.evidence_attached
-    SELECT prosrc INTO v_func_src FROM pg_proc WHERE proname = 'register_public_complaint_evidence' LIMIT 1;
+    -- Event 2: complaint.evidence_attached (register_public_complaint_evidence)
+    SELECT pg_get_functiondef(p.oid) INTO v_func_src
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'register_public_complaint_evidence' LIMIT 1;
+
     IF v_func_src NOT LIKE '%complaint.evidence_attached%' THEN
-        RAISE EXCEPTION 'Source Code Audit FAILED: register_public_complaint_evidence does not emit complaint.evidence_attached';
+        RAISE EXCEPTION 'Static Check 2 FAILED: register_public_complaint_evidence does not emit complaint.evidence_attached';
+    END IF;
+    IF v_func_src NOT LIKE '%EXCEPTION WHEN OTHERS THEN%' THEN
+        RAISE EXCEPTION 'Static Check 2 FAILED: register_public_complaint_evidence must wrap notification emission in fail-safe handler';
     END IF;
 
-    -- admin_publish_complaint -> complaint.published & complaints.publish check
-    SELECT prosrc INTO v_func_src FROM pg_proc WHERE proname = 'admin_publish_complaint' LIMIT 1;
+    -- Event 3: complaint.published (admin_publish_complaint)
+    SELECT pg_get_functiondef(p.oid) INTO v_func_src
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'admin_publish_complaint' LIMIT 1;
+
     IF v_func_src NOT LIKE '%complaint.published%' THEN
-        RAISE EXCEPTION 'Source Code Audit FAILED: admin_publish_complaint does not emit complaint.published';
+        RAISE EXCEPTION 'Static Check 3 FAILED: admin_publish_complaint does not emit complaint.published';
     END IF;
     IF v_func_src NOT LIKE '%complaints.publish%' THEN
-        RAISE EXCEPTION 'Source Code Audit FAILED: admin_publish_complaint does not check permission complaints.publish';
+        RAISE EXCEPTION 'Static Check 3 FAILED: admin_publish_complaint does not require permission complaints.publish';
+    END IF;
+    IF v_func_src NOT LIKE '%submitted%' OR v_func_src NOT LIKE '%unpublished%' THEN
+        RAISE EXCEPTION 'Static Check 3 FAILED: admin_publish_complaint must accept status submitted or unpublished';
     END IF;
 
-    -- admin_unpublish_complaint -> complaint.unpublished & complaints.unpublish check
-    SELECT prosrc INTO v_func_src FROM pg_proc WHERE proname = 'admin_unpublish_complaint' LIMIT 1;
+    -- Event 4: complaint.unpublished (admin_unpublish_complaint)
+    SELECT pg_get_functiondef(p.oid) INTO v_func_src
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'admin_unpublish_complaint' LIMIT 1;
+
     IF v_func_src NOT LIKE '%complaint.unpublished%' THEN
-        RAISE EXCEPTION 'Source Code Audit FAILED: admin_unpublish_complaint does not emit complaint.unpublished';
+        RAISE EXCEPTION 'Static Check 4 FAILED: admin_unpublish_complaint does not emit complaint.unpublished';
     END IF;
     IF v_func_src NOT LIKE '%complaints.unpublish%' THEN
-        RAISE EXCEPTION 'Source Code Audit FAILED: admin_unpublish_complaint does not check permission complaints.unpublish';
+        RAISE EXCEPTION 'Static Check 4 FAILED: admin_unpublish_complaint does not require permission complaints.unpublish';
     END IF;
 
-    -- admin_reject_complaint -> complaint.rejected & complaints.reject check
-    SELECT prosrc INTO v_func_src FROM pg_proc WHERE proname = 'admin_reject_complaint' LIMIT 1;
+    -- Event 5: complaint.rejected (admin_reject_complaint)
+    SELECT pg_get_functiondef(p.oid) INTO v_func_src
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'admin_reject_complaint' LIMIT 1;
+
     IF v_func_src NOT LIKE '%complaint.rejected%' THEN
-        RAISE EXCEPTION 'Source Code Audit FAILED: admin_reject_complaint does not emit complaint.rejected';
+        RAISE EXCEPTION 'Static Check 5 FAILED: admin_reject_complaint does not emit complaint.rejected';
     END IF;
     IF v_func_src NOT LIKE '%complaints.reject%' THEN
-        RAISE EXCEPTION 'Source Code Audit FAILED: admin_reject_complaint does not check permission complaints.reject';
+        RAISE EXCEPTION 'Static Check 5 FAILED: admin_reject_complaint does not require permission complaints.reject';
     END IF;
 
-    -- admin_finalize_user_membership -> admin.created (Dual Stream) + oversight permissions
-    SELECT prosrc INTO v_func_src FROM pg_proc WHERE proname = 'admin_finalize_user_membership' LIMIT 1;
-    IF v_func_src NOT LIKE '%admin.created%' OR v_func_src NOT LIKE '%p_audience_mode := ''personal''%' THEN
-        RAISE EXCEPTION 'Source Code Audit FAILED: admin_finalize_user_membership does not wire dual-stream admin.created';
+    -- Event 6: admin.created (admin_finalize_user_membership)
+    SELECT pg_get_functiondef(p.oid) INTO v_func_src
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'admin_finalize_user_membership' LIMIT 1;
+
+    IF v_func_src NOT LIKE '%admin.created%' THEN
+        RAISE EXCEPTION 'Static Check 6 FAILED: admin_finalize_user_membership does not emit admin.created';
     END IF;
-    IF v_func_src NOT LIKE '%admin_users.manage%' OR v_func_src NOT LIKE '%admin_users.view%' THEN
-        RAISE EXCEPTION 'Source Code Audit FAILED: admin_finalize_user_membership oversight must require admin_users.view or admin_users.manage';
+    IF v_func_src NOT LIKE '%personal%' THEN
+        RAISE EXCEPTION 'Static Check 6 FAILED: admin_finalize_user_membership does not emit personal stream';
+    END IF;
+    IF v_func_src NOT LIKE '%admin_users.view%' OR v_func_src NOT LIKE '%admin_users.manage%' THEN
+        RAISE EXCEPTION 'Static Check 6 FAILED: admin_finalize_user_membership oversight must require admin_users.view or admin_users.manage';
     END IF;
 
-    -- admin_update_user -> admin.activated, admin.deactivated, admin.role_changed
-    SELECT prosrc INTO v_func_src FROM pg_proc WHERE proname = 'admin_update_user' LIMIT 1;
-    IF v_func_src NOT LIKE '%admin.activated%' OR v_func_src NOT LIKE '%admin.deactivated%' OR v_func_src NOT LIKE '%admin.role_changed%' THEN
-        RAISE EXCEPTION 'Source Code Audit FAILED: admin_update_user does not wire admin user state transitions';
+    -- Events 7, 8, 9: admin.activated, admin.deactivated, admin.role_changed (admin_update_user)
+    SELECT pg_get_functiondef(p.oid) INTO v_func_src
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'admin_update_user' LIMIT 1;
+
+    IF v_func_src NOT LIKE '%admin.activated%' THEN
+        RAISE EXCEPTION 'Static Check 7 FAILED: admin_update_user does not emit admin.activated';
+    END IF;
+    IF v_func_src NOT LIKE '%admin.deactivated%' THEN
+        RAISE EXCEPTION 'Static Check 8 FAILED: admin_update_user does not emit admin.deactivated';
+    END IF;
+    IF v_func_src NOT LIKE '%admin.role_changed%' THEN
+        RAISE EXCEPTION 'Static Check 9 FAILED: admin_update_user does not emit admin.role_changed';
+    END IF;
+    IF v_func_src NOT LIKE '%ADMIN_USER_UPDATED%' THEN
+        RAISE EXCEPTION 'Static Check 9 FAILED: admin_update_user must preserve audit event ADMIN_USER_UPDATED';
     END IF;
 
-    -- admin_create_role -> role.created
-    SELECT prosrc INTO v_func_src FROM pg_proc WHERE proname = 'admin_create_role' LIMIT 1;
+    -- Event 10: role.created (admin_create_role)
+    SELECT pg_get_functiondef(p.oid) INTO v_func_src
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'admin_create_role' LIMIT 1;
+
     IF v_func_src NOT LIKE '%role.created%' THEN
-        RAISE EXCEPTION 'Source Code Audit FAILED: admin_create_role does not emit role.created';
+        RAISE EXCEPTION 'Static Check 10 FAILED: admin_create_role does not emit role.created';
     END IF;
     IF v_func_src NOT LIKE '%roles.manage%' THEN
-        RAISE EXCEPTION 'Source Code Audit FAILED: admin_create_role audience must require roles.manage';
+        RAISE EXCEPTION 'Static Check 10 FAILED: admin_create_role must direct notifications to roles.manage';
+    END IF;
+    IF v_func_src NOT LIKE '%generate_role_slug%' THEN
+        RAISE EXCEPTION 'Static Check 10 FAILED: admin_create_role must use generate_role_slug';
     END IF;
 
-    -- admin_update_role -> role.updated & role.permissions_changed
-    SELECT prosrc INTO v_func_src FROM pg_proc WHERE proname = 'admin_update_role' LIMIT 1;
-    IF v_func_src NOT LIKE '%role.updated%' OR v_func_src NOT LIKE '%role.permissions_changed%' THEN
-        RAISE EXCEPTION 'Source Code Audit FAILED: admin_update_role does not wire role changes';
+    -- Event 11: role.updated (admin_update_role)
+    SELECT pg_get_functiondef(p.oid) INTO v_func_src
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'admin_update_role' LIMIT 1;
+
+    IF v_func_src NOT LIKE '%role.updated%' THEN
+        RAISE EXCEPTION 'Static Check 11 FAILED: admin_update_role does not emit role.updated';
+    END IF;
+    IF v_func_src NOT LIKE '%roles.manage%' THEN
+        RAISE EXCEPTION 'Static Check 11 FAILED: admin_update_role must direct notifications to roles.manage';
     END IF;
 
-    -- admin_replace_role_permissions -> role.permissions_changed
-    SELECT prosrc INTO v_func_src FROM pg_proc WHERE proname = 'admin_replace_role_permissions' LIMIT 1;
+    -- Event 12: role.permissions_changed (admin_update_role & admin_replace_role_permissions)
     IF v_func_src NOT LIKE '%role.permissions_changed%' THEN
-        RAISE EXCEPTION 'Source Code Audit FAILED: admin_replace_role_permissions does not emit role.permissions_changed';
+        RAISE EXCEPTION 'Static Check 12 FAILED: admin_update_role does not emit role.permissions_changed';
     END IF;
 
-    RAISE NOTICE '>>> [AUDIT 1.4 SUCCESS] Producer source codes statically verified.';
+    SELECT pg_get_functiondef(p.oid) INTO v_func_src
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'admin_replace_role_permissions' LIMIT 1;
 
-    -- Verify 15 Canonical Permissions Integrity (No nonexistent or notification permissions)
+    IF v_func_src NOT LIKE '%role.permissions_changed%' THEN
+        RAISE EXCEPTION 'Static Check 12 FAILED: admin_replace_role_permissions does not emit role.permissions_changed';
+    END IF;
+    IF v_func_src NOT LIKE '%roles.manage%' THEN
+        RAISE EXCEPTION 'Static Check 12 FAILED: admin_replace_role_permissions must direct notifications to roles.manage';
+    END IF;
+
+    RAISE NOTICE '>>> [AUDIT 1.4 SUCCESS] All 12 producer events verified statically via pg_get_functiondef().';
+
+    -- --------------------------------------------------------------------------
+    -- 1.5 CANONICAL 15 PERMISSIONS INTEGRITY (NO NONEXISTENT PERMISSIONS)
+    -- --------------------------------------------------------------------------
     RAISE NOTICE '>>> [AUDIT 1.5] Inspecting Canonical 15 Permissions Integrity...';
+
     SELECT ARRAY(
         SELECT unnest(v_canonical_perms)
         EXCEPT
@@ -259,15 +341,36 @@ BEGIN
         RAISE EXCEPTION 'Permissions Verification FAILED: Unexpected permissions present in permissions table: %', array_to_string(v_unexpected_perms, ', ');
     END IF;
 
-    -- Verify nonexistent permissions (complaints.manage, roles.view) are NOT referenced in role notification audiences
-    FOR v_proc_name IN SELECT unnest(ARRAY['admin_create_role', 'admin_update_role', 'admin_replace_role_permissions'])
+    -- Ensure exactly 15 permissions
+    SELECT COUNT(*) INTO v_count FROM public.permissions;
+    IF v_count <> 15 THEN
+        RAISE EXCEPTION 'Permissions Verification FAILED: Expected exactly 15 permissions, found %', v_count;
+    END IF;
+
+    -- Ensure nonexistent permissions are NOT referenced in producer routines
+    FOR v_proc_name IN SELECT unnest(ARRAY[
+        'admin_create_role',
+        'admin_update_role',
+        'admin_replace_role_permissions',
+        'admin_publish_complaint',
+        'admin_unpublish_complaint',
+        'admin_reject_complaint',
+        'admin_finalize_user_membership',
+        'admin_update_user'
+    ])
     LOOP
-        SELECT prosrc INTO v_func_src FROM pg_proc WHERE proname = v_proc_name LIMIT 1;
+        SELECT pg_get_functiondef(p.oid) INTO v_func_src
+        FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+        WHERE n.nspname = 'public' AND p.proname = v_proc_name LIMIT 1;
+
         IF v_func_src LIKE '%roles.view%' THEN
-            RAISE EXCEPTION 'Permissions Verification FAILED: Routine % still references deprecated roles.view!', v_proc_name;
+            RAISE EXCEPTION 'Permissions Verification FAILED: Routine % references deprecated roles.view!', v_proc_name;
         END IF;
         IF v_func_src LIKE '%complaints.manage%' THEN
-            RAISE EXCEPTION 'Permissions Verification FAILED: Routine % still references deprecated complaints.manage!', v_proc_name;
+            RAISE EXCEPTION 'Permissions Verification FAILED: Routine % references deprecated complaints.manage!', v_proc_name;
+        END IF;
+        IF v_func_src LIKE '%notifications.view%' THEN
+            RAISE EXCEPTION 'Permissions Verification FAILED: Routine % references nonexistent notifications.view!', v_proc_name;
         END IF;
     END LOOP;
 
@@ -309,7 +412,9 @@ DECLARE
     v_pass_count      INT := 0;
     v_skip_count      INT := 0;
 BEGIN
+    RAISE NOTICE '==============================================================================';
     RAISE NOTICE '>>> [AUDIT 2.0] Discovering Safe Test Fixtures (Zero Synthetic auth.users)...';
+    RAISE NOTICE '==============================================================================';
 
     -- Discover existing Super Admins
     SELECT user_id INTO v_u_super_actor
@@ -341,7 +446,7 @@ BEGIN
             v_candidate_user := NULL;
     END;
 
-    -- Discover or safely ensure test segment & subcategory
+    -- Discover active test segment & subcategory
     SELECT s.id, sc.id INTO v_test_segment, v_test_subcat
     FROM public.segments s
     JOIN public.subcategories sc ON sc.segment_id = s.id
@@ -349,6 +454,7 @@ BEGIN
     LIMIT 1;
 
     IF v_test_segment IS NULL THEN
+        -- Safely create a transaction-isolated fixture (rolled back at end)
         INSERT INTO public.segments (id, name_en, name_bn, active)
         VALUES ('audit_safe_seg', 'Audit Segment', 'অডিট সেগমেন্ট', true)
         ON CONFLICT (id) DO UPDATE SET active = true;
@@ -405,7 +511,6 @@ BEGIN
 
         -- Verify deduplication held
         IF v_notif_count > 0 THEN
-            -- Check for duplicates by recipient
             IF EXISTS (
                 SELECT recipient_user_id, count(*)
                 FROM public.admin_notifications
@@ -439,7 +544,6 @@ BEGIN
         );
         v_evidence_id := (v_ev_resp->>'evidence_id')::UUID;
 
-        -- Verify notification created
         SELECT COUNT(*) INTO v_notif_count
         FROM public.admin_notifications
         WHERE event_key = 'complaint.evidence_attached'
@@ -457,7 +561,6 @@ BEGIN
     -- --------------------------------------------------------------------------
     RAISE NOTICE '>>> [AUDIT 2.3] Testing Events 3, 4, 5: Moderation Workflow...';
     IF v_u_super_actor IS NOT NULL AND v_complaint_id IS NOT NULL THEN
-        -- Act as super admin
         PERFORM set_config('request.jwt.claim.sub', v_u_super_actor::text, true);
 
         -- 3. Publish Complaint (allows submitted -> published)
@@ -538,7 +641,7 @@ BEGIN
         RAISE NOTICE '>>> [AUDIT 2.4 SUCCESS] Event 6 admin.created dual-stream verified.';
     ELSE
         v_skip_count := v_skip_count + 1;
-        RAISE NOTICE 'SKIPPED: Candidate auth.user or super admin fixture not available for admin_finalize_user_membership.';
+        RAISE NOTICE 'SKIPPED: Candidate auth.users fixture not available for admin_finalize_user_membership.';
     END IF;
 
     -- --------------------------------------------------------------------------
@@ -587,7 +690,7 @@ BEGIN
           AND recipient_user_id = v_u_normal_admin;
 
         -- 9. Role change while active: emit personal notification
-        -- Create temporary test role to switch to
+        -- Create temporary test role to switch to inside transaction
         INSERT INTO public.roles (id, name_en, name_bn, active, is_system)
         VALUES ('audit_tmp_role', 'Audit Role', 'অডিট রোল', true, false)
         ON CONFLICT (id) DO UPDATE SET active = true;
