@@ -288,6 +288,10 @@ DECLARE
     v_super_admin_id UUID;
     v_can_simulate_auth BOOLEAN := false;
 
+    -- Counters for truthful verification reporting
+    v_pass_count INTEGER := 0;
+    v_skip_count INTEGER := 0;
+
     -- Temporary roles for transactional permission assignment
     v_test_role_id TEXT := 'test-audit-role-' || substr(gen_random_uuid()::text, 1, 8);
     v_target_role_id TEXT := 'test-target-role-' || substr(gen_random_uuid()::text, 1, 8);
@@ -384,7 +388,11 @@ BEGIN
             RAISE EXCEPTION 'TEST N FAILED (Dedupe Row Count): Expected exactly 1 surviving row, found %', v_survived_count;
         END IF;
 
+        v_pass_count := v_pass_count + 1;
         RAISE NOTICE 'TEST PASS (Test N - Canonical Emitter Deduplication): Exactly 1 notification row inserted on dedupe collision.';
+    ELSE
+        v_skip_count := v_skip_count + 1;
+        RAISE NOTICE 'SKIPPED (Test N - Canonical Emitter Deduplication): Active normal administrator fixture not found in database.';
     END IF;
 
     -- --------------------------------------------------------------------------
@@ -432,7 +440,11 @@ BEGIN
         -- Restore active flag
         UPDATE public.admin_users SET active = true WHERE user_id = v_normal_admin_id;
 
+        v_pass_count := v_pass_count + 1;
         RAISE NOTICE 'TEST PASS (Test D - Personal Mode): Active resolved without elevated perms, inactive safely skipped.';
+    ELSE
+        v_skip_count := v_skip_count + 1;
+        RAISE NOTICE 'SKIPPED (Test D - Personal Mode): Active normal administrator fixture not found in database.';
     END IF;
 
     -- --------------------------------------------------------------------------
@@ -457,8 +469,10 @@ BEGIN
             RAISE EXCEPTION 'TEST C FAILED (Actor Exclusion): Super admin actor was not excluded.';
         END IF;
 
+        v_pass_count := v_pass_count + 1;
         RAISE NOTICE 'TEST PASS (Test C - Actor Exclusion): Actor excluded when p_exclude_actor is true.';
     ELSE
+        v_skip_count := v_skip_count + 1;
         RAISE NOTICE 'SKIPPED: Active super administrator fixture not found. Test C (Actor Exclusion) skipped.';
     END IF;
 
@@ -494,8 +508,10 @@ BEGIN
             RAISE EXCEPTION 'TEST B FAILED (super_admin_only Mode): Non-super-admin resolved in super_admin_only mode!';
         END IF;
 
+        v_pass_count := v_pass_count + 1;
         RAISE NOTICE 'TEST PASS (Test B - Super Admin Dynamic Permissions & Isolation): Verified dynamic complete permission set.';
     ELSE
+        v_skip_count := v_skip_count + 1;
         RAISE NOTICE 'SKIPPED: Active super administrator fixture not found. Test B (Super Admin Dynamic Permissions & Isolation) skipped.';
     END IF;
 
@@ -561,6 +577,7 @@ BEGIN
             RAISE EXCEPTION 'TEST E FAILED (required_all non-matching): Normal admin resolved without possessing all required permissions!';
         END IF;
 
+        v_pass_count := v_pass_count + 1;
         RAISE NOTICE 'TEST PASS (Test E - required_all_permissions): Passes with full match, fails on missing permission.';
 
         -- ----------------------------------------------------------------------
@@ -602,6 +619,7 @@ BEGIN
             RAISE EXCEPTION 'TEST F FAILED (required_any disjoint): Normal admin resolved without any matching permissions!';
         END IF;
 
+        v_pass_count := v_pass_count + 1;
         RAISE NOTICE 'TEST PASS (Test F - required_any_permissions): Passes on any overlap, fails on disjoint set.';
 
         -- ----------------------------------------------------------------------
@@ -617,8 +635,10 @@ BEGIN
                 RAISE EXCEPTION 'TEST G FAILED (User Target Scoping): Normal admin allowed to view Super Admin target!';
             END IF;
 
+            v_pass_count := v_pass_count + 1;
             RAISE NOTICE 'TEST PASS (Test G - Protected Super Admin Target): Normal admin cannot target Super Admin user scope.';
         ELSE
+            v_skip_count := v_skip_count + 1;
             RAISE NOTICE 'SKIPPED: Active super administrator fixture not found. Test G (Protected Super Admin Target) skipped.';
         END IF;
 
@@ -651,6 +671,7 @@ BEGIN
             RAISE EXCEPTION 'TEST H FAILED (Role Target Ceiling Exceeded): Normal admin allowed to manage role outside ceiling!';
         END IF;
 
+        v_pass_count := v_pass_count + 1;
         RAISE NOTICE 'TEST PASS (Test H - Role Target Ceiling): Out-of-ceiling role target strictly blocked.';
 
         -- ----------------------------------------------------------------------
@@ -701,8 +722,10 @@ BEGIN
                 RAISE EXCEPTION 'TEST I FAILED (Stale Notification Visibility): Stale notification should be hidden when target role exceeds ceiling!';
             END IF;
 
+            v_pass_count := v_pass_count + 1;
             RAISE NOTICE 'TEST PASS (Test I - Stale Target-Scope Revocation): Historical role notifications disappear when target exceeds ceiling.';
         ELSE
+            v_skip_count := v_skip_count + 1;
             RAISE NOTICE 'SKIPPED: auth.uid() simulation unavailable for stale role-target visibility test';
         END IF;
 
@@ -741,18 +764,20 @@ BEGIN
                 RAISE EXCEPTION 'TEST J FAILED (Permission Revocation): Stale notification visible after permission loss!';
             END IF;
 
+            v_pass_count := v_pass_count + 1;
             RAISE NOTICE 'TEST PASS (Test J - Stale Permission Revocation): Stale privileged notifications dynamically hidden after permission loss.';
         ELSE
+            v_skip_count := v_skip_count + 1;
             RAISE NOTICE 'SKIPPED: auth.uid() simulation unavailable for stale permission revocation test';
         END IF;
 
         -- ----------------------------------------------------------------------
-        -- TEST A: Active/Inactive Current Visibility
+        -- TEST A1: Active/Inactive Effective Permissions
         -- ----------------------------------------------------------------------
         -- While active, effective permissions exist
         SELECT ARRAY(SELECT p_id FROM public.admin_notification_get_effective_permissions(v_normal_admin_id) AS p_id) INTO v_eff_perms;
         IF cardinality(v_eff_perms) = 0 THEN
-            RAISE EXCEPTION 'TEST A FAILED: Active admin must have permissions from test role!';
+            RAISE EXCEPTION 'TEST A1 FAILED: Active admin must have permissions from test role!';
         END IF;
 
         -- Temporarily mark inactive
@@ -760,9 +785,15 @@ BEGIN
 
         SELECT ARRAY(SELECT p_id FROM public.admin_notification_get_effective_permissions(v_normal_admin_id) AS p_id) INTO v_eff_perms;
         IF cardinality(v_eff_perms) <> 0 THEN
-            RAISE EXCEPTION 'TEST A FAILED: Deactivated admin returned effective permissions: %', v_eff_perms;
+            RAISE EXCEPTION 'TEST A1 FAILED: Deactivated admin returned effective permissions: %', v_eff_perms;
         END IF;
 
+        v_pass_count := v_pass_count + 1;
+        RAISE NOTICE 'TEST PASS (Test A1 - Inactive Effective Permissions): Inactive admins possess no effective permissions.';
+
+        -- ----------------------------------------------------------------------
+        -- TEST A2: Caller-Bound Visibility
+        -- ----------------------------------------------------------------------
         IF v_can_simulate_auth THEN
             PERFORM set_config('request.jwt.claim.sub', v_normal_admin_id::text, true);
             v_is_visible := public.admin_notification_can_currently_view(
@@ -774,19 +805,25 @@ BEGIN
                 NULL
             );
             IF v_is_visible IS TRUE THEN
-                RAISE EXCEPTION 'TEST A FAILED: Deactivated admin granted caller-bound visibility!';
+                RAISE EXCEPTION 'TEST A2 FAILED: Deactivated admin granted caller-bound visibility!';
             END IF;
 
             -- Restore active flag
             UPDATE public.admin_users SET active = true WHERE user_id = v_normal_admin_id;
 
-            RAISE NOTICE 'TEST PASS (Test A - Active/Inactive Current Visibility): Inactive admins possess no effective permissions and cannot view.';
+            v_pass_count := v_pass_count + 1;
+            RAISE NOTICE 'TEST PASS (Test A2 - Caller-Bound Visibility): Inactive admins strictly denied caller-bound visibility.';
         ELSE
             -- Restore active flag
             UPDATE public.admin_users SET active = true WHERE user_id = v_normal_admin_id;
 
-            RAISE NOTICE 'TEST PASS (Test A - Active/Inactive Effective Permissions): Inactive admins possess no effective permissions. Caller-bound visibility check SKIPPED (auth.uid() simulation unavailable).';
+            v_skip_count := v_skip_count + 1;
+            RAISE NOTICE 'SKIPPED (Test A2 - Caller-Bound Visibility): auth.uid() simulation unavailable.';
         END IF;
+    ELSE
+        -- Normal admin fixture missing: skip dependent tests E, F, G, H, I, J, A1, A2
+        v_skip_count := v_skip_count + 8;
+        RAISE NOTICE 'SKIPPED (Tests E, F, G, H, I, J, A1, A2): Active normal administrator fixture not found in database.';
     END IF;
 
     -- --------------------------------------------------------------------------
@@ -825,6 +862,7 @@ BEGIN
         RAISE EXCEPTION 'TEST K FAILED (Unknown Target Type Emitter): Did not raise SQLSTATE 22000!';
     END IF;
 
+    v_pass_count := v_pass_count + 1;
     RAISE NOTICE 'TEST PASS (Test K - Unknown Target Type): Resolver returns 0, emitter raises SQLSTATE 22000.';
 
     -- --------------------------------------------------------------------------
@@ -915,6 +953,7 @@ BEGIN
         RAISE EXCEPTION 'TEST L FAILED (role blank target_id): Did not raise SQLSTATE 22000!';
     END IF;
 
+    v_pass_count := v_pass_count + 1;
     RAISE NOTICE 'TEST PASS (Test L - Malformed Target IDs): Missing, blank, or malformed target IDs strictly rejected with SQLSTATE 22000.';
 
     -- --------------------------------------------------------------------------
@@ -952,10 +991,21 @@ BEGIN
         RAISE EXCEPTION 'TEST M FAILED (Invalid Audience Mode Emitter): Did not raise SQLSTATE 22000!';
     END IF;
 
+    v_pass_count := v_pass_count + 1;
     RAISE NOTICE 'TEST PASS (Test M - Invalid Audience Mode): Resolver returns 0, emitter raises SQLSTATE 22000.';
 
     RAISE NOTICE '==============================================================================';
-    RAISE NOTICE 'ALL NOTIFICATION FOUNDATION VERIFICATION ASSERTIONS (A-N) PASSED SUCCESSFULLY ✅';
+    IF v_skip_count = 0 THEN
+        RAISE NOTICE 'NOTIFICATION FOUNDATION VERIFICATION PASSED';
+        RAISE NOTICE 'All executable A-N tests completed successfully.';
+        RAISE NOTICE 'Passed: %', v_pass_count;
+        RAISE NOTICE 'Skipped: 0';
+    ELSE
+        RAISE NOTICE 'NOTIFICATION FOUNDATION VERIFICATION COMPLETED WITH SKIPPED TESTS';
+        RAISE NOTICE 'Passed: %', v_pass_count;
+        RAISE NOTICE 'Skipped: %', v_skip_count;
+        RAISE NOTICE 'Review the SKIPPED notices above before treating live verification as fully complete.';
+    END IF;
     RAISE NOTICE '==============================================================================';
 END;
 $$;

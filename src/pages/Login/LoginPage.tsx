@@ -256,26 +256,6 @@ export const LoginPage: React.FC = () => {
                   ? 'লগইন'
                   : 'Login'}
               </Button>
-
-              {!authService.isConfigured() && (
-                <div className="pt-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="md"
-                    fullWidth
-                    onClick={() => {
-                      setEmail('admin@sobaike.org');
-                      setPassword('Admin@1234');
-                    }}
-                    className="text-xs border-dashed"
-                  >
-                    {language === 'bn'
-                      ? 'ডেমো অ্যাডমিন তথ্য পূরণ করুন (admin@sobaike.org)'
-                      : 'Fill Demo Admin Credentials (admin@sobaike.org)'}
-                  </Button>
-                </div>
-              )}
             </form>
 
             {/* Helper Footer */}
