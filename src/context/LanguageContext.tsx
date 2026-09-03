@@ -160,6 +160,7 @@ export interface TranslationDictionary {
     lastUpdated: string;
     neverUpdated: string;
     assignedPermissions: string;
+    assignedPermissionsCount: string;
     noAssignedPermissions: string;
     noAssignedPermissionsDesc: string;
     assignedCountBadge: string;
@@ -254,6 +255,9 @@ export interface TranslationDictionary {
     systemAccessPermanent: string;
     locked: string;
     protectedBadge: string;
+    restrictedBadge: string;
+    strongerUserCannotBeEdited: string;
+    strongerRoleLocked: string;
     failedToLoadUsers: string;
     failedToLoadUser: string;
     userNotFound: string;
@@ -438,6 +442,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       lastUpdated: 'Last Updated',
       neverUpdated: 'Never updated',
       assignedPermissions: 'Assigned Permissions',
+      assignedPermissionsCount: '{count} permissions assigned',
       noAssignedPermissions: 'No permissions assigned to this role',
       noAssignedPermissionsDesc: 'Users with this role will not have access to permission-controlled administrative features.',
       assignedCountBadge: '{count} assigned',
@@ -532,6 +537,9 @@ export const translations: Record<Language, TranslationDictionary> = {
       systemAccessPermanent: 'System Access (Permanent)',
       locked: 'Locked',
       protectedBadge: 'Protected Account',
+      restrictedBadge: 'Restricted',
+      strongerUserCannotBeEdited: 'This administrator possesses permissions outside your authorization ceiling and cannot be edited.',
+      strongerRoleLocked: 'This administrator possesses permissions outside your authorization ceiling.',
       failedToLoadUsers: 'Failed to Load Administrators',
       failedToLoadUser: 'Failed to Load Administrator',
       userNotFound: 'Administrator account could not be found.',
@@ -714,6 +722,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       lastUpdated: 'সর্বশেষ হালনাগাদ',
       neverUpdated: 'কখনো পরিবর্তন হয়নি',
       assignedPermissions: 'বরাদ্দকৃত অনুমতিসমূহ',
+      assignedPermissionsCount: '{count} টি অনুমতি বরাদ্দকৃত',
       noAssignedPermissions: 'এই ভূমিকায় কোনো অনুমতি বরাদ্দ নেই',
       noAssignedPermissionsDesc: 'এই ভূমিকার ব্যবহারকারীরা কোনো অনুমতি-নিয়ন্ত্রিত প্রশাসনিক ফিচারে প্রবেশাধিকার পাবেন না।',
       assignedCountBadge: '{count} টি বরাদ্দকৃত',
@@ -808,6 +817,9 @@ export const translations: Record<Language, TranslationDictionary> = {
       systemAccessPermanent: 'সিস্টেম অ্যাক্সেস (স্থায়ী)',
       locked: 'সুরক্ষিত',
       protectedBadge: 'সুরক্ষিত অ্যাকাউন্ট',
+      restrictedBadge: 'সীমাবদ্ধ',
+      strongerUserCannotBeEdited: 'এই প্রশাসকের কাছে আপনার অনুমোদনের বাইরের অনুমতি রয়েছে এবং সম্পাদনা করা যাবে না।',
+      strongerRoleLocked: 'এই প্রশাসকের কাছে আপনার অনুমোদনের বাইরের অনুমতি রয়েছে।',
       failedToLoadUsers: 'প্রশাসক তালিকা লোড করতে ব্যর্থ হয়েছে',
       failedToLoadUser: 'প্রশাসক তথ্য পাওয়া যায়নি',
       userNotFound: 'প্রশাসক অ্যাকাউন্ট পাওয়া যায়নি।',

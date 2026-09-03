@@ -74,18 +74,20 @@ export const EditUserPage: React.FC = () => {
   }, [userId, t.users.userIdMissing, t.users.failedToLoadUser]);
 
   const isSuperAdmin = initialUser?.is_super_admin ?? false;
+  const isOutOfCeiling = initialUser?.can_manage_target === false;
+  const isLocked = isSuperAdmin || isOutOfCeiling;
 
   // Check if modified
   const isDirty =
     initialUser &&
-    !isSuperAdmin &&
+    !isLocked &&
     (displayName.trim() !== (initialUser.display_name || '').trim() ||
       roleId !== (initialUser.role?.id || '') ||
       active !== initialUser.active);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userId || !initialUser || isSuperAdmin) return;
+    if (!userId || !initialUser || isLocked) return;
 
     if (!isDirty) {
       navigate(`/users/${userId}`);
@@ -210,8 +212,35 @@ export const EditUserPage: React.FC = () => {
         </div>
       )}
 
+      {/* Ceiling Restriction Alert Banner */}
+      {!isSuperAdmin && isOutOfCeiling && (
+        <div
+          id="edit-ceiling-restriction-banner"
+          className="p-5 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 flex items-start gap-3.5 shadow-xs"
+        >
+          <Lock className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <div className="text-sm space-y-1">
+            <h4 className="font-bold">{t.users.restrictedBadge}</h4>
+            <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
+              {t.users.strongerUserCannotBeEdited}
+            </p>
+            <div className="pt-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => navigate(`/users/${userId}`)}
+                className="h-8 text-xs bg-white dark:bg-slate-900 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+                {t.users.backToUsers}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Error Alert */}
-      {error && !isSuperAdmin && (
+      {error && !isLocked && (
         <div
           id="edit-user-error-alert"
           className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900/60 flex items-start gap-3 shadow-xs"
@@ -246,7 +275,7 @@ export const EditUserPage: React.FC = () => {
               <input
                 id="input-edit-display-name"
                 type="text"
-                disabled={isSuperAdmin || submitting}
+                disabled={isLocked || submitting}
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 maxLength={100}
@@ -291,7 +320,7 @@ export const EditUserPage: React.FC = () => {
             <select
               id="select-edit-user-role"
               required
-              disabled={isSuperAdmin || submitting || roles.length === 0}
+              disabled={isLocked || submitting || roles.length === 0}
               value={roleId}
               onChange={(e) => setRoleId(e.target.value)}
               className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-400 text-slate-900 dark:text-slate-100 disabled:opacity-50"
@@ -335,7 +364,7 @@ export const EditUserPage: React.FC = () => {
                 id="radio-edit-status-active"
                 type="radio"
                 name="edit-user-status"
-                disabled={isSuperAdmin || submitting}
+                disabled={isLocked || submitting}
                 checked={active === true}
                 onChange={() => setActive(true)}
                 className="w-4 h-4 text-sky-600 focus:ring-sky-500 border-slate-300 dark:border-slate-700"
@@ -348,7 +377,7 @@ export const EditUserPage: React.FC = () => {
                 id="radio-edit-status-inactive"
                 type="radio"
                 name="edit-user-status"
-                disabled={isSuperAdmin || submitting}
+                disabled={isLocked || submitting}
                 checked={active === false}
                 onChange={() => setActive(false)}
                 className="w-4 h-4 text-sky-600 focus:ring-sky-500 border-slate-300 dark:border-slate-700"
@@ -371,7 +400,7 @@ export const EditUserPage: React.FC = () => {
             {t.common.cancel}
           </Button>
 
-          {!isSuperAdmin && (
+          {!isLocked && (
             <Button
               id="btn-submit-edit-user"
               type="submit"

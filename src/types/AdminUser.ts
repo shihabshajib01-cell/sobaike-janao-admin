@@ -11,6 +11,7 @@ export interface AdminUserListItem {
   role_id: string | null;
   role_name_en: string | null;
   role_name_bn: string | null;
+  can_manage_target?: boolean;
   created_at: string;
 }
 
@@ -29,6 +30,7 @@ export interface AdminUserDetail {
     is_system?: boolean;
   } | null;
   effective_permissions: string[];
+  can_manage_target?: boolean;
   created_at: string;
   updated_at: string | null;
 }

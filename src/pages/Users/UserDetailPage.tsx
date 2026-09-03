@@ -156,7 +156,7 @@ export const UserDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Edit Button (Disabled/Hidden for Super Admin) */}
+        {/* Edit Button (Disabled/Hidden for Super Admin or out-of-ceiling administrator) */}
         {canManageUsers && (
           user.is_super_admin ? (
             <div
@@ -165,6 +165,14 @@ export const UserDetailPage: React.FC = () => {
             >
               <Lock className="w-3.5 h-3.5" />
               {t.users.protectedBadge}
+            </div>
+          ) : user.can_manage_target === false ? (
+            <div
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-400 dark:text-slate-500 rounded-lg bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 cursor-not-allowed"
+              title={t.users.strongerUserCannotBeEdited}
+            >
+              <Lock className="w-3.5 h-3.5" />
+              {t.users.restrictedBadge}
             </div>
           ) : (
             <Button
@@ -207,6 +215,26 @@ export const UserDetailPage: React.FC = () => {
             </h4>
             <p className="text-xs text-purple-700 dark:text-purple-300/90 mt-1 leading-relaxed">
               {t.users.protectedAccountDesc}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Ceiling Restriction Banner */}
+      {!user.is_super_admin && user.can_manage_target === false && (
+        <div
+          id="ceiling-restriction-banner"
+          className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 flex items-start gap-3 shadow-xs"
+        >
+          <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/60 flex items-center justify-center shrink-0 text-amber-700 dark:text-amber-300">
+            <Lock className="w-4 h-4" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-amber-900 dark:text-amber-200">
+              {t.users.restrictedBadge}
+            </h4>
+            <p className="text-xs text-amber-700 dark:text-amber-300/90 mt-1 leading-relaxed">
+              {t.users.strongerUserCannotBeEdited}
             </p>
           </div>
         </div>

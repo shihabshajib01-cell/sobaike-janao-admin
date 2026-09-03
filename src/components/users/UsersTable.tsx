@@ -180,6 +180,14 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                             <Lock className="w-3 h-3" />
                             {t.users.locked}
                           </div>
+                        ) : user.can_manage_target === false ? (
+                          <div
+                            className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-slate-400 dark:text-slate-500 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 cursor-not-allowed"
+                            title={t.users.strongerUserCannotBeEdited}
+                          >
+                            <Lock className="w-3 h-3" />
+                            {t.users.restrictedBadge}
+                          </div>
                         ) : (
                           <Button
                             id={`btn-edit-user-${user.user_id}`}
@@ -290,6 +298,11 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-slate-400 dark:text-slate-500 rounded bg-slate-50 dark:bg-slate-800/60">
                       <Lock className="w-3 h-3" />
                       {t.users.locked}
+                    </span>
+                  ) : user.can_manage_target === false ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-slate-400 dark:text-slate-500 rounded bg-slate-50 dark:bg-slate-800/60">
+                      <Lock className="w-3 h-3" />
+                      {t.users.restrictedBadge}
                     </span>
                   ) : (
                     <Button

@@ -35,10 +35,11 @@ export const RolePermissionsView: React.FC<RolePermissionsViewProps> = ({
 
   const assignedSet = useMemo(() => new Set(permissionIds), [permissionIds]);
 
-  // Group catalogue items by module
+  // Group ONLY assigned catalogue items by module (scope-safe inspection)
   const groupedPermissions = useMemo(() => {
     const groups: Record<string, PermissionCatalogueItem[]> = {};
     catalogue.forEach((item) => {
+      if (!assignedSet.has(item.id)) return;
       const mod = item.module || 'other';
       if (!groups[mod]) {
         groups[mod] = [];
@@ -46,7 +47,7 @@ export const RolePermissionsView: React.FC<RolePermissionsViewProps> = ({
       groups[mod].push(item);
     });
     return groups;
-  }, [catalogue]);
+  }, [catalogue, assignedSet]);
 
   const moduleKeys = useMemo(() => Object.keys(groupedPermissions), [groupedPermissions]);
 
@@ -117,9 +118,7 @@ export const RolePermissionsView: React.FC<RolePermissionsViewProps> = ({
                 {t.roles.assignedPermissions}
               </CardTitle>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                {t.roles.permissionsCount
-                  .replace('{count}', formatNumber(permissionIds.length))
-                  .replace('{total}', formatNumber(catalogue.length))}
+                {t.roles.assignedPermissionsCount.replace('{count}', formatNumber(permissionIds.length))}
               </p>
             </div>
           </div>
@@ -153,30 +152,16 @@ export const RolePermissionsView: React.FC<RolePermissionsViewProps> = ({
           {moduleKeys.map((moduleKey) => {
             const items = groupedPermissions[moduleKey] || [];
             const Icon = getModuleIcon(moduleKey);
-            const assignedInModule = items.filter((item) => assignedSet.has(item.id)).length;
-            const hasAnyAssigned = assignedInModule > 0;
 
             return (
               <div
                 key={moduleKey}
-                className={cn(
-                  'rounded-xl border transition-colors',
-                  hasAnyAssigned
-                    ? 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60'
-                    : 'border-slate-100 dark:border-slate-800/60 bg-slate-50/40 dark:bg-slate-900/30 opacity-75'
-                )}
+                className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 transition-colors"
               >
                 {/* Module Header */}
                 <div className="p-3.5 sm:px-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30 rounded-t-xl">
                   <div className="flex items-center gap-2.5">
-                    <div
-                      className={cn(
-                        'p-1.5 rounded-md',
-                        hasAnyAssigned
-                          ? 'bg-sky-100 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400'
-                          : 'bg-slate-200/60 dark:bg-slate-800 text-slate-400 dark:text-slate-500'
-                      )}
-                    >
+                    <div className="p-1.5 rounded-md bg-sky-100 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400">
                       <Icon className="w-4 h-4" />
                     </div>
                     <span className="font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-200">
@@ -185,44 +170,27 @@ export const RolePermissionsView: React.FC<RolePermissionsViewProps> = ({
                   </div>
 
                   <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                    {formatNumber(assignedInModule)} / {formatNumber(items.length)}
+                    {t.roles.assignedCountBadge.replace('{count}', formatNumber(items.length))}
                   </span>
                 </div>
 
                 {/* Module Permission Items Grid */}
                 <div className="p-3 sm:p-4 grid grid-cols-1 md:grid-cols-2 gap-2.5">
                   {items.map((perm) => {
-                    const isAssigned = assignedSet.has(perm.id);
                     const permName = isBn ? perm.name_bn || perm.name_en : perm.name_en;
 
                     return (
                       <div
                         key={perm.id}
-                        className={cn(
-                          'p-3 rounded-lg border transition-all flex items-start gap-2.5',
-                          isAssigned
-                            ? 'bg-sky-50/40 dark:bg-sky-950/20 border-sky-200/70 dark:border-sky-900/50 text-slate-900 dark:text-slate-100'
-                            : 'bg-slate-50/30 dark:bg-slate-800/20 border-slate-150 dark:border-slate-800/50 text-slate-400 dark:text-slate-500'
-                        )}
+                        className="p-3 rounded-lg border bg-sky-50/40 dark:bg-sky-950/20 border-sky-200/70 dark:border-sky-900/50 text-slate-900 dark:text-slate-100 flex items-start gap-2.5"
                       >
                         <div className="mt-0.5 shrink-0">
-                          {isAssigned ? (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                          ) : (
-                            <XCircle className="w-4 h-4 text-slate-300 dark:text-slate-600" />
-                          )}
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                         </div>
 
                         <div className="min-w-0 space-y-0.5">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span
-                              className={cn(
-                                'text-xs font-semibold',
-                                isAssigned
-                                  ? 'text-slate-900 dark:text-slate-100'
-                                  : 'text-slate-500 dark:text-slate-400 line-through decoration-slate-300 dark:decoration-slate-600'
-                              )}
-                            >
+                            <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
                               {permName}
                             </span>
                             <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 shrink-0">
