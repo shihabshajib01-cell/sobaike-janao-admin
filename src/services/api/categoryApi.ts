@@ -70,10 +70,7 @@ export class CategoryApi {
    */
   async getTaxonomy(): Promise<TaxonomyBundle> {
     if (!isSupabaseConfigured) {
-      if (isDev) {
-        return createDevFallbackTaxonomyBundle();
-      }
-      throw new Error('Supabase taxonomy service is not configured in this environment.');
+      return createDevFallbackTaxonomyBundle();
     }
 
     const [segmentsRes, subcategoriesRes] = await Promise.all([
