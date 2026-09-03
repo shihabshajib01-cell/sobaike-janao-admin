@@ -287,23 +287,19 @@ export class RoleApi {
 
       let rpcResult = await supabase.rpc('admin_create_role', primaryParams);
 
-      // If backend has not yet applied migration 20260903000001 (PGRST202 or unknown p_name_en parameter),
-      // fall back gracefully to the pre-2C single-name signature
-      if (
-        rpcResult.error &&
-        (rpcResult.error.code === 'PGRST202' ||
-          rpcResult.error.message?.includes('p_name_en') ||
-          rpcResult.error.message?.includes('schema cache'))
-      ) {
-        rpcResult = await supabase.rpc('admin_create_role', {
-          p_name: cleanNameEn,
-          p_active: input.active,
-          p_permission_ids: input.permission_ids,
-          p_description: input.description && input.description.trim() ? input.description.trim() : null,
-        });
-      }
-
       if (rpcResult.error) {
+        if (
+          rpcResult.error.code === 'PGRST202' ||
+          rpcResult.error.message?.includes('p_name_en') ||
+          rpcResult.error.message?.includes('schema cache')
+        ) {
+          throw new RoleApiError(
+            'Role creation is temporarily unavailable because the required bilingual role update has not been applied. Please apply migration 20260903000001.',
+            'COMPATIBILITY_ERROR',
+            rpcResult.error.details,
+            'Apply migration 20260903000001 to enable safe role creation with separate bilingual naming.'
+          );
+        }
         throw new RoleApiError(rpcResult.error.message, rpcResult.error.code, rpcResult.error.details, rpcResult.error.hint);
       }
 
@@ -428,40 +424,21 @@ export class RoleApi {
         p_update_name_bn: hasNameBnUpdate,
       };
 
-      let { data, error } = await supabase.rpc('admin_update_role', primaryParams);
-
-      // If database is running 00008 (before Phase 2C migration 20260903000001):
-      // Fall back to calling 00008 signature (p_name, p_update_description)
-      if (
-        error &&
-        (error.code === 'PGRST202' ||
-          error.message?.includes('p_name_en') ||
-          error.message?.includes('p_update_name_bn'))
-      ) {
-        const fallbackParams: Record<string, unknown> = {
-          p_role_id: cleanId,
-          p_name: cleanNameEn,
-          p_active: input.active,
-          p_permission_ids: input.permission_ids !== undefined ? input.permission_ids : null,
-          p_description: cleanDesc,
-          p_update_description: hasDescriptionUpdate,
-        };
-        const fallbackResult = await supabase.rpc('admin_update_role', fallbackParams);
-        data = fallbackResult.data;
-        error = fallbackResult.error;
-      }
+      const { data, error } = await supabase.rpc('admin_update_role', primaryParams);
 
       if (error) {
         if (
           error.code === 'PGRST202' ||
           error.message?.includes('p_update_description') ||
-          error.message?.includes('p_name_en')
+          error.message?.includes('p_update_name_bn') ||
+          error.message?.includes('p_name_en') ||
+          error.message?.includes('schema cache')
         ) {
           throw new RoleApiError(
-            'The database is missing migrations required for safe role updates. Please apply migrations 20260902000008 and 20260903000001.',
+            'Role updates are temporarily unavailable because the required bilingual role update has not been applied. Please apply migration 20260903000001.',
             'COMPATIBILITY_ERROR',
             error.details,
-            'Apply migrations to enable safe role updates with separate bilingual naming.'
+            'Apply migration 20260903000001 to enable safe role updates with separate bilingual naming.'
           );
         }
         throw new RoleApiError(error.message, error.code, error.details, error.hint);

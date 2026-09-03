@@ -34,6 +34,7 @@ export const CreateRolePage: React.FC = () => {
     message: string;
     isDuplicate: boolean;
     isPermissionDenied: boolean;
+    isCompatibility: boolean;
   } | null>(null);
 
   // Unsaved changes confirmation modal
@@ -138,14 +139,22 @@ export const CreateRolePage: React.FC = () => {
       let msg = t.roles.generalCreateError;
       let isDuplicate = false;
       let isPermissionDenied = false;
+      let isCompatibility = false;
 
-      if (err instanceof RoleApiError || err instanceof Error) {
+      if (err instanceof RoleApiError) {
+        msg = err.message;
+        isDuplicate = err.isDuplicate;
+        isPermissionDenied = err.isPermissionDenied;
+        isCompatibility = err.isCompatibilityError;
+      } else if (err instanceof Error) {
         msg = err.message;
         const code = (err as { code?: string }).code;
         if (code === '23505' || err.message.toLowerCase().includes('already exists') || err.message.toLowerCase().includes('duplicate')) {
           isDuplicate = true;
         } else if (code === '42501' || err.message.toLowerCase().includes('permission denied')) {
           isPermissionDenied = true;
+        } else if (code === 'COMPATIBILITY_ERROR' || err.message.toLowerCase().includes('bilingual role update')) {
+          isCompatibility = true;
         }
       } else if (typeof err === 'object' && err !== null && 'code' in err) {
         const code = String((err as { code: unknown }).code);
@@ -153,6 +162,8 @@ export const CreateRolePage: React.FC = () => {
           isDuplicate = true;
         } else if (code === '42501') {
           isPermissionDenied = true;
+        } else if (code === 'COMPATIBILITY_ERROR') {
+          isCompatibility = true;
         }
       }
 
@@ -160,6 +171,7 @@ export const CreateRolePage: React.FC = () => {
         message: msg,
         isDuplicate,
         isPermissionDenied,
+        isCompatibility,
       });
     } finally {
       setIsSubmitting(false);

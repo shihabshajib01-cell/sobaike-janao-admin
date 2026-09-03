@@ -29,7 +29,7 @@ export interface StepReviewProps {
   selectedPermissionIds: string[];
   permissionCatalogue: PermissionCatalogueItem[];
   isSubmitting: boolean;
-  submitError: { message: string; isDuplicate: boolean; isPermissionDenied: boolean } | null;
+  submitError: { message: string; isDuplicate: boolean; isPermissionDenied: boolean; isCompatibility?: boolean } | null;
   onEditDetails: () => void;
   onEditPermissions: () => void;
   onSubmit: () => void;
@@ -135,14 +135,14 @@ export const StepReview: React.FC<StepReviewProps> = ({
         <div
           className={cn(
             'p-4 rounded-xl border flex items-start gap-3 text-sm animate-in fade-in',
-            submitError.isDuplicate || submitError.isPermissionDenied
+            submitError.isDuplicate || submitError.isPermissionDenied || submitError.isCompatibility
               ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200'
               : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-900 dark:text-rose-200'
           )}
         >
           {submitError.isPermissionDenied ? (
             <ShieldAlert className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-          ) : submitError.isDuplicate ? (
+          ) : submitError.isDuplicate || submitError.isCompatibility ? (
             <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           ) : (
             <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
@@ -150,7 +150,9 @@ export const StepReview: React.FC<StepReviewProps> = ({
 
           <div className="space-y-0.5 flex-1">
             <h4 className="font-semibold text-xs sm:text-sm">
-              {submitError.isDuplicate
+              {submitError.isCompatibility
+                ? t.roles.createCompatibilityError
+                : submitError.isDuplicate
                 ? t.roles.duplicateNameError
                 : submitError.isPermissionDenied
                 ? t.roles.permissionDeniedCreate
@@ -158,7 +160,8 @@ export const StepReview: React.FC<StepReviewProps> = ({
             </h4>
             {submitError.message &&
               !submitError.isDuplicate &&
-              !submitError.isPermissionDenied && (
+              !submitError.isPermissionDenied &&
+              !submitError.isCompatibility && (
                 <p className="text-xs opacity-90">{submitError.message}</p>
               )}
           </div>

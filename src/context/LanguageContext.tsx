@@ -117,6 +117,7 @@ export interface TranslationDictionary {
     roleCreatedSuccess: string;
     duplicateNameError: string;
     permissionDeniedCreate: string;
+    createCompatibilityError: string;
     generalCreateError: string;
     loadPermissionsError: string;
     cancelConfirmTitle: string;
@@ -301,6 +302,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       roleCreatedSuccess: 'Role created successfully.',
       duplicateNameError: 'A role with this name already exists.',
       permissionDeniedCreate: 'You do not have permission to manage Roles & Permissions.',
+      createCompatibilityError: 'Role creation is temporarily unavailable because the required bilingual role update has not been applied. Please contact your system administrator.',
       generalCreateError: 'Failed to create role. Please check your connection and retry.',
       loadPermissionsError: 'Could not load permissions catalogue. Please check your connection and retry.',
       cancelConfirmTitle: 'Discard changes?',
@@ -483,6 +485,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       roleCreatedSuccess: 'ভূমিকা সফলভাবে তৈরি হয়েছে।',
       duplicateNameError: 'এই নামের একটি ভূমিকা ইতিমধ্যে বিদ্যমান।',
       permissionDeniedCreate: 'ভূমিকা ও অনুমতি পরিচালনা করার অনুমতি আপনার নেই।',
+      createCompatibilityError: 'প্রয়োজনীয় দ্বিভাষিক ব্যাকএন্ড আপডেট প্রয়োগ না করায় ভূমিকা তৈরি সাময়িকভাবে অনুপলব্ধ। অনুগ্রহ করে সিস্টেম অ্যাডমিনিস্ট্রেটরের সাথে যোগাযোগ করুন।',
       generalCreateError: 'ভূমিকা তৈরি করতে ব্যর্থ হয়েছে। আপনার সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।',
       loadPermissionsError: 'অনুমতি তালিকা লোড করা যায়নি। অনুগ্রহ করে আপনার সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।',
       cancelConfirmTitle: 'পরিবর্তন বাতিল করবেন?',
