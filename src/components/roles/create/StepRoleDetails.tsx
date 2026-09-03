@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, ArrowRight, X } from 'lucide-react';
+import { Shield, ArrowRight, X, Hash, Lock, Globe, Sparkles } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
@@ -7,12 +7,15 @@ import { Switch } from '@/components/ui/Switch';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useLanguage } from '@/context/LanguageContext';
+import { generateRoleSlug } from '@/utils/roleUtils';
 
 export interface StepRoleDetailsProps {
-  roleName: string;
+  nameEn: string;
+  nameBn: string;
   active: boolean;
   description: string;
-  onRoleNameChange: (name: string) => void;
+  onNameEnChange: (name: string) => void;
+  onNameBnChange: (name: string) => void;
   onActiveChange: (active: boolean) => void;
   onDescriptionChange: (desc: string) => void;
   onNext: () => void;
@@ -20,10 +23,12 @@ export interface StepRoleDetailsProps {
 }
 
 export const StepRoleDetails: React.FC<StepRoleDetailsProps> = ({
-  roleName,
+  nameEn,
+  nameBn,
   active,
   description,
-  onRoleNameChange,
+  onNameEnChange,
+  onNameBnChange,
   onActiveChange,
   onDescriptionChange,
   onNext,
@@ -32,13 +37,22 @@ export const StepRoleDetails: React.FC<StepRoleDetailsProps> = ({
   const { t } = useLanguage();
   const [touched, setTouched] = useState<boolean>(false);
 
-  const trimmedName = roleName.trim();
-  const isNameInvalid = touched && trimmedName.length === 0;
+  const trimmedNameEn = nameEn.trim();
+  const technicalSlug = generateRoleSlug(trimmedNameEn);
+
+  const isNameEmpty = touched && trimmedNameEn.length === 0;
+  const isSlugInvalid = touched && trimmedNameEn.length > 0 && technicalSlug.length === 0;
+
+  const errorMessage = isNameEmpty
+    ? t.roles.roleNameEnglishRequired
+    : isSlugInvalid
+    ? t.roles.roleNameEnglishInvalidSlug
+    : undefined;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setTouched(true);
-    if (trimmedName.length === 0) {
+    if (trimmedNameEn.length === 0 || technicalSlug.length === 0) {
       return;
     }
     onNext();
@@ -60,24 +74,76 @@ export const StepRoleDetails: React.FC<StepRoleDetailsProps> = ({
         </CardHeader>
 
         <CardContent className="space-y-6 pt-5">
-          {/* Role Name */}
+          {/* English Role Name (Primary, drives technical ID) */}
           <div className="space-y-1.5">
             <Input
-              id="role-name-input"
-              label={t.roles.roleName}
-              placeholder={t.roles.roleNamePlaceholder}
-              value={roleName}
-              onChange={(e) => onRoleNameChange(e.target.value)}
+              id="role-name-en-input"
+              label={t.roles.roleNameEnglish}
+              placeholder={t.roles.roleNameEnglishPlaceholder}
+              value={nameEn}
+              onChange={(e) => onNameEnChange(e.target.value)}
               onBlur={() => setTouched(true)}
-              error={isNameInvalid ? t.roles.roleNameRequired : undefined}
-              helperText={!isNameInvalid ? t.roles.roleNameHelper : undefined}
+              error={errorMessage}
+              helperText={!errorMessage ? t.roles.roleNameEnglishHelper : undefined}
               required
               autoFocus
             />
           </div>
 
+          {/* Technical Role ID Preview Box */}
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Hash className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                <span>{t.roles.technicalRoleIdPreview}</span>
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-400 dark:text-slate-500 bg-slate-200/60 dark:bg-slate-700/60 px-1.5 py-0.5 rounded">
+                  <Lock className="w-2.5 h-2.5" />
+                  {t.roles.readOnlyField}
+                </span>
+              </label>
+
+              {technicalSlug ? (
+                <Badge status="info" size="sm" className="font-mono text-[11px]">
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  auto-generated
+                </Badge>
+              ) : null}
+            </div>
+
+            <div className="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center gap-2">
+              <span className="text-slate-400 dark:text-slate-500 font-mono text-sm select-none">id:</span>
+              {technicalSlug ? (
+                <code className="font-mono text-xs sm:text-sm font-semibold text-sky-600 dark:text-sky-400 break-all select-all">
+                  {technicalSlug}
+                </code>
+              ) : (
+                <span className="font-mono text-xs sm:text-sm text-slate-400 dark:text-slate-500 italic select-none">
+                  e.g. content-moderator
+                </span>
+              )}
+            </div>
+
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              {technicalSlug
+                ? t.roles.technicalRoleIdPreviewHelper
+                : t.roles.enterEnglishNameToPreviewId}
+            </p>
+          </div>
+
+          {/* Bengali Role Name (Optional, separate bilingual display) */}
+          <div className="space-y-1.5">
+            <Input
+              id="role-name-bn-input"
+              label={t.roles.roleNameBengaliOptional}
+              placeholder={t.roles.roleNameBengaliPlaceholder}
+              value={nameBn}
+              onChange={(e) => onNameBnChange(e.target.value)}
+              helperText={t.roles.roleNameBengaliHelper}
+            />
+          </div>
+
           {/* Status Switch */}
-          <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 space-y-3">
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 space-y-3">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <label className="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
@@ -132,7 +198,7 @@ export const StepRoleDetails: React.FC<StepRoleDetailsProps> = ({
           type="submit"
           variant="primary"
           size="md"
-          disabled={trimmedName.length === 0}
+          disabled={trimmedNameEn.length === 0 || technicalSlug.length === 0}
           rightIcon={<ArrowRight className="w-4 h-4" />}
         >
           <span>{t.roles.next}</span>

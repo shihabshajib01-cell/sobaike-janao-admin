@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { useLanguage } from '@/context/LanguageContext';
@@ -11,14 +11,16 @@ import { StepReview } from '@/components/roles/create/StepReview';
 import { UnsavedChangesModal } from '@/components/roles/create/UnsavedChangesModal';
 import { roleApi } from '@/services/api';
 import { PermissionCatalogueItem, RoleApiError } from '@/types/Role';
+import { generateRoleSlug } from '@/utils/roleUtils';
 
 export const CreateRolePage: React.FC = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
 
-  // Form State
+  // Form State - Separate EN and BN Role Names
   const [currentStep, setCurrentStep] = useState<number>(1);
-  const [roleName, setRoleName] = useState<string>('');
+  const [nameEn, setNameEn] = useState<string>('');
+  const [nameBn, setNameBn] = useState<string>('');
   const [active, setActive] = useState<boolean>(true);
   const [description, setDescription] = useState<string>('');
   const [selectedPermissionIds, setSelectedPermissionIds] = useState<string[]>([]);
@@ -39,7 +41,8 @@ export const CreateRolePage: React.FC = () => {
 
   // Check if user has entered anything
   const hasUnsavedChanges =
-    roleName.trim().length > 0 ||
+    nameEn.trim().length > 0 ||
+    nameBn.trim().length > 0 ||
     description.trim().length > 0 ||
     selectedPermissionIds.length > 0 ||
     active === false;
@@ -67,8 +70,14 @@ export const CreateRolePage: React.FC = () => {
     navigate('/roles');
   };
 
+  const isStep1Valid = (): boolean => {
+    const trimmedEn = nameEn.trim();
+    if (trimmedEn.length === 0) return false;
+    return generateRoleSlug(trimmedEn).length > 0;
+  };
+
   const handleStep1Next = () => {
-    if (roleName.trim().length === 0) return;
+    if (!isStep1Valid()) return;
     setCurrentStep(2);
   };
 
@@ -80,11 +89,11 @@ export const CreateRolePage: React.FC = () => {
     if (step === 1) {
       setCurrentStep(1);
     } else if (step === 2) {
-      if (roleName.trim().length > 0) {
+      if (isStep1Valid()) {
         setCurrentStep(2);
       }
     } else if (step === 3) {
-      if (roleName.trim().length > 0) {
+      if (isStep1Valid()) {
         setCurrentStep(3);
       }
     }
@@ -92,20 +101,25 @@ export const CreateRolePage: React.FC = () => {
 
   const isStepValid = (step: number): boolean => {
     if (step === 1) return true;
-    if (step === 2) return roleName.trim().length > 0;
-    if (step === 3) return roleName.trim().length > 0;
+    if (step === 2) return isStep1Valid();
+    if (step === 3) return isStep1Valid();
     return false;
   };
 
   const handleSubmit = async () => {
-    if (roleName.trim().length === 0 || isSubmitting) return;
+    if (!isStep1Valid() || isSubmitting) return;
 
     setIsSubmitting(true);
     setSubmitError(null);
 
+    const trimmedEn = nameEn.trim();
+    const trimmedBn = nameBn.trim();
+
     try {
       await roleApi.createRole({
-        name: roleName.trim(),
+        name: trimmedEn,
+        name_en: trimmedEn,
+        name_bn: trimmedBn.length > 0 ? trimmedBn : null,
         active,
         permission_ids: selectedPermissionIds,
         description: description.trim() ? description.trim() : null,
@@ -115,7 +129,7 @@ export const CreateRolePage: React.FC = () => {
       navigate('/roles', {
         state: {
           roleCreatedSuccess: true,
-          createdRoleName: roleName.trim(),
+          createdRoleName: trimmedEn,
         },
       });
     } catch (err: unknown) {
@@ -185,10 +199,12 @@ export const CreateRolePage: React.FC = () => {
       {/* Step Content */}
       {currentStep === 1 && (
         <StepRoleDetails
-          roleName={roleName}
+          nameEn={nameEn}
+          nameBn={nameBn}
           active={active}
           description={description}
-          onRoleNameChange={setRoleName}
+          onNameEnChange={setNameEn}
+          onNameBnChange={setNameBn}
           onActiveChange={setActive}
           onDescriptionChange={setDescription}
           onNext={handleStep1Next}
@@ -208,7 +224,8 @@ export const CreateRolePage: React.FC = () => {
 
       {currentStep === 3 && (
         <StepReview
-          roleName={roleName}
+          nameEn={nameEn}
+          nameBn={nameBn}
           active={active}
           description={description}
           selectedPermissionIds={selectedPermissionIds}

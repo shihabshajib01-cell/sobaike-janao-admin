@@ -40,8 +40,9 @@ export const EditRolePage: React.FC = () => {
   const [isNotFound, setIsNotFound] = useState<boolean>(false);
   const [isPermissionDenied, setIsPermissionDenied] = useState<boolean>(false);
 
-  // Form states
-  const [name, setName] = useState<string>('');
+  // Form states - Separate EN and BN Role Names
+  const [nameEn, setNameEn] = useState<string>('');
+  const [nameBn, setNameBn] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [active, setActive] = useState<boolean>(true);
   const [permissionIds, setPermissionIds] = useState<string[]>([]);
@@ -77,8 +78,9 @@ export const EditRolePage: React.FC = () => {
       setRole(roleData);
       setCatalogue(catalogueData);
 
-      // Populate form state
-      setName(roleData.name_en);
+      // Populate form state with separate bilingual values
+      setNameEn(roleData.name_en);
+      setNameBn(roleData.name_bn || '');
       setDescription(roleData.description || '');
       setActive(roleData.active);
       setPermissionIds(roleData.permission_ids);
@@ -117,7 +119,8 @@ export const EditRolePage: React.FC = () => {
   const isDirty = useMemo(() => {
     if (!role) return false;
 
-    const isNameChanged = !role.is_system && name.trim() !== role.name_en;
+    const isNameEnChanged = !role.is_system && nameEn.trim() !== role.name_en;
+    const isNameBnChanged = !role.is_system && nameBn.trim() !== (role.name_bn || '').trim();
     const isActiveChanged = !role.is_system && active !== role.active;
     const isDescChanged = description.trim() !== (role.description || '').trim();
 
@@ -138,8 +141,8 @@ export const EditRolePage: React.FC = () => {
       }
     }
 
-    return isNameChanged || isActiveChanged || isDescChanged || isPermsChanged;
-  }, [role, name, active, description, permissionIds]);
+    return isNameEnChanged || isNameBnChanged || isActiveChanged || isDescChanged || isPermsChanged;
+  }, [role, nameEn, nameBn, active, description, permissionIds]);
 
   const isSavingOrDiscardingRef = useRef(false);
 
@@ -199,11 +202,11 @@ export const EditRolePage: React.FC = () => {
     if (e) e.preventDefault();
     if (!role) return;
 
-    // Custom role validation: name is required
+    // Custom role validation: English name is required
     if (!role.is_system) {
-      const trimmedName = name.trim();
-      if (!trimmedName) {
-        setNameError(t.roles.roleNameRequired);
+      const trimmedEn = nameEn.trim();
+      if (!trimmedEn) {
+        setNameError(t.roles.roleNameEnglishRequired);
         return;
       }
     }
@@ -214,10 +217,19 @@ export const EditRolePage: React.FC = () => {
 
     try {
       const isDescChanged = description.trim() !== (role.description || '').trim();
+      const isNameBnChanged = !role.is_system && nameBn.trim() !== (role.name_bn || '').trim();
 
       const payload: UpdateRoleInput = {
         id: role.id,
-        name: role.is_system ? role.name_en : name.trim(),
+        name: role.is_system ? role.name_en : nameEn.trim(),
+        name_en: role.is_system ? role.name_en : nameEn.trim(),
+        name_bn: role.is_system
+          ? undefined
+          : isNameBnChanged
+          ? nameBn.trim().length > 0
+            ? nameBn.trim()
+            : null
+          : undefined,
         active: role.is_system ? role.active : active,
         permission_ids: role.is_system ? undefined : permissionIds,
         description: isDescChanged
@@ -235,7 +247,7 @@ export const EditRolePage: React.FC = () => {
       navigate(`/roles/${role.id}`, {
         state: {
           roleUpdatedSuccess: true,
-          updatedRoleName: role.is_system ? role.name_en : name.trim(),
+          updatedRoleName: role.is_system ? role.name_en : nameEn.trim(),
         },
       });
     } catch (err: unknown) {
@@ -433,7 +445,7 @@ export const EditRolePage: React.FC = () => {
                 variant="primary"
                 size="sm"
                 onClick={() => handleSubmit()}
-                disabled={isSubmitting || !isDirty || (!role.is_system && !name.trim())}
+                disabled={isSubmitting || !isDirty || (!role.is_system && !nameEn.trim())}
                 isLoading={isSubmitting}
                 leftIcon={<Save className="w-3.5 h-3.5" />}
               >
@@ -543,12 +555,12 @@ export const EditRolePage: React.FC = () => {
               ) : (
                 <Input
                   id="edit-role-name"
-                  value={name}
+                  value={nameEn}
                   onChange={(e) => {
-                    setName(e.target.value);
+                    setNameEn(e.target.value);
                     if (nameError) setNameError(null);
                   }}
-                  placeholder={t.roles.roleNamePlaceholder}
+                  placeholder={t.roles.roleNameEnglishPlaceholder}
                   error={nameError || undefined}
                   maxLength={100}
                 />
@@ -557,33 +569,52 @@ export const EditRolePage: React.FC = () => {
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 {role.is_system
                   ? t.roles.systemRoleProtectedNotice
-                  : t.roles.roleNameHelper}
+                  : t.roles.roleNameEnglishHelper}
               </p>
             </div>
 
-            {/* 2. Bengali Name (read-only display) */}
+            {/* 2. Bengali Name */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-900 dark:text-slate-100 flex items-center justify-between">
+              <label
+                htmlFor="edit-role-name-bn"
+                className="text-xs font-semibold text-slate-900 dark:text-slate-100 flex items-center justify-between"
+              >
                 <span>{t.roles.bengaliName}</span>
-                <span className="text-[11px] text-slate-400 flex items-center gap-1 font-normal">
-                  <Lock className="w-3 h-3" /> {t.roles.readOnlyField}
-                </span>
+                {role.is_system && (
+                  <span className="text-[11px] text-slate-400 flex items-center gap-1 font-normal">
+                    <Lock className="w-3 h-3" /> {t.roles.readOnlyField}
+                  </span>
+                )}
               </label>
-              <div className="relative">
+
+              {role.is_system ? (
+                <div className="relative">
+                  <Input
+                    id="edit-role-bengali-name-readonly"
+                    value={role.name_bn || t.roles.notSpecified}
+                    disabled
+                    className="bg-slate-100/80 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 cursor-not-allowed font-medium"
+                  />
+                  <Lock className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-3" />
+                </div>
+              ) : (
                 <Input
-                  id="edit-role-bengali-name"
-                  value={role.name_bn || t.roles.notSpecified}
-                  disabled
-                  className="bg-slate-100/80 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 cursor-not-allowed font-medium"
+                  id="edit-role-name-bn"
+                  value={nameBn}
+                  onChange={(e) => setNameBn(e.target.value)}
+                  placeholder={t.roles.roleNameBengaliPlaceholder}
+                  maxLength={100}
                 />
-                <Lock className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-3" />
-              </div>
+              )}
+
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                {t.roles.bengaliNameNotice}
+                {role.is_system
+                  ? t.roles.systemRoleProtectedNotice
+                  : t.roles.roleNameBengaliHelper}
               </p>
             </div>
 
-            {/* 3. Technical Role ID */}
+            {/* 3. Technical Role ID (Permanent & Immutable) */}
             <div className="space-y-1.5 min-w-0">
               <label className="text-xs font-semibold text-slate-900 dark:text-slate-100 flex items-center justify-between">
                 <span className="flex items-center gap-1">
@@ -777,9 +808,9 @@ export const EditRolePage: React.FC = () => {
             variant="primary"
             size="md"
             onClick={() => handleSubmit()}
-            disabled={isSubmitting || !isDirty || (!role.is_system && !name.trim())}
+            disabled={isSubmitting || !isDirty || (!role.is_system && !nameEn.trim())}
             isLoading={isSubmitting}
-            leftIcon={<Save className="w-4 h-4" />}
+            leftIcon={<Save className="w-3.5 h-3.5" />}
           >
             <span>{isSubmitting ? t.roles.savingChanges : t.roles.saveChanges}</span>
           </Button>

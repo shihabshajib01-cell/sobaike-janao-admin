@@ -23,6 +23,7 @@ import {
   ReplaceRolePermissionsResult,
   RoleApiError,
 } from '@/types/Role';
+import { generateRoleSlug } from '@/utils/roleUtils';
 
 /**
  * Asserts whether role management is configured.
@@ -249,33 +250,71 @@ export class RoleApi {
 
   /**
    * Atomically create a new administrative role with validated permission IDs.
+   * Separate English and Bengali role naming:
+   * - English name is required and drives the technical ASCII slug (id).
+   * - Bengali name is optional and stored separately (never affects the slug, never auto-translated).
    */
   async createRole(input: CreateRoleInput): Promise<CreateRoleResult> {
-    const cleanName = input.name ? input.name.trim() : '';
-    if (!cleanName) {
-      throw new RoleApiError('Role name is required and cannot be blank.', '22000');
+    const cleanNameEn = input.name_en ? input.name_en.trim() : input.name ? input.name.trim() : '';
+    if (!cleanNameEn) {
+      throw new RoleApiError('English role name is required and cannot be blank.', '22000');
     }
+
+    const technicalSlug = generateRoleSlug(cleanNameEn);
+    if (!technicalSlug) {
+      throw new RoleApiError(
+        'English role name must contain valid alphanumeric characters to create a technical role ID.',
+        '22000'
+      );
+    }
+
+    const cleanNameBn =
+      input.name_bn && typeof input.name_bn === 'string' && input.name_bn.trim().length > 0
+        ? input.name_bn.trim()
+        : null;
 
     const mode = assertRoleApiConfigured();
 
     if (mode === 'configured') {
-      const { data, error } = await supabase.rpc('admin_create_role', {
-        p_name: cleanName,
+      // First attempt the forward Phase 2C RPC signature (p_name_en, p_name_bn)
+      const primaryParams = {
+        p_name_en: cleanNameEn,
+        p_name_bn: cleanNameBn,
         p_active: input.active,
         p_permission_ids: input.permission_ids,
         p_description: input.description && input.description.trim() ? input.description.trim() : null,
-      });
+      };
 
-      if (error) {
-        throw new RoleApiError(error.message, error.code, error.details, error.hint);
+      let rpcResult = await supabase.rpc('admin_create_role', primaryParams);
+
+      // If backend has not yet applied migration 20260903000001 (PGRST202 or unknown p_name_en parameter),
+      // fall back gracefully to the pre-2C single-name signature
+      if (
+        rpcResult.error &&
+        (rpcResult.error.code === 'PGRST202' ||
+          rpcResult.error.message?.includes('p_name_en') ||
+          rpcResult.error.message?.includes('schema cache'))
+      ) {
+        rpcResult = await supabase.rpc('admin_create_role', {
+          p_name: cleanNameEn,
+          p_active: input.active,
+          p_permission_ids: input.permission_ids,
+          p_description: input.description && input.description.trim() ? input.description.trim() : null,
+        });
       }
 
-      return data as unknown as CreateRoleResult;
+      if (rpcResult.error) {
+        throw new RoleApiError(rpcResult.error.message, rpcResult.error.code, rpcResult.error.details, rpcResult.error.hint);
+      }
+
+      return rpcResult.data as unknown as CreateRoleResult;
     }
 
-    // Dev fallback: duplicate check
+    // Dev fallback: duplicate check by English name or technical ID
     const isDuplicate = inMemoryRoles.some(
-      (r) => r.name_en.toLowerCase() === cleanName.toLowerCase()
+      (r) =>
+        r.id.toLowerCase() === technicalSlug.toLowerCase() ||
+        r.name_en.toLowerCase() === cleanNameEn.toLowerCase()
     );
     if (isDuplicate) {
       throw new RoleApiError('A role with this name already exists.', '23505');
@@ -292,9 +331,9 @@ export class RoleApi {
     }
 
     const newRole: RoleListItem = {
-      id: `role_${Date.now()}`,
-      name_en: cleanName,
-      name_bn: null,
+      id: technicalSlug,
+      name_en: cleanNameEn,
+      name_bn: cleanNameBn,
       description: input.description?.trim() || null,
       active: input.active,
       is_system: false,
@@ -309,7 +348,7 @@ export class RoleApi {
     return {
       id: newRole.id,
       name_en: newRole.name_en,
-      name_bn: null,
+      name_bn: newRole.name_bn,
       description: newRole.description,
       active: newRole.active,
       is_system: false,
@@ -322,16 +361,24 @@ export class RoleApi {
 
   /**
    * Atomically update role metadata and optionally replace its permission set.
-   * Preserves existing Bengali role names (name_bn) and preserves omitted descriptions.
+   * Separate English and Bengali role naming:
+   * - Preserves immutable technical role ID.
+   * - Preserves Bengali name unless explicitly updated.
+   * - Preserves omitted descriptions.
    */
   async updateRole(input: RoleUpdateInput): Promise<RoleDetail> {
     const cleanId = input.id ? input.id.trim() : '';
-    const cleanName = input.name ? input.name.trim() : '';
+    const cleanNameEn =
+      input.name_en !== undefined
+        ? input.name_en.trim()
+        : input.name !== undefined
+        ? input.name.trim()
+        : '';
 
     if (!cleanId) {
       throw new RoleApiError('Role ID cannot be empty.', '22000');
     }
-    if (!cleanName) {
+    if (!cleanNameEn) {
       throw new RoleApiError('Role name is required and cannot be blank.', '22000');
     }
 
@@ -353,25 +400,68 @@ export class RoleApi {
           : null;
     }
 
+    // Determine Bengali name update semantics:
+    // - If input.name_bn was omitted (undefined): preserve existing name_bn
+    // - If input.name_bn is a non-empty string: update to trimmed string
+    // - If input.name_bn is null or empty string '': update to null (explicitly clear)
+    const hasNameBnUpdate =
+      Object.prototype.hasOwnProperty.call(input, 'name_bn') &&
+      input.name_bn !== undefined;
+
+    let cleanNameBn: string | null = null;
+    if (hasNameBnUpdate) {
+      cleanNameBn =
+        typeof input.name_bn === 'string' && input.name_bn.trim().length > 0
+          ? input.name_bn.trim()
+          : null;
+    }
+
     if (mode === 'configured') {
-      const rpcParams: Record<string, unknown> = {
+      const primaryParams: Record<string, unknown> = {
         p_role_id: cleanId,
-        p_name: cleanName,
+        p_name_en: cleanNameEn,
+        p_name_bn: cleanNameBn,
         p_active: input.active,
         p_permission_ids: input.permission_ids !== undefined ? input.permission_ids : null,
         p_description: cleanDesc,
         p_update_description: hasDescriptionUpdate,
+        p_update_name_bn: hasNameBnUpdate,
       };
 
-      const { data, error } = await supabase.rpc('admin_update_role', rpcParams);
+      let { data, error } = await supabase.rpc('admin_update_role', primaryParams);
+
+      // If database is running 00008 (before Phase 2C migration 20260903000001):
+      // Fall back to calling 00008 signature (p_name, p_update_description)
+      if (
+        error &&
+        (error.code === 'PGRST202' ||
+          error.message?.includes('p_name_en') ||
+          error.message?.includes('p_update_name_bn'))
+      ) {
+        const fallbackParams: Record<string, unknown> = {
+          p_role_id: cleanId,
+          p_name: cleanNameEn,
+          p_active: input.active,
+          p_permission_ids: input.permission_ids !== undefined ? input.permission_ids : null,
+          p_description: cleanDesc,
+          p_update_description: hasDescriptionUpdate,
+        };
+        const fallbackResult = await supabase.rpc('admin_update_role', fallbackParams);
+        data = fallbackResult.data;
+        error = fallbackResult.error;
+      }
 
       if (error) {
-        if (error.code === 'PGRST202' || error.message?.includes('p_update_description')) {
+        if (
+          error.code === 'PGRST202' ||
+          error.message?.includes('p_update_description') ||
+          error.message?.includes('p_name_en')
+        ) {
           throw new RoleApiError(
-            'The database is missing migration 00008 required for safe role updates. Please apply migration 20260902000008_phase2a_role_update_correction.sql.',
+            'The database is missing migrations required for safe role updates. Please apply migrations 20260902000008 and 20260903000001.',
             'COMPATIBILITY_ERROR',
             error.details,
-            'Apply migration 00008 to enable safe role updates with name_bn and description preservation.'
+            'Apply migrations to enable safe role updates with separate bilingual naming.'
           );
         }
         throw new RoleApiError(error.message, error.code, error.details, error.hint);
@@ -396,14 +486,17 @@ export class RoleApi {
       if (input.permission_ids !== undefined && input.permission_ids !== null) {
         throw new RoleApiError('System role permissions are protected and cannot be modified.', '42501');
       }
-      if (cleanName.toLowerCase() !== existing.name_en.toLowerCase()) {
+      if (cleanNameEn.toLowerCase() !== existing.name_en.toLowerCase()) {
+        throw new RoleApiError('System role names are protected and cannot be modified.', '42501');
+      }
+      if (hasNameBnUpdate && cleanNameBn !== existing.name_bn) {
         throw new RoleApiError('System role names are protected and cannot be modified.', '42501');
       }
     }
 
-    // Duplicate visible name check against other roles
+    // Duplicate visible English name check against other roles
     const isDuplicate = inMemoryRoles.some(
-      (r) => r.id !== cleanId && r.name_en.toLowerCase() === cleanName.toLowerCase()
+      (r) => r.id !== cleanId && r.name_en.toLowerCase() === cleanNameEn.toLowerCase()
     );
     if (isDuplicate) {
       throw new RoleApiError('A role with this name already exists.', '23505');
@@ -452,16 +545,16 @@ export class RoleApi {
     }
 
     // Description resolution:
-    // If description omitted -> preserve existing description!
-    // If description provided -> cleanDesc (null if empty, or trimmed text)
     const nextDescription = hasDescriptionUpdate ? cleanDesc : existing.description;
+    // Bengali name resolution:
+    const nextNameBn = hasNameBnUpdate ? cleanNameBn : existing.name_bn;
 
     const updated: RoleListItem = {
       ...existing,
-      name_en: cleanName,
-      name_bn: existing.name_bn, // PRESERVE existing Bengali role name!
+      name_en: cleanNameEn,
+      name_bn: nextNameBn,
       active: input.active,
-      description: nextDescription, // PRESERVE omitted description or update!
+      description: nextDescription,
       updated_at: new Date().toISOString(),
     };
 

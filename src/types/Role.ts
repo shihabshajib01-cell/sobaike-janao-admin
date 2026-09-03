@@ -24,7 +24,9 @@ export interface PermissionCatalogueItem {
 }
 
 export interface CreateRoleInput {
-  name: string;
+  name_en?: string;
+  name?: string;
+  name_bn?: string | null;
   active: boolean;
   permission_ids: string[];
   description?: string | null;
@@ -115,8 +117,10 @@ export class RoleApiError extends Error {
   get isCompatibilityError(): boolean {
     return (
       this.code === 'COMPATIBILITY_ERROR' ||
-      this.message.toLowerCase().includes('missing migration 00008') ||
-      this.message.toLowerCase().includes('p_update_description')
+      this.message.toLowerCase().includes('missing migration') ||
+      this.message.toLowerCase().includes('p_update_description') ||
+      this.message.toLowerCase().includes('p_update_name_bn') ||
+      this.message.toLowerCase().includes('p_name_en')
     );
   }
 }
@@ -143,7 +147,9 @@ export interface RolePermission {
 
 export interface RoleUpdateInput {
   id: string;
-  name: string;
+  name_en?: string;
+  name?: string;
+  name_bn?: string | null;
   active: boolean;
   permission_ids?: string[] | null;
   /**

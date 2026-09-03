@@ -11,16 +11,19 @@ import {
   Lock,
   AlertCircle,
   ShieldAlert,
+  Hash,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useLanguage, TranslationDictionary } from '@/context/LanguageContext';
-import { PermissionCatalogueItem, RoleApiError } from '@/types/Role';
+import { PermissionCatalogueItem } from '@/types/Role';
+import { generateRoleSlug } from '@/utils/roleUtils';
 import { cn } from '@/utils';
 
 export interface StepReviewProps {
-  roleName: string;
+  nameEn: string;
+  nameBn: string;
   active: boolean;
   description: string;
   selectedPermissionIds: string[];
@@ -35,7 +38,8 @@ export interface StepReviewProps {
 }
 
 export const StepReview: React.FC<StepReviewProps> = ({
-  roleName,
+  nameEn,
+  nameBn,
   active,
   description,
   selectedPermissionIds,
@@ -50,6 +54,10 @@ export const StepReview: React.FC<StepReviewProps> = ({
 }) => {
   const { t, language } = useLanguage();
   const isBn = language === 'bn';
+
+  const trimmedNameEn = nameEn.trim();
+  const trimmedNameBn = nameBn.trim();
+  const technicalSlug = generateRoleSlug(trimmedNameEn);
 
   const formatNumber = (num: number): string => {
     if (!isBn) return String(num);
@@ -77,7 +85,6 @@ export const StepReview: React.FC<StepReviewProps> = ({
         if (!groups[mod]) groups[mod] = [];
         groups[mod].push(item);
       } else {
-        // Fallback for custom or newly added permission id
         const mod = 'other';
         if (!groups[mod]) groups[mod] = [];
         groups[mod].push({
@@ -197,15 +204,44 @@ export const StepReview: React.FC<StepReviewProps> = ({
             </div>
 
             <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs sm:text-sm">
+              {/* English Name */}
               <div>
                 <span className="text-xs text-slate-500 dark:text-slate-400 block mb-0.5">
-                  {t.roles.roleName}
+                  {t.roles.englishName}
                 </span>
                 <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm sm:text-base">
-                  {roleName.trim()}
+                  {trimmedNameEn}
                 </span>
               </div>
 
+              {/* Bengali Name */}
+              <div>
+                <span className="text-xs text-slate-500 dark:text-slate-400 block mb-0.5">
+                  {t.roles.bengaliName}
+                </span>
+                <span className="text-slate-900 dark:text-slate-100 text-sm sm:text-base font-medium">
+                  {trimmedNameBn ? (
+                    trimmedNameBn
+                  ) : (
+                    <span className="text-slate-400 dark:text-slate-500 italic">
+                      {t.roles.notSpecified}
+                    </span>
+                  )}
+                </span>
+              </div>
+
+              {/* Technical Role ID */}
+              <div>
+                <span className="text-xs text-slate-500 dark:text-slate-400 block mb-0.5 flex items-center gap-1">
+                  <Hash className="w-3 h-3" />
+                  {t.roles.technicalRoleId}
+                </span>
+                <code className="font-mono text-xs sm:text-sm font-semibold text-sky-600 dark:text-sky-400 break-all">
+                  {technicalSlug}
+                </code>
+              </div>
+
+              {/* Status */}
               <div>
                 <span className="text-xs text-slate-500 dark:text-slate-400 block mb-0.5">
                   {t.roles.status}
@@ -215,12 +251,15 @@ export const StepReview: React.FC<StepReviewProps> = ({
                 </Badge>
               </div>
 
+              {/* Description */}
               <div className="sm:col-span-2 pt-1 border-t border-slate-100 dark:border-slate-800/80">
                 <span className="text-xs text-slate-500 dark:text-slate-400 block mb-0.5">
                   {t.roles.descriptionLabel}
                 </span>
                 <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
-                  {description.trim() ? description.trim() : (
+                  {description.trim() ? (
+                    description.trim()
+                  ) : (
                     <span className="text-slate-400 dark:text-slate-500 italic">—</span>
                   )}
                 </p>
@@ -357,7 +396,7 @@ export const StepReview: React.FC<StepReviewProps> = ({
             size="md"
             onClick={onSubmit}
             isLoading={isSubmitting}
-            disabled={isSubmitting || roleName.trim().length === 0}
+            disabled={isSubmitting || trimmedNameEn.length === 0 || technicalSlug.length === 0}
             leftIcon={<Check className="w-4 h-4" />}
           >
             <span>{isSubmitting ? t.roles.submitting : t.roles.createRole}</span>

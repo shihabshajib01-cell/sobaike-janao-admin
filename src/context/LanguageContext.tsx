@@ -88,6 +88,18 @@ export interface TranslationDictionary {
     roleNamePlaceholder: string;
     roleNameRequired: string;
     roleNameHelper: string;
+    roleNameEnglish: string;
+    roleNameEnglishHelper: string;
+    roleNameEnglishPlaceholder: string;
+    roleNameEnglishRequired: string;
+    roleNameEnglishInvalidSlug: string;
+    roleNameBengali: string;
+    roleNameBengaliOptional: string;
+    roleNameBengaliPlaceholder: string;
+    roleNameBengaliHelper: string;
+    technicalRoleIdPreview: string;
+    technicalRoleIdPreviewHelper: string;
+    enterEnglishNameToPreviewId: string;
     descriptionLabel: string;
     descriptionOptional: string;
     descriptionPlaceholder: string;
@@ -260,6 +272,18 @@ export const translations: Record<Language, TranslationDictionary> = {
       roleNamePlaceholder: 'Enter role name',
       roleNameRequired: 'Role name is required and cannot be blank.',
       roleNameHelper: 'A clear, descriptive name for this administrative role.',
+      roleNameEnglish: 'Role Name (English)',
+      roleNameEnglishHelper: 'A clear English name used to derive the permanent technical Role ID.',
+      roleNameEnglishPlaceholder: 'e.g. Content Moderator, Department Inspector',
+      roleNameEnglishRequired: 'English role name is required and cannot be blank.',
+      roleNameEnglishInvalidSlug: 'Role name must contain English letters or numbers to generate a technical ID.',
+      roleNameBengali: 'Role Name (Bengali)',
+      roleNameBengaliOptional: 'Role Name (Bengali) (Optional)',
+      roleNameBengaliPlaceholder: 'e.g. কন্টেন্ট মডারেটর',
+      roleNameBengaliHelper: 'Displayed to administrators using the Bengali interface. Does not affect the technical ID.',
+      technicalRoleIdPreview: 'Technical Role ID',
+      technicalRoleIdPreviewHelper: 'Permanent system identifier used for authorization checks. Automatically derived from English name.',
+      enterEnglishNameToPreviewId: 'Enter an English role name above to preview generated technical ID.',
       descriptionLabel: 'Description',
       descriptionOptional: 'Description (Optional)',
       descriptionPlaceholder: 'Add an optional description',
@@ -430,6 +454,18 @@ export const translations: Record<Language, TranslationDictionary> = {
       roleNamePlaceholder: 'ভূমিকার নাম লিখুন',
       roleNameRequired: 'ভূমিকার নাম আবশ্যক এবং ফাঁকা রাখা যাবে না।',
       roleNameHelper: 'এই প্রশাসনিক ভূমিকার জন্য একটি স্পষ্ট ও বর্ণনামূলক নাম।',
+      roleNameEnglish: 'ভূমিকার নাম (ইংরেজি)',
+      roleNameEnglishHelper: 'স্থায়ী টেকনিক্যাল ভূমিকা আইডি তৈরির জন্য একটি সুস্পষ্ট ইংরেজি নাম।',
+      roleNameEnglishPlaceholder: 'যেমন: Content Moderator, Department Inspector',
+      roleNameEnglishRequired: 'ইংরেজি ভূমিকার নাম আবশ্যক এবং ফাঁকা রাখা যাবে না।',
+      roleNameEnglishInvalidSlug: 'টেকনিক্যাল আইডি তৈরির জন্য ভূমিকার নামে ইংরেজি অক্ষর বা সংখ্যা থাকতে হবে।',
+      roleNameBengali: 'ভূমিকার নাম (বাংলা)',
+      roleNameBengaliOptional: 'ভূমিকার নাম (বাংলা) (ঐচ্ছিক)',
+      roleNameBengaliPlaceholder: 'যেমন: কন্টেন্ট মডারেটর',
+      roleNameBengaliHelper: 'বাংলা ইন্টারফেস ব্যবহারকারী প্রশাসকদের জন্য প্রদর্শিত হবে। এটি টেকনিক্যাল আইডিতে প্রভাব ফেলে না।',
+      technicalRoleIdPreview: 'টেকনিক্যাল ভূমিকা আইডি',
+      technicalRoleIdPreviewHelper: 'অনুমতি যাচাইয়ের জন্য স্থায়ী সিস্টেম শনাক্তকারী। ইংরেজি নাম থেকে স্বয়ংক্রিয়ভাবে তৈরি হয়।',
+      enterEnglishNameToPreviewId: 'টেকনিক্যাল ভূমিকা আইডি তৈরি দেখতে উপরে একটি ইংরেজি ভূমিকার নাম লিখুন।',
       descriptionLabel: 'বিবরণ',
       descriptionOptional: 'বিবরণ (ঐচ্ছিক)',
       descriptionPlaceholder: 'একটি ঐচ্ছিক বিবরণ যুক্ত করুন',
