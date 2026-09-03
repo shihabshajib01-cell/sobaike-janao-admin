@@ -144,6 +144,18 @@ BEGIN
         RAISE EXCEPTION 'Audit Logger FAILED: log_role_audit_event must return uuid, found %', v_ret_type;
     END IF;
 
+    -- Verify log_role_audit_event preserves uppercase target_type USER and ROLE
+    SELECT pg_get_functiondef(p.oid) INTO v_func_src
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'log_role_audit_event' LIMIT 1;
+
+    IF v_func_src NOT LIKE '%''USER''%' OR v_func_src NOT LIKE '%''ROLE''%' THEN
+        RAISE EXCEPTION 'Audit Logger FAILED: log_role_audit_event must preserve target_type USER and ROLE!';
+    END IF;
+    IF v_func_src LIKE '%''user''%' OR v_func_src LIKE '%''role''%' THEN
+        RAISE EXCEPTION 'Audit Logger FAILED: log_role_audit_event must not use lowercase target_type user/role!';
+    END IF;
+
     RAISE NOTICE '>>> [AUDIT 1.2 SUCCESS] All producer routines and helper return types verified.';
 
     -- Verify execute permissions

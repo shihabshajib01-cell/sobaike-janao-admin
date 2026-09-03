@@ -55,9 +55,8 @@ BEGIN
         auth.uid(),
         p_action,
         CASE
-            WHEN p_action ILIKE '%USER%' THEN 'user'
-            WHEN p_action ILIKE '%ROLE%' THEN 'role'
-            ELSE 'system'
+            WHEN p_action ILIKE '%USER%' THEN 'USER'
+            ELSE 'ROLE'
         END,
         p_target_id,
         COALESCE(p_details, '{}'::jsonb),
