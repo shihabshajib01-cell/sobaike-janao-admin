@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useMemo } from 'react';
 import {
   Lock,
   ArrowRight,
@@ -25,13 +25,16 @@ import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Badge } from '@/components/ui/Badge';
 import { useLanguage, TranslationDictionary } from '@/context/LanguageContext';
-import { roleApi } from '@/services/api';
-import { PermissionCatalogueItem, RoleApiError } from '@/types/Role';
+import { PermissionCatalogueItem } from '@/types/Role';
 import { cn } from '@/utils';
 
 export interface StepPermissionsProps {
   selectedPermissionIds: string[];
   onPermissionsChange: (ids: string[]) => void;
+  permissionCatalogue: PermissionCatalogueItem[];
+  isLoadingCatalogue: boolean;
+  catalogueError: { message: string; isPermissionDenied: boolean } | string | null;
+  onRetryCatalogue: () => void;
   onNext: () => void;
   onBack: () => void;
   onCancel: () => void;
@@ -40,6 +43,10 @@ export interface StepPermissionsProps {
 export const StepPermissions: React.FC<StepPermissionsProps> = ({
   selectedPermissionIds,
   onPermissionsChange,
+  permissionCatalogue,
+  isLoadingCatalogue,
+  catalogueError,
+  onRetryCatalogue,
   onNext,
   onBack,
   onCancel,
@@ -47,44 +54,16 @@ export const StepPermissions: React.FC<StepPermissionsProps> = ({
   const { t, language } = useLanguage();
   const isBn = language === 'bn';
 
-  const [catalogue, setCatalogue] = useState<PermissionCatalogueItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<{ message: string; isPermissionDenied: boolean } | null>(null);
+  const catalogue = permissionCatalogue;
+  const loading = isLoadingCatalogue;
 
-  const fetchPermissions = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const items = await roleApi.getPermissionCatalogue();
-      setCatalogue(items);
-    } catch (err: unknown) {
-      console.error('Failed to load permission catalogue:', err);
-      let msg = t.roles.loadPermissionsError;
-      let isPermissionDenied = false;
-
-      if (err instanceof RoleApiError || err instanceof Error) {
-        msg = err.message;
-        if ('code' in err && (err as { code: unknown }).code === '42501') {
-          isPermissionDenied = true;
-        }
-      } else if (typeof err === 'object' && err !== null && 'code' in err) {
-        if (String((err as { code: unknown }).code) === '42501') {
-          isPermissionDenied = true;
-        }
-      }
-
-      setError({
-        message: msg,
-        isPermissionDenied,
-      });
-    } finally {
-      setLoading(false);
+  const error = useMemo(() => {
+    if (!catalogueError) return null;
+    if (typeof catalogueError === 'string') {
+      return { message: catalogueError, isPermissionDenied: false };
     }
-  }, [t.roles.loadPermissionsError]);
-
-  useEffect(() => {
-    fetchPermissions();
-  }, [fetchPermissions]);
+    return catalogueError;
+  }, [catalogueError]);
 
   // Group permissions by module
   const groupedPermissions = useMemo(() => {
@@ -258,7 +237,7 @@ export const StepPermissions: React.FC<StepPermissionsProps> = ({
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={fetchPermissions}
+                onClick={onRetryCatalogue}
                 leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
               >
                 <span>{t.roles.retry}</span>
