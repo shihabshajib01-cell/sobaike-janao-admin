@@ -21,26 +21,23 @@
 --   - Super Admin: Automatically satisfies has_permission() checks across both.
 -- ==============================================================================
 
+BEGIN;
+
 -- ------------------------------------------------------------------------------
 -- 1. ROW LEVEL SECURITY ON public.complaints
 -- ------------------------------------------------------------------------------
 ALTER TABLE public.complaints ENABLE ROW LEVEL SECURITY;
 
--- Safely remove existing SELECT policies on public.complaints to avoid permissive OR-bypass
-DO $$
-DECLARE
-    pol RECORD;
-BEGIN
-    FOR pol IN
-        SELECT policyname
-        FROM pg_policies
-        WHERE schemaname = 'public' 
-          AND tablename = 'complaints' 
-          AND cmd = 'SELECT'
-    LOOP
-        EXECUTE format('DROP POLICY IF EXISTS %I ON public.complaints', pol.policyname);
-    END LOOP;
-END $$;
+-- Explicitly drop known policies on public.complaints to avoid permissive OR-bypass
+DROP POLICY IF EXISTS "complaints_public_anon_select_published" ON public.complaints;
+DROP POLICY IF EXISTS "complaints_admin_authenticated_select" ON public.complaints;
+DROP POLICY IF EXISTS "Allow public read access" ON public.complaints;
+DROP POLICY IF EXISTS "Allow anon read published" ON public.complaints;
+DROP POLICY IF EXISTS "Public complaints read published" ON public.complaints;
+DROP POLICY IF EXISTS "Allow authenticated full access" ON public.complaints;
+DROP POLICY IF EXISTS "Enable read access for all users" ON public.complaints;
+DROP POLICY IF EXISTS "complaints_select_policy" ON public.complaints;
+DROP POLICY IF EXISTS "Allow authenticated users to view complaints" ON public.complaints;
 
 -- Policy 1: Public Citizen Feed
 -- Anonymous users can strictly read complaints with status = 'published'.
@@ -151,3 +148,5 @@ $$;
 REVOKE ALL ON FUNCTION public.admin_get_dashboard_aggregates() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.admin_get_dashboard_aggregates() FROM anon;
 GRANT EXECUTE ON FUNCTION public.admin_get_dashboard_aggregates() TO authenticated;
+
+COMMIT;

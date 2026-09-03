@@ -1,7 +1,8 @@
 /**
  * Real Map Monitoring API Service Layer
- * Connects directly to Supabase production complaints, segments, and subcategories.
- * Strictly real data: no mocks, no fake Dhaka boundaries, no fallback coordinates.
+ * Uses controlled SECURITY DEFINER Map RPC when Supabase is configured,
+ * ensuring users with 'map.view' can inspect geospatial monitoring datasets
+ * without requiring arbitrary row-level 'complaints.view' table reads.
  */
 
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
@@ -12,12 +13,11 @@ import {
   MapSubcategoryOption,
 } from '@/types/Map';
 import { ComplaintLifecycleStatus } from '@/types/Complaint';
-import { categoryApi } from './categoryApi';
 import { MOCK_COMPLAINTS } from '@/services/mock/complaintService';
 
 export const MAP_MONITORING_CONNECTED = true;
 
-const MAP_QUERY_PAGE_SIZE = 1000;
+const isDev = Boolean(typeof import.meta !== 'undefined' && import.meta.env?.DEV);
 
 function getFallbackMapDataset(): MapDataset {
   const mappedComplaints: MapComplaint[] = MOCK_COMPLAINTS.map((c) => ({
@@ -81,190 +81,144 @@ function getFallbackMapDataset(): MapDataset {
   };
 }
 
-interface RawComplaintRow {
-  id: string;
-  segment_id: string | null;
-  subcategory_id: string | null;
-  title: string | null;
-  title_en: string | null;
-  status: string | null;
-  formatted_address: string | null;
-  division: string | null;
-  district: string | null;
-  upazila_or_thana: string | null;
-  area: string | null;
-  road: string | null;
-  landmark: string | null;
-  latitude: number | string | null;
-  longitude: number | string | null;
-  created_at: string | null;
-}
-
 export class MapApi {
   /**
-   * Fetch complete geospatial dataset with deterministic chunking and taxonomy resolution
+   * Fetch complete geospatial dataset with controlled RPC and taxonomy resolution
    */
   async getMapDataset(): Promise<MapDataset> {
     if (!isSupabaseConfigured) {
-      return getFallbackMapDataset();
+      if (isDev) {
+        return getFallbackMapDataset();
+      }
+      throw new Error('Supabase map service is not configured in this environment.');
     }
 
-    try {
-      // 1. Fetch Taxonomy (segments & subcategories) - propagate any errors honestly
-      const taxonomyPromise = categoryApi.getTaxonomy();
+    // Call controlled SECURITY DEFINER Map RPC
+    const { data, error } = await supabase.rpc('admin_get_map_dataset');
 
-      // 2. Fetch all complaints in deterministic pages (minimal select only)
-      const fetchAllComplaints = async (): Promise<RawComplaintRow[]> => {
-        const allRows: RawComplaintRow[] = [];
-        let from = 0;
-        let hasMore = true;
+    if (error) {
+      console.error('admin_get_map_dataset RPC failed:', error);
+      throw new Error(`Failed to load map dataset: ${error.message}`);
+    }
 
-        while (hasMore) {
-          const to = from + MAP_QUERY_PAGE_SIZE - 1;
+    if (!data) {
+      throw new Error('No map dataset received from server.');
+    }
 
-          const { data, error } = await supabase
-            .from('complaints')
-            .select(
-              'id, segment_id, subcategory_id, title, title_en, status, formatted_address, division, district, upazila_or_thana, area, road, landmark, latitude, longitude, created_at'
-            )
-            .order('created_at', { ascending: false })
-            .order('id', { ascending: false })
-            .range(from, to);
+    const rawSegments = Array.isArray(data.segments) ? data.segments : [];
+    const rawSubcategories = Array.isArray(data.subcategories) ? data.subcategories : [];
+    const rawComplaints = Array.isArray(data.complaints) ? data.complaints : [];
 
-          if (error) {
-            console.error(`Error querying complaints range ${from}-${to}:`, error);
-            throw new Error(`Failed to load complaint location data: ${error.message}`);
-          }
+    // Build taxonomy lookup maps from returned RPC contract
+    const segmentMap = new Map<string, { nameEn: string; nameBn: string }>();
+    const segmentOptions: MapSegmentOption[] = rawSegments.map((seg: any) => {
+      const id = String(seg.id);
+      const nameEn = String(seg.name_en || seg.nameEn || seg.name_bn || seg.nameBn || id);
+      const nameBn = String(seg.name_bn || seg.nameBn || seg.name_en || seg.nameEn || id);
+      segmentMap.set(id, { nameEn, nameBn });
+      return { id, nameEn, nameBn };
+    });
 
-          const rows = (data || []) as RawComplaintRow[];
-          allRows.push(...rows);
+    const subcategoryMap = new Map<string, { nameEn: string; nameBn: string; segmentId: string }>();
+    const subcategoryOptions: MapSubcategoryOption[] = rawSubcategories.map((sub: any) => {
+      const id = String(sub.id);
+      const segmentId = String(sub.segment_id || sub.segmentId || '');
+      const nameEn = String(sub.name_en || sub.nameEn || sub.name_bn || sub.nameBn || id);
+      const nameBn = String(sub.name_bn || sub.nameBn || sub.name_en || sub.nameEn || id);
+      subcategoryMap.set(id, { nameEn, nameBn, segmentId });
+      return { id, segmentId, nameEn, nameBn };
+    });
 
-          if (rows.length < MAP_QUERY_PAGE_SIZE) {
-            hasMore = false;
-          } else {
-            from += MAP_QUERY_PAGE_SIZE;
-          }
-        }
+    // Process, validate status & coordinates, and transform complaints
+    const mappedComplaints: MapComplaint[] = [];
+    const districtSet = new Set<string>();
+    let unmappedCount = 0;
+    let unsupportedStatusCount = 0;
 
-        return allRows;
-      };
+    const validStatuses: ComplaintLifecycleStatus[] = [
+      'submitted',
+      'published',
+      'unpublished',
+      'rejected',
+      'edited',
+    ];
 
-      const [taxonomy, rawComplaints] = await Promise.all([
-        taxonomyPromise,
-        fetchAllComplaints(),
-      ]);
+    for (const row of rawComplaints) {
+      // 1. Only include complaints with supported Admin status
+      if (!row.status || !validStatuses.includes(row.status as ComplaintLifecycleStatus)) {
+        unsupportedStatusCount++;
+        continue;
+      }
+      const status = row.status as ComplaintLifecycleStatus;
 
-      // Build taxonomy lookup maps
-      const segmentMap = new Map<string, { nameEn: string; nameBn: string }>();
-      const segmentOptions: MapSegmentOption[] = taxonomy.segments.map((seg) => {
-        const nameEn = seg.nameEn || seg.nameBn || seg.id || '';
-        const nameBn = seg.nameBn || seg.nameEn || seg.id || '';
-        segmentMap.set(seg.id, { nameEn, nameBn });
-        return { id: seg.id, nameEn, nameBn };
-      });
+      // 2. Validate coordinates among supported-status records
+      const rawLat = row.latitude;
+      const rawLng = row.longitude;
 
-      const subcategoryMap = new Map<string, { nameEn: string; nameBn: string; segmentId: string }>();
-      const subcategoryOptions: MapSubcategoryOption[] = taxonomy.subcategories.map((sub) => {
-        const nameEn = sub.nameEn || sub.nameBn || sub.id || '';
-        const nameBn = sub.nameBn || sub.nameEn || sub.id || '';
-        subcategoryMap.set(sub.id, { nameEn, nameBn, segmentId: sub.segmentId });
-        return { id: sub.id, segmentId: sub.segmentId, nameEn, nameBn };
-      });
+      const latNum = rawLat !== null && rawLat !== undefined && rawLat !== '' ? Number(rawLat) : NaN;
+      const lngNum = rawLng !== null && rawLng !== undefined && rawLng !== '' ? Number(rawLng) : NaN;
 
-      // 3. Process, validate status & coordinates, and transform complaints
-      const mappedComplaints: MapComplaint[] = [];
-      const districtSet = new Set<string>();
-      let unmappedCount = 0;
-      let unsupportedStatusCount = 0;
+      const isValidCoord =
+        Number.isFinite(latNum) &&
+        Number.isFinite(lngNum) &&
+        latNum >= -90 &&
+        latNum <= 90 &&
+        lngNum >= -180 &&
+        lngNum <= 180 &&
+        !(latNum === 0 && lngNum === 0); // Exclude 0,0 null-island coordinates if any
 
-      const validStatuses: ComplaintLifecycleStatus[] = [
-        'submitted',
-        'published',
-        'unpublished',
-        'rejected',
-        'edited',
-      ];
-
-      for (const row of rawComplaints) {
-        // 1. Only include complaints with supported Admin status
-        if (!row.status || !validStatuses.includes(row.status as ComplaintLifecycleStatus)) {
-          unsupportedStatusCount++;
-          continue;
-        }
-        const status = row.status as ComplaintLifecycleStatus;
-
-        // 2. Validate coordinates among supported-status records
-        const rawLat = row.latitude;
-        const rawLng = row.longitude;
-
-        const latNum = rawLat !== null && rawLat !== undefined && rawLat !== '' ? Number(rawLat) : NaN;
-        const lngNum = rawLng !== null && rawLng !== undefined && rawLng !== '' ? Number(rawLng) : NaN;
-
-        const isValidCoord =
-          Number.isFinite(latNum) &&
-          Number.isFinite(lngNum) &&
-          latNum >= -90 &&
-          latNum <= 90 &&
-          lngNum >= -180 &&
-          lngNum <= 180 &&
-          !(latNum === 0 && lngNum === 0); // Exclude 0,0 null-island coordinates if any
-
-        if (!isValidCoord) {
-          unmappedCount++;
-          continue;
-        }
-
-        const segmentId = row.segment_id || '';
-        const subcategoryId = row.subcategory_id || '';
-        const segInfo = segmentMap.get(segmentId);
-        const subInfo = subcategoryMap.get(subcategoryId);
-
-        const districtName = (row.district || '').trim();
-        if (districtName) {
-          districtSet.add(districtName);
-        }
-
-        mappedComplaints.push({
-          id: row.id,
-          titleEn: row.title_en || row.title || row.id,
-          titleBn: row.title || row.title_en || row.id,
-          segmentId,
-          segmentEn: segInfo?.nameEn || segInfo?.nameBn || segmentId || '',
-          segmentBn: segInfo?.nameBn || segInfo?.nameEn || segmentId || '',
-          subcategoryId,
-          subcategoryEn: subInfo?.nameEn || subInfo?.nameBn || subcategoryId || '',
-          subcategoryBn: subInfo?.nameBn || subInfo?.nameEn || subcategoryId || '',
-          status,
-          latitude: latNum,
-          longitude: lngNum,
-          location: {
-            formattedAddress: (row.formatted_address || '').trim(),
-            division: (row.division || '').trim(),
-            district: districtName,
-            upazilaOrThana: (row.upazila_or_thana || '').trim(),
-            area: (row.area || '').trim(),
-            road: (row.road || '').trim(),
-            landmark: (row.landmark || '').trim(),
-          },
-          createdAt: row.created_at || new Date().toISOString(),
-        });
+      if (!isValidCoord) {
+        unmappedCount++;
+        continue;
       }
 
-      const districts = Array.from(districtSet).sort((a, b) => a.localeCompare(b));
+      const segmentId = String(row.segment_id || row.segmentId || '');
+      const subcategoryId = String(row.subcategory_id || row.subcategoryId || '');
+      const segInfo = segmentMap.get(segmentId);
+      const subInfo = subcategoryMap.get(subcategoryId);
 
-      return {
-        complaints: mappedComplaints,
-        totalSourceCount: rawComplaints.length,
-        unmappedCount,
-        unsupportedStatusCount,
-        segments: segmentOptions,
-        subcategories: subcategoryOptions,
-        districts,
-      };
-    } catch (err) {
-      console.warn('Failed to load map dataset from Supabase, using mock fixtures:', err);
-      return getFallbackMapDataset();
+      const districtName = String(row.district || '').trim();
+      if (districtName) {
+        districtSet.add(districtName);
+      }
+
+      mappedComplaints.push({
+        id: String(row.id),
+        titleEn: String(row.title_en || row.titleEn || row.title || row.id),
+        titleBn: String(row.title || row.titleBn || row.title_en || row.titleEn || row.id),
+        segmentId,
+        segmentEn: segInfo?.nameEn || segInfo?.nameBn || segmentId || '',
+        segmentBn: segInfo?.nameBn || segInfo?.nameEn || segmentId || '',
+        subcategoryId,
+        subcategoryEn: subInfo?.nameEn || subInfo?.nameBn || subcategoryId || '',
+        subcategoryBn: subInfo?.nameBn || subInfo?.nameEn || subcategoryId || '',
+        status,
+        latitude: latNum,
+        longitude: lngNum,
+        location: {
+          formattedAddress: String(row.formatted_address || row.formattedAddress || '').trim(),
+          division: String(row.division || '').trim(),
+          district: districtName,
+          upazilaOrThana: String(row.upazila_or_thana || row.upazilaOrThana || '').trim(),
+          area: String(row.area || '').trim(),
+          road: String(row.road || '').trim(),
+          landmark: String(row.landmark || '').trim(),
+        },
+        createdAt: String(row.created_at || row.createdAt || new Date().toISOString()),
+      });
     }
+
+    const districts = Array.from(districtSet).sort((a, b) => a.localeCompare(b));
+
+    return {
+      complaints: mappedComplaints,
+      totalSourceCount: rawComplaints.length,
+      unmappedCount,
+      unsupportedStatusCount,
+      segments: segmentOptions,
+      subcategories: subcategoryOptions,
+      districts,
+    };
   }
 }
 

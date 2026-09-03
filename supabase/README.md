@@ -46,6 +46,10 @@ This directory contains the database migrations, audit scripts, and security def
    - **Phase:** Phase 2E Dashboard & Complaint Read Authorization
    - **Contents:** Enforces Row-Level Security (RLS) on `public.complaints` requiring `complaints.view` for administrative table queries; preserves anonymous public feed (`anon` can read `status = 'published'`); and introduces controlled `SECURITY DEFINER` aggregate RPC `public.admin_get_dashboard_aggregates()` requiring `dashboard.view`.
 
+8. **`20260903000005_phase2e_map_authorization_correction.sql`**
+   - **Phase:** Phase 2E Map Authorization Correction
+   - **Contents:** Provides controlled `SECURITY DEFINER` RPC `public.admin_get_map_dataset()` requiring active admin session and `map.view` permission; returns sanitized geospatial fields and taxonomy filters; avoids broad complaint table exposure; and idempotently reaffirms explicit RLS policies on `public.complaints`.
+
 ---
 
 ## Role Management Backend API Specification
