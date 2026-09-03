@@ -54,6 +54,22 @@ This directory contains the database migrations, audit scripts, and security def
    - **Phase:** Phase 2E Map Status Filter & Navigation Correction
    - **Contents:** Updates `public.admin_get_map_dataset()` to filter complaints server-side to supported lifecycle statuses only, and returns server-computed `unsupportedStatusCount` numeric aggregate without returning unsupported row content.
 
+10. **`20260904000001_phase4a_delegation_ceiling_and_scoping.sql`**
+    - **Phase:** Phase 4A Authorization Delegation Ceiling & Scoping
+    - **Contents:** Enforces server-authoritative delegation ceiling where callers can only grant permissions they effectively possess; enforces target user and role manageability scoping; implements `can_manage_role_scope`, `can_manage_user_target`, and safe role assignment ceilings.
+
+11. **`20260904000002_phase4a_delegation_ceiling_correction.sql`**
+    - **Phase:** Phase 4A Delegation Ceiling Parameter Correction
+    - **Contents:** Aligns `public.admin_finalize_user_membership` signature defaults (`p_display_name TEXT DEFAULT NULL, p_role_id TEXT DEFAULT NULL, p_active BOOLEAN DEFAULT TRUE`) with production runtime.
+
+12. **`20260904000003_phase2e_edge_function_service_privileges.sql`**
+    - **Phase:** Phase 2E Edge Function Service Privileges
+    - **Contents:** Grants narrow `USAGE` on schema `public` and `SELECT` on `public.admin_users` and `public.roles` to `service_role` for server-side user provisioning verification.
+
+13. **`20260904000004_notification_foundation.sql`**
+    - **Phase:** Notification Project Phase 1 — Notification Backend Foundation & Recipient Engine
+    - **Contents:** Establishes canonical notification event catalogue (12 approved keys), per-recipient notifications table with deduplication and partial unread indexes, server-side recipient resolution (`admin_notification_resolve_recipients`) respecting delegation ceilings and target scoping, canonical internal emitter (`admin_emit_notification`), and user-facing read/count/mark-read RPCs with strict RLS.
+
 ---
 
 ## Role Management Backend API Specification
@@ -84,3 +100,4 @@ This directory contains the database migrations, audit scripts, and security def
 
 - `supabase/audit/phase_3b_database_inspection.sql` — Schema and table constraint inspection (safe pre- and post-migration).
 - `supabase/audit/phase_3c_role_backend_verification.sql` — Verifies Role Management RPCs, function security definer modes, and execution grants.
+- `supabase/audit/notification_foundation_verification.sql` — Verifies Notification event catalogue keys, tables, RLS policies, execute privileges, and transactional deduplication.
