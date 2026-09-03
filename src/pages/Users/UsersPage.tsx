@@ -19,6 +19,55 @@ import {
   ChevronRight,
 } from 'lucide-react';
 
+/**
+ * Generates a bounded list of page numbers and ellipsis tokens for pagination.
+ * Prevents rendering arbitrarily large page strips and avoids horizontal scrolling.
+ * Guarantees no duplicate numbers and mathematically sound ellipsis placement.
+ */
+const getVisiblePages = (currentPage: number, total: number): (number | 'ellipsis')[] => {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+
+  const pagesSet = new Set<number>();
+  pagesSet.add(1);
+  pagesSet.add(total);
+
+  for (let offset = -1; offset <= 1; offset++) {
+    const p = currentPage + offset;
+    if (p >= 1 && p <= total) {
+      pagesSet.add(p);
+    }
+  }
+
+  if (currentPage <= 3) {
+    pagesSet.add(2);
+    pagesSet.add(3);
+  }
+
+  if (currentPage >= total - 2) {
+    pagesSet.add(total - 2);
+    pagesSet.add(total - 1);
+  }
+
+  const sorted = Array.from(pagesSet).sort((a, b) => a - b);
+  const result: (number | 'ellipsis')[] = [];
+
+  for (let i = 0; i < sorted.length; i++) {
+    if (i > 0) {
+      const diff = sorted[i] - sorted[i - 1];
+      if (diff === 2) {
+        result.push(sorted[i - 1] + 1);
+      } else if (diff > 2) {
+        result.push('ellipsis');
+      }
+    }
+    result.push(sorted[i]);
+  }
+
+  return result;
+};
+
 export const UsersPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -309,32 +358,62 @@ export const UsersPage: React.FC = () => {
 
           {/* Pagination Controls */}
           {totalPages > 1 && (
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 px-1 w-full max-w-full">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 px-1 w-full">
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1 || loading}
                 leftIcon={<ChevronLeft className="w-4 h-4" />}
+                aria-label={t.users.previous}
               >
                 <span>{t.users.previous}</span>
               </Button>
 
-              <div className="flex items-center gap-1 overflow-x-auto max-w-full py-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
-                  const isCurrent = p === page;
+              {/* Mobile Compact Page Indicator */}
+              <div className="flex sm:hidden items-center justify-center text-xs font-medium text-slate-600 dark:text-slate-400 px-2 py-1">
+                <span>
+                  {t.users.pageIndicator
+                    .replace('{current}', formatNumber(page))
+                    .replace('{total}', formatNumber(totalPages))}
+                </span>
+              </div>
+
+              {/* Desktop & Tablet Bounded Page Buttons */}
+              <div className="hidden sm:flex items-center gap-1 py-1">
+                {getVisiblePages(page, totalPages).map((item, idx) => {
+                  if (item === 'ellipsis') {
+                    return (
+                      <span
+                        key={`ellipsis-${idx}`}
+                        aria-hidden="true"
+                        className="w-8 h-8 flex items-center justify-center text-xs text-slate-400 dark:text-slate-500 font-medium select-none"
+                      >
+                        …
+                      </span>
+                    );
+                  }
+
+                  const isCurrent = item === page;
                   return (
                     <button
-                      key={p}
-                      onClick={() => setPage(p)}
+                      key={item}
+                      type="button"
+                      onClick={() => setPage(item)}
                       disabled={loading}
-                      className={`w-8 h-8 rounded-md text-xs font-mono font-medium transition-colors ${
+                      aria-label={
+                        language === 'bn'
+                          ? `পৃষ্ঠা ${formatNumber(item)}-এ যান`
+                          : `Go to page ${item}`
+                      }
+                      aria-current={isCurrent ? 'page' : undefined}
+                      className={`min-w-8 h-8 px-2 rounded-md text-xs font-mono font-medium transition-colors ${
                         isCurrent
-                          ? 'bg-sky-600 text-white font-bold'
+                          ? 'bg-sky-600 text-white font-bold shadow-xs'
                           : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                       }`}
                     >
-                      {formatNumber(p)}
+                      {formatNumber(item)}
                     </button>
                   );
                 })}
@@ -346,6 +425,7 @@ export const UsersPage: React.FC = () => {
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages || loading}
                 rightIcon={<ChevronRight className="w-4 h-4" />}
+                aria-label={t.users.next}
               >
                 <span>{t.users.next}</span>
               </Button>
