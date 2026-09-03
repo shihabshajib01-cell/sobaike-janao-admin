@@ -3,6 +3,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
 import {
   DashboardCardsGrid,
   StatusOverview,
@@ -21,6 +22,8 @@ import { RefreshCw, AlertTriangle } from 'lucide-react';
 export const DashboardPage: React.FC = () => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
+  const { hasPermission } = useAuth();
+  const canViewComplaints = hasPermission('complaints.view');
 
   // State
   const [loading, setLoading] = useState<boolean>(true);
@@ -38,18 +41,38 @@ export const DashboardPage: React.FC = () => {
     setError(null);
 
     try {
-      const [statsData, statusData, categoryData, recentData] =
-        await Promise.all([
-          dashboardApi.getDashboardStats(),
-          dashboardApi.getStatusSummary(),
-          dashboardApi.getCategorySummary(),
-          dashboardApi.getRecentComplaints(6),
-        ]);
+      // 1. Fetch aggregate metrics (authorized by dashboard.view)
+      const aggregateFetches: [
+        Promise<DashboardStats>,
+        Promise<StatusSummaryItem[]>,
+        Promise<CategorySummaryItem[]>
+      ] = [
+        dashboardApi.getDashboardStats(),
+        dashboardApi.getStatusSummary(),
+        dashboardApi.getCategorySummary(),
+      ];
 
-      setStats(statsData);
-      setStatusItems(statusData);
-      setCategories(categoryData);
-      setRecentComplaints(recentData);
+      // 2. Fetch recent complaint rows ONLY if current admin holds complaints.view permission
+      if (canViewComplaints) {
+        const [statsData, statusData, categoryData, recentData] =
+          await Promise.all([
+            ...aggregateFetches,
+            dashboardApi.getRecentComplaints(6),
+          ]);
+
+        setStats(statsData);
+        setStatusItems(statusData);
+        setCategories(categoryData);
+        setRecentComplaints(recentData);
+      } else {
+        const [statsData, statusData, categoryData] =
+          await Promise.all(aggregateFetches);
+
+        setStats(statsData);
+        setStatusItems(statusData);
+        setCategories(categoryData);
+        setRecentComplaints([]);
+      }
     } catch (err: any) {
       console.error('Failed to load dashboard metrics:', err);
       setError(
@@ -60,7 +83,7 @@ export const DashboardPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [isBn]);
+  }, [isBn, canViewComplaints]);
 
   useEffect(() => {
     loadDashboardData();
@@ -133,10 +156,12 @@ export const DashboardPage: React.FC = () => {
             <CategoryOverview categories={categories} loading={loading} />
           </section>
 
-          {/* 5. Recent Complaints Table */}
-          <section aria-label="Recent Citizen Reports">
-            <RecentComplaints complaints={recentComplaints} loading={loading} />
-          </section>
+          {/* 5. Recent Complaints Table (Rendered strictly when authorized for complaints.view) */}
+          {canViewComplaints && (
+            <section aria-label="Recent Citizen Reports">
+              <RecentComplaints complaints={recentComplaints} loading={loading} />
+            </section>
+          )}
         </>
       )}
     </div>

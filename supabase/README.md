@@ -42,6 +42,10 @@ This directory contains the database migrations, audit scripts, and security def
    - **Phase:** Phase 2A Role Update Correction
    - **Contents:** Preserves existing Bengali role names (`name_bn`) during English renames, preserves omitted descriptions, and supports explicit description updates.
 
+7. **`20260903000004_phase2e_dashboard_complaint_read_authorization.sql`**
+   - **Phase:** Phase 2E Dashboard & Complaint Read Authorization
+   - **Contents:** Enforces Row-Level Security (RLS) on `public.complaints` requiring `complaints.view` for administrative table queries; preserves anonymous public feed (`anon` can read `status = 'published'`); and introduces controlled `SECURITY DEFINER` aggregate RPC `public.admin_get_dashboard_aggregates()` requiring `dashboard.view`.
+
 ---
 
 ## Role Management Backend API Specification
