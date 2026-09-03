@@ -1185,8 +1185,8 @@ $$;
 -- ------------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.admin_finalize_user_membership(
     p_user_id UUID,
-    p_display_name TEXT,
-    p_role_id TEXT,
+    p_display_name TEXT DEFAULT NULL,
+    p_role_id TEXT DEFAULT NULL,
     p_active BOOLEAN DEFAULT TRUE
 )
 RETURNS JSONB
