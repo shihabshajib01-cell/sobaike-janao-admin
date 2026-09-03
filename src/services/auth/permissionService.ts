@@ -69,7 +69,10 @@ export const permissionService = {
    */
   async resolveCurrentUserAuthorization(): Promise<UserPermissionProfile> {
     if (!isSupabaseConfigured) {
-      return DEV_MOCK_PROFILE;
+      if (isDev) {
+        return DEV_MOCK_PROFILE;
+      }
+      throw new Error('Supabase authorization service is not configured in this environment.');
     }
 
     const currentUser = await authService.getCurrentUser();

@@ -53,9 +53,9 @@ export async function checkAdminStatus(userId: string): Promise<boolean> {
     return false;
   }
 
-  // Fallback when Supabase is not configured
+  // Local development fallback strictly isolated to DEV
   if (!isSupabaseConfigured) {
-    return true;
+    return isDev;
   }
 
   try {
@@ -97,13 +97,15 @@ export const authService = {
       }
     }
 
-    // Fallback when Supabase is not configured
-    try {
-      const stored = typeof window !== 'undefined' ? localStorage.getItem(MOCK_SESSION_KEY) : null;
-      if (stored) {
-        return JSON.parse(stored) as Session;
-      }
-    } catch {}
+    // Fallback strictly isolated to unconfigured DEV; ignored in production
+    if (isDev) {
+      try {
+        const stored = typeof window !== 'undefined' ? localStorage.getItem(MOCK_SESSION_KEY) : null;
+        if (stored) {
+          return JSON.parse(stored) as Session;
+        }
+      } catch {}
+    }
 
     return null;
   },
@@ -244,7 +246,17 @@ export const authService = {
       }
     }
 
-    // Fallback local mock login when Supabase is not configured
+    // Unconfigured environment:
+    // Production MUST fail closed: no login, no mock session
+    if (!isDev) {
+      return {
+        success: false,
+        isUnconfigured: true,
+        error: 'Authentication service is not configured in this environment.',
+      };
+    }
+
+    // Dev-only local mock login
     const { user, session } = createDevMockSession(email || 'admin@sobaike.org');
     try {
       if (typeof window !== 'undefined') {

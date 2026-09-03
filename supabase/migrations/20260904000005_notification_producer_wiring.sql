@@ -24,155 +24,6 @@
 BEGIN;
 
 -- ------------------------------------------------------------------------------
--- 0. RESOLVER ADJUSTMENT: Personal Audience Mode Delivery
--- Ensure personal notifications can be delivered to admin user account records
--- (e.g. personal deactivation notices stored for account audit history).
--- ------------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION public.admin_notification_resolve_recipients(
-    p_audience_mode TEXT DEFAULT 'permission',
-    p_required_all_permissions TEXT[] DEFAULT '{}',
-    p_required_any_permissions TEXT[] DEFAULT '{}',
-    p_target_type TEXT DEFAULT NULL,
-    p_target_id TEXT DEFAULT NULL,
-    p_personal_recipient_id UUID DEFAULT NULL,
-    p_actor_user_id UUID DEFAULT NULL,
-    p_exclude_actor BOOLEAN DEFAULT true,
-    p_include_super_admin BOOLEAN DEFAULT true
-)
-RETURNS SETOF UUID
-LANGUAGE plpgsql
-STABLE
-SECURITY DEFINER
-SET search_path = pg_catalog, public
-AS $$
-DECLARE
-    v_cand RECORD;
-    v_eff_perms TEXT[];
-    v_target_uuid UUID;
-    v_scope_ok BOOLEAN;
-BEGIN
-    -- 1. Personal audience mode
-    IF p_audience_mode = 'personal' THEN
-        IF p_personal_recipient_id IS NULL THEN
-            RETURN;
-        END IF;
-
-        IF p_exclude_actor IS TRUE AND p_actor_user_id IS NOT NULL AND p_personal_recipient_id = p_actor_user_id THEN
-            RETURN;
-        END IF;
-
-        RETURN QUERY
-        SELECT au.user_id
-        FROM public.admin_users au
-        WHERE au.user_id = p_personal_recipient_id;
-        RETURN;
-    END IF;
-
-    -- 2. Super admin only audience mode
-    IF p_audience_mode = 'super_admin_only' THEN
-        RETURN QUERY
-        SELECT au.user_id
-        FROM public.admin_users au
-        WHERE au.active = true
-          AND au.is_super_admin = true
-          AND (NOT p_exclude_actor OR p_actor_user_id IS NULL OR au.user_id <> p_actor_user_id);
-        RETURN;
-    END IF;
-
-    -- 3. Permission audience mode
-    IF p_audience_mode = 'permission' THEN
-        -- Defense in depth: validate supported target types
-        IF p_target_type IS NOT NULL AND p_target_type NOT IN ('complaint', 'admin_user', 'role') THEN
-            RETURN;
-        END IF;
-
-        -- Defense in depth: validate target_id for scoped target types
-        IF p_target_type = 'admin_user' THEN
-            IF p_target_id IS NULL OR length(btrim(p_target_id)) = 0 THEN
-                RETURN;
-            END IF;
-            BEGIN
-                v_target_uuid := btrim(p_target_id)::UUID;
-            EXCEPTION WHEN OTHERS THEN
-                RETURN;
-            END;
-        ELSIF p_target_type = 'role' THEN
-            IF p_target_id IS NULL OR length(btrim(p_target_id)) = 0 THEN
-                RETURN;
-            END IF;
-        END IF;
-
-        FOR v_cand IN
-            SELECT au.user_id, au.is_super_admin
-            FROM public.admin_users au
-            WHERE au.active = true
-        LOOP
-            -- Check actor exclusion
-            IF p_exclude_actor IS TRUE AND p_actor_user_id IS NOT NULL AND v_cand.user_id = p_actor_user_id THEN
-                CONTINUE;
-            END IF;
-
-            -- If Super Admin candidate
-            IF v_cand.is_super_admin IS TRUE THEN
-                IF p_include_super_admin IS TRUE THEN
-                    RETURN NEXT v_cand.user_id;
-                END IF;
-                CONTINUE;
-            END IF;
-
-            -- Normal administrator: resolve effective permissions
-            v_eff_perms := ARRAY(
-                SELECT p_id FROM public.admin_notification_get_effective_permissions(v_cand.user_id) AS p_id
-            );
-
-            -- Check required_all_permissions (must possess every listed permission)
-            IF p_required_all_permissions IS NOT NULL AND cardinality(p_required_all_permissions) > 0 THEN
-                IF NOT (p_required_all_permissions <@ v_eff_perms) THEN
-                    CONTINUE;
-                END IF;
-            END IF;
-
-            -- Check required_any_permissions (must possess at least one listed permission)
-            IF p_required_any_permissions IS NOT NULL AND cardinality(p_required_any_permissions) > 0 THEN
-                IF NOT (p_required_any_permissions && v_eff_perms) THEN
-                    CONTINUE;
-                END IF;
-            END IF;
-
-            -- Check target scoping
-            IF p_target_type = 'admin_user' THEN
-                v_scope_ok := public.admin_notification_can_view_user_scope(v_cand.user_id, v_target_uuid);
-                IF v_scope_ok IS NOT TRUE THEN
-                    CONTINUE;
-                END IF;
-            ELSIF p_target_type = 'role' THEN
-                v_scope_ok := public.admin_notification_can_view_role_scope(v_cand.user_id, btrim(p_target_id));
-                IF v_scope_ok IS NOT TRUE THEN
-                    CONTINUE;
-                END IF;
-            ELSIF p_target_type = 'complaint' THEN
-                NULL;
-            ELSIF p_target_type IS NULL THEN
-                NULL;
-            ELSE
-                CONTINUE;
-            END IF;
-
-            RETURN NEXT v_cand.user_id;
-        END LOOP;
-        RETURN;
-    END IF;
-
-    RETURN;
-END;
-$$;
-
-REVOKE ALL ON FUNCTION public.admin_notification_resolve_recipients(TEXT, TEXT[], TEXT[], TEXT, TEXT, UUID, UUID, BOOLEAN, BOOLEAN) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.admin_notification_resolve_recipients(TEXT, TEXT[], TEXT[], TEXT, TEXT, UUID, UUID, BOOLEAN, BOOLEAN) FROM anon;
-REVOKE ALL ON FUNCTION public.admin_notification_resolve_recipients(TEXT, TEXT[], TEXT[], TEXT, TEXT, UUID, UUID, BOOLEAN, BOOLEAN) FROM authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_notification_resolve_recipients(TEXT, TEXT[], TEXT[], TEXT, TEXT, UUID, UUID, BOOLEAN, BOOLEAN) TO service_role;
-
--- ------------------------------------------------------------------------------
 -- 1. AUDIT LOGGER HELPER: Return Audit Log UUID
 -- Upgrades log_role_audit_event to return the generated UUID for deterministic
 -- oversight notification deduplication keys.
@@ -204,8 +55,8 @@ BEGIN
         auth.uid(),
         p_action,
         CASE
-            WHEN p_action LIKE 'USER%' THEN 'user'
-            WHEN p_action LIKE 'ROLE%' THEN 'role'
+            WHEN p_action ILIKE '%USER%' THEN 'user'
+            WHEN p_action ILIKE '%ROLE%' THEN 'role'
             ELSE 'system'
         END,
         p_target_id,
@@ -589,33 +440,37 @@ BEGIN
     now()
   );
 
-  -- Step 14: Emit Notification: complaint.submitted
-  PERFORM public.admin_emit_notification(
-    p_event_key := 'complaint.submitted',
-    p_title_en := 'New complaint submitted: ' || v_report_id,
-    p_title_bn := 'নতুন অভিযোগ জমা দেওয়া হয়েছে: ' || v_report_id,
-    p_body_en := 'A new complaint has been submitted under ' || COALESCE(v_segment, 'general') || '.',
-    p_body_bn := 'নতুন একটি অভিযোগ জমা দেওয়া হয়েছে (' || COALESCE(v_segment, 'সাধারণ') || ' বিভাগে)।',
-    p_actor_user_id := NULL,
-    p_target_type := 'complaint',
-    p_target_id := v_report_id,
-    p_target_label := COALESCE(v_title, v_report_id),
-    p_metadata := jsonb_build_object(
-      'complaint_id', v_report_id,
-      'segment_id', v_segment,
-      'subcategory_id', v_subcat_id,
-      'division', v_division,
-      'district', v_district,
-      'submission_time', now()
-    ),
-    p_required_all_permissions := ARRAY['complaints.view'],
-    p_required_any_permissions := '{}'::text[],
-    p_audience_mode := 'permission',
-    p_route := '/complaints/' || v_report_id,
-    p_dedupe_key := 'complaint.submitted:' || v_report_id,
-    p_exclude_actor := false,
-    p_include_super_admin := true
-  );
+  -- Step 14: Emit Notification: complaint.submitted (fail-safe for public submission)
+  BEGIN
+    PERFORM public.admin_emit_notification(
+      p_event_key := 'complaint.submitted',
+      p_title_en := 'New complaint submitted: ' || v_report_id,
+      p_title_bn := 'নতুন অভিযোগ জমা দেওয়া হয়েছে: ' || v_report_id,
+      p_body_en := 'A new complaint has been submitted under ' || COALESCE(v_segment, 'general') || '.',
+      p_body_bn := 'নতুন একটি অভিযোগ জমা দেওয়া হয়েছে (' || COALESCE(v_segment, 'সাধারণ') || ' বিভাগে)।',
+      p_actor_user_id := NULL,
+      p_target_type := 'complaint',
+      p_target_id := v_report_id,
+      p_target_label := COALESCE(v_title, v_report_id),
+      p_metadata := jsonb_build_object(
+        'complaint_id', v_report_id,
+        'segment_id', v_segment,
+        'subcategory_id', v_subcat_id,
+        'division', v_division,
+        'district', v_district,
+        'submission_time', now()
+      ),
+      p_required_all_permissions := ARRAY['complaints.view'],
+      p_required_any_permissions := '{}'::text[],
+      p_audience_mode := 'permission',
+      p_route := '/complaints/' || v_report_id,
+      p_dedupe_key := 'complaint.submitted:' || v_report_id,
+      p_exclude_actor := false,
+      p_include_super_admin := true
+    );
+  EXCEPTION WHEN OTHERS THEN
+    RAISE WARNING 'admin_emit_notification failed for complaint.submitted (%): %', v_report_id, SQLERRM;
+  END;
 
   -- Step 15: Return Standardized Client Response Payload
   RETURN jsonb_build_object(
@@ -748,34 +603,38 @@ BEGIN
         updated_at = now()
     WHERE id = v_complaint_id;
 
-    -- 7. Emit Notification: complaint.evidence_attached
-    PERFORM public.admin_emit_notification(
-        p_event_key := 'complaint.evidence_attached',
-        p_title_en := 'Evidence attached to complaint: ' || v_complaint_id,
-        p_title_bn := 'অভিযোগে প্রমাণ সংযুক্ত করা হয়েছে: ' || v_complaint_id,
-        p_body_en := 'New evidence attached: ' || trim(p_file_name),
-        p_body_bn := 'অভিযোগে নতুন প্রমাণ যুক্ত করা হয়েছে: ' || trim(p_file_name),
-        p_actor_user_id := NULL,
-        p_target_type := 'complaint',
-        p_target_id := v_complaint_id,
-        p_target_label := trim(p_file_name),
-        p_metadata := jsonb_build_object(
-            'complaint_id', v_complaint_id,
-            'evidence_id', v_evidence_id,
-            'evidence_type', v_media_type,
-            'storage_path', trim(p_storage_path),
-            'file_name', trim(p_file_name),
-            'file_size_bytes', p_file_size_bytes,
-            'created_at', now()
-        ),
-        p_required_all_permissions := ARRAY['complaints.view', 'complaints.evidence_view'],
-        p_required_any_permissions := '{}'::text[],
-        p_audience_mode := 'permission',
-        p_route := '/complaints/' || v_complaint_id,
-        p_dedupe_key := 'complaint.evidence_attached:' || v_evidence_id::text,
-        p_exclude_actor := false,
-        p_include_super_admin := true
-    );
+    -- 7. Emit Notification: complaint.evidence_attached (fail-safe for public upload)
+    BEGIN
+        PERFORM public.admin_emit_notification(
+            p_event_key := 'complaint.evidence_attached',
+            p_title_en := 'Evidence attached to complaint: ' || v_complaint_id,
+            p_title_bn := 'অভিযোগে প্রমাণ সংযুক্ত করা হয়েছে: ' || v_complaint_id,
+            p_body_en := 'New evidence attached: ' || trim(p_file_name),
+            p_body_bn := 'অভিযোগে নতুন প্রমাণ যুক্ত করা হয়েছে: ' || trim(p_file_name),
+            p_actor_user_id := NULL,
+            p_target_type := 'complaint',
+            p_target_id := v_complaint_id,
+            p_target_label := trim(p_file_name),
+            p_metadata := jsonb_build_object(
+                'complaint_id', v_complaint_id,
+                'evidence_id', v_evidence_id,
+                'evidence_type', v_media_type,
+                'storage_path', trim(p_storage_path),
+                'file_name', trim(p_file_name),
+                'file_size_bytes', p_file_size_bytes,
+                'created_at', now()
+            ),
+            p_required_all_permissions := ARRAY['complaints.view', 'complaints.evidence_view'],
+            p_required_any_permissions := '{}'::text[],
+            p_audience_mode := 'permission',
+            p_route := '/complaints/' || v_complaint_id,
+            p_dedupe_key := 'complaint.evidence_attached:' || v_evidence_id::text,
+            p_exclude_actor := false,
+            p_include_super_admin := true
+        );
+    EXCEPTION WHEN OTHERS THEN
+        RAISE WARNING 'admin_emit_notification failed for complaint.evidence_attached (%): %', v_evidence_id, SQLERRM;
+    END;
 
     RETURN jsonb_build_object(
         'success', true,
@@ -807,11 +666,11 @@ DECLARE
     v_audit_id uuid;
 BEGIN
     IF NOT public.is_active_admin() THEN
-        RAISE EXCEPTION 'Access denied. Active administrator session required.' USING ERRCODE = '42501';
+        RAISE EXCEPTION 'Access denied. Active administrative session required.' USING ERRCODE = '42501';
     END IF;
 
-    IF NOT public.has_permission('complaints.manage') THEN
-        RAISE EXCEPTION 'Access denied. Permission complaints.manage required.' USING ERRCODE = '42501';
+    IF NOT public.has_permission('complaints.publish') THEN
+        RAISE EXCEPTION 'Access denied. You do not have permission to publish complaints.' USING ERRCODE = '42501';
     END IF;
 
     SELECT id, status INTO v_complaint
@@ -820,22 +679,25 @@ BEGIN
     FOR UPDATE;
 
     IF v_complaint.id IS NULL THEN
-        RAISE EXCEPTION 'Complaint % not found', p_complaint_id USING ERRCODE = 'P0002';
+        RAISE EXCEPTION 'Complaint with ID % not found', p_complaint_id USING ERRCODE = 'P0002';
     END IF;
 
-    IF v_complaint.status <> 'submitted' THEN
-        RAISE EXCEPTION 'Invalid status transition: cannot publish complaint from status %', v_complaint.status
-            USING ERRCODE = '22000';
+    IF v_complaint.status IS NULL OR v_complaint.status NOT IN ('submitted', 'unpublished') THEN
+        RAISE EXCEPTION 'Cannot publish complaint with status "%". Only "submitted" or "unpublished" complaints can be published.', COALESCE(v_complaint.status, 'null')
+            USING ERRCODE = '22023';
     END IF;
 
     UPDATE public.complaints
-    SET status = 'published', updated_at = now()
-    WHERE id = p_complaint_id;
+    SET 
+        status = 'published',
+        published_at = COALESCE(published_at, now()),
+        updated_at = now()
+    WHERE id = v_complaint.id;
 
     INSERT INTO public.complaint_updates (
         complaint_id, update_type, note, is_public, created_at
     ) VALUES (
-        p_complaint_id, 'status_change', 'Complaint verified and published by administrator.', true, now()
+        v_complaint.id, 'published', 'Complaint approved and published to public feed.', true, now()
     );
 
     INSERT INTO public.admin_audit_logs (
@@ -876,7 +738,8 @@ BEGIN
     RETURN jsonb_build_object(
         'success', true,
         'complaint_id', p_complaint_id,
-        'status', 'published'
+        'status', 'published',
+        'previous_status', v_complaint.status
     );
 END;
 $$;
@@ -893,14 +756,15 @@ SET search_path = pg_catalog, public
 AS $$
 DECLARE
     v_complaint record;
+    v_note_text text;
     v_audit_id uuid;
 BEGIN
     IF NOT public.is_active_admin() THEN
-        RAISE EXCEPTION 'Access denied. Active administrator session required.' USING ERRCODE = '42501';
+        RAISE EXCEPTION 'Access denied. Active administrative session required.' USING ERRCODE = '42501';
     END IF;
 
-    IF NOT public.has_permission('complaints.manage') THEN
-        RAISE EXCEPTION 'Access denied. Permission complaints.manage required.' USING ERRCODE = '42501';
+    IF NOT public.has_permission('complaints.unpublish') THEN
+        RAISE EXCEPTION 'Access denied. You do not have permission to unpublish complaints.' USING ERRCODE = '42501';
     END IF;
 
     SELECT id, status INTO v_complaint
@@ -909,24 +773,24 @@ BEGIN
     FOR UPDATE;
 
     IF v_complaint.id IS NULL THEN
-        RAISE EXCEPTION 'Complaint % not found', p_complaint_id USING ERRCODE = 'P0002';
+        RAISE EXCEPTION 'Complaint with ID % not found', p_complaint_id USING ERRCODE = 'P0002';
     END IF;
 
-    IF v_complaint.status <> 'published' THEN
-        RAISE EXCEPTION 'Invalid status transition: cannot unpublish complaint from status %', v_complaint.status
-            USING ERRCODE = '22000';
+    IF v_complaint.status IS NULL OR v_complaint.status <> 'published' THEN
+        RAISE EXCEPTION 'Cannot unpublish complaint with status "%". Only "published" complaints can be unpublished.', COALESCE(v_complaint.status, 'null')
+            USING ERRCODE = '22023';
     END IF;
 
     UPDATE public.complaints
     SET status = 'unpublished', updated_at = now()
-    WHERE id = p_complaint_id;
+    WHERE id = v_complaint.id;
+
+    v_note_text := COALESCE(NULLIF(TRIM(p_reason), ''), 'Complaint unpublished from public feed.');
 
     INSERT INTO public.complaint_updates (
         complaint_id, update_type, note, is_public, created_at
     ) VALUES (
-        p_complaint_id, 'status_change',
-        COALESCE(p_reason, 'Complaint unpublished by administrator.'),
-        false, now()
+        v_complaint.id, 'unpublished', v_note_text, false, now()
     );
 
     INSERT INTO public.admin_audit_logs (
@@ -968,7 +832,8 @@ BEGIN
     RETURN jsonb_build_object(
         'success', true,
         'complaint_id', p_complaint_id,
-        'status', 'unpublished'
+        'status', 'unpublished',
+        'previous_status', v_complaint.status
     );
 END;
 $$;
@@ -985,14 +850,15 @@ SET search_path = pg_catalog, public
 AS $$
 DECLARE
     v_complaint record;
+    v_note_text text;
     v_audit_id uuid;
 BEGIN
     IF NOT public.is_active_admin() THEN
-        RAISE EXCEPTION 'Access denied. Active administrator session required.' USING ERRCODE = '42501';
+        RAISE EXCEPTION 'Access denied. Active administrative session required.' USING ERRCODE = '42501';
     END IF;
 
-    IF NOT public.has_permission('complaints.manage') THEN
-        RAISE EXCEPTION 'Access denied. Permission complaints.manage required.' USING ERRCODE = '42501';
+    IF NOT public.has_permission('complaints.reject') THEN
+        RAISE EXCEPTION 'Access denied. You do not have permission to reject complaints.' USING ERRCODE = '42501';
     END IF;
 
     IF p_reason_code IS NULL OR length(trim(p_reason_code)) = 0 THEN
@@ -1005,24 +871,24 @@ BEGIN
     FOR UPDATE;
 
     IF v_complaint.id IS NULL THEN
-        RAISE EXCEPTION 'Complaint % not found', p_complaint_id USING ERRCODE = 'P0002';
+        RAISE EXCEPTION 'Complaint with ID % not found', p_complaint_id USING ERRCODE = 'P0002';
     END IF;
 
-    IF v_complaint.status <> 'submitted' THEN
-        RAISE EXCEPTION 'Invalid status transition: cannot reject complaint from status %', v_complaint.status
-            USING ERRCODE = '22000';
+    IF v_complaint.status IS NULL OR v_complaint.status <> 'submitted' THEN
+        RAISE EXCEPTION 'Cannot reject complaint with status "%". Only "submitted" complaints can be rejected.', COALESCE(v_complaint.status, 'null')
+            USING ERRCODE = '22023';
     END IF;
 
     UPDATE public.complaints
     SET status = 'rejected', updated_at = now()
-    WHERE id = p_complaint_id;
+    WHERE id = v_complaint.id;
+
+    v_note_text := COALESCE(NULLIF(TRIM(p_note), ''), NULLIF(TRIM(p_reason_code), ''), 'Rejected by administrator');
 
     INSERT INTO public.complaint_updates (
         complaint_id, update_type, note, is_public, created_at
     ) VALUES (
-        p_complaint_id, 'status_change',
-        'Complaint rejected during moderation review. Reason: ' || p_reason_code,
-        false, now()
+        v_complaint.id, 'rejected', v_note_text, false, now()
     );
 
     INSERT INTO public.admin_audit_logs (
@@ -1066,7 +932,7 @@ BEGIN
         'success', true,
         'complaint_id', p_complaint_id,
         'status', 'rejected',
-        'reason_code', p_reason_code
+        'previous_status', v_complaint.status
     );
 END;
 $$;
@@ -1214,8 +1080,8 @@ BEGIN
             'actor_user_id', auth.uid(),
             'timestamp', now()
         ),
-        p_required_all_permissions := ARRAY['admin_users.view'],
-        p_required_any_permissions := '{}'::text[],
+        p_required_all_permissions := '{}'::text[],
+        p_required_any_permissions := ARRAY['admin_users.view', 'admin_users.manage'],
         p_audience_mode := 'permission',
         p_route := '/users',
         p_dedupe_key := 'admin.created:oversight:' || v_audit_id::text,
@@ -1223,33 +1089,35 @@ BEGIN
         p_include_super_admin := true
     );
 
-    -- Stream B: Personal Recipient
-    PERFORM public.admin_emit_notification(
-        p_event_key := 'admin.created',
-        p_title_en := 'Welcome to Sobaike Janao Admin',
-        p_title_bn := 'সবাইকে জানাও অ্যাডমিনে স্বাগতম',
-        p_body_en := 'Your administrator account has been set up with the ' || v_clean_role_id || ' role.',
-        p_body_bn := 'আপনার প্রশাসক অ্যাকাউন্ট সফলভাবে তৈরি হয়েছে (' || v_clean_role_id || ' ভূমিকা সহ)।',
-        p_actor_user_id := auth.uid(),
-        p_target_type := 'admin_user',
-        p_target_id := p_user_id::text,
-        p_target_label := v_target_label,
-        p_metadata := jsonb_build_object(
-            'user_id', p_user_id,
-            'email', v_auth_email,
-            'role_id', v_clean_role_id,
-            'active', COALESCE(p_active, TRUE),
-            'timestamp', now()
-        ),
-        p_required_all_permissions := '{}'::text[],
-        p_required_any_permissions := '{}'::text[],
-        p_audience_mode := 'personal',
-        p_personal_recipient_id := p_user_id,
-        p_route := '/dashboard',
-        p_dedupe_key := 'admin.created:personal:' || p_user_id::text,
-        p_exclude_actor := false,
-        p_include_super_admin := true
-    );
+    -- Stream B: Personal Recipient (only if resulting user is active)
+    IF COALESCE(p_active, TRUE) IS TRUE THEN
+        PERFORM public.admin_emit_notification(
+            p_event_key := 'admin.created',
+            p_title_en := 'Welcome to Sobaike Janao Admin',
+            p_title_bn := 'সবাইকে জানাও অ্যাডমিনে স্বাগতম',
+            p_body_en := 'Your administrator account has been set up with the ' || v_clean_role_id || ' role.',
+            p_body_bn := 'আপনার প্রশাসক অ্যাকাউন্ট সফলভাবে তৈরি হয়েছে (' || v_clean_role_id || ' ভূমিকা সহ)।',
+            p_actor_user_id := auth.uid(),
+            p_target_type := 'admin_user',
+            p_target_id := p_user_id::text,
+            p_target_label := v_target_label,
+            p_metadata := jsonb_build_object(
+                'user_id', p_user_id,
+                'email', v_auth_email,
+                'role_id', v_clean_role_id,
+                'active', COALESCE(p_active, TRUE),
+                'timestamp', now()
+            ),
+            p_required_all_permissions := '{}'::text[],
+            p_required_any_permissions := '{}'::text[],
+            p_audience_mode := 'personal',
+            p_personal_recipient_id := p_user_id,
+            p_route := '/dashboard',
+            p_dedupe_key := 'admin.created:personal:' || p_user_id::text,
+            p_exclude_actor := false,
+            p_include_super_admin := true
+        );
+    END IF;
 
     RETURN jsonb_build_object(
         'user_id', p_user_id,
@@ -1392,7 +1260,7 @@ BEGIN
 
     -- Audit log
     v_audit_id := public.log_role_audit_event(
-        'USER_MEMBERSHIP_UPDATED',
+        'ADMIN_USER_UPDATED',
         COALESCE(v_clean_role_id, v_existing_role_id, 'none'),
         jsonb_build_object(
             'target_user_id', p_user_id,
@@ -1431,8 +1299,8 @@ BEGIN
                     'actor_user_id', auth.uid(),
                     'timestamp', now()
                 ),
-                p_required_all_permissions := ARRAY['admin_users.view'],
-                p_required_any_permissions := '{}'::text[],
+                p_required_all_permissions := '{}'::text[],
+                p_required_any_permissions := ARRAY['admin_users.view', 'admin_users.manage'],
                 p_audience_mode := 'permission',
                 p_route := '/users',
                 p_dedupe_key := 'admin.activated:oversight:' || v_audit_id::text,
@@ -1466,7 +1334,7 @@ BEGIN
                 p_include_super_admin := true
             );
         ELSE
-            -- Stream A: Oversight
+            -- Stream A: Oversight (Personal admin.deactivated is intentionally excluded)
             PERFORM public.admin_emit_notification(
                 p_event_key := 'admin.deactivated',
                 p_title_en := 'Administrator deactivated: ' || v_target_label,
@@ -1485,38 +1353,12 @@ BEGIN
                     'actor_user_id', auth.uid(),
                     'timestamp', now()
                 ),
-                p_required_all_permissions := ARRAY['admin_users.view'],
-                p_required_any_permissions := '{}'::text[],
+                p_required_all_permissions := '{}'::text[],
+                p_required_any_permissions := ARRAY['admin_users.view', 'admin_users.manage'],
                 p_audience_mode := 'permission',
                 p_route := '/users',
                 p_dedupe_key := 'admin.deactivated:oversight:' || v_audit_id::text,
                 p_exclude_actor := true,
-                p_include_super_admin := true
-            );
-
-            -- Stream B: Personal
-            PERFORM public.admin_emit_notification(
-                p_event_key := 'admin.deactivated',
-                p_title_en := 'Your administrator account has been deactivated',
-                p_title_bn := 'আপনার প্রশাসক অ্যাকাউন্ট নিষ্ক্রিয় করা হয়েছে',
-                p_body_en := 'Your administrative account has been deactivated by an administrator.',
-                p_body_bn := 'আপনার প্রশাসক অ্যাকাউন্ট প্রশাসক কর্তৃক নিষ্ক্রিয় করা হয়েছে।',
-                p_actor_user_id := auth.uid(),
-                p_target_type := 'admin_user',
-                p_target_id := p_user_id::text,
-                p_target_label := v_target_label,
-                p_metadata := jsonb_build_object(
-                    'target_user_id', p_user_id,
-                    'active', false,
-                    'timestamp', now()
-                ),
-                p_required_all_permissions := '{}'::text[],
-                p_required_any_permissions := '{}'::text[],
-                p_audience_mode := 'personal',
-                p_personal_recipient_id := p_user_id,
-                p_route := '/dashboard',
-                p_dedupe_key := 'admin.deactivated:personal:' || v_audit_id::text,
-                p_exclude_actor := false,
                 p_include_super_admin := true
             );
         END IF;
@@ -1544,8 +1386,8 @@ BEGIN
                 'actor_user_id', auth.uid(),
                 'timestamp', now()
             ),
-            p_required_all_permissions := ARRAY['admin_users.view'],
-            p_required_any_permissions := '{}'::text[],
+            p_required_all_permissions := '{}'::text[],
+            p_required_any_permissions := ARRAY['admin_users.view', 'admin_users.manage'],
             p_audience_mode := 'permission',
             p_route := '/users',
             p_dedupe_key := 'admin.role_changed:oversight:' || v_audit_id::text,
@@ -1553,33 +1395,35 @@ BEGIN
             p_include_super_admin := true
         );
 
-        -- Stream B: Personal
-        PERFORM public.admin_emit_notification(
-            p_event_key := 'admin.role_changed',
-            p_title_en := 'Your administrator role has been updated',
-            p_title_bn := 'আপনার প্রশাসকের ভূমিকা পরিবর্তন করা হয়েছে',
-            p_body_en := 'Your role has been changed to ' || v_clean_role_id || '.',
-            p_body_bn := 'আপনার ভূমিকা ' || v_clean_role_id || '-এ পরিবর্তন করা হয়েছে।',
-            p_actor_user_id := auth.uid(),
-            p_target_type := 'admin_user',
-            p_target_id := p_user_id::text,
-            p_target_label := v_target_label,
-            p_metadata := jsonb_build_object(
-                'target_user_id', p_user_id,
-                'previous_role_id', v_existing_role_id,
-                'new_role_id', v_clean_role_id,
-                'actor_user_id', auth.uid(),
-                'timestamp', now()
-            ),
-            p_required_all_permissions := '{}'::text[],
-            p_required_any_permissions := '{}'::text[],
-            p_audience_mode := 'personal',
-            p_personal_recipient_id := p_user_id,
-            p_route := '/dashboard',
-            p_dedupe_key := 'admin.role_changed:personal:' || v_audit_id::text,
-            p_exclude_actor := false,
-            p_include_super_admin := true
-        );
+        -- Stream B: Personal (emit only when role changed AND resulting user is active)
+        IF COALESCE(p_active, v_existing_admin.active) IS TRUE THEN
+            PERFORM public.admin_emit_notification(
+                p_event_key := 'admin.role_changed',
+                p_title_en := 'Your administrator role has been updated',
+                p_title_bn := 'আপনার প্রশাসকের ভূমিকা পরিবর্তন করা হয়েছে',
+                p_body_en := 'Your role has been changed to ' || v_clean_role_id || '.',
+                p_body_bn := 'আপনার ভূমিকা ' || v_clean_role_id || '-এ পরিবর্তন করা হয়েছে।',
+                p_actor_user_id := auth.uid(),
+                p_target_type := 'admin_user',
+                p_target_id := p_user_id::text,
+                p_target_label := v_target_label,
+                p_metadata := jsonb_build_object(
+                    'target_user_id', p_user_id,
+                    'previous_role_id', v_existing_role_id,
+                    'new_role_id', v_clean_role_id,
+                    'actor_user_id', auth.uid(),
+                    'timestamp', now()
+                ),
+                p_required_all_permissions := '{}'::text[],
+                p_required_any_permissions := '{}'::text[],
+                p_audience_mode := 'personal',
+                p_personal_recipient_id := p_user_id,
+                p_route := '/dashboard',
+                p_dedupe_key := 'admin.role_changed:personal:' || v_audit_id::text,
+                p_exclude_actor := false,
+                p_include_super_admin := true
+            );
+        END IF;
     END IF;
 
     RETURN jsonb_build_object(
@@ -1638,16 +1482,15 @@ BEGIN
     v_clean_name_bn := nullif(trim(p_name_bn), '');
     v_clean_desc := nullif(trim(p_description), '');
 
-    -- Generate technical slug
-    v_slug := lower(regexp_replace(v_clean_name_en, '[^a-zA-Z0-9]+', '_', 'g'));
-    v_slug := trim(both '_' from v_slug);
-
-    IF length(v_slug) = 0 THEN
-        RAISE EXCEPTION 'Cannot generate valid role slug from name.' USING ERRCODE = '22000';
+    -- Generate ASCII slug
+    v_slug := public.generate_role_slug(v_clean_name_en);
+    IF v_slug IS NULL OR v_slug = '' THEN
+        RAISE EXCEPTION 'English role name must contain valid alphanumeric characters to create a technical role ID.'
+            USING ERRCODE = '22000';
     END IF;
 
     IF EXISTS (SELECT 1 FROM public.roles WHERE id = v_slug) THEN
-        RAISE EXCEPTION 'Role with identifier % already exists.', v_slug USING ERRCODE = '23505';
+        RAISE EXCEPTION 'A role with this ID or English name already exists.' USING ERRCODE = '23505';
     END IF;
 
     -- Validate permissions
@@ -1723,7 +1566,7 @@ BEGIN
             'actor_user_id', auth.uid(),
             'timestamp', now()
         ),
-        p_required_all_permissions := ARRAY['roles.view'],
+        p_required_all_permissions := ARRAY['roles.manage'],
         p_required_any_permissions := '{}'::text[],
         p_audience_mode := 'permission',
         p_route := '/roles/' || v_slug,
@@ -1953,7 +1796,7 @@ BEGIN
                 'actor_user_id', auth.uid(),
                 'timestamp', now()
             ),
-            p_required_all_permissions := ARRAY['roles.view'],
+            p_required_all_permissions := ARRAY['roles.manage'],
             p_required_any_permissions := '{}'::text[],
             p_audience_mode := 'permission',
             p_route := '/roles/' || v_clean_id,
@@ -1985,7 +1828,7 @@ BEGIN
                 'actor_user_id', auth.uid(),
                 'timestamp', now()
             ),
-            p_required_all_permissions := ARRAY['roles.view', 'roles.manage'],
+            p_required_all_permissions := ARRAY['roles.manage'],
             p_required_any_permissions := '{}'::text[],
             p_audience_mode := 'permission',
             p_route := '/roles/' || v_clean_id,
@@ -2162,7 +2005,7 @@ BEGIN
                 'actor_user_id', auth.uid(),
                 'timestamp', now()
             ),
-            p_required_all_permissions := ARRAY['roles.view', 'roles.manage'],
+            p_required_all_permissions := ARRAY['roles.manage'],
             p_required_any_permissions := '{}'::text[],
             p_audience_mode := 'permission',
             p_route := '/roles/' || v_clean_role_id,
