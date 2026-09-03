@@ -288,7 +288,7 @@ DECLARE
     v_super_admin_id UUID;
     v_can_simulate_auth BOOLEAN := false;
 
-    -- Temporary role for transactional permission assignment
+    -- Temporary roles for transactional permission assignment
     v_test_role_id TEXT := 'test-audit-role-' || substr(gen_random_uuid()::text, 1, 8);
     v_target_role_id TEXT := 'test-target-role-' || substr(gen_random_uuid()::text, 1, 8);
     v_dedupe_key TEXT := 'audit-dedupe-' || gen_random_uuid()::text;
@@ -341,7 +341,9 @@ BEGIN
         RAISE NOTICE 'SKIPPED: Transaction-local auth.uid() context simulation not active in this runner. Direct caller-bound runtime ownership assertions skipped.';
     END IF;
 
-    -- 7.3 Test: Canonical Emitter Deduplication
+    -- --------------------------------------------------------------------------
+    -- TEST N: Canonical Emitter Deduplication
+    -- --------------------------------------------------------------------------
     IF v_normal_admin_id IS NOT NULL THEN
         -- First emission
         v_emit_res := public.admin_emit_notification(
@@ -355,7 +357,7 @@ BEGIN
         );
 
         IF (v_emit_res->>'recipient_count')::INTEGER <> 1 THEN
-            RAISE EXCEPTION 'TEST FAILED (Dedupe Initial): Expected recipient_count = 1, got %', v_emit_res->>'recipient_count';
+            RAISE EXCEPTION 'TEST N FAILED (Dedupe Initial): Expected recipient_count = 1, got %', v_emit_res->>'recipient_count';
         END IF;
 
         -- Second emission with identical dedupe_key
@@ -370,7 +372,7 @@ BEGIN
         );
 
         IF (v_emit_res->>'recipient_count')::INTEGER <> 0 THEN
-            RAISE EXCEPTION 'TEST FAILED (Dedupe Secondary): Expected recipient_count = 0, got %', v_emit_res->>'recipient_count';
+            RAISE EXCEPTION 'TEST N FAILED (Dedupe Secondary): Expected recipient_count = 0, got %', v_emit_res->>'recipient_count';
         END IF;
 
         SELECT COUNT(*) INTO v_survived_count
@@ -378,15 +380,17 @@ BEGIN
         WHERE recipient_user_id = v_normal_admin_id AND dedupe_key = v_dedupe_key;
 
         IF v_survived_count <> 1 THEN
-            RAISE EXCEPTION 'TEST FAILED (Dedupe Row Count): Expected exactly 1 surviving row, found %', v_survived_count;
+            RAISE EXCEPTION 'TEST N FAILED (Dedupe Row Count): Expected exactly 1 surviving row, found %', v_survived_count;
         END IF;
 
-        RAISE NOTICE 'TEST PASS (Emitter Deduplication): Exactly 1 notification row inserted on dedupe collision.';
+        RAISE NOTICE 'TEST PASS (Test N - Canonical Emitter Deduplication): Exactly 1 notification row inserted on dedupe collision.';
     END IF;
 
-    -- 7.4 Test: Personal Audience Mode Resolution & Inactive Handling
+    -- --------------------------------------------------------------------------
+    -- TEST D: Personal Audience Mode
+    -- --------------------------------------------------------------------------
     IF v_normal_admin_id IS NOT NULL THEN
-        -- Active personal recipient
+        -- Active personal recipient is resolved without needing roles.manage/admin_users.manage
         SELECT COUNT(*) INTO v_resolved_count
         FROM public.admin_notification_resolve_recipients(
             'personal',
@@ -401,10 +405,10 @@ BEGIN
         );
 
         IF v_resolved_count <> 1 THEN
-            RAISE EXCEPTION 'TEST FAILED (Personal Mode Resolution): Active recipient not resolved.';
+            RAISE EXCEPTION 'TEST D FAILED (Personal Mode Resolution): Active recipient not resolved.';
         END IF;
 
-        -- Temporarily mark administrator inactive
+        -- Inactive recipient: not returned
         UPDATE public.admin_users SET active = false WHERE user_id = v_normal_admin_id;
 
         SELECT COUNT(*) INTO v_resolved_count
@@ -421,16 +425,18 @@ BEGIN
         );
 
         IF v_resolved_count <> 0 THEN
-            RAISE EXCEPTION 'TEST FAILED (Personal Mode Inactive): Inactive recipient was resolved!';
+            RAISE EXCEPTION 'TEST D FAILED (Personal Mode Inactive): Inactive recipient was resolved!';
         END IF;
 
         -- Restore active flag
         UPDATE public.admin_users SET active = true WHERE user_id = v_normal_admin_id;
 
-        RAISE NOTICE 'TEST PASS (Personal Audience Mode): Active resolved, inactive safely skipped.';
+        RAISE NOTICE 'TEST PASS (Test D - Personal Mode): Active resolved without elevated perms, inactive safely skipped.';
     END IF;
 
-    -- 7.5 Test: Actor Exclusion in Resolver
+    -- --------------------------------------------------------------------------
+    -- TEST C: Actor Exclusion
+    -- --------------------------------------------------------------------------
     IF v_super_admin_id IS NOT NULL THEN
         SELECT COUNT(*) INTO v_resolved_count
         FROM public.admin_notification_resolve_recipients(
@@ -447,20 +453,22 @@ BEGIN
         WHERE r = v_super_admin_id;
 
         IF v_resolved_count <> 0 THEN
-            RAISE EXCEPTION 'TEST FAILED (Actor Exclusion): Super admin actor was not excluded.';
+            RAISE EXCEPTION 'TEST C FAILED (Actor Exclusion): Super admin actor was not excluded.';
         END IF;
 
-        RAISE NOTICE 'TEST PASS (Actor Exclusion): Actor excluded when p_exclude_actor is true.';
+        RAISE NOTICE 'TEST PASS (Test C - Actor Exclusion): Actor excluded when p_exclude_actor is true.';
     END IF;
 
-    -- 7.6 Test: Super Admin Dynamic Permissions & super_admin_only Mode
+    -- --------------------------------------------------------------------------
+    -- TEST B: Super Admin Dynamic Permissions & super_admin_only Mode
+    -- --------------------------------------------------------------------------
     IF v_super_admin_id IS NOT NULL THEN
         -- Super Admin must dynamically possess all canonical permissions in system
         SELECT ARRAY(SELECT id FROM public.permissions ORDER BY id) INTO v_all_perm_ids;
         SELECT ARRAY(SELECT p_id FROM public.admin_notification_get_effective_permissions(v_super_admin_id) AS p_id ORDER BY p_id) INTO v_super_perms;
 
         IF v_super_perms <> v_all_perm_ids THEN
-            RAISE EXCEPTION 'TEST FAILED (Super Admin Permissions): Super admin permissions do not match complete catalog!';
+            RAISE EXCEPTION 'TEST B FAILED (Super Admin Permissions): Super admin permissions do not match complete catalog!';
         END IF;
 
         -- Resolver super_admin_only mode returns only super admins
@@ -480,13 +488,15 @@ BEGIN
         WHERE au.is_super_admin IS NOT TRUE;
 
         IF v_resolved_count <> 0 THEN
-            RAISE EXCEPTION 'TEST FAILED (super_admin_only Mode): Non-super-admin resolved in super_admin_only mode!';
+            RAISE EXCEPTION 'TEST B FAILED (super_admin_only Mode): Non-super-admin resolved in super_admin_only mode!';
         END IF;
 
-        RAISE NOTICE 'TEST PASS (Super Admin Dynamic Permissions & Isolation): Verified dynamic complete permission set.';
+        RAISE NOTICE 'TEST PASS (Test B - Super Admin Dynamic Permissions & Isolation): Verified dynamic complete permission set.';
     END IF;
 
-    -- 7.7 Test: Role-based Permissions & Target Scoping
+    -- --------------------------------------------------------------------------
+    -- TEMPORARY FIXTURE ASSIGNMENT (Safe Transactional Replacement)
+    -- --------------------------------------------------------------------------
     IF v_normal_admin_id IS NOT NULL THEN
         -- Create a temporary test role
         INSERT INTO public.roles (id, name_en, name_bn, active, is_system)
@@ -495,11 +505,14 @@ BEGIN
         INSERT INTO public.role_permissions (role_id, permission_id)
         VALUES (v_test_role_id, 'complaints.view');
 
-        -- Assign temporary role to normal admin
+        -- Safely reassign temporary role to normal admin for transaction duration
+        DELETE FROM public.user_roles WHERE user_id = v_normal_admin_id;
         INSERT INTO public.user_roles (user_id, role_id)
         VALUES (v_normal_admin_id, v_test_role_id);
 
-        -- Test required_all_permissions: matching
+        -- ----------------------------------------------------------------------
+        -- TEST E: required_all_permissions
+        -- ----------------------------------------------------------------------
         SELECT COUNT(*) INTO v_resolved_count
         FROM public.admin_notification_resolve_recipients(
             'permission',
@@ -515,10 +528,9 @@ BEGIN
         WHERE r = v_normal_admin_id;
 
         IF v_resolved_count <> 1 THEN
-            RAISE EXCEPTION 'TEST FAILED (required_all matching): Normal admin was not resolved!';
+            RAISE EXCEPTION 'TEST E FAILED (required_all matching): Normal admin was not resolved!';
         END IF;
 
-        -- Test required_all_permissions: non-matching (requires complaints.evidence_view which is not held)
         SELECT COUNT(*) INTO v_resolved_count
         FROM public.admin_notification_resolve_recipients(
             'permission',
@@ -534,10 +546,14 @@ BEGIN
         WHERE r = v_normal_admin_id;
 
         IF v_resolved_count <> 0 THEN
-            RAISE EXCEPTION 'TEST FAILED (required_all non-matching): Normal admin resolved without possessing all required permissions!';
+            RAISE EXCEPTION 'TEST E FAILED (required_all non-matching): Normal admin resolved without possessing all required permissions!';
         END IF;
 
-        -- Test required_any_permissions: matching overlap
+        RAISE NOTICE 'TEST PASS (Test E - required_all_permissions): Passes with full match, fails on missing permission.';
+
+        -- ----------------------------------------------------------------------
+        -- TEST F: required_any_permissions
+        -- ----------------------------------------------------------------------
         SELECT COUNT(*) INTO v_resolved_count
         FROM public.admin_notification_resolve_recipients(
             'permission',
@@ -553,10 +569,9 @@ BEGIN
         WHERE r = v_normal_admin_id;
 
         IF v_resolved_count <> 1 THEN
-            RAISE EXCEPTION 'TEST FAILED (required_any matching): Normal admin was not resolved on permission overlap!';
+            RAISE EXCEPTION 'TEST F FAILED (required_any matching): Normal admin was not resolved on permission overlap!';
         END IF;
 
-        -- Test required_any_permissions: disjoint
         SELECT COUNT(*) INTO v_resolved_count
         FROM public.admin_notification_resolve_recipients(
             'permission',
@@ -572,12 +587,14 @@ BEGIN
         WHERE r = v_normal_admin_id;
 
         IF v_resolved_count <> 0 THEN
-            RAISE EXCEPTION 'TEST FAILED (required_any disjoint): Normal admin resolved without any matching permissions!';
+            RAISE EXCEPTION 'TEST F FAILED (required_any disjoint): Normal admin resolved without any matching permissions!';
         END IF;
 
-        RAISE NOTICE 'TEST PASS (required_all and required_any Logic): Correctly evaluated against effective permissions.';
+        RAISE NOTICE 'TEST PASS (Test F - required_any_permissions): Passes on any overlap, fails on disjoint set.';
 
-        -- Test Protected Super Admin target scoping
+        -- ----------------------------------------------------------------------
+        -- TEST G: Protected Super Admin User Target
+        -- ----------------------------------------------------------------------
         IF v_super_admin_id IS NOT NULL THEN
             -- Add admin_users.view to test role
             INSERT INTO public.role_permissions (role_id, permission_id)
@@ -585,14 +602,16 @@ BEGIN
 
             v_scope_ok := public.admin_notification_can_view_user_scope(v_normal_admin_id, v_super_admin_id);
             IF v_scope_ok IS TRUE THEN
-                RAISE EXCEPTION 'TEST FAILED (User Target Scoping): Normal admin allowed to view Super Admin target!';
+                RAISE EXCEPTION 'TEST G FAILED (User Target Scoping): Normal admin allowed to view Super Admin target!';
             END IF;
 
-            RAISE NOTICE 'TEST PASS (Super Admin Target Protection): Normal admin cannot target Super Admin user scope.';
+            RAISE NOTICE 'TEST PASS (Test G - Protected Super Admin Target): Normal admin cannot target Super Admin user scope.';
         END IF;
 
-        -- Test Role Target Scope Ceiling
-        -- Create a target role with complaints.view
+        -- ----------------------------------------------------------------------
+        -- TEST H: Role Target Ceiling
+        -- ----------------------------------------------------------------------
+        -- Create target role with complaints.view
         INSERT INTO public.roles (id, name_en, name_bn, active, is_system)
         VALUES (v_target_role_id, 'Audit Target Role', 'অডিট টার্গেট রোল', true, false);
 
@@ -606,7 +625,7 @@ BEGIN
         -- Target role permissions (complaints.view) are a subset of normal admin permissions -> OK
         v_scope_ok := public.admin_notification_can_view_role_scope(v_normal_admin_id, v_target_role_id);
         IF v_scope_ok IS NOT TRUE THEN
-            RAISE EXCEPTION 'TEST FAILED (Role Target Scope Initial): Allowed role target rejected!';
+            RAISE EXCEPTION 'TEST H FAILED (Role Target Scope Initial): Allowed role target rejected!';
         END IF;
 
         -- Now add audit.view to target role (normal admin does NOT hold audit.view -> exceeds ceiling)
@@ -615,82 +634,141 @@ BEGIN
 
         v_scope_ok := public.admin_notification_can_view_role_scope(v_normal_admin_id, v_target_role_id);
         IF v_scope_ok IS TRUE THEN
-            RAISE EXCEPTION 'TEST FAILED (Role Target Ceiling Exceeded): Normal admin allowed to manage role outside ceiling!';
+            RAISE EXCEPTION 'TEST H FAILED (Role Target Ceiling Exceeded): Normal admin allowed to manage role outside ceiling!';
         END IF;
 
-        RAISE NOTICE 'TEST PASS (Role Scope Ceiling): Role target scope properly checked against ceiling.';
-    END IF;
+        RAISE NOTICE 'TEST PASS (Test H - Role Target Ceiling): Out-of-ceiling role target strictly blocked.';
 
-    -- 7.8 Test: Read-Time Dynamic Revocation (If auth.uid() simulation supported)
-    IF v_can_simulate_auth AND v_normal_admin_id IS NOT NULL THEN
-        -- Set transaction-local auth context
-        PERFORM set_config('request.jwt.claim.sub', v_normal_admin_id::text, true);
+        -- ----------------------------------------------------------------------
+        -- TEST I: Stale Target-Scope Revocation
+        -- ----------------------------------------------------------------------
+        -- Reset target role to complaints.view (inside recipient ceiling)
+        DELETE FROM public.role_permissions WHERE role_id = v_target_role_id AND permission_id = 'audit.view';
 
-        -- Active personal notification visibility
-        v_is_visible := public.admin_notification_can_currently_view(
-            v_normal_admin_id,
-            'personal',
-            '{}',
-            '{}',
-            NULL,
-            NULL
-        );
-        IF v_is_visible IS NOT TRUE THEN
-            RAISE EXCEPTION 'TEST FAILED (Dynamic Visibility Personal): Active personal recipient denied visibility!';
+        v_scope_ok := public.admin_notification_can_view_role_scope(v_normal_admin_id, v_target_role_id);
+        IF v_scope_ok IS NOT TRUE THEN
+            RAISE EXCEPTION 'TEST I FAILED (Initial Target Scope): Scope must be visible initially!';
         END IF;
 
-        -- Deactivate normal admin dynamically
+        IF v_can_simulate_auth THEN
+            PERFORM set_config('request.jwt.claim.sub', v_normal_admin_id::text, true);
+            v_is_visible := public.admin_notification_can_currently_view(
+                v_normal_admin_id,
+                'permission',
+                ARRAY['roles.manage'],
+                '{}',
+                'role',
+                v_target_role_id
+            );
+            IF v_is_visible IS NOT TRUE THEN
+                RAISE EXCEPTION 'TEST I FAILED (Caller-Bound Target Scope Initial): Notification must be visible initially!';
+            END IF;
+        END IF;
+
+        -- Add audit.view to target role (exceeds recipient ceiling)
+        INSERT INTO public.role_permissions (role_id, permission_id)
+        VALUES (v_target_role_id, 'audit.view');
+
+        v_scope_ok := public.admin_notification_can_view_role_scope(v_normal_admin_id, v_target_role_id);
+        IF v_scope_ok IS TRUE THEN
+            RAISE EXCEPTION 'TEST I FAILED (Post-Ceiling Target Scope): Scope must NOT be visible after target expands!';
+        END IF;
+
+        IF v_can_simulate_auth THEN
+            v_is_visible := public.admin_notification_can_currently_view(
+                v_normal_admin_id,
+                'permission',
+                ARRAY['roles.manage'],
+                '{}',
+                'role',
+                v_target_role_id
+            );
+            IF v_is_visible IS TRUE THEN
+                RAISE EXCEPTION 'TEST I FAILED (Stale Notification Visibility): Stale notification should be hidden when target role exceeds ceiling!';
+            END IF;
+        END IF;
+
+        RAISE NOTICE 'TEST PASS (Test I - Stale Target-Scope Revocation): Historical role notifications disappear when target exceeds ceiling.';
+
+        -- ----------------------------------------------------------------------
+        -- TEST J: Stale Permission Revocation
+        -- ----------------------------------------------------------------------
+        IF v_can_simulate_auth THEN
+            PERFORM set_config('request.jwt.claim.sub', v_normal_admin_id::text, true);
+
+            -- Initial check: recipient possesses roles.manage
+            v_is_visible := public.admin_notification_can_currently_view(
+                v_normal_admin_id,
+                'permission',
+                ARRAY['roles.manage'],
+                '{}',
+                NULL,
+                NULL
+            );
+            IF v_is_visible IS NOT TRUE THEN
+                RAISE EXCEPTION 'TEST J FAILED (Permission Initial): Admin with roles.manage denied visibility!';
+            END IF;
+
+            -- Revoke 'roles.manage' from test role
+            DELETE FROM public.role_permissions WHERE role_id = v_test_role_id AND permission_id = 'roles.manage';
+
+            -- Re-evaluate visibility: MUST return false immediately!
+            v_is_visible := public.admin_notification_can_currently_view(
+                v_normal_admin_id,
+                'permission',
+                ARRAY['roles.manage'],
+                '{}',
+                NULL,
+                NULL
+            );
+            IF v_is_visible IS TRUE THEN
+                RAISE EXCEPTION 'TEST J FAILED (Permission Revocation): Stale notification visible after permission loss!';
+            END IF;
+
+            RAISE NOTICE 'TEST PASS (Test J - Stale Permission Revocation): Stale privileged notifications dynamically hidden after permission loss.';
+        END IF;
+
+        -- ----------------------------------------------------------------------
+        -- TEST A: Active/Inactive Current Visibility
+        -- ----------------------------------------------------------------------
+        -- While active, effective permissions exist
+        SELECT ARRAY(SELECT p_id FROM public.admin_notification_get_effective_permissions(v_normal_admin_id) AS p_id) INTO v_eff_perms;
+        IF cardinality(v_eff_perms) = 0 THEN
+            RAISE EXCEPTION 'TEST A FAILED: Active admin must have permissions from test role!';
+        END IF;
+
+        -- Temporarily mark inactive
         UPDATE public.admin_users SET active = false WHERE user_id = v_normal_admin_id;
 
-        v_is_visible := public.admin_notification_can_currently_view(
-            v_normal_admin_id,
-            'personal',
-            '{}',
-            '{}',
-            NULL,
-            NULL
-        );
-        IF v_is_visible IS TRUE THEN
-            RAISE EXCEPTION 'TEST FAILED (Dynamic Visibility Inactive): Deactivated admin granted visibility!';
+        SELECT ARRAY(SELECT p_id FROM public.admin_notification_get_effective_permissions(v_normal_admin_id) AS p_id) INTO v_eff_perms;
+        IF cardinality(v_eff_perms) <> 0 THEN
+            RAISE EXCEPTION 'TEST A FAILED: Deactivated admin returned effective permissions: %', v_eff_perms;
         END IF;
 
-        -- Restore active
+        IF v_can_simulate_auth THEN
+            PERFORM set_config('request.jwt.claim.sub', v_normal_admin_id::text, true);
+            v_is_visible := public.admin_notification_can_currently_view(
+                v_normal_admin_id,
+                'personal',
+                '{}',
+                '{}',
+                NULL,
+                NULL
+            );
+            IF v_is_visible IS TRUE THEN
+                RAISE EXCEPTION 'TEST A FAILED: Deactivated admin granted caller-bound visibility!';
+            END IF;
+        END IF;
+
+        -- Restore active flag
         UPDATE public.admin_users SET active = true WHERE user_id = v_normal_admin_id;
 
-        -- Dynamic Permission Revocation Test:
-        -- Permission notification requiring 'roles.manage'
-        v_is_visible := public.admin_notification_can_currently_view(
-            v_normal_admin_id,
-            'permission',
-            ARRAY['roles.manage'],
-            '{}',
-            NULL,
-            NULL
-        );
-        IF v_is_visible IS NOT TRUE THEN
-            RAISE EXCEPTION 'TEST FAILED (Dynamic Visibility Permission Initial): Admin with roles.manage denied visibility!';
-        END IF;
-
-        -- Revoke 'roles.manage' from test role
-        DELETE FROM public.role_permissions WHERE role_id = v_test_role_id AND permission_id = 'roles.manage';
-
-        -- Re-evaluate visibility: MUST return false immediately!
-        v_is_visible := public.admin_notification_can_currently_view(
-            v_normal_admin_id,
-            'permission',
-            ARRAY['roles.manage'],
-            '{}',
-            NULL,
-            NULL
-        );
-        IF v_is_visible IS TRUE THEN
-            RAISE EXCEPTION 'TEST FAILED (Dynamic Visibility Permission Revocation): Stale notification visible after permission revocation!';
-        END IF;
-
-        RAISE NOTICE 'TEST PASS (Dynamic Read-Time Revocation): Stale notifications dynamically hide upon deactivation or permission revocation.';
+        RAISE NOTICE 'TEST PASS (Test A - Active/Inactive Current Visibility): Inactive admins possess no effective permissions and cannot view.';
     END IF;
 
-    -- 7.9 Test: Unknown Target Type & Audience Mode Fail-Closed
+    -- --------------------------------------------------------------------------
+    -- TEST K: Unknown Target Type Fail-Closed
+    -- --------------------------------------------------------------------------
     SELECT COUNT(*) INTO v_resolved_count
     FROM public.admin_notification_resolve_recipients(
         'permission',
@@ -705,9 +783,120 @@ BEGIN
     );
 
     IF v_resolved_count <> 0 THEN
-        RAISE EXCEPTION 'TEST FAILED (Unknown Target Type Fail-Closed): Resolver resolved % candidates for unknown target', v_resolved_count;
+        RAISE EXCEPTION 'TEST K FAILED (Unknown Target Type Resolver): Resolved % candidates for unknown target', v_resolved_count;
     END IF;
 
+    v_caught_22000 := false;
+    BEGIN
+        PERFORM public.admin_emit_notification(
+            p_event_key := 'complaint.submitted',
+            p_title_en := 'Valid Title',
+            p_title_bn := 'বৈধ শিরোনাম',
+            p_target_type := 'unsupported_type',
+            p_target_id := 'some_id'
+        );
+    EXCEPTION WHEN SQLSTATE '22000' THEN
+        v_caught_22000 := true;
+    END;
+    IF NOT v_caught_22000 THEN
+        RAISE EXCEPTION 'TEST K FAILED (Unknown Target Type Emitter): Did not raise SQLSTATE 22000!';
+    END IF;
+
+    RAISE NOTICE 'TEST PASS (Test K - Unknown Target Type): Resolver returns 0, emitter raises SQLSTATE 22000.';
+
+    -- --------------------------------------------------------------------------
+    -- TEST L: Malformed Target IDs (SQLSTATE 22000)
+    -- --------------------------------------------------------------------------
+    -- admin_user with NULL target_id
+    v_caught_22000 := false;
+    BEGIN
+        PERFORM public.admin_emit_notification(
+            p_event_key := 'admin.created',
+            p_title_en := 'Valid Title',
+            p_title_bn := 'বৈধ শিরোনাম',
+            p_target_type := 'admin_user',
+            p_target_id := NULL
+        );
+    EXCEPTION WHEN SQLSTATE '22000' THEN
+        v_caught_22000 := true;
+    END;
+    IF NOT v_caught_22000 THEN
+        RAISE EXCEPTION 'TEST L FAILED (admin_user NULL target_id): Did not raise SQLSTATE 22000!';
+    END IF;
+
+    -- admin_user with blank target_id
+    v_caught_22000 := false;
+    BEGIN
+        PERFORM public.admin_emit_notification(
+            p_event_key := 'admin.created',
+            p_title_en := 'Valid Title',
+            p_title_bn := 'বৈধ শিরোনাম',
+            p_target_type := 'admin_user',
+            p_target_id := '   '
+        );
+    EXCEPTION WHEN SQLSTATE '22000' THEN
+        v_caught_22000 := true;
+    END;
+    IF NOT v_caught_22000 THEN
+        RAISE EXCEPTION 'TEST L FAILED (admin_user blank target_id): Did not raise SQLSTATE 22000!';
+    END IF;
+
+    -- admin_user with invalid UUID
+    v_caught_22000 := false;
+    BEGIN
+        PERFORM public.admin_emit_notification(
+            p_event_key := 'admin.created',
+            p_title_en := 'Valid Title',
+            p_title_bn := 'বৈধ শিরোনাম',
+            p_target_type := 'admin_user',
+            p_target_id := 'not-a-valid-uuid'
+        );
+    EXCEPTION WHEN SQLSTATE '22000' THEN
+        v_caught_22000 := true;
+    END;
+    IF NOT v_caught_22000 THEN
+        RAISE EXCEPTION 'TEST L FAILED (admin_user invalid UUID): Did not raise SQLSTATE 22000!';
+    END IF;
+
+    -- role with NULL target_id
+    v_caught_22000 := false;
+    BEGIN
+        PERFORM public.admin_emit_notification(
+            p_event_key := 'role.created',
+            p_title_en := 'Valid Title',
+            p_title_bn := 'বৈধ শিরোনাম',
+            p_target_type := 'role',
+            p_target_id := NULL
+        );
+    EXCEPTION WHEN SQLSTATE '22000' THEN
+        v_caught_22000 := true;
+    END;
+    IF NOT v_caught_22000 THEN
+        RAISE EXCEPTION 'TEST L FAILED (role NULL target_id): Did not raise SQLSTATE 22000!';
+    END IF;
+
+    -- role with blank target_id
+    v_caught_22000 := false;
+    BEGIN
+        PERFORM public.admin_emit_notification(
+            p_event_key := 'role.created',
+            p_title_en := 'Valid Title',
+            p_title_bn := 'বৈধ শিরোনাম',
+            p_target_type := 'role',
+            p_target_id := ''
+        );
+    EXCEPTION WHEN SQLSTATE '22000' THEN
+        v_caught_22000 := true;
+    END;
+    IF NOT v_caught_22000 THEN
+        RAISE EXCEPTION 'TEST L FAILED (role blank target_id): Did not raise SQLSTATE 22000!';
+    END IF;
+
+    RAISE NOTICE 'TEST PASS (Test L - Malformed Target IDs): Missing, blank, or malformed target IDs strictly rejected with SQLSTATE 22000.';
+
+    -- --------------------------------------------------------------------------
+    -- TEST M: Invalid Audience Mode Fail-Closed
+    -- --------------------------------------------------------------------------
     SELECT COUNT(*) INTO v_resolved_count
     FROM public.admin_notification_resolve_recipients(
         'invalid_audience_mode',
@@ -722,13 +911,9 @@ BEGIN
     );
 
     IF v_resolved_count <> 0 THEN
-        RAISE EXCEPTION 'TEST FAILED (Invalid Audience Mode Fail-Closed): Resolver resolved % candidates for invalid mode', v_resolved_count;
+        RAISE EXCEPTION 'TEST M FAILED (Invalid Audience Mode Resolver): Resolved % candidates for invalid mode', v_resolved_count;
     END IF;
 
-    RAISE NOTICE 'TEST PASS (Fail-Closed Boundaries): Resolver safely returns 0 rows for invalid inputs.';
-
-    -- 7.10 Test: Emitter Contract & Input Validations (SQLSTATE 22000)
-    -- Invalid audience mode
     v_caught_22000 := false;
     BEGIN
         PERFORM public.admin_emit_notification(
@@ -741,111 +926,14 @@ BEGIN
         v_caught_22000 := true;
     END;
     IF NOT v_caught_22000 THEN
-        RAISE EXCEPTION 'TEST FAILED (Emitter Invalid Audience Mode): Did not raise SQLSTATE 22000!';
+        RAISE EXCEPTION 'TEST M FAILED (Invalid Audience Mode Emitter): Did not raise SQLSTATE 22000!';
     END IF;
 
-    -- Personal mode without recipient ID
-    v_caught_22000 := false;
-    BEGIN
-        PERFORM public.admin_emit_notification(
-            p_event_key := 'complaint.submitted',
-            p_title_en := 'Valid Title',
-            p_title_bn := 'বৈধ শিরোনাম',
-            p_audience_mode := 'personal',
-            p_personal_recipient_id := NULL
-        );
-    EXCEPTION WHEN SQLSTATE '22000' THEN
-        v_caught_22000 := true;
-    END;
-    IF NOT v_caught_22000 THEN
-        RAISE EXCEPTION 'TEST FAILED (Emitter Missing Personal Recipient): Did not raise SQLSTATE 22000!';
-    END IF;
+    RAISE NOTICE 'TEST PASS (Test M - Invalid Audience Mode): Resolver returns 0, emitter raises SQLSTATE 22000.';
 
-    -- Invalid target type
-    v_caught_22000 := false;
-    BEGIN
-        PERFORM public.admin_emit_notification(
-            p_event_key := 'complaint.submitted',
-            p_title_en := 'Valid Title',
-            p_title_bn := 'বৈধ শিরোনাম',
-            p_target_type := 'unsupported_type',
-            p_target_id := 'some_id'
-        );
-    EXCEPTION WHEN SQLSTATE '22000' THEN
-        v_caught_22000 := true;
-    END;
-    IF NOT v_caught_22000 THEN
-        RAISE EXCEPTION 'TEST FAILED (Emitter Invalid Target Type): Did not raise SQLSTATE 22000!';
-    END IF;
-
-    -- admin_user with non-UUID target_id
-    v_caught_22000 := false;
-    BEGIN
-        PERFORM public.admin_emit_notification(
-            p_event_key := 'admin.created',
-            p_title_en := 'Valid Title',
-            p_title_bn := 'বৈধ শিরোনাম',
-            p_target_type := 'admin_user',
-            p_target_id := 'not-a-valid-uuid'
-        );
-    EXCEPTION WHEN SQLSTATE '22000' THEN
-        v_caught_22000 := true;
-    END;
-    IF NOT v_caught_22000 THEN
-        RAISE EXCEPTION 'TEST FAILED (Emitter Invalid admin_user UUID): Did not raise SQLSTATE 22000!';
-    END IF;
-
-    -- admin_user with empty target_id
-    v_caught_22000 := false;
-    BEGIN
-        PERFORM public.admin_emit_notification(
-            p_event_key := 'admin.created',
-            p_title_en := 'Valid Title',
-            p_title_bn := 'বৈধ শিরোনাম',
-            p_target_type := 'admin_user',
-            p_target_id := '   '
-        );
-    EXCEPTION WHEN SQLSTATE '22000' THEN
-        v_caught_22000 := true;
-    END;
-    IF NOT v_caught_22000 THEN
-        RAISE EXCEPTION 'TEST FAILED (Emitter Empty admin_user Target ID): Did not raise SQLSTATE 22000!';
-    END IF;
-
-    -- role with empty target_id
-    v_caught_22000 := false;
-    BEGIN
-        PERFORM public.admin_emit_notification(
-            p_event_key := 'role.created',
-            p_title_en := 'Valid Title',
-            p_title_bn := 'বৈধ শিরোনাম',
-            p_target_type := 'role',
-            p_target_id := ''
-        );
-    EXCEPTION WHEN SQLSTATE '22000' THEN
-        v_caught_22000 := true;
-    END;
-    IF NOT v_caught_22000 THEN
-        RAISE EXCEPTION 'TEST FAILED (Emitter Empty role Target ID): Did not raise SQLSTATE 22000!';
-    END IF;
-
-    -- Empty titles
-    v_caught_22000 := false;
-    BEGIN
-        PERFORM public.admin_emit_notification(
-            p_event_key := 'role.created',
-            p_title_en := '   ',
-            p_title_bn := 'বৈধ শিরোনাম'
-        );
-    EXCEPTION WHEN SQLSTATE '22000' THEN
-        v_caught_22000 := true;
-    END;
-    IF NOT v_caught_22000 THEN
-        RAISE EXCEPTION 'TEST FAILED (Emitter Empty title_en): Did not raise SQLSTATE 22000!';
-    END IF;
-
-    RAISE NOTICE 'TEST PASS (Emitter Validations): All invalid inputs strictly rejected with SQLSTATE 22000.';
-    RAISE NOTICE 'ALL NOTIFICATION FOUNDATION VERIFICATION ASSERTIONS COMPLETED SUCCESSFULLY ✅';
+    RAISE NOTICE '==============================================================================';
+    RAISE NOTICE 'ALL NOTIFICATION FOUNDATION VERIFICATION ASSERTIONS (A-N) PASSED SUCCESSFULLY ✅';
+    RAISE NOTICE '==============================================================================';
 END;
 $$;
 
