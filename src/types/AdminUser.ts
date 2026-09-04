@@ -67,6 +67,11 @@ export interface UpdateAdminUserInput {
   active: boolean;
 }
 
+export interface DeleteAdminUserResponse {
+  success: boolean;
+  user_id: string;
+}
+
 export interface AdminUsersListResponse {
   users: AdminUserListItem[];
   total_count: number;

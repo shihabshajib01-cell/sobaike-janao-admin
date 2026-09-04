@@ -13,21 +13,26 @@ import {
   CheckCircle2,
   XCircle,
   Mail,
+  Trash2,
 } from 'lucide-react';
 import { formatDate } from '@/utils';
 
 export interface UsersTableProps {
   users: AdminUserListItem[];
   canManage: boolean;
+  currentUserId?: string;
   onView: (userId: string) => void;
   onEdit: (userId: string) => void;
+  onDelete?: (user: AdminUserListItem) => void;
 }
 
 export const UsersTable: React.FC<UsersTableProps> = ({
   users,
   canManage,
+  currentUserId,
   onView,
   onEdit,
+  onDelete,
 }) => {
   const { t, language } = useLanguage();
   const isBn = language === 'bn';
@@ -189,17 +194,33 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                             {t.users.restrictedBadge}
                           </div>
                         ) : (
-                          <Button
-                            id={`btn-edit-user-${user.user_id}`}
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => onEdit(user.user_id)}
-                            className="h-8 px-2.5 text-xs"
-                            title={t.users.editUser}
-                          >
-                            <Edit2 className="w-3.5 h-3.5 mr-1" />
-                            {t.users.editUser}
-                          </Button>
+                          <>
+                            <Button
+                              id={`btn-edit-user-${user.user_id}`}
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => onEdit(user.user_id)}
+                              className="h-8 px-2.5 text-xs"
+                              title={t.users.editUser}
+                            >
+                              <Edit2 className="w-3.5 h-3.5 mr-1" />
+                              {t.users.editUser}
+                            </Button>
+
+                            {user.user_id !== currentUserId && onDelete && (
+                              <Button
+                                id={`btn-delete-user-${user.user_id}`}
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => onDelete(user)}
+                                className="h-8 px-2.5 text-xs text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                                title={t.users.deleteUser}
+                              >
+                                <Trash2 className="w-3.5 h-3.5 mr-1" />
+                                {t.users.deleteUser}
+                              </Button>
+                            )}
+                          </>
                         )
                       )}
                     </div>
@@ -305,15 +326,32 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                       {t.users.restrictedBadge}
                     </span>
                   ) : (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => onEdit(user.user_id)}
-                      className="h-8 px-3 text-xs"
-                    >
-                      <Edit2 className="w-3.5 h-3.5 mr-1" />
-                      {t.users.editUser}
-                    </Button>
+                    <>
+                      <Button
+                        id={`btn-edit-user-mobile-${user.user_id}`}
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onEdit(user.user_id)}
+                        className="h-8 px-3 text-xs"
+                      >
+                        <Edit2 className="w-3.5 h-3.5 mr-1" />
+                        {t.users.editUser}
+                      </Button>
+
+                      {user.user_id !== currentUserId && onDelete && (
+                        <Button
+                          id={`btn-delete-user-mobile-${user.user_id}`}
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onDelete(user)}
+                          className="h-8 px-3 text-xs text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                          title={t.users.deleteUser}
+                        >
+                          <Trash2 className="w-3.5 h-3.5 mr-1" />
+                          {t.users.deleteUser}
+                        </Button>
+                      )}
+                    </>
                   )
                 )}
               </div>

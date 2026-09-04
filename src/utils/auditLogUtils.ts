@@ -105,6 +105,15 @@ const ACTION_REGISTRY: Record<string, ActionDisplayMeta> = {
     severity: 'info',
     icon: UserCog,
   },
+  'ADMIN_USER_DELETED': {
+    labelEn: 'Administrator Deleted',
+    labelBn: 'প্রশাসক মুছে ফেলা হয়েছে',
+    descEn: 'Administrative user permanently removed from system',
+    descBn: 'প্রশাসনিক ব্যবহারকারীকে স্থায়ীভাবে সিস্টেম থেকে মুছে ফেলা হয়েছে',
+    category: 'user',
+    severity: 'danger',
+    icon: UserX,
+  },
   'role.created': {
     labelEn: 'Role Created',
     labelBn: 'ভূমিকা তৈরি',

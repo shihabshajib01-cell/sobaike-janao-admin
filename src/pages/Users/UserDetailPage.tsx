@@ -6,9 +6,11 @@ import { useAuth } from '@/context/AuthContext';
 import { adminUserApi } from '@/services/api/adminUserApi';
 import { AdminUserDetail } from '@/types/AdminUser';
 import { UserLoadingSkeleton } from '@/components/users/UserLoadingSkeleton';
+import { DeleteUserModal } from '@/components/users/DeleteUserModal';
 import {
   ArrowLeft,
   Edit2,
+  Trash2,
   Shield,
   ShieldCheck,
   Lock,
@@ -26,7 +28,7 @@ export const UserDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t, language } = useLanguage();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user: currentUser } = useAuth();
   const isBn = language === 'bn';
 
   const canManageUsers = hasPermission('admin_users.manage');
@@ -34,6 +36,7 @@ export const UserDetailPage: React.FC = () => {
   const [user, setUser] = useState<AdminUserDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
 
   // Success Banner from Edit navigation
   const [successBanner] = useState<string | null>(() => {
@@ -175,16 +178,31 @@ export const UserDetailPage: React.FC = () => {
               {t.users.restrictedBadge}
             </div>
           ) : (
-            <Button
-              id="btn-edit-user-detail"
-              variant="primary"
-              size="sm"
-              onClick={() => navigate(`/users/${user.user_id}/edit`)}
-              className="h-9"
-            >
-              <Edit2 className="w-4 h-4 mr-2" />
-              {t.users.editUser}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                id="btn-edit-user-detail"
+                variant="secondary"
+                size="sm"
+                onClick={() => navigate(`/users/${user.user_id}/edit`)}
+                className="h-9"
+              >
+                <Edit2 className="w-4 h-4 mr-2" />
+                {t.users.editUser}
+              </Button>
+
+              {user.user_id !== currentUser?.id && (
+                <Button
+                  id="btn-delete-user-detail"
+                  variant="danger"
+                  size="sm"
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  className="h-9"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  {t.users.deleteUser}
+                </Button>
+              )}
+            </div>
           )
         )}
       </div>
@@ -435,6 +453,18 @@ export const UserDetailPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteUserModal
+        isOpen={isDeleteModalOpen}
+        user={user}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onSuccess={(deletedName) => {
+          navigate('/users', {
+            state: { userDeletedSuccess: true, userName: deletedName },
+          });
+        }}
+      />
     </div>
   );
 };

@@ -281,6 +281,15 @@ export interface TranslationDictionary {
     showPassword: string;
     hidePassword: string;
     rolesLoading: string;
+    deleteUser: string;
+    deleteUserConfirmTitle: string;
+    deleteUserConfirmMessage: string;
+    deleteUserSuccess: string;
+    deletingUser: string;
+    deleteUserSelfError: string;
+    deleteUserSuperAdminError: string;
+    deleteUserRestricted: string;
+    deleteUserNotFound: string;
   };
   notifications: {
     title: string;
@@ -598,6 +607,15 @@ export const translations: Record<Language, TranslationDictionary> = {
       showPassword: 'Show password',
       hidePassword: 'Hide password',
       rolesLoading: 'Loading roles...',
+      deleteUser: 'Delete Administrator',
+      deleteUserConfirmTitle: 'Delete Administrator',
+      deleteUserConfirmMessage: 'Are you sure you want to permanently delete this administrator? This action cannot be undone.',
+      deleteUserSuccess: 'Administrator has been successfully deleted.',
+      deletingUser: 'Deleting Administrator...',
+      deleteUserSelfError: 'You cannot delete your own administrative account.',
+      deleteUserSuperAdminError: 'Super Administrator accounts cannot be deleted.',
+      deleteUserRestricted: 'You cannot delete an administrator with permissions exceeding your authority.',
+      deleteUserNotFound: 'Administrator account not found or has already been removed.',
     },
     notifications: {
       title: 'Notifications',
@@ -913,6 +931,15 @@ export const translations: Record<Language, TranslationDictionary> = {
       showPassword: 'পাসওয়ার্ড দেখান',
       hidePassword: 'পাসওয়ার্ড লুকান',
       rolesLoading: 'ভূমিকা লোড হচ্ছে...',
+      deleteUser: 'প্রশাসক মুছুন',
+      deleteUserConfirmTitle: 'প্রশাসক মুছে ফেলার নিশ্চিতকরণ',
+      deleteUserConfirmMessage: 'আপনি কি নিশ্চিত যে আপনি এই প্রশাসককে স্থায়ীভাবে মুছে ফেলতে চান? এই কাজটি পূর্বাবস্থায় ফেরানো যাবে না।',
+      deleteUserSuccess: 'প্রশাসক সফলভাবে মুছে ফেলা হয়েছে।',
+      deletingUser: 'প্রশাসক মুছে ফেলা হচ্ছে...',
+      deleteUserSelfError: 'আপনি নিজের প্রশাসনিক অ্যাকাউন্ট মুছে ফেলতে পারবেন না।',
+      deleteUserSuperAdminError: 'সুপার অ্যাডমিনিস্ট্রেটর অ্যাকাউন্ট মুছে ফেলা যাবে না।',
+      deleteUserRestricted: 'আপনার ক্ষমতার অতিরিক্ত অনুমতিসম্পন্ন প্রশাসককে আপনি মুছে ফেলতে পারবেন না।',
+      deleteUserNotFound: 'প্রশাসক অ্যাকাউন্ট পাওয়া যায়নি বা ইতোমধ্যে মুছে ফেলা হয়েছে।',
     },
     notifications: {
       title: 'বিজ্ঞপ্তি',
