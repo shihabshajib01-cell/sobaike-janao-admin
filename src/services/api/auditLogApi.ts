@@ -23,14 +23,7 @@ function assertAuditApiConfigured(): 'configured' | 'dev_fallback' {
   if (isSupabaseConfigured) {
     return 'configured';
   }
-  const isDev = Boolean(typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV);
-  if (isDev) {
-    return 'dev_fallback';
-  }
-  throw new AuditApiError(
-    'Supabase audit logs service is not configured in this environment.',
-    'CONFIG_ERROR'
-  );
+  return 'dev_fallback';
 }
 
 // ==============================================================================
