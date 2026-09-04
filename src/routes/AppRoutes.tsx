@@ -29,6 +29,7 @@ import {
   CreateUserPage,
   UserDetailPage,
   EditUserPage,
+  NotificationsPage,
   NotFoundPage,
 } from '@/pages';
 
@@ -270,6 +271,7 @@ const routes = createRoutesFromElements(
           </PermissionGuard>
         }
       />
+      <Route path="/notifications" element={<NotificationsPage />} />
 
       {/* Catch-all 404 Route */}
       <Route path="*" element={<NotFoundPage />} />

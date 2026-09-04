@@ -2,6 +2,7 @@ import React from 'react';
 import { ThemeProvider } from '@/themes';
 import { LanguageProvider } from '@/context/LanguageContext';
 import { AuthProvider } from '@/context/AuthContext';
+import { NotificationProvider } from '@/context/NotificationContext';
 import { AppRoutes } from '@/routes';
 import { ErrorBoundary } from '@/components/common';
 
@@ -11,7 +12,9 @@ export const App: React.FC = () => {
       <ThemeProvider defaultTheme="system">
         <LanguageProvider>
           <AuthProvider>
-            <AppRoutes />
+            <NotificationProvider>
+              <AppRoutes />
+            </NotificationProvider>
           </AuthProvider>
         </LanguageProvider>
       </ThemeProvider>

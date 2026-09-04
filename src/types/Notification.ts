@@ -11,11 +11,31 @@ export type NotificationCategory =
   | 'personal'
   | 'system';
 
-export type NotificationSeverity = 'info' | 'warning' | 'critical';
+export type NotificationSeverity =
+  | 'info'
+  | 'warning'
+  | 'critical'
+  | 'action_required'
+  | 'security';
 
-export type NotificationLayer = 'toast' | 'feed' | 'both' | 'silent';
+export type NotificationLayer =
+  | 'toast'
+  | 'feed'
+  | 'both'
+  | 'silent'
+  | 'action_required'
+  | 'workflow_activity'
+  | 'administrative_oversight'
+  | 'security_privilege'
+  | 'personal_account'
+  | 'system_operational';
 
-export type NotificationAudienceMode = 'broadcast' | 'personal' | 'role_scoped';
+export type NotificationAudienceMode =
+  | 'broadcast'
+  | 'personal'
+  | 'role_scoped'
+  | 'permission'
+  | 'super_admin_only';
 
 export type NotificationEventKey =
   | 'complaint.submitted'

@@ -281,6 +281,39 @@ export interface TranslationDictionary {
     hidePassword: string;
     rolesLoading: string;
   };
+  notifications: {
+    title: string;
+    subtitle: string;
+    all: string;
+    unread: string;
+    complaints: string;
+    administration: string;
+    roles: string;
+    security: string;
+    markAllRead: string;
+    markAllAsReadSuccess: string;
+    markAsRead: string;
+    allCaughtUp: string;
+    noNotifications: string;
+    noFilteredNotifications: string;
+    viewAll: string;
+    unreadCountSingular: string;
+    unreadCountPlural: string;
+    unreadBadgeAria: string;
+    loadMore: string;
+    loadingMore: string;
+    errorLoading: string;
+    errorMarkRead: string;
+    retry: string;
+    refresh: string;
+    openDetails: string;
+    viewAction: string;
+    justNow: string;
+    minutesAgo: string;
+    hoursAgo: string;
+    daysAgo: string;
+    yesterday: string;
+  };
 }
 
 export const translations: Record<Language, TranslationDictionary> = {
@@ -564,6 +597,39 @@ export const translations: Record<Language, TranslationDictionary> = {
       hidePassword: 'Hide password',
       rolesLoading: 'Loading roles...',
     },
+    notifications: {
+      title: 'Notifications',
+      subtitle: 'System alerts, workflow activities, and administrative updates.',
+      all: 'All',
+      unread: 'Unread',
+      complaints: 'Complaints',
+      administration: 'Administration',
+      roles: 'Roles & Access',
+      security: 'Security',
+      markAllRead: 'Mark all as read',
+      markAllAsReadSuccess: 'All notifications marked as read',
+      markAsRead: 'Mark as read',
+      allCaughtUp: 'You are all caught up!',
+      noNotifications: 'No notifications yet.',
+      noFilteredNotifications: 'No notifications in this category.',
+      viewAll: 'View all notifications',
+      unreadCountSingular: '{count} unread notification',
+      unreadCountPlural: '{count} unread notifications',
+      unreadBadgeAria: '{count} unread notifications',
+      loadMore: 'Load more notifications',
+      loadingMore: 'Loading more...',
+      errorLoading: 'Failed to load notifications.',
+      errorMarkRead: 'Failed to mark notification as read.',
+      retry: 'Retry',
+      refresh: 'Refresh',
+      openDetails: 'Open notification',
+      viewAction: 'View',
+      justNow: 'Just now',
+      minutesAgo: '{count}m ago',
+      hoursAgo: '{count}h ago',
+      daysAgo: '{count}d ago',
+      yesterday: 'Yesterday',
+    },
   },
   bn: {
     nav: {
@@ -844,6 +910,39 @@ export const translations: Record<Language, TranslationDictionary> = {
       showPassword: 'পাসওয়ার্ড দেখান',
       hidePassword: 'পাসওয়ার্ড লুকান',
       rolesLoading: 'ভূমিকা লোড হচ্ছে...',
+    },
+    notifications: {
+      title: 'বিজ্ঞপ্তি',
+      subtitle: 'সিস্টেম সতর্কতা, কাজের অগ্রগতি এবং প্রশাসনিক আপডেট।',
+      all: 'সব',
+      unread: 'অপঠিত',
+      complaints: 'অভিযোগ',
+      administration: 'প্রশাসন',
+      roles: 'ভূমিকা ও অনুমতি',
+      security: 'নিরাপত্তা',
+      markAllRead: 'সবগুলো পঠিত হিসেবে চিহ্নিত করুন',
+      markAllAsReadSuccess: 'সবগুলো বিজ্ঞপ্তি পঠিত হিসেবে চিহ্নিত করা হয়েছে',
+      markAsRead: 'পঠিত হিসেবে চিহ্নিত করুন',
+      allCaughtUp: 'সব বিজ্ঞপ্তি দেখা হয়ে গেছে!',
+      noNotifications: 'এখনো কোনো বিজ্ঞপ্তি নেই।',
+      noFilteredNotifications: 'এই ক্যাটাগরিতে কোনো বিজ্ঞপ্তি নেই।',
+      viewAll: 'সব বিজ্ঞপ্তি দেখুন',
+      unreadCountSingular: '{count}টি অপঠিত বিজ্ঞপ্তি',
+      unreadCountPlural: '{count}টি অপঠিত বিজ্ঞপ্তি',
+      unreadBadgeAria: '{count}টি অপঠিত বিজ্ঞপ্তি',
+      loadMore: 'আরও বিজ্ঞপ্তি দেখুন',
+      loadingMore: 'লোড হচ্ছে...',
+      errorLoading: 'বিজ্ঞপ্তি লোড করতে ব্যর্থ হয়েছে।',
+      errorMarkRead: 'বিজ্ঞপ্তিটি পঠিত হিসেবে চিহ্নিত করা যায়নি।',
+      retry: 'পুনরায় চেষ্টা করুন',
+      refresh: 'রিফ্রেশ',
+      openDetails: 'বিজ্ঞপ্তি দেখুন',
+      viewAction: 'দেখুন',
+      justNow: 'এইমাত্র',
+      minutesAgo: '{count} মিনিট আগে',
+      hoursAgo: '{count} ঘণ্টা আগে',
+      daysAgo: '{count} দিন আগে',
+      yesterday: 'গতকাল',
     },
   },
 };

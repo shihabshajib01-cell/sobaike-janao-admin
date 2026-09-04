@@ -34,8 +34,8 @@ const FALLBACK_NOTIFICATIONS: AdminNotification[] = [
     event_group_id: 'e1111111-1111-1111-1111-111111111111',
     event_key: 'complaint.submitted',
     category: 'complaint',
-    layer: 'both',
-    severity: 'info',
+    layer: 'action_required',
+    severity: 'action_required',
     audience_mode: 'broadcast',
     actor_user_id: null,
     actor_display_name: 'Citizen Portal',
@@ -48,15 +48,81 @@ const FALLBACK_NOTIFICATIONS: AdminNotification[] = [
     body_bn: 'অভিযোগ CMP-2026-0001 দাখিল করা হয়েছে এবং মডারেশন পর্যালোচনার জন্য অপেক্ষমাণ।',
     metadata: { complaint_id: 'CMP-2026-0001' },
     route: '/complaints/CMP-2026-0001',
-    created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+    created_at: new Date(Date.now() - 6 * 60 * 1000).toISOString(),
     read_at: null,
   },
   {
     id: '22222222-2222-2222-2222-222222222222',
     event_group_id: 'e2222222-2222-2222-2222-222222222222',
+    event_key: 'complaint.evidence_attached',
+    category: 'complaint',
+    layer: 'action_required',
+    severity: 'info',
+    audience_mode: 'broadcast',
+    actor_user_id: null,
+    actor_display_name: 'Citizen Portal',
+    target_type: 'complaint',
+    target_id: 'CMP-2026-0001',
+    target_label: 'Waterlogging evidence photo',
+    title_en: 'Evidence attached to complaint',
+    title_bn: 'অভিযোগে প্রমাণাদি সংযুক্ত করা হয়েছে',
+    body_en: 'Additional photographic evidence was uploaded for CMP-2026-0001.',
+    body_bn: 'CMP-2026-0001 অভিযোগের জন্য অতিরিক্ত ছবি প্রমাণ হিসেবে আপলোড করা হয়েছে।',
+    metadata: { complaint_id: 'CMP-2026-0001' },
+    route: '/complaints/CMP-2026-0001',
+    created_at: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
+    read_at: null,
+  },
+  {
+    id: '33333333-3333-3333-3333-333333333333',
+    event_group_id: 'e3333333-3333-3333-3333-333333333333',
+    event_key: 'admin.role_changed',
+    category: 'administration',
+    layer: 'security_privilege',
+    severity: 'security',
+    audience_mode: 'personal',
+    actor_user_id: null,
+    actor_display_name: 'Superadmin',
+    target_type: 'user',
+    target_id: 'u-operator-01',
+    target_label: 'Field Moderator',
+    title_en: 'Administrative role assignment modified',
+    title_bn: 'প্রশাসনিক ভূমিকা বরাদ্দ পরিবর্তন করা হয়েছে',
+    body_en: 'Your administrative role was elevated to Senior Moderator.',
+    body_bn: 'আপনার প্রশাসনিক ভূমিকা সিনিয়র মডারেটরে উন্নীত করা হয়েছে।',
+    metadata: { user_id: 'u-operator-01' },
+    route: '/users',
+    created_at: new Date(Date.now() - 70 * 60 * 1000).toISOString(),
+    read_at: null,
+  },
+  {
+    id: '44444444-4444-4444-4444-444444444444',
+    event_group_id: 'e4444444-4444-4444-4444-444444444444',
+    event_key: 'role.permissions_changed',
+    category: 'role',
+    layer: 'security_privilege',
+    severity: 'security',
+    audience_mode: 'role_scoped',
+    actor_user_id: null,
+    actor_display_name: 'Security Admin',
+    target_type: 'role',
+    target_id: 'field_officer',
+    target_label: 'Field Officer',
+    title_en: 'Role security permissions updated',
+    title_bn: 'ভূমিকার নিরাপত্তা অনুমতিসমূহ হালনাগাদ করা হয়েছে',
+    body_en: 'Critical permissions for role "Field Officer" were updated in security audit.',
+    body_bn: '"ফিল্ড অফিসার" ভূমিকার জন্য গুরুত্বপূর্ণ নিরাপত্তা অনুমতি অডিট শেষে হালনাগাদ করা হয়েছে।',
+    metadata: { role_id: 'field_officer' },
+    route: '/roles/field_officer',
+    created_at: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
+    read_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+  },
+  {
+    id: '55555555-5555-5555-5555-555555555555',
+    event_group_id: 'e5555555-5555-5555-5555-555555555555',
     event_key: 'complaint.published',
     category: 'complaint',
-    layer: 'both',
+    layer: 'workflow_activity',
     severity: 'info',
     audience_mode: 'broadcast',
     actor_user_id: null,
@@ -70,30 +136,30 @@ const FALLBACK_NOTIFICATIONS: AdminNotification[] = [
     body_bn: 'অভিযোগ CMP-2026-0002 যাচাই করা হয়েছে এবং প্রকাশিত হয়েছে।',
     metadata: { complaint_id: 'CMP-2026-0002' },
     route: '/complaints/CMP-2026-0002',
-    created_at: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-    read_at: null,
+    created_at: new Date(Date.now() - 5 * 3600 * 1000).toISOString(),
+    read_at: new Date(Date.now() - 4 * 3600 * 1000).toISOString(),
   },
   {
-    id: '33333333-3333-3333-3333-333333333333',
-    event_group_id: 'e3333333-3333-3333-3333-333333333333',
-    event_key: 'role.permissions_changed',
-    category: 'role',
-    layer: 'feed',
-    severity: 'warning',
-    audience_mode: 'role_scoped',
+    id: '66666666-6666-6666-6666-666666666666',
+    event_group_id: 'e6666666-6666-6666-6666-666666666666',
+    event_key: 'admin.created',
+    category: 'administration',
+    layer: 'administrative_oversight',
+    severity: 'info',
+    audience_mode: 'super_admin_only',
     actor_user_id: null,
     actor_display_name: 'System Admin',
-    target_type: 'role',
-    target_id: 'field_officer',
-    target_label: 'Field Officer',
-    title_en: 'Role permissions updated',
-    title_bn: 'ভূমিকার অনুমতিসমূহ হালনাগাদ করা হয়েছে',
-    body_en: 'Permissions for role "Field Officer" were updated by System Admin.',
-    body_bn: '"ফিল্ড অফিসার" ভূমিকার জন্য অনুমতিসমূহ হালনাগাদ করা হয়েছে।',
-    metadata: { role_id: 'field_officer' },
-    route: '/roles/field_officer',
-    created_at: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
-    read_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+    target_type: 'user',
+    target_id: 'u-field-99',
+    target_label: 'Zonal Inspector',
+    title_en: 'New administrator account provisioned',
+    title_bn: 'নতুন প্রশাসক অ্যাকাউন্ট যুক্ত করা হয়েছে',
+    body_en: 'Administrator account for Zonal Inspector was successfully created.',
+    body_bn: 'জোনাল পরিদর্শকের জন্য নতুন প্রশাসক অ্যাকাউন্ট সফলভাবে তৈরি করা হয়েছে।',
+    metadata: { user_id: 'u-field-99' },
+    route: '/users',
+    created_at: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
+    read_at: new Date(Date.now() - 20 * 3600 * 1000).toISOString(),
   },
 ];
 
@@ -111,7 +177,16 @@ export const notificationApi = {
         list = list.filter((n) => !n.read_at);
       }
       if (params?.category) {
-        list = list.filter((n) => n.category === params.category);
+        if (params.category === 'security') {
+          list = list.filter(
+            (n) =>
+              n.category === 'security' ||
+              n.severity === 'security' ||
+              n.layer === 'security_privilege'
+          );
+        } else {
+          list = list.filter((n) => n.category === params.category);
+        }
       }
       if (params?.before_created_at) {
         list = list.filter(
@@ -122,12 +197,15 @@ export const notificationApi = {
       return list.slice(0, limit);
     }
 
+    const isSecurityFilter = params?.category === 'security';
+    const rpcCategory = isSecurityFilter ? null : params?.category || null;
+
     const { data, error } = await supabase.rpc('admin_list_notifications', {
       p_limit: params?.limit ?? 20,
       p_before_created_at: params?.before_created_at || null,
       p_before_id: params?.before_id || null,
       p_unread_only: params?.unread_only ?? false,
-      p_category: params?.category || null,
+      p_category: rpcCategory,
     });
 
     if (error) {
@@ -135,7 +213,17 @@ export const notificationApi = {
       throw new NotificationApiError(error.message, error.code, error.details);
     }
 
-    return Array.isArray(data) ? (data as AdminNotification[]) : [];
+    let results = Array.isArray(data) ? (data as AdminNotification[]) : [];
+    if (isSecurityFilter) {
+      results = results.filter(
+        (n) =>
+          n.category === 'security' ||
+          n.severity === 'security' ||
+          n.layer === 'security_privilege'
+      );
+    }
+
+    return results;
   },
 
   /**

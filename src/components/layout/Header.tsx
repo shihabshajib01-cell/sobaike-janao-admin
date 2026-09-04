@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   Info,
 } from 'lucide-react';
+import { NotificationDropdown } from './NotificationDropdown';
 import { Badge } from '@/components/ui/Badge';
 import { cn } from '@/utils';
 
@@ -36,9 +37,7 @@ export const AdminHeader: React.FC<HeaderProps> = ({
   const location = useLocation();
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement | null>(null);
-  const notifRef = useRef<HTMLDivElement | null>(null);
 
   const roleTitle = isBootstrapMode
     ? isBn
@@ -82,9 +81,6 @@ export const AdminHeader: React.FC<HeaderProps> = ({
     const handleClickOutside = (e: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
         setProfileOpen(false);
-      }
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
-        setNotificationsOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -138,70 +134,8 @@ export const AdminHeader: React.FC<HeaderProps> = ({
         {/* Theme Mode Toggle */}
         <ThemeToggle />
 
-        {/* Notifications Dropdown Placeholder */}
-        <div className="relative" ref={notifRef}>
-          <button
-            type="button"
-            onClick={() => setNotificationsOpen((prev) => !prev)}
-            className={cn(
-              'relative p-2 rounded-md text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500',
-              notificationsOpen && 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100'
-            )}
-            aria-label={t.header.notifications}
-            aria-expanded={notificationsOpen}
-          >
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-sky-500 ring-2 ring-white dark:ring-slate-900" />
-          </button>
-
-          {/* Notifications Popover Skeleton */}
-          {notificationsOpen && (
-            <div className="absolute right-0 mt-2 w-80 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl py-2 z-50 animate-in fade-in zoom-in-95 text-left">
-              <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100 dark:border-slate-800">
-                <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-                  {t.header.notifications}
-                </span>
-                <Badge status="info" size="sm" variant="subtle">
-                  3 New
-                </Badge>
-              </div>
-              <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-72 overflow-y-auto">
-                <div className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors flex items-start gap-2.5">
-                  <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-xs font-medium text-slate-800 dark:text-slate-200">
-                      High urgency road hazard in Ward 12
-                    </p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">5 mins ago</p>
-                  </div>
-                </div>
-                <div className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-xs font-medium text-slate-800 dark:text-slate-200">
-                      WASA sanitation response published
-                    </p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">28 mins ago</p>
-                  </div>
-                </div>
-                <div className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors flex items-start gap-2.5">
-                  <Info className="w-4 h-4 text-sky-500 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-xs font-medium text-slate-800 dark:text-slate-200">
-                      System backup completed successfully
-                    </p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">2 hours ago</p>
-                  </div>
-                </div>
-              </div>
-              <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-800 text-center">
-                <span className="text-[11px] text-slate-400 dark:text-slate-500">
-                  Notification Center • Phase 3 Shell
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
+        {/* Real Notification Bell & Dropdown */}
+        <NotificationDropdown />
 
         <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-0.5 hidden sm:block" />
 
