@@ -204,6 +204,14 @@ export async function getDistinctLocations(): Promise<string[]> {
 /**
  * Map raw Supabase row to domain Complaint model
  */
+/**
+ * Helper to detect Bengali Unicode characters
+ */
+export function containsBengali(text?: string | null): boolean {
+  if (!text) return false;
+  return /[\u0980-\u09FF]/.test(text);
+}
+
 export function mapSupabaseRowToComplaint(
   row: SupabaseComplaintRow,
   segmentsMap: Map<string, SupabaseSegment>,
@@ -214,13 +222,55 @@ export function mapSupabaseRowToComplaint(
     ? subcategoriesMap.get(row.subcategory_id)
     : undefined;
 
-  // Title mapping
-  const titleBn = row.title?.trim() || row.title_en?.trim() || row.id;
-  const titleEn = row.title_en?.trim() || row.title?.trim() || row.id;
+  // Title mapping - preserve single language submissions without duplicating fallback content
+  const rawTitle = row.title?.trim() || '';
+  const rawTitleEn = row.title_en?.trim() || '';
 
-  // Description mapping
-  const descriptionBn = row.description?.trim() || row.description_en?.trim() || '';
-  const descriptionEn = row.description_en?.trim() || row.description?.trim() || '';
+  let titleBn = '';
+  let titleEn = '';
+
+  if (rawTitleEn && rawTitle && rawTitleEn !== rawTitle) {
+    titleEn = rawTitleEn;
+    titleBn = rawTitle;
+  } else if (rawTitleEn && !rawTitle) {
+    titleEn = rawTitleEn;
+    titleBn = '';
+  } else if (rawTitle) {
+    if (containsBengali(rawTitle)) {
+      titleBn = rawTitle;
+      titleEn = '';
+    } else {
+      titleEn = rawTitle;
+      titleBn = '';
+    }
+  } else {
+    // If no title provided, fallback to ID
+    titleBn = row.id;
+    titleEn = row.id;
+  }
+
+  // Description mapping - preserve single language submissions without duplicating fallback content
+  const rawDesc = row.description?.trim() || '';
+  const rawDescEn = row.description_en?.trim() || '';
+
+  let descriptionBn = '';
+  let descriptionEn = '';
+
+  if (rawDescEn && rawDesc && rawDescEn !== rawDesc) {
+    descriptionEn = rawDescEn;
+    descriptionBn = rawDesc;
+  } else if (rawDescEn && !rawDesc) {
+    descriptionEn = rawDescEn;
+    descriptionBn = '';
+  } else if (rawDesc) {
+    if (containsBengali(rawDesc)) {
+      descriptionBn = rawDesc;
+      descriptionEn = '';
+    } else {
+      descriptionEn = rawDesc;
+      descriptionBn = '';
+    }
+  }
 
   // Taxonomy mapping
   const categoryId = row.segment_id || '';
@@ -318,6 +368,12 @@ export function mapSupabaseRowToComplaint(
     citizenName,
     citizenPhone,
     isAnonymous,
+    hasSupportingInfo: Boolean(
+      row.has_supporting_info ||
+      (Array.isArray(row.evidence_types) && row.evidence_types.length > 0)
+    ),
+    evidenceTypes: Array.isArray(row.evidence_types) ? row.evidence_types : [],
+    evidenceDescription: row.evidence_description || undefined,
     upvotesCount: 0,
     commentsCount: 0,
     createdAt,
@@ -674,11 +730,24 @@ export const supabaseComplaintService = {
           };
         }
 
-        console.warn(`Error loading evidence via RPC for complaint ${complaintId}:`, rpcError?.message);
-        return {
-          media: [],
-          error: 'Evidence images could not be loaded. Please retry.',
-        };
+        // Fallback: Query public.complaint_evidence table directly with RLS
+        const { data: tableRows, error: tableError } = await supabase
+          .from('complaint_evidence')
+          .select('*')
+          .eq('complaint_id', complaintId);
+
+        if (!tableError && Array.isArray(tableRows)) {
+          evidenceRows = tableRows as SupabaseComplaintEvidenceRow[];
+        } else {
+          if (tableError && (tableError.code === '42501' || tableError.message?.includes('42501'))) {
+            return {
+              media: [],
+              error: 'You do not have permission to view private complaint evidence.',
+            };
+          }
+          // If no evidence rows exist or table query returned 0 rows, there is no evidence attached
+          return { media: [] };
+        }
       }
 
       if (!evidenceRows || evidenceRows.length === 0) {
@@ -815,6 +884,16 @@ export const supabaseComplaintService = {
       segmentsMap,
       subcategoriesMap
     );
+
+    // If the complaint has no evidence attached, ensure media is empty and evidenceError is null
+    if (!complaint.hasSupportingInfo) {
+      complaint.media = [];
+      return {
+        complaint,
+        timeline,
+        evidenceError: null,
+      };
+    }
 
     // Replace initial empty media array with real evidence media
     complaint.media = evidenceResult.media || [];

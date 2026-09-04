@@ -229,6 +229,7 @@ export const ComplaintDetailPage: React.FC = () => {
             media={complaint.media}
             error={evidenceError}
             onRetry={fetchComplaintData}
+            hasSupportingInfo={complaint.hasSupportingInfo}
           />
 
           {/* Location & Jurisdictional Area */}

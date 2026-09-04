@@ -27,6 +27,7 @@ export interface ComplaintMediaViewerProps {
   className?: string;
   error?: string | null;
   onRetry?: () => void;
+  hasSupportingInfo?: boolean;
 }
 
 export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
@@ -34,6 +35,7 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
   className,
   error,
   onRetry,
+  hasSupportingInfo,
 }) => {
   const { language, t } = useLanguage();
   const { hasPermission } = useAuth();
@@ -47,6 +49,9 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
 
   const hasMedia = media && media.length > 0;
   const currentItem = hasMedia ? media[activeMediaIndex] : null;
+
+  // If complaint has no evidence attached, treat as clean empty state regardless of fetch errors
+  const hasNoEvidenceAttached = hasSupportingInfo === false || (!hasMedia && hasSupportingInfo !== true);
 
   const handleNext = () => {
     if (!hasMedia) return;
@@ -99,8 +104,23 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
                 complaints.evidence_view
               </Badge>
             </div>
+          ) : hasNoEvidenceAttached ? (
+            /* 1. Empty / No Evidence State */
+            <div className="flex flex-col items-center justify-center p-8 rounded-lg border-2 border-dashed border-slate-200 dark:border-slate-800 text-center bg-slate-50/50 dark:bg-slate-900/40">
+              <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-2">
+                <ImageIcon className="w-6 h-6 text-slate-400" />
+              </div>
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                {isBn ? 'কোনো প্রমাণ সংযুক্ত নেই' : 'No Evidence Attached'}
+              </p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm">
+                {isBn
+                  ? 'নাগরিক এই অভিযোগটির সাথে কোনো ডিজিটাল ছবি বা প্রমাণ ফাইল যুক্ত করেননি।'
+                  : 'Citizen submitted this complaint with textual description only.'}
+              </p>
+            </div>
           ) : error ? (
-            /* 1. Error State when evidence fails to load */
+            /* 2. Error State when evidence exists but fails to load */
             <div className="flex flex-col items-center justify-center p-8 rounded-lg border border-amber-200 dark:border-amber-900/40 text-center bg-amber-50/50 dark:bg-amber-950/20 space-y-3">
               <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
                 <AlertCircle className="w-6 h-6 text-amber-600 dark:text-amber-400" />
@@ -129,13 +149,13 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
               )}
             </div>
           ) : !hasMedia ? (
-            /* 2. Empty / No Media State */
+            /* 3. Empty Fallback State */
             <div className="flex flex-col items-center justify-center p-8 rounded-lg border-2 border-dashed border-slate-200 dark:border-slate-800 text-center bg-slate-50/50 dark:bg-slate-900/40">
               <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-2">
                 <ImageIcon className="w-6 h-6 text-slate-400" />
               </div>
               <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                {isBn ? 'কোনো ছবি বা ডকুমেন্ট সংযুক্ত নেই' : 'No Media Attached'}
+                {isBn ? 'কোনো প্রমাণ সংযুক্ত নেই' : 'No Evidence Attached'}
               </p>
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm">
                 {isBn
