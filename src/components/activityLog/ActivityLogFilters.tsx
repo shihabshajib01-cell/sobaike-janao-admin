@@ -77,28 +77,22 @@ export const ActivityLogFilters: React.FC<ActivityLogFiltersProps> = ({
               </option>
             </optgroup>
             <optgroup label={language === 'bn' ? 'প্রশাসক কার্যক্রম' : 'Administrator Actions'}>
-              <option value="admin.created">
-                {language === 'bn' ? 'প্রশাসক তৈরি' : 'Administrator Created'}
+              <option value="USER_MEMBERSHIP_FINALIZED">
+                {language === 'bn' ? 'সদস্যপদ চূড়ান্তকরণ' : 'User Membership Finalized'}
               </option>
-              <option value="admin.activated">
-                {language === 'bn' ? 'প্রশাসক সক্রিয়' : 'Administrator Activated'}
-              </option>
-              <option value="admin.deactivated">
-                {language === 'bn' ? 'প্রশাসক নিষ্ক্রিয়' : 'Administrator Deactivated'}
-              </option>
-              <option value="admin.role_changed">
-                {language === 'bn' ? 'ভূমিকা পরিবর্তন' : 'Role Changed'}
+              <option value="ADMIN_USER_UPDATED">
+                {language === 'bn' ? 'প্রশাসক তথ্য আপডেট' : 'Admin User Updated'}
               </option>
             </optgroup>
             <optgroup label={language === 'bn' ? 'ভূমিকা (RBAC) কার্যক্রম' : 'Role Actions'}>
-              <option value="role.created">
+              <option value="ROLE_CREATED">
                 {language === 'bn' ? 'ভূমিকা তৈরি' : 'Role Created'}
               </option>
-              <option value="role.updated">
+              <option value="ROLE_UPDATED">
                 {language === 'bn' ? 'ভূমিকা আপডেট' : 'Role Updated'}
               </option>
-              <option value="role.permissions_changed">
-                {language === 'bn' ? 'অনুমতি পরিবর্তন' : 'Permissions Changed'}
+              <option value="ROLE_PERMISSIONS_REPLACED">
+                {language === 'bn' ? 'অনুমতি প্রতিস্থাপন' : 'Role Permissions Replaced'}
               </option>
             </optgroup>
           </select>
