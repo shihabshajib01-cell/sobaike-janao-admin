@@ -1,14 +1,14 @@
 -- ==============================================================================
 -- Migration: 20260904000008_admin_delete_user.sql
--- Description: Implement administrative user deletion procedure (admin_delete_user)
+-- Description: Implement administrative user deletion preflight and validation procedure
 --   1. Transaction wrapping (BEGIN ... COMMIT)
 --   2. Enforces caller authorization via has_permission('admin_users.manage')
---   3. Blocks caller self-deletion
---   4. Blocks deletion of Super Administrator accounts (is_super_admin = true)
+--   3. Blocks caller self-deletion (CANNOT_DELETE_SELF)
+--   4. Blocks deletion of Super Administrator accounts (SUPER_ADMIN_CANNOT_BE_DELETED)
 --   5. Enforces delegation ceiling via can_manage_user_target(p_target_user_id)
---   6. Gathers metadata (display_name, email, role) for audit logging
---   7. Emits ADMIN_USER_DELETED audit log event via log_role_audit_event
---   8. Cleans up membership/role assignments and cascades removal
+--   6. Gathers metadata (display_name, email, role) for validation & audit preparation
+--   7. Safe helper/check operation: does NOT perform independent destructive partial deletions
+--   8. Explicit revocation from anon, grant to authenticated and service_role
 -- ==============================================================================
 
 BEGIN;
@@ -93,39 +93,17 @@ BEGIN
     WHERE user_id = p_target_user_id
     LIMIT 1;
 
-    -- 10. Record canonical audit log
-    PERFORM public.log_role_audit_event(
-        'ADMIN_USER_DELETED',
-        p_target_user_id::text,
-        jsonb_build_object(
-            'target_user_id', p_target_user_id,
-            'display_name', v_target.display_name,
-            'email', v_auth_email,
-            'previous_role_id', v_previous_role_id
-        )
-    );
-
-    -- 11. Delete user role assignment
-    DELETE FROM public.user_roles
-    WHERE user_id = p_target_user_id;
-
-    -- 12. Delete admin user profile
-    DELETE FROM public.admin_users
-    WHERE user_id = p_target_user_id;
-
-    -- 13. Delete from auth.users if accessible
-    BEGIN
-        DELETE FROM auth.users
-        WHERE id = p_target_user_id;
-    EXCEPTION WHEN OTHERS THEN
-        -- If direct deletion from auth.users fails due to permissions,
-        -- Edge Function handles auth.admin.deleteUser
-        NULL;
-    END;
-
+    -- 10. Return validation success with target metadata
+    -- Note: Authoritative removal of auth.users and associated cascading
+    -- cleanup is orchestrated by the admin-delete-user Edge Function using service_role
+    -- credentials to avoid partial deletions and orphaned records.
     RETURN jsonb_build_object(
         'success', true,
-        'user_id', p_target_user_id
+        'eligible_for_deletion', true,
+        'target_user_id', p_target_user_id,
+        'display_name', v_target.display_name,
+        'email', v_auth_email,
+        'previous_role_id', v_previous_role_id
     );
 END;
 $$;
@@ -135,5 +113,9 @@ REVOKE ALL ON FUNCTION public.admin_delete_user(UUID) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.admin_delete_user(UUID) FROM anon;
 GRANT EXECUTE ON FUNCTION public.admin_delete_user(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_delete_user(UUID) TO service_role;
+
+-- Grant service_role narrow privileges required during delete operations
+GRANT SELECT ON TABLE public.user_roles TO service_role;
+GRANT INSERT ON TABLE public.admin_audit_logs TO service_role;
 
 COMMIT;

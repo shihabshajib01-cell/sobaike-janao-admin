@@ -408,57 +408,35 @@ export const adminUserApi = {
       return { success: true, user_id: userId };
     }
 
-    // Call Supabase Edge Function 'admin-delete-user'
-    try {
-      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
-        body: { user_id: userId },
-      });
-
-      if (!error && data?.success) {
-        return { success: true, user_id: userId };
-      }
-
-      if (error) {
-        let message = error.message || 'Failed to delete administrator.';
-        let code: string | undefined;
-
-        if (error && typeof error === 'object' && 'context' in error) {
-          const ctx = (error as { context?: { json?: () => Promise<{ error?: string; code?: string }> } }).context;
-          if (ctx && typeof ctx.json === 'function') {
-            try {
-              const body = await ctx.json();
-              if (body?.error) message = body.error;
-              if (body?.code) code = body.code;
-            } catch {
-              // Ignore parse failure
-            }
-          }
-        }
-
-        if (
-          code === 'FORBIDDEN' ||
-          code === 'CANNOT_DELETE_SELF' ||
-          code === 'USER_NOT_FOUND' ||
-          code === 'SUPER_ADMIN_CANNOT_BE_DELETED'
-        ) {
-          throw new AdminUserApiError(message, code);
-        }
-      }
-    } catch (edgeErr) {
-      if (edgeErr instanceof AdminUserApiError) {
-        throw edgeErr;
-      }
-      console.warn('Edge Function admin-delete-user unavailable, trying admin_delete_user RPC:', edgeErr);
-    }
-
-    // Fallback: RPC admin_delete_user
-    const { data: rpcData, error: rpcError } = await supabase.rpc('admin_delete_user', {
-      p_target_user_id: userId,
+    // Edge Function 'admin-delete-user' is the authoritative production delete path
+    const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+      body: { user_id: userId },
     });
 
-    if (rpcError) {
-      console.error('admin_delete_user RPC failed:', rpcError);
-      throw new AdminUserApiError(rpcError.message, rpcError.code, rpcError.details);
+    if (error) {
+      console.error('Edge Function admin-delete-user failed:', error);
+      let message = error.message || 'Failed to delete administrator.';
+      let code: string | undefined;
+
+      // Extract error response body if available
+      if (error && typeof error === 'object' && 'context' in error) {
+        const ctx = (error as { context?: { json?: () => Promise<{ error?: string; code?: string }> } }).context;
+        if (ctx && typeof ctx.json === 'function') {
+          try {
+            const body = await ctx.json();
+            if (body?.error) message = body.error;
+            if (body?.code) code = body.code;
+          } catch {
+            // Ignore parse failure
+          }
+        }
+      }
+
+      throw new AdminUserApiError(message, code);
+    }
+
+    if (!data || !data.success) {
+      throw new AdminUserApiError(data?.error || 'Failed to delete administrator.', data?.code);
     }
 
     return { success: true, user_id: userId };

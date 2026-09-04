@@ -182,23 +182,9 @@ serve(async (req: Request) => {
       console.warn("Could not retrieve role_id for audit log:", e);
     }
 
-    // 11. Record audit event: ADMIN_USER_DELETED
-    try {
-      await supabaseCaller.rpc("log_role_audit_event", {
-        p_action: "ADMIN_USER_DELETED",
-        p_target_id: cleanUserId,
-        p_details: {
-          target_user_id: cleanUserId,
-          display_name: targetAdmin.display_name,
-          email: targetEmail,
-          previous_role_id: previousRoleId,
-        },
-      });
-    } catch (auditErr) {
-      console.warn("Audit logging warning during user deletion:", auditErr);
-    }
-
-    // 12. Delete Auth user via Admin API (cascades admin_users and user_roles via FK)
+    // 11. Authoritative Auth user deletion via Admin API
+    // Foreign key cascade (ON DELETE CASCADE) automatically cascades removal of
+    // public.admin_users and public.user_roles rows upon auth.users deletion.
     const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(cleanUserId);
     if (deleteAuthError) {
       console.error("Auth user deletion failed:", deleteAuthError);
@@ -211,15 +197,48 @@ serve(async (req: Request) => {
       );
     }
 
-    // Explicit cleanup safeguard (in case cascade was not immediate or FK was modified)
+    // 12. Explicit cleanup safeguard (in case cascade was delayed or FK was modified)
     try {
       await supabaseAdmin.from("user_roles").delete().eq("user_id", cleanUserId);
       await supabaseAdmin.from("admin_users").delete().eq("user_id", cleanUserId);
     } catch (cleanupErr) {
-      console.warn("Explicit table cleanup safeguard warning:", cleanupErr);
+      console.warn("Explicit table cleanup safeguard warning (cascade handled):", cleanupErr);
     }
 
-    // 13. Return clean success response
+    // 13. Record canonical audit event: ADMIN_USER_DELETED (only after successful deletion)
+    try {
+      const { error: auditError } = await supabaseCaller.rpc("log_role_audit_event", {
+        p_action: "ADMIN_USER_DELETED",
+        p_target_id: cleanUserId,
+        p_details: {
+          target_user_id: cleanUserId,
+          display_name: targetAdmin.display_name,
+          email: targetEmail,
+          previous_role_id: previousRoleId,
+        },
+      });
+
+      if (auditError) {
+        console.warn("Caller RPC audit logging warning, trying service_role insert fallback:", auditError);
+        await supabaseAdmin.from("admin_audit_logs").insert({
+          actor_id: callerUser.id,
+          action: "ADMIN_USER_DELETED",
+          target_type: "USER",
+          target_id: cleanUserId,
+          details: {
+            target_user_id: cleanUserId,
+            display_name: targetAdmin.display_name,
+            email: targetEmail,
+            previous_role_id: previousRoleId,
+          },
+          created_at: new Date().toISOString(),
+        });
+      }
+    } catch (auditErr) {
+      console.warn("Audit logging warning during user deletion:", auditErr);
+    }
+
+    // 14. Return clean success response
     return new Response(
       JSON.stringify({
         success: true,
