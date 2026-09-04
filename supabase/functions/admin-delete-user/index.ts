@@ -64,6 +64,28 @@ serve(async (req: Request) => {
       );
     }
 
+    // Create server-side service role client for privileged operations
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    // Verify caller exists in public.admin_users and is active
+    const { data: callerAdmin, error: callerAdminError } = await supabaseAdmin
+      .from("admin_users")
+      .select("user_id, active, is_super_admin")
+      .eq("user_id", callerUser.id)
+      .maybeSingle();
+
+    if (callerAdminError || !callerAdmin || !callerAdmin.active) {
+      return new Response(
+        JSON.stringify({
+          error: "Access denied. Active administrator account required.",
+          code: "FORBIDDEN",
+        }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // 4. Verify caller authorization: must have 'admin_users.manage' or be Super Admin
     const { data: hasManagePermission, error: permError } = await supabaseCaller.rpc(
       "has_permission",
@@ -103,11 +125,6 @@ serve(async (req: Request) => {
       );
     }
 
-    // Create server-side service role client for privileged operations
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-
     // 7. Verify target administrator exists and check Super Admin status
     const { data: targetAdmin, error: targetQueryError } = await supabaseAdmin
       .from("admin_users")
@@ -141,20 +158,24 @@ serve(async (req: Request) => {
       );
     }
 
-    // 9. Enforce delegation ceiling: caller cannot delete a user with higher or unassigned scope
-    const { data: canManageTarget, error: ceilingError } = await supabaseCaller.rpc(
-      "can_manage_user_target",
-      { p_target_user_id: cleanUserId }
-    );
-
-    if (ceilingError || !canManageTarget) {
-      return new Response(
-        JSON.stringify({
-          error: "Access denied. You cannot manage or delete an administrator with permissions that you do not possess.",
-          code: "FORBIDDEN",
-        }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    // 9. Enforce delegation ceiling:
+    // - active designated Super Admin: may delete any non-Super-Admin target, skip the normal delegation-ceiling rejection
+    // - normal authorized admin: must still pass can_manage_user_target(p_target_user_id)
+    if (!callerAdmin.is_super_admin) {
+      const { data: canManageTarget, error: ceilingError } = await supabaseCaller.rpc(
+        "can_manage_user_target",
+        { p_target_user_id: cleanUserId }
       );
+
+      if (ceilingError || !canManageTarget) {
+        return new Response(
+          JSON.stringify({
+            error: "Access denied. You cannot manage or delete an administrator with permissions that you do not possess.",
+            code: "FORBIDDEN",
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // 10. Fetch target email and role for audit log details
