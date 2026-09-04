@@ -217,7 +217,7 @@ export const MobileComplaintCardList: React.FC<MobileComplaintCardListProps> = (
             <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
               <div>
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">
-                  {isBn ? 'ট্র্যাকিং আইডি' : 'Tracking ID'}
+                  {isBn ? 'অভিযোগ আইডি' : 'Complaint ID'}
                 </span>
                 <span className="font-mono text-sm font-bold text-sky-700 dark:text-sky-400">
                   {selectedComplaint.id}
