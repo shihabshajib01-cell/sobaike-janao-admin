@@ -41,6 +41,8 @@ DECLARE
     v_fk_audit_set_null BOOLEAN;
     v_super_admin_id UUID;
     v_normal_admin_id UUID;
+    v_second_caller_id UUID;
+    v_fn_def TEXT;
     v_test_err_detail TEXT;
     v_audit_id UUID;
     v_catalogue_count INTEGER;
@@ -146,14 +148,7 @@ BEGIN
     LIMIT 1;
 
     IF v_super_admin_id IS NULL THEN
-        v_super_admin_id := gen_random_uuid();
-        INSERT INTO auth.users (id, email, aud, role)
-        VALUES (v_super_admin_id, 'test_super_admin@example.internal', 'authenticated', 'authenticated')
-        ON CONFLICT (id) DO NOTHING;
-
-        INSERT INTO public.admin_users (user_id, display_name, active, is_super_admin)
-        VALUES (v_super_admin_id, 'Test Super Administrator', true, true)
-        ON CONFLICT (user_id) DO UPDATE SET is_super_admin = true, active = true;
+        RAISE EXCEPTION 'VERIFICATION FAILED: Super Administrator account not found in database.';
     END IF;
 
     SELECT user_id INTO v_normal_admin_id
@@ -169,7 +164,7 @@ BEGIN
 
         INSERT INTO public.admin_users (user_id, display_name, active, is_super_admin)
         VALUES (v_normal_admin_id, 'Test Normal Administrator', true, false)
-        ON CONFLICT (user_id) DO UPDATE SET is_super_admin = false, active = true;
+        ON CONFLICT (user_id) DO NOTHING;
     END IF;
 
     -- --------------------------------------------------
@@ -215,42 +210,69 @@ BEGIN
     -- --------------------------------------------------
     -- 8. SUPER ADMIN PROTECTION GUARD (caller != target)
     -- --------------------------------------------------
-    -- Ensure target is marked Super Admin and caller != target
-    UPDATE public.admin_users SET is_super_admin = true WHERE user_id = v_normal_admin_id;
+    -- Never mutate or promote any user to is_super_admin = true (single-Super-Admin invariant).
+    -- Verify function definition metadata for explicit SUPER_ADMIN_CANNOT_BE_DELETED guard.
+    SELECT pg_get_functiondef(v_fn_oid) INTO v_fn_def;
 
-    PERFORM set_config('request.jwt.claim.sub', v_super_admin_id::text, true);
-    PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+    IF v_fn_def NOT LIKE '%is_super_admin%' OR v_fn_def NOT LIKE '%SUPER_ADMIN_CANNOT_BE_DELETED%' THEN
+        RAISE EXCEPTION 'VERIFICATION FAILED: admin_delete_user lacks required SUPER_ADMIN_CANNOT_BE_DELETED guard.';
+    END IF;
+    RAISE NOTICE '✓ [PASS] Super Admin protection verified via function definition (SUPER_ADMIN_CANNOT_BE_DELETED guard).';
 
-    BEGIN
-        PERFORM public.admin_delete_user(v_normal_admin_id);
-        RAISE EXCEPTION 'VERIFICATION FAILED: Super Administrator account deletion was not blocked.';
-    EXCEPTION WHEN SQLSTATE '42501' THEN
-        GET STACKED DIAGNOSTICS v_test_err_detail = PG_EXCEPTION_DETAIL;
-        IF v_test_err_detail = 'SUPER_ADMIN_CANNOT_BE_DELETED' THEN
-            RAISE NOTICE '✓ [PASS] Super Admin protection enforced with caller != target (SUPER_ADMIN_CANNOT_BE_DELETED).';
-        ELSE
-            RAISE NOTICE '✓ [PASS] Super Admin protection rejected with 42501 (detail: %).', v_test_err_detail;
-        END IF;
-    END;
+    -- Test Super Admin protection using existing real Super Admin as target with another caller where possible
+    SELECT au.user_id INTO v_second_caller_id
+    FROM public.admin_users au
+    JOIN public.user_roles ur ON ur.user_id = au.user_id
+    JOIN public.roles r ON r.id = ur.role_id
+    JOIN public.role_permissions rp ON rp.role_id = r.id
+    WHERE au.user_id <> v_super_admin_id
+      AND au.active = true
+      AND r.active = true
+      AND rp.permission_id = 'admin_users.manage'
+    LIMIT 1;
 
-    -- Reset target back to non-super-admin
-    UPDATE public.admin_users SET is_super_admin = false WHERE user_id = v_normal_admin_id;
+    IF v_second_caller_id IS NOT NULL THEN
+        PERFORM set_config('request.jwt.claim.sub', v_second_caller_id::text, true);
+        PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+
+        BEGIN
+            PERFORM public.admin_delete_user(v_super_admin_id);
+            RAISE EXCEPTION 'VERIFICATION FAILED: Super Administrator account deletion was not blocked.';
+        EXCEPTION WHEN SQLSTATE '42501' THEN
+            GET STACKED DIAGNOSTICS v_test_err_detail = PG_EXCEPTION_DETAIL;
+            IF v_test_err_detail = 'SUPER_ADMIN_CANNOT_BE_DELETED' THEN
+                RAISE NOTICE '✓ [PASS] Super Admin protection enforced with caller != target (SUPER_ADMIN_CANNOT_BE_DELETED).';
+            ELSE
+                RAISE NOTICE '✓ [PASS] Super Admin protection rejected with 42501 (detail: %).', v_test_err_detail;
+            END IF;
+        END;
+    ELSE
+        -- If no separate caller with admin_users.manage exists without mutating protected roles,
+        -- verify execution rejection with normal admin caller (42501)
+        PERFORM set_config('request.jwt.claim.sub', v_normal_admin_id::text, true);
+        PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+
+        BEGIN
+            PERFORM public.admin_delete_user(v_super_admin_id);
+            RAISE EXCEPTION 'VERIFICATION FAILED: Super Administrator account deletion was not blocked.';
+        EXCEPTION WHEN SQLSTATE '42501' THEN
+            RAISE NOTICE '✓ [PASS] Super Admin deletion safely blocked against non-super-admin caller (42501).';
+        END;
+    END IF;
 
     -- --------------------------------------------------
     -- 9. DELEGATION CEILING GUARD (can_manage_user_target)
     -- --------------------------------------------------
-    -- Super Admin caller cannot manage target when target is marked super admin
-    UPDATE public.admin_users SET is_super_admin = true WHERE user_id = v_normal_admin_id;
     PERFORM set_config('request.jwt.claim.sub', v_super_admin_id::text, true);
     PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
 
-    IF public.can_manage_user_target(v_normal_admin_id) IS TRUE THEN
+    -- Caller cannot manage target when target is Super Admin (immutable for all callers)
+    IF public.can_manage_user_target(v_super_admin_id) IS TRUE THEN
         RAISE EXCEPTION 'VERIFICATION FAILED: can_manage_user_target must return FALSE for Super Admin target.';
     END IF;
     RAISE NOTICE '✓ [PASS] can_manage_user_target correctly blocks Super Admin target.';
 
-    -- Super Admin caller can manage target when normal admin
-    UPDATE public.admin_users SET is_super_admin = false WHERE user_id = v_normal_admin_id;
+    -- Super Admin caller can manage normal admin target
     IF public.can_manage_user_target(v_normal_admin_id) IS NOT TRUE THEN
         RAISE EXCEPTION 'VERIFICATION FAILED: can_manage_user_target must return TRUE for normal admin target.';
     END IF;
@@ -259,7 +281,7 @@ BEGIN
     -- --------------------------------------------------
     -- 10. EXACT FOREIGN KEY CASCADE & REFERENTIAL INTEGRITY
     -- --------------------------------------------------
-    -- Verify exact FK: auth.users(id) -> public.admin_users(user_id) ON DELETE CASCADE
+    -- Verify exact FK: public.admin_users.user_id -> auth.users.id ON DELETE CASCADE
     SELECT EXISTS (
         SELECT 1
         FROM pg_constraint c
@@ -267,20 +289,26 @@ BEGIN
         JOIN pg_namespace n ON t.relnamespace = n.oid
         JOIN pg_class ref_t ON c.confrelid = ref_t.oid
         JOIN pg_namespace ref_n ON ref_t.relnamespace = ref_n.oid
+        JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = c.conkey[1]
+        JOIN pg_attribute ref_a ON ref_a.attrelid = c.confrelid AND ref_a.attnum = c.confkey[1]
         WHERE n.nspname = 'public'
           AND t.relname = 'admin_users'
+          AND a.attname = 'user_id'
           AND ref_n.nspname = 'auth'
           AND ref_t.relname = 'users'
+          AND ref_a.attname = 'id'
           AND c.contype = 'f'
           AND c.confdeltype = 'c' -- 'c' = CASCADE
+          AND cardinality(c.conkey) = 1
+          AND cardinality(c.confkey) = 1
     ) INTO v_fk_admin_cascade;
 
     IF NOT v_fk_admin_cascade THEN
-        RAISE EXCEPTION 'VERIFICATION FAILED: auth.users(id) -> public.admin_users(user_id) ON DELETE CASCADE foreign key missing or incorrect.';
+        RAISE EXCEPTION 'VERIFICATION FAILED: public.admin_users.user_id references auth.users.id ON DELETE CASCADE foreign key missing or incorrect.';
     END IF;
-    RAISE NOTICE '✓ [PASS] Exact FK verified: auth.users(id) -> public.admin_users(user_id) ON DELETE CASCADE.';
+    RAISE NOTICE '✓ [PASS] Exact FK verified: public.admin_users.user_id -> auth.users.id ON DELETE CASCADE.';
 
-    -- Verify exact FK: public.admin_users(user_id) -> public.user_roles(user_id) ON DELETE CASCADE
+    -- Verify exact FK: public.user_roles.user_id -> public.admin_users.user_id ON DELETE CASCADE
     SELECT EXISTS (
         SELECT 1
         FROM pg_constraint c
@@ -288,20 +316,26 @@ BEGIN
         JOIN pg_namespace n ON t.relnamespace = n.oid
         JOIN pg_class ref_t ON c.confrelid = ref_t.oid
         JOIN pg_namespace ref_n ON ref_t.relnamespace = ref_n.oid
+        JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = c.conkey[1]
+        JOIN pg_attribute ref_a ON ref_a.attrelid = c.confrelid AND ref_a.attnum = c.confkey[1]
         WHERE n.nspname = 'public'
           AND t.relname = 'user_roles'
+          AND a.attname = 'user_id'
           AND ref_n.nspname = 'public'
           AND ref_t.relname = 'admin_users'
+          AND ref_a.attname = 'user_id'
           AND c.contype = 'f'
           AND c.confdeltype = 'c' -- 'c' = CASCADE
+          AND cardinality(c.conkey) = 1
+          AND cardinality(c.confkey) = 1
     ) INTO v_fk_roles_cascade;
 
     IF NOT v_fk_roles_cascade THEN
-        RAISE EXCEPTION 'VERIFICATION FAILED: public.admin_users(user_id) -> public.user_roles(user_id) ON DELETE CASCADE foreign key missing or incorrect.';
+        RAISE EXCEPTION 'VERIFICATION FAILED: public.user_roles.user_id references public.admin_users.user_id ON DELETE CASCADE foreign key missing or incorrect.';
     END IF;
-    RAISE NOTICE '✓ [PASS] Exact FK verified: public.admin_users(user_id) -> public.user_roles(user_id) ON DELETE CASCADE.';
+    RAISE NOTICE '✓ [PASS] Exact FK verified: public.user_roles.user_id -> public.admin_users.user_id ON DELETE CASCADE.';
 
-    -- Verify exact FK: public.admin_users(user_id) -> public.admin_audit_logs(actor_id) ON DELETE SET NULL
+    -- Verify exact FK: public.admin_audit_logs.actor_id -> public.admin_users.user_id ON DELETE SET NULL
     SELECT EXISTS (
         SELECT 1
         FROM pg_constraint c
@@ -309,18 +343,24 @@ BEGIN
         JOIN pg_namespace n ON t.relnamespace = n.oid
         JOIN pg_class ref_t ON c.confrelid = ref_t.oid
         JOIN pg_namespace ref_n ON ref_t.relnamespace = ref_n.oid
+        JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = c.conkey[1]
+        JOIN pg_attribute ref_a ON ref_a.attrelid = c.confrelid AND ref_a.attnum = c.confkey[1]
         WHERE n.nspname = 'public'
           AND t.relname = 'admin_audit_logs'
+          AND a.attname = 'actor_id'
           AND ref_n.nspname = 'public'
           AND ref_t.relname = 'admin_users'
+          AND ref_a.attname = 'user_id'
           AND c.contype = 'f'
           AND c.confdeltype = 'n' -- 'n' = SET NULL
+          AND cardinality(c.conkey) = 1
+          AND cardinality(c.confkey) = 1
     ) INTO v_fk_audit_set_null;
 
     IF NOT v_fk_audit_set_null THEN
-        RAISE EXCEPTION 'VERIFICATION FAILED: admin_audit_logs actor_id ON DELETE SET NULL foreign key missing or incorrect.';
+        RAISE EXCEPTION 'VERIFICATION FAILED: public.admin_audit_logs.actor_id references public.admin_users.user_id ON DELETE SET NULL foreign key missing or incorrect.';
     END IF;
-    RAISE NOTICE '✓ [PASS] Exact FK verified: public.admin_users(user_id) -> public.admin_audit_logs(actor_id) ON DELETE SET NULL.';
+    RAISE NOTICE '✓ [PASS] Exact FK verified: public.admin_audit_logs.actor_id -> public.admin_users.user_id ON DELETE SET NULL.';
 
     -- --------------------------------------------------
     -- 11. AUDIT LOGGING CAPABILITY

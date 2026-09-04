@@ -199,13 +199,71 @@ serve(async (req: Request) => {
 
     // 12. Verify Post-Delete State (Cascade & Referential Integrity Confirmation)
     // Confirm auth identity is gone
-    const { data: authUserCheck } = await supabaseAdmin.auth.admin.getUserById(cleanUserId);
-    if (authUserCheck?.user) {
+    let authUserCheckData = null;
+    let authUserCheckError = null;
+
+    try {
+      const response = await supabaseAdmin.auth.admin.getUserById(cleanUserId);
+      authUserCheckData = response.data;
+      authUserCheckError = response.error;
+    } catch (verifyErr) {
+      console.error("Auth verify threw unexpected exception:", verifyErr);
+      return new Response(
+        JSON.stringify({
+          error: "Failed to verify authentication identity deletion due to an unexpected Auth API error.",
+          code: "POST_DELETE_AUTH_VERIFY_FAILED",
+          details: verifyErr instanceof Error ? verifyErr.message : String(verifyErr),
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // If getUserById confirms user still exists -> FAIL
+    if (authUserCheckData?.user?.id) {
       console.error("Post-delete verification failed: auth identity still exists for", cleanUserId);
       return new Response(
         JSON.stringify({
           error: "Cleanup inconsistency detected: authentication identity remains after delete operation.",
           code: "AUTH_IDENTITY_REMAINS",
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Distinguish expected USER_NOT_FOUND from unexpected Auth API failure
+    if (authUserCheckError) {
+      const errMsg = (authUserCheckError.message || "").toLowerCase();
+      const errCode = (authUserCheckError as any).code ? String((authUserCheckError as any).code).toLowerCase() : "";
+      const status = (authUserCheckError as any).status;
+
+      const isUserNotFound =
+        status === 404 ||
+        errCode === "user_not_found" ||
+        errCode === "not_found" ||
+        errMsg.includes("user not found") ||
+        errMsg.includes("not found") ||
+        errMsg.includes("user does not exist");
+
+      if (!isUserNotFound) {
+        console.error("Unexpected Auth API error during post-delete verification:", authUserCheckError);
+        return new Response(
+          JSON.stringify({
+            error: "Failed to verify authentication identity deletion due to an unexpected Auth API error.",
+            code: "POST_DELETE_AUTH_VERIFY_FAILED",
+            details: authUserCheckError.message,
+          }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      // Expected user-not-found result -> PASS, continue to database cascade checks
+    } else {
+      // If there was no error but no valid user (or empty user object):
+      // Do not treat an empty user object alone as proof of deletion
+      console.error("Post-delete auth verification returned 200 without expected user-not-found error:", authUserCheckData);
+      return new Response(
+        JSON.stringify({
+          error: "Auth post-delete verification failed: expected user-not-found error from Auth API, received unexpected empty response.",
+          code: "POST_DELETE_AUTH_VERIFY_FAILED",
         }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
