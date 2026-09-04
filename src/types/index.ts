@@ -6,4 +6,5 @@ export * from './Map';
 export * from './LocationActivity';
 export * from './Role';
 export * from './AdminUser';
+export * from './Notification';
 export * from './api';

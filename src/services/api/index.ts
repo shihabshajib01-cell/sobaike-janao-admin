@@ -28,3 +28,6 @@ export { default as roleApi } from './roleApi';
 export * from './adminUserApi';
 export { adminUserApi } from './adminUserApi';
 
+export * from './notificationApi';
+export { default as notificationApi } from './notificationApi';
+
