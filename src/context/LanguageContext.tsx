@@ -281,6 +281,14 @@ export interface TranslationDictionary {
     showPassword: string;
     hidePassword: string;
     rolesLoading: string;
+    deleteUser: string;
+    deleteUserConfirmTitle: string;
+    deleteUserConfirmDesc: string;
+    deleteUserSuccess: string;
+    deletingUser: string;
+    cannotDeleteSelf: string;
+    cannotDeleteSuperAdmin: string;
+    selfAccountBadge: string;
   };
   notifications: {
     title: string;
@@ -598,6 +606,14 @@ export const translations: Record<Language, TranslationDictionary> = {
       showPassword: 'Show password',
       hidePassword: 'Hide password',
       rolesLoading: 'Loading roles...',
+      deleteUser: 'Delete Administrator',
+      deleteUserConfirmTitle: 'Delete Administrator Account',
+      deleteUserConfirmDesc: 'Are you sure you want to permanently delete this administrator account? All administrative privileges and session access will be immediately revoked. This action cannot be undone.',
+      deleteUserSuccess: 'Administrator deleted successfully.',
+      deletingUser: 'Deleting Administrator...',
+      cannotDeleteSelf: 'You cannot delete your own administrator account.',
+      cannotDeleteSuperAdmin: 'Super Administrator accounts cannot be deleted.',
+      selfAccountBadge: 'Current User',
     },
     notifications: {
       title: 'Notifications',
@@ -913,6 +929,14 @@ export const translations: Record<Language, TranslationDictionary> = {
       showPassword: 'পাসওয়ার্ড দেখান',
       hidePassword: 'পাসওয়ার্ড লুকান',
       rolesLoading: 'ভূমিকা লোড হচ্ছে...',
+      deleteUser: 'প্রশাসক মুছে ফেলুন',
+      deleteUserConfirmTitle: 'প্রশাসক অ্যাকাউন্ট মুছে ফেলার নিশ্চিতকরণ',
+      deleteUserConfirmDesc: 'আপনি কি নিশ্চিত যে আপনি এই প্রশাসক অ্যাকাউন্টটি স্থায়ীভাবে মুছে ফেলতে চান? সমস্ত প্রশাসনিক ক্ষমতা ও সেশন অ্যাক্সেস অবিলম্বে বাতিল করা হবে। এই কাজটি পূর্বাবস্থায় ফিরিয়ে নেওয়া যাবে না।',
+      deleteUserSuccess: 'প্রশাসক সফলভাবে মুছে ফেলা হয়েছে।',
+      deletingUser: 'মুছে ফেলা হচ্ছে...',
+      cannotDeleteSelf: 'আপনি নিজের প্রশাসক অ্যাকাউন্ট মুছে ফেলতে পারবেন না।',
+      cannotDeleteSuperAdmin: 'সুপার অ্যাডমিনিস্ট্রেটর অ্যাকাউন্ট মুছে ফেলা যাবে না।',
+      selfAccountBadge: 'বর্তমান ব্যবহারকারী',
     },
     notifications: {
       title: 'বিজ্ঞপ্তি',

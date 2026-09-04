@@ -82,6 +82,13 @@ export interface AdminUserQueryParams {
   offset?: number;
 }
 
+export interface DeleteAdminUserResponse {
+  success: boolean;
+  deleted_user_id: string;
+  email?: string;
+  display_name?: string | null;
+}
+
 export class AdminUserApiError extends Error {
   code?: string;
   status?: number;

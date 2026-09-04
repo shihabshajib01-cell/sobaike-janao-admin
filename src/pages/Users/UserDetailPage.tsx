@@ -6,9 +6,12 @@ import { useAuth } from '@/context/AuthContext';
 import { adminUserApi } from '@/services/api/adminUserApi';
 import { AdminUserDetail } from '@/types/AdminUser';
 import { UserLoadingSkeleton } from '@/components/users/UserLoadingSkeleton';
+import { DeleteUserModal, DeleteUserTarget } from '@/components/users/DeleteUserModal';
 import {
   ArrowLeft,
   Edit2,
+  Trash2,
+  User as UserIcon,
   Shield,
   ShieldCheck,
   Lock,
@@ -26,7 +29,7 @@ export const UserDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t, language } = useLanguage();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user: currentUser } = useAuth();
   const isBn = language === 'bn';
 
   const canManageUsers = hasPermission('admin_users.manage');
@@ -34,6 +37,7 @@ export const UserDetailPage: React.FC = () => {
   const [user, setUser] = useState<AdminUserDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
 
   // Success Banner from Edit navigation
   const [successBanner] = useState<string | null>(() => {
@@ -79,6 +83,16 @@ export const UserDetailPage: React.FC = () => {
       setLoading(false);
     }
   }, [userId, t.users.userIdMissing, t.users.failedToLoadUser]);
+
+  const handleDeleteUser = async (targetId: string) => {
+    const res = await adminUserApi.deleteUser(targetId);
+    navigate('/users', {
+      state: {
+        userDeletedSuccess: true,
+        userName: res.display_name || res.email || user?.display_name || user?.email,
+      },
+    });
+  };
 
   useEffect(() => {
     loadUser();
@@ -156,7 +170,7 @@ export const UserDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Edit Button (Disabled/Hidden for Super Admin or out-of-ceiling administrator) */}
+        {/* Action Buttons (Edit / Delete) */}
         {canManageUsers && (
           user.is_super_admin ? (
             <div
@@ -175,16 +189,39 @@ export const UserDetailPage: React.FC = () => {
               {t.users.restrictedBadge}
             </div>
           ) : (
-            <Button
-              id="btn-edit-user-detail"
-              variant="primary"
-              size="sm"
-              onClick={() => navigate(`/users/${user.user_id}/edit`)}
-              className="h-9"
-            >
-              <Edit2 className="w-4 h-4 mr-2" />
-              {t.users.editUser}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                id="btn-edit-user-detail"
+                variant="primary"
+                size="sm"
+                onClick={() => navigate(`/users/${user.user_id}/edit`)}
+                className="h-9"
+              >
+                <Edit2 className="w-4 h-4 mr-2" />
+                {t.users.editUser}
+              </Button>
+              {user.user_id === currentUser?.id ? (
+                <div
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-400 dark:text-slate-500 rounded-lg bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 cursor-not-allowed"
+                  title={t.users.cannotDeleteSelf}
+                >
+                  <UserIcon className="w-3.5 h-3.5" />
+                  {t.users.selfAccountBadge}
+                </div>
+              ) : (
+                <Button
+                  id="btn-delete-user-detail"
+                  variant="danger"
+                  size="sm"
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  className="h-9 px-3 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40 border border-rose-200/60 dark:border-rose-900/40"
+                  title={t.users.deleteUser}
+                >
+                  <Trash2 className="w-4 h-4 mr-1.5" />
+                  {t.users.deleteUser}
+                </Button>
+              )}
+            </div>
           )
         )}
       </div>
@@ -435,6 +472,21 @@ export const UserDetailPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Delete Administrator Confirmation Modal */}
+      <DeleteUserModal
+        isOpen={isDeleteModalOpen}
+        user={user ? {
+          user_id: user.user_id,
+          email: user.email,
+          display_name: user.display_name,
+          role_name_en: user.role?.name_en || null,
+          role_name_bn: user.role?.name_bn || null,
+          is_super_admin: user.is_super_admin,
+        } : null}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDeleteUser}
+      />
     </div>
   );
 };
