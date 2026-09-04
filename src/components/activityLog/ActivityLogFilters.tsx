@@ -114,7 +114,7 @@ export const ActivityLogFilters: React.FC<ActivityLogFiltersProps> = ({
         </div>
 
         {/* Date Filter & Clear Controls */}
-        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 min-w-0">
+        <div className="flex flex-wrap 2xl:flex-nowrap items-center gap-2 min-w-0">
           <div className="relative flex-1 min-w-[120px]">
             <Calendar className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
