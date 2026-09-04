@@ -1,5 +1,9 @@
 # Sobaike Janao Admin — Supabase Migrations & Backend Architecture
 
+**Notification Project Delivery Status:**
+- **Phase 1 (Notification Foundation):** CODE PASS + LIVE PASS
+- **Phase 2 (Notification Producer Wiring & Live Sync):** CODE PASS + LIVE PASS
+
 ## Overview
 
 This directory contains the database migrations, audit scripts, and security definitions for the **Sobaike Janao Admin Panel**.
@@ -80,6 +84,14 @@ This directory contains the database migrations, audit scripts, and security def
       - Wires administrator onboarding (`admin_finalize_user_membership`) to emit dual-stream `admin.created` notifications (Stream A oversight requiring `admin_users.view` or `admin_users.manage`, and Stream B personal welcome).
       - Wires administrator lifecycle management (`admin_update_user`) to emit `admin.activated`, `admin.deactivated` (oversight only), and `admin.role_changed` (oversight and personal, gated by active status). Preserves `ADMIN_USER_UPDATED` audit action.
       - Wires role lifecycle management (`admin_create_role`, `admin_update_role`, `admin_replace_role_permissions`) to emit `role.created`, `role.updated`, and `role.permissions_changed` directed strictly to `ARRAY['roles.manage']`. Preserves `public.generate_role_slug()`.
+
+15. **`20260904000006_phase2_live_sync_corrections.sql`**
+    - **Phase:** Notification Project Phase 2 Live Sync Corrections (Phase 2 CODE PASS + LIVE PASS)
+    - **Contents:**
+      - Synchronizes final live Supabase corrections back to the repository.
+      - `admin_publish_complaint(text)`: Removes non-existent `published_at` column reference; preserves `submitted` and `unpublished` -> `published` transitions; preserves `complaints.publish` permission, timeline updates, audit logging, and `complaint.published` event notification.
+      - `admin_update_user(uuid, text, text, boolean)`: Removes non-existent `has_role_permission()`; preserves delegation ceiling / target-scope checks and atomic `count_effective_role_managers()` resulting-state protection; preserves `ADMIN_USER_UPDATED` audit action and notifications (`admin.activated`, `admin.deactivated`, `admin.role_changed`), with personal `admin.role_changed` emitted only when resulting user is active and personal `admin.deactivated` omitted.
+      - `admin_update_role`: Drops accidental conflicting 8-param overload `(text, text, text, text, boolean, text[], text, text)` and retains authoritative frontend-compatible bilingual signature `(text, text, text, boolean, text[], text, boolean, boolean)`; preserves bilingual naming, description update flags, immutable technical role ID, system-role protections, delegation ceiling, last-manager protection, `ROLE_UPDATED` audit, and notifications (`role.updated`, `role.permissions_changed`) with no-op notification suppression.
 
 ---
 
