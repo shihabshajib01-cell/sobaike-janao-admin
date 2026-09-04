@@ -7,6 +7,8 @@ import {
   formatTargetType,
   getSeverityClasses,
   formatAuditTimestamp,
+  getActorDisplayInfo,
+  formatAuditSummary,
 } from '@/utils/auditLogUtils';
 import {
   History,
@@ -85,25 +87,8 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
               const ActionIcon = meta.icon;
               const time = formatAuditTimestamp(log.created_at, language);
 
-              // Quick summary snippet
-              let summarySnippet = '';
-              if (log.action === 'admin.role_changed' || log.action === 'ADMIN_USER_UPDATED') {
-                summarySnippet = `${log.details?.previous_role_name || log.details?.previous_role_id || 'Role'} → ${log.details?.new_role_name || log.details?.new_role_id || 'Role'}`;
-              } else if (log.action === 'role.permissions_changed' || log.action === 'ROLE_PERMISSIONS_REPLACED') {
-                const addedCount = log.details?.added_permissions?.length || 0;
-                const removedCount = log.details?.removed_permissions?.length || 0;
-                summarySnippet = `+${addedCount} / -${removedCount} permissions`;
-              } else if (log.action === 'complaint.reject') {
-                summarySnippet = log.details?.reason_code || 'Rejected';
-              } else if (log.action === 'complaint.publish') {
-                summarySnippet = 'Published to public feed';
-              } else if (log.action === 'complaint.unpublish') {
-                summarySnippet = log.details?.reason || 'Unpublished';
-              } else if (log.action === 'admin.created') {
-                summarySnippet = log.details?.role_name ? `Role: ${log.details.role_name}` : 'Provisioned';
-              } else if (log.action === 'role.created') {
-                summarySnippet = log.details?.name || 'New role created';
-              }
+              const summarySnippet = formatAuditSummary(log, language);
+              const actorInfo = getActorDisplayInfo(log, language);
 
               return (
                 <tr
@@ -141,11 +126,11 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
                       </div>
                       <div className="max-w-[160px] truncate">
                         <p className="text-xs font-medium text-slate-900 dark:text-slate-100 truncate">
-                          {log.actor_display_name || (language === 'bn' ? 'সিস্টেম' : 'System')}
+                          {actorInfo.primary}
                         </p>
-                        {log.actor_email && (
+                        {actorInfo.secondary && (
                           <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                            {log.actor_email}
+                            {actorInfo.secondary}
                           </p>
                         )}
                       </div>
@@ -198,6 +183,7 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
           const severity = getSeverityClasses(meta.severity);
           const ActionIcon = meta.icon;
           const time = formatAuditTimestamp(log.created_at, language);
+          const actorInfo = getActorDisplayInfo(log, language);
 
           return (
             <div
@@ -224,7 +210,7 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
                 <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
                   <span className="text-slate-400">{language === 'bn' ? 'কর্তৃপক্ষ:' : 'Actor:'}</span>
                   <span className="font-medium text-slate-900 dark:text-slate-100 truncate max-w-[200px]">
-                    {log.actor_display_name || (language === 'bn' ? 'সিস্টেম' : 'System')}
+                    {actorInfo.primary}
                   </span>
                 </div>
 

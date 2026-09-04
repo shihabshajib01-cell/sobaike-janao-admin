@@ -38,7 +38,7 @@ export const ActivityLogFilters: React.FC<ActivityLogFiltersProps> = ({
       id="activity-log-filters"
       className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3"
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-3">
         {/* Search Input */}
         <div className="relative">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -114,8 +114,8 @@ export const ActivityLogFilters: React.FC<ActivityLogFiltersProps> = ({
         </div>
 
         {/* Date Filter & Clear Controls */}
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 min-w-0">
+          <div className="relative flex-1 min-w-[120px]">
             <Calendar className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               id="activity-date-from-input"
@@ -127,7 +127,7 @@ export const ActivityLogFilters: React.FC<ActivityLogFiltersProps> = ({
             />
           </div>
 
-          <div className="relative flex-1">
+          <div className="relative flex-1 min-w-[120px]">
             <Calendar className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               id="activity-date-to-input"
@@ -148,7 +148,7 @@ export const ActivityLogFilters: React.FC<ActivityLogFiltersProps> = ({
               title={language === 'bn' ? 'ফিল্টার রিসেট করুন' : 'Clear filters'}
             >
               <X className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{language === 'bn' ? 'রিসেট' : 'Clear'}</span>
+              <span className="hidden sm:inline xl:hidden 2xl:inline">{language === 'bn' ? 'রিসেট' : 'Clear'}</span>
             </button>
           )}
         </div>

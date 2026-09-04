@@ -8,6 +8,7 @@ import {
   getSeverityClasses,
   formatAuditTimestamp,
   sanitizeAuditDetails,
+  getActorDisplayInfo,
 } from '@/utils/auditLogUtils';
 import {
   User,
@@ -86,25 +87,30 @@ export const ActivityLogDetailDrawer: React.FC<ActivityLogDetailDrawerProps> = (
         {/* Actor & Target Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Actor Info */}
-          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-1.5">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-              <User className="w-3.5 h-3.5 text-sky-500" />
-              <span>{language === 'bn' ? 'কর্তৃপক্ষ (অ্যাক্টর)' : 'Actor (Admin)'}</span>
-            </div>
-            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-              {log.actor_display_name || (language === 'bn' ? 'সিস্টেম বা স্বয়ংক্রিয়' : 'System / Automated')}
-            </p>
-            {log.actor_email && (
-              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                {log.actor_email}
-              </p>
-            )}
-            {log.actor_id && (
-              <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500 truncate">
-                ID: {log.actor_id}
-              </p>
-            )}
-          </div>
+          {(() => {
+            const actorInfo = getActorDisplayInfo(log, language);
+            return (
+              <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                  <User className="w-3.5 h-3.5 text-sky-500" />
+                  <span>{language === 'bn' ? 'কর্তৃপক্ষ (অ্যাক্টর)' : 'Actor (Admin)'}</span>
+                </div>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  {actorInfo.primary}
+                </p>
+                {actorInfo.secondary && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                    {actorInfo.secondary}
+                  </p>
+                )}
+                {log.actor_id && actorInfo.primary !== log.actor_id && actorInfo.secondary !== `ID: ${log.actor_id}` && (
+                  <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500 truncate">
+                    ID: {log.actor_id}
+                  </p>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Target Info */}
           <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-1.5">
@@ -134,22 +140,37 @@ export const ActivityLogDetailDrawer: React.FC<ActivityLogDetailDrawerProps> = (
 
           {/* Role Change Diff */}
           {(log.action === 'admin.role_changed' || log.action === 'ADMIN_USER_UPDATED') &&
-            (log.details?.previous_role_name || log.details?.new_role_name || log.details?.previous_role_id || log.details?.new_role_id) && (
-              <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-2">
-                <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
-                  {language === 'bn' ? 'ভূমিকা বরাদ্দ পরিবর্তন:' : 'Role Assignment Transition:'}
-                </p>
-                <div className="flex items-center gap-2 flex-wrap text-xs">
-                  <span className="px-2.5 py-1 rounded-md bg-slate-200 dark:bg-slate-700 font-medium text-slate-800 dark:text-slate-200">
-                    {log.details.previous_role_name || log.details.previous_role_id || 'None'}
-                  </span>
-                  <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
-                  <span className="px-2.5 py-1 rounded-md bg-sky-100 dark:bg-sky-950 font-semibold text-sky-800 dark:text-sky-300 border border-sky-300 dark:border-sky-800">
-                    {log.details.new_role_name || log.details.new_role_id || 'None'}
-                  </span>
+            (() => {
+              const prevRole = log.details?.previous_role_name || log.details?.previous_role_id;
+              const newRole =
+                log.details?.new_role_name ||
+                log.details?.new_role_id ||
+                (log.details?.role_changed ? log.details?.role_name || log.details?.role_id : undefined);
+
+              const hasTransition =
+                prevRole &&
+                newRole &&
+                (prevRole !== newRole || log.details?.role_changed === true || log.action === 'admin.role_changed');
+
+              if (!hasTransition && !log.details?.role_changed) return null;
+
+              return (
+                <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-2">
+                  <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                    {language === 'bn' ? 'ভূমিকা বরাদ্দ পরিবর্তন:' : 'Role Assignment Transition:'}
+                  </p>
+                  <div className="flex items-center gap-2 flex-wrap text-xs">
+                    <span className="px-2.5 py-1 rounded-md bg-slate-200 dark:bg-slate-700 font-medium text-slate-800 dark:text-slate-200">
+                      {prevRole || '—'}
+                    </span>
+                    <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+                    <span className="px-2.5 py-1 rounded-md bg-sky-100 dark:bg-sky-950 font-semibold text-sky-800 dark:text-sky-300 border border-sky-300 dark:border-sky-800">
+                      {newRole || '—'}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
           {/* Permissions Added / Removed Diff */}
           {(log.action === 'role.permissions_changed' || log.action === 'ROLE_PERMISSIONS_REPLACED') && (

@@ -185,6 +185,192 @@ export const getAuditActionMeta = (action: string): ActionDisplayMeta => {
   };
 };
 
+export interface ActorDisplayInfo {
+  primary: string;
+  secondary: string | null;
+  isSystem: boolean;
+}
+
+/**
+ * Resolves the display representation of an audit actor.
+ * Priority:
+ * 1. actor_display_name
+ * 2. actor_email
+ * 3. actor_id
+ * 4. only then "System" / Bangla equivalent
+ * 
+ * Never labels actor as System if actor_email or actor_id exists.
+ */
+export const getActorDisplayInfo = (
+  log: {
+    actor_display_name?: string | null;
+    actor_email?: string | null;
+    actor_id?: string | null;
+  },
+  language: 'en' | 'bn'
+): ActorDisplayInfo => {
+  const name = log.actor_display_name?.trim() || null;
+  const email = log.actor_email?.trim() || null;
+  const id = log.actor_id?.trim() || null;
+
+  if (name) {
+    return {
+      primary: name,
+      secondary: email || (id ? `ID: ${id}` : null),
+      isSystem: false,
+    };
+  }
+
+  if (email) {
+    return {
+      primary: email,
+      secondary: id ? `ID: ${id}` : null,
+      isSystem: false,
+    };
+  }
+
+  if (id) {
+    return {
+      primary: id,
+      secondary: null,
+      isSystem: false,
+    };
+  }
+
+  return {
+    primary: language === 'bn' ? 'সিস্টেম' : 'System',
+    secondary: null,
+    isSystem: true,
+  };
+};
+
+/**
+ * Derives a clean, localized summary snippet for any audit log entry.
+ * Prevents misleading "Role → Role" literal fallbacks and derives real details.
+ */
+export const formatAuditSummary = (
+  log: {
+    action: string;
+    details?: Record<string, any> | null;
+  },
+  language: 'en' | 'bn'
+): string => {
+  const { action, details } = log;
+  const isBn = language === 'bn';
+
+  if (action === 'admin.role_changed' || action === 'ADMIN_USER_UPDATED') {
+    if (!details || typeof details !== 'object') {
+      return '—';
+    }
+
+    // A. If real role transition data exists
+    const prevRole = details.previous_role_name || details.previous_role_id;
+    const newRole =
+      details.new_role_name ||
+      details.new_role_id ||
+      (details.role_changed ? details.role_name || details.role_id : undefined);
+
+    if (
+      prevRole &&
+      newRole &&
+      (prevRole !== newRole || details.role_changed === true || action === 'admin.role_changed')
+    ) {
+      return `${prevRole} → ${newRole}`;
+    }
+    if (prevRole && !newRole && (details.role_changed === true || action === 'admin.role_changed')) {
+      return `${prevRole} → —`;
+    }
+    if (!prevRole && newRole && (details.role_changed === true || action === 'admin.role_changed')) {
+      return `— → ${newRole}`;
+    }
+
+    // B. Otherwise, use real available details when present
+    // 1. active/status change
+    if (details.active_changed === true || typeof details.active === 'boolean') {
+      if (typeof details.active === 'boolean') {
+        const statusText = details.active
+          ? isBn ? 'অবস্থা: সক্রিয়' : 'Status: Active'
+          : isBn ? 'অবস্থা: নিষ্ক্রিয়' : 'Status: Inactive';
+        if (details.reason) {
+          return `${statusText} (${details.reason})`;
+        }
+        return statusText;
+      }
+    }
+
+    // 2. display_name change
+    if (details.display_name) {
+      return isBn ? `নাম: ${details.display_name}` : `Name: ${details.display_name}`;
+    }
+
+    // 3. other supported real fields
+    if (details.reason) {
+      return details.reason;
+    }
+
+    if (details.email) {
+      return isBn ? `ইমেইল: ${details.email}` : `Email: ${details.email}`;
+    }
+
+    // C. If no meaningful safe summary can be derived: show —
+    return '—';
+  }
+
+  if (action === 'role.permissions_changed' || action === 'ROLE_PERMISSIONS_REPLACED') {
+    const addedCount = details?.added_permissions?.length || details?.added_count || 0;
+    const removedCount = details?.removed_permissions?.length || details?.removed_count || 0;
+    return isBn
+      ? `+${addedCount} / -${removedCount} অনুমতি`
+      : `+${addedCount} / -${removedCount} permissions`;
+  }
+
+  if (action === 'complaint.reject') {
+    return details?.reason_code || (isBn ? 'বাতিল করা হয়েছে' : 'Rejected');
+  }
+
+  if (action === 'complaint.publish') {
+    return isBn ? 'পাবলিক ফিডে প্রকাশিত' : 'Published to public feed';
+  }
+
+  if (action === 'complaint.unpublish') {
+    return details?.reason || (isBn ? 'অপ্রকাশিত' : 'Unpublished');
+  }
+
+  if (action === 'admin.created') {
+    return details?.role_name
+      ? isBn ? `ভূমিকা: ${details.role_name}` : `Role: ${details.role_name}`
+      : isBn ? 'তৈরি সম্পন্ন' : 'Provisioned';
+  }
+
+  if (action === 'admin.activated') {
+    return isBn ? 'সক্রিয় করা হয়েছে' : 'Activated';
+  }
+
+  if (action === 'admin.deactivated') {
+    return isBn ? 'নিষ্ক্রিয় করা হয়েছে' : 'Deactivated';
+  }
+
+  if (action === 'role.created' || action === 'ROLE_CREATED') {
+    return details?.name || details?.name_en || (isBn ? 'নতুন ভূমিকা তৈরি' : 'New role created');
+  }
+
+  if (action === 'role.updated' || action === 'ROLE_UPDATED') {
+    return details?.name || details?.name_en || (isBn ? 'ভূমিকা তথ্য আপডেট' : 'Role updated');
+  }
+
+  if (action === 'USER_MEMBERSHIP_FINALIZED') {
+    return details?.role_name || details?.role_id
+      ? isBn
+        ? `ভূমিকা: ${details.role_name || details.role_id}`
+        : `Role: ${details.role_name || details.role_id}`
+      : isBn
+      ? 'সদস্যপদ চূড়ান্তকরণ'
+      : 'Membership finalized';
+  }
+
+  return '—';
+};
+
 /**
  * Returns localized target type label
  */

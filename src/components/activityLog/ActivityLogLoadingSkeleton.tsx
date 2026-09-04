@@ -5,7 +5,7 @@ export const ActivityLogLoadingSkeleton: React.FC = () => {
     <div className="space-y-4 animate-pulse" id="activity-log-loading-skeleton">
       {/* Filters bar skeleton */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-3">
           <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded-lg" />
           <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded-lg" />
           <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded-lg" />
