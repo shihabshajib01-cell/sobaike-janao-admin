@@ -129,7 +129,7 @@ export const ComplaintDetailPage: React.FC = () => {
               title={isBn ? `আইডি "${id}" এর কোনো অভিযোগ নেই` : `No Complaint Found with ID: "${id}"`}
               description={
                 isBn
-                  ? 'এই অভিযোগটি মুছে ফেলা হয়েছে অথবা ভুল অভিযোগ আইডি প্রবেশ করানো হয়েছে।'
+                  ? 'এই আইডির অভিযোগটি পাওয়া যায়নি। অভিযোগটি মুছে ফেলা হয়েছে অথবা আর্কাইভ করা হয়েছে।'
                   : 'The requested complaint does not exist in the platform registry or has been archived.'
               }
               icon={FileQuestion}

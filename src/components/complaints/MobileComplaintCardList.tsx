@@ -118,7 +118,7 @@ export const MobileComplaintCardList: React.FC<MobileComplaintCardListProps> = (
             labelBn: complaint.status,
           };
 
-          const title = isBn ? complaint.titleBn : complaint.titleEn;
+          const title = (isBn ? complaint.titleBn : complaint.titleEn) || complaint.titleEn || complaint.titleBn || complaint.id;
           const location = isBn ? complaint.location.addressBn : complaint.location.addressEn;
           const category = isBn ? complaint.categoryBn : complaint.categoryEn;
 
@@ -239,10 +239,10 @@ export const MobileComplaintCardList: React.FC<MobileComplaintCardListProps> = (
             {/* Title & Description */}
             <div className="space-y-1.5">
               <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                {isBn ? selectedComplaint.titleBn : selectedComplaint.titleEn}
+                {(isBn ? selectedComplaint.titleBn : selectedComplaint.titleEn) || selectedComplaint.titleEn || selectedComplaint.titleBn || selectedComplaint.id}
               </h4>
               <p className="text-slate-600 dark:text-slate-300 leading-relaxed bg-slate-50/70 dark:bg-slate-800/40 p-3 rounded-lg border border-slate-100 dark:border-slate-800">
-                {isBn ? selectedComplaint.descriptionBn : selectedComplaint.descriptionEn}
+                {(isBn ? selectedComplaint.descriptionBn : selectedComplaint.descriptionEn) || selectedComplaint.descriptionEn || selectedComplaint.descriptionBn}
               </p>
             </div>
 
