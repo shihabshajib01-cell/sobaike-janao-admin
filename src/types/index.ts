@@ -7,4 +7,5 @@ export * from './LocationActivity';
 export * from './Role';
 export * from './AdminUser';
 export * from './Notification';
+export * from './AuditLog';
 export * from './api';

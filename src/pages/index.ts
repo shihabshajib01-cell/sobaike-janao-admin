@@ -15,4 +15,5 @@ export * from './Users/CreateUserPage';
 export * from './Users/UserDetailPage';
 export * from './Users/EditUserPage';
 export * from './Notifications/NotificationsPage';
+export * from './ActivityLog/ActivityLogPage';
 export * from './NotFound/NotFoundPage';

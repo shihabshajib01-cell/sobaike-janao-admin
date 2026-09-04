@@ -8,6 +8,7 @@ import {
   MapPinned,
   ShieldCheck,
   Users,
+  History,
 } from 'lucide-react';
 import { TranslationDictionary } from '@/context/LanguageContext';
 
@@ -77,6 +78,13 @@ export const ADMIN_NAVIGATION_ITEMS: RouteItem[] = [
     defaultLabel: 'Roles & Permissions',
     icon: ShieldCheck,
     requiredPermission: 'roles.manage',
+  },
+  {
+    path: '/activity-log',
+    labelKey: 'activityLog',
+    defaultLabel: 'Activity Log',
+    icon: History,
+    requiredPermission: 'audit.view',
   },
 ];
 

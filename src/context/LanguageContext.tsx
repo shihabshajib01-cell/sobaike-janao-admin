@@ -12,6 +12,7 @@ export interface TranslationDictionary {
     locationActivity: string;
     roles: string;
     users: string;
+    activityLog: string;
   };
   header: {
     searchPlaceholder: string;
@@ -327,6 +328,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       locationActivity: 'Location Activity',
       roles: 'Roles & Permissions',
       users: 'User Management',
+      activityLog: 'Activity Log',
     },
     header: {
       searchPlaceholder: 'Search complaints, IDs, wards...',
@@ -641,6 +643,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       locationActivity: 'লোকেশন অ্যাক্টিভিটি',
       roles: 'ভূমিকা ও অনুমতি',
       users: 'ব্যবহারকারী ব্যবস্থাপনা',
+      activityLog: 'কার্যক্রম লগ',
     },
     header: {
       searchPlaceholder: 'অভিযোগ, আইডি, ওয়ার্ড অনুসন্ধান করুন...',

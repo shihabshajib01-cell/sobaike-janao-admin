@@ -31,3 +31,6 @@ export { adminUserApi } from './adminUserApi';
 export * from './notificationApi';
 export { default as notificationApi } from './notificationApi';
 
+export * from './auditLogApi';
+export { auditLogApi } from './auditLogApi';
+
