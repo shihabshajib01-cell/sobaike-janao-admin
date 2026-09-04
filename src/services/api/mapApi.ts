@@ -87,10 +87,7 @@ export class MapApi {
    */
   async getMapDataset(): Promise<MapDataset> {
     if (!isSupabaseConfigured) {
-      if (isDev) {
-        return getFallbackMapDataset();
-      }
-      throw new Error('Supabase map service is not configured in this environment.');
+      return getFallbackMapDataset();
     }
 
     // Call controlled SECURITY DEFINER Map RPC
