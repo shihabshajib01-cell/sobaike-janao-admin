@@ -20,7 +20,6 @@ import {
   AdminUsersListResponse,
   AdminUserQueryParams,
   AdminUserApiError,
-  DeleteAdminUserResponse,
 } from '@/types/AdminUser';
 import { CANONICAL_PERMISSIONS } from '@/services/auth/permissionService';
 
@@ -28,7 +27,14 @@ function assertAdminUserApiConfigured(): 'configured' | 'dev_fallback' {
   if (isSupabaseConfigured) {
     return 'configured';
   }
-  return 'dev_fallback';
+  const isDev = Boolean(typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV);
+  if (isDev) {
+    return 'dev_fallback';
+  }
+  throw new AdminUserApiError(
+    'Supabase user management is not configured in this environment.',
+    'CONFIG_ERROR'
+  );
 }
 
 // ==============================================================================
@@ -374,91 +380,5 @@ export const adminUserApi = {
     }
 
     return { success: true, user_id: input.user_id };
-  },
-
-  /**
-   * Delete an administrative user account permanently
-   * Enforces: caller must have admin_users.manage, cannot delete Super Admin, cannot delete self,
-   * delegation ceiling check, and atomic audit logging.
-   */
-  async deleteUser(userId: string): Promise<DeleteAdminUserResponse> {
-    const mode = assertAdminUserApiConfigured();
-
-    if (mode === 'dev_fallback') {
-      const idx = inMemoryUsers.findIndex((u) => u.user_id === userId);
-      if (idx === -1) {
-        throw new AdminUserApiError('Administrator account not found.', 'P0002', 404);
-      }
-
-      if (inMemoryUsers[idx].is_super_admin) {
-        throw new AdminUserApiError(
-          'Protected system account: Super Administrator cannot be deleted.',
-          '42501',
-          403
-        );
-      }
-
-      const deleted = inMemoryUsers.splice(idx, 1)[0];
-      return {
-        success: true,
-        deleted_user_id: userId,
-        email: deleted.email,
-        display_name: deleted.display_name,
-      };
-    }
-
-    // Call Supabase Edge Function 'admin-delete-user'
-    const { data, error } = await supabase.functions.invoke('admin-delete-user', {
-      body: { user_id: userId },
-    });
-
-    if (error) {
-      console.warn('Edge Function admin-delete-user invocation error, checking response context or falling back:', error);
-      let message = error.message || 'Failed to delete user.';
-      let code: string | undefined;
-
-      // Extract error response body if available from Edge Function
-      if (error && typeof error === 'object' && 'context' in error) {
-        const ctx = (error as { context?: { json?: () => Promise<{ error?: string; code?: string }> } }).context;
-        if (ctx && typeof ctx.json === 'function') {
-          try {
-            const body = await ctx.json();
-            if (body?.error) message = body.error;
-            if (body?.code) code = body.code;
-          } catch {
-            // Ignore parse failure
-          }
-        }
-      }
-
-      // If error is an explicit business rejection from the Edge Function, throw it
-      if (code && code !== 'CONFIG_ERROR' && code !== 'INTERNAL_ERROR') {
-        throw new AdminUserApiError(message, code);
-      }
-
-      // If Edge Function is unavailable or missing configuration, fallback directly to the authoritative RPC
-      const { data: rpcData, error: rpcError } = await supabase.rpc('admin_delete_user', {
-        p_target_user_id: userId,
-      });
-
-      if (rpcError) {
-        console.error('admin_delete_user RPC fallback failed:', rpcError);
-        throw new AdminUserApiError(rpcError.message, rpcError.code, rpcError.details);
-      }
-
-      const res = rpcData as { deleted_user_id?: string; email?: string; display_name?: string | null };
-      return {
-        success: true,
-        deleted_user_id: res?.deleted_user_id || userId,
-        email: res?.email,
-        display_name: res?.display_name,
-      };
-    }
-
-    if (!data || !data.success) {
-      throw new AdminUserApiError(data?.error || 'Failed to delete user.', data?.code);
-    }
-
-    return data as DeleteAdminUserResponse;
   },
 };

@@ -8,7 +8,6 @@ import { adminUserApi } from '@/services/api/adminUserApi';
 import { AdminUserListItem, UserFilterRole } from '@/types/AdminUser';
 import { UsersTable } from '@/components/users/UsersTable';
 import { UserLoadingSkeleton } from '@/components/users/UserLoadingSkeleton';
-import { DeleteUserModal, DeleteUserTarget } from '@/components/users/DeleteUserModal';
 import {
   UserPlus,
   RefreshCw,
@@ -73,7 +72,7 @@ export const UsersPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t, language } = useLanguage();
-  const { hasPermission, user: currentUser } = useAuth();
+  const { hasPermission } = useAuth();
 
   const canManageUsers = hasPermission('admin_users.manage');
 
@@ -82,10 +81,6 @@ export const UsersPage: React.FC = () => {
   const [roles, setRoles] = useState<UserFilterRole[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Deletion Modal State
-  const [deleteTarget, setDeleteTarget] = useState<DeleteUserTarget | null>(null);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
 
   // Pagination State
   const [page, setPage] = useState<number>(1);
@@ -97,12 +92,11 @@ export const UsersPage: React.FC = () => {
   const [selectedRole, setSelectedRole] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'inactive'>('all');
 
-  // Success Banner from Navigation state (e.g., after Create, Edit, or Delete)
+  // Success Banner from Navigation state (e.g., after Create or Edit)
   const [successMessage, setSuccessMessage] = useState<string | null>(() => {
     const state = location.state as {
       userCreatedSuccess?: boolean;
       userUpdatedSuccess?: boolean;
-      userDeletedSuccess?: boolean;
       userName?: string;
     } | null;
 
@@ -116,22 +110,12 @@ export const UsersPage: React.FC = () => {
         ? `${state.userName}: ${t.users.userUpdatedSuccess}`
         : t.users.userUpdatedSuccess;
     }
-    if (state?.userDeletedSuccess) {
-      return state.userName
-        ? `${state.userName}: ${t.users.deleteUserSuccess}`
-        : t.users.deleteUserSuccess;
-    }
     return null;
   });
 
   // Clear location state after reading
   useEffect(() => {
-    const state = location.state as {
-      userCreatedSuccess?: boolean;
-      userUpdatedSuccess?: boolean;
-      userDeletedSuccess?: boolean;
-    } | null;
-    if (state && (state.userCreatedSuccess || state.userUpdatedSuccess || state.userDeletedSuccess)) {
+    if (location.state && ((location.state as { userCreatedSuccess?: boolean; userUpdatedSuccess?: boolean }).userCreatedSuccess || (location.state as { userCreatedSuccess?: boolean; userUpdatedSuccess?: boolean }).userUpdatedSuccess)) {
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
@@ -208,17 +192,6 @@ export const UsersPage: React.FC = () => {
   const handleStatusChange = (val: 'all' | 'active' | 'inactive') => {
     setSelectedStatus(val);
     setPage(1);
-  };
-
-  const handleDeleteUser = async (userId: string) => {
-    const res = await adminUserApi.deleteUser(userId);
-    const targetName = res.display_name || res.email || deleteTarget?.display_name || deleteTarget?.email;
-    setSuccessMessage(
-      targetName
-        ? `${targetName}: ${t.users.deleteUserSuccess}`
-        : t.users.deleteUserSuccess
-    );
-    loadUsers();
   };
 
   const totalPages = Math.ceil(totalCount / pageSize);
@@ -379,20 +352,8 @@ export const UsersPage: React.FC = () => {
           <UsersTable
             users={users}
             canManage={canManageUsers}
-            currentUserId={currentUser?.id}
             onView={(id) => navigate(`/users/${id}`)}
             onEdit={(id) => navigate(`/users/${id}/edit`)}
-            onDelete={(target) => {
-              setDeleteTarget({
-                user_id: target.user_id,
-                email: target.email,
-                display_name: target.display_name,
-                role_name_en: target.role_name_en,
-                role_name_bn: target.role_name_bn,
-                is_super_admin: target.is_super_admin,
-              });
-              setIsDeleteModalOpen(true);
-            }}
           />
 
           {/* Pagination Controls */}
@@ -472,17 +433,6 @@ export const UsersPage: React.FC = () => {
           )}
         </div>
       )}
-
-      {/* Delete Administrator Confirmation Modal */}
-      <DeleteUserModal
-        isOpen={isDeleteModalOpen}
-        user={deleteTarget}
-        onClose={() => {
-          setIsDeleteModalOpen(false);
-          setDeleteTarget(null);
-        }}
-        onConfirm={handleDeleteUser}
-      />
     </div>
   );
 };

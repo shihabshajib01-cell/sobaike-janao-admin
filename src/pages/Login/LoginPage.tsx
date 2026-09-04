@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Shield, ShieldCheck, Lock, Mail, AlertCircle, ArrowRight, CheckCircle2, Moon, Sun } from 'lucide-react';
+import { Shield, Lock, Mail, AlertCircle, ArrowRight, CheckCircle2, Moon, Sun } from 'lucide-react';
 import { Button, Input, Checkbox } from '@/components/ui';
 import { authService } from '@/services/auth/authService';
 import { useAuth } from '@/context/AuthContext';
@@ -21,15 +21,12 @@ export const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
 
-  // Initialize remembered email on mount if existing or demo credentials if unconfigured
+  // Initialize remembered email on mount if existing
   useEffect(() => {
     const remembered = authService.getRememberedUser();
     if (remembered) {
       setEmail(remembered);
       setRememberMe(true);
-    } else if (!authService.isConfigured()) {
-      setEmail('admin@sobaike.org');
-      setPassword('admin123');
     }
   }, []);
 
@@ -189,25 +186,6 @@ export const LoginPage: React.FC = () => {
                 <span>
                   {language === 'bn' ? 'সফলভাবে লগইন হয়েছে! ড্যাশবোর্ডে নিয়ে যাওয়া হচ্ছে...' : 'Authenticated successfully! Redirecting to dashboard...'}
                 </span>
-              </div>
-            )}
-
-            {/* Unconfigured Demo Mode Notice */}
-            {!authService.isConfigured() && (
-              <div className="mb-5 p-3 rounded-lg bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 text-xs text-sky-800 dark:text-sky-300">
-                <div className="flex items-start gap-2">
-                  <ShieldCheck className="w-4 h-4 shrink-0 text-sky-600 dark:text-sky-400 mt-0.5" />
-                  <div>
-                    <span className="font-semibold block mb-0.5">
-                      {language === 'bn' ? 'প্রিভিউ / ডেমো মোড সক্রিয়' : 'Preview / Demo Mode Active'}
-                    </span>
-                    <span className="leading-relaxed block">
-                      {language === 'bn'
-                        ? 'সুপাবেস শংসাপত্র সংযুক্ত না থাকলে আপনি সরাসরি ডিফল্ট প্রশাসক অ্যাকাউন্ট ব্যবহার করে প্যানেলটি অন্বেষণ করতে পারবেন।'
-                        : 'Supabase credentials are not yet connected. You can sign in using the default demo admin credentials below.'}
-                    </span>
-                  </div>
-                </div>
               </div>
             )}
 

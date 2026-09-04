@@ -115,7 +115,7 @@ export const ActivityLogFilters: React.FC<ActivityLogFiltersProps> = ({
 
         {/* Date Filter & Clear Controls */}
         <div className="flex flex-wrap 2xl:flex-nowrap items-center gap-2 min-w-0">
-          <div className="relative flex-1 min-w-[115px]">
+          <div className="relative flex-1 min-w-[120px]">
             <Calendar className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               id="activity-date-from-input"
@@ -127,7 +127,7 @@ export const ActivityLogFilters: React.FC<ActivityLogFiltersProps> = ({
             />
           </div>
 
-          <div className="relative flex-1 min-w-[115px]">
+          <div className="relative flex-1 min-w-[120px]">
             <Calendar className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               id="activity-date-to-input"
@@ -148,7 +148,7 @@ export const ActivityLogFilters: React.FC<ActivityLogFiltersProps> = ({
               title={language === 'bn' ? 'ফিল্টার রিসেট করুন' : 'Clear filters'}
             >
               <X className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline xl:hidden">{language === 'bn' ? 'রিসেট' : 'Clear'}</span>
+              <span className="hidden sm:inline xl:hidden 2xl:inline">{language === 'bn' ? 'রিসেট' : 'Clear'}</span>
             </button>
           )}
         </div>

@@ -13,26 +13,21 @@ import {
   CheckCircle2,
   XCircle,
   Mail,
-  Trash2,
 } from 'lucide-react';
 import { formatDate } from '@/utils';
 
 export interface UsersTableProps {
   users: AdminUserListItem[];
   canManage: boolean;
-  currentUserId?: string;
   onView: (userId: string) => void;
   onEdit: (userId: string) => void;
-  onDelete?: (user: AdminUserListItem) => void;
 }
 
 export const UsersTable: React.FC<UsersTableProps> = ({
   users,
   canManage,
-  currentUserId,
   onView,
   onEdit,
-  onDelete,
 }) => {
   const { t, language } = useLanguage();
   const isBn = language === 'bn';
@@ -194,42 +189,17 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                             {t.users.restrictedBadge}
                           </div>
                         ) : (
-                          <>
-                            <Button
-                              id={`btn-edit-user-${user.user_id}`}
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => onEdit(user.user_id)}
-                              className="h-8 px-2.5 text-xs"
-                              title={t.users.editUser}
-                            >
-                              <Edit2 className="w-3.5 h-3.5 mr-1" />
-                              {t.users.editUser}
-                            </Button>
-                            {onDelete && (
-                              user.user_id === currentUserId ? (
-                                <div
-                                  className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-slate-400 dark:text-slate-500 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 cursor-not-allowed"
-                                  title={t.users.cannotDeleteSelf}
-                                >
-                                  <UserIcon className="w-3 h-3" />
-                                  {t.users.selfAccountBadge}
-                                </div>
-                              ) : (
-                                <Button
-                                  id={`btn-delete-user-${user.user_id}`}
-                                  variant="danger"
-                                  size="sm"
-                                  onClick={() => onDelete(user)}
-                                  className="h-8 px-2 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40 border border-rose-200/60 dark:border-rose-900/40"
-                                  title={t.users.deleteUser}
-                                >
-                                  <Trash2 className="w-3.5 h-3.5 mr-1" />
-                                  {t.users.deleteUser}
-                                </Button>
-                              )
-                            )}
-                          </>
+                          <Button
+                            id={`btn-edit-user-${user.user_id}`}
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => onEdit(user.user_id)}
+                            className="h-8 px-2.5 text-xs"
+                            title={t.users.editUser}
+                          >
+                            <Edit2 className="w-3.5 h-3.5 mr-1" />
+                            {t.users.editUser}
+                          </Button>
                         )
                       )}
                     </div>
@@ -335,41 +305,15 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                       {t.users.restrictedBadge}
                     </span>
                   ) : (
-                    <>
-                      <Button
-                        id={`btn-mobile-edit-user-${user.user_id}`}
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => onEdit(user.user_id)}
-                        className="h-8 px-3 text-xs"
-                      >
-                        <Edit2 className="w-3.5 h-3.5 mr-1" />
-                        {t.users.editUser}
-                      </Button>
-                      {onDelete && (
-                        user.user_id === currentUserId ? (
-                          <span
-                            className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-slate-400 dark:text-slate-500 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 cursor-not-allowed"
-                            title={t.users.cannotDeleteSelf}
-                          >
-                            <UserIcon className="w-3 h-3" />
-                            {t.users.selfAccountBadge}
-                          </span>
-                        ) : (
-                          <Button
-                            id={`btn-mobile-delete-user-${user.user_id}`}
-                            variant="danger"
-                            size="sm"
-                            onClick={() => onDelete(user)}
-                            className="h-8 px-2.5 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40 border border-rose-200/60 dark:border-rose-900/40"
-                            title={t.users.deleteUser}
-                          >
-                            <Trash2 className="w-3.5 h-3.5 mr-1" />
-                            {t.users.deleteUser}
-                          </Button>
-                        )
-                      )}
-                    </>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => onEdit(user.user_id)}
+                      className="h-8 px-3 text-xs"
+                    >
+                      <Edit2 className="w-3.5 h-3.5 mr-1" />
+                      {t.users.editUser}
+                    </Button>
                   )
                 )}
               </div>
