@@ -66,8 +66,8 @@ export interface AdminNotification {
   target_label: string | null;
   title_en: string;
   title_bn: string;
-  body_en: string;
-  body_bn: string;
+  body_en: string | null;
+  body_bn: string | null;
   metadata: Record<string, unknown> | null;
   route: string | null;
   created_at: string;

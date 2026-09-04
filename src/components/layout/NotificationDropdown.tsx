@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Check, ArrowRight, RotateCcw, CheckCheck } from 'lucide-react';
+import { Bell, Check, ArrowRight, RotateCcw, CheckCheck, AlertCircle } from 'lucide-react';
 import { useNotifications } from '@/context/NotificationContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { cn } from '@/utils';
@@ -27,6 +27,8 @@ export const NotificationDropdown: React.FC = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [isMarkingAll, setIsMarkingAll] = useState<boolean>(false);
+  const [itemErrorIds, setItemErrorIds] = useState<Set<string>>(new Set());
+  const [markingItemIds, setMarkingItemIds] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Close dropdown on click outside
@@ -34,6 +36,7 @@ export const NotificationDropdown: React.FC = () => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
+        setItemErrorIds(new Set());
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -45,6 +48,7 @@ export const NotificationDropdown: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
         setIsOpen(false);
+        setItemErrorIds(new Set());
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -56,6 +60,7 @@ export const NotificationDropdown: React.FC = () => {
     setIsOpen((prev) => {
       const next = !prev;
       if (next) {
+        setItemErrorIds(new Set());
         refreshRecent();
       }
       return next;
@@ -64,25 +69,63 @@ export const NotificationDropdown: React.FC = () => {
 
   // Notification item click: Mark read, validate route, navigate safely or stay
   const handleItemClick = async (notification: AdminNotification) => {
-    // 1. Mark it read
-    if (!notification.read_at) {
-      try {
-        const success = await markAsRead(notification.id);
-        if (!success) {
-          console.warn('Failed to mark notification as read:', notification.id);
-        }
-      } catch (err) {
-        console.warn('Failed to mark notification as read:', err);
+    // If already in-flight marking this item, prevent duplicate calls
+    if (markingItemIds.has(notification.id)) return;
+
+    // 1. If already read, can navigate normally
+    if (notification.read_at) {
+      setItemErrorIds((prev) => {
+        const next = new Set(prev);
+        next.delete(notification.id);
+        return next;
+      });
+      const route = notification.route;
+      if (isSafeNotificationRoute(route)) {
+        setIsOpen(false);
+        navigate(route!);
       }
+      return;
     }
 
-    // 2. Validate route before navigating
+    // 2. Unread notification: must successfully mark as read first
+    setMarkingItemIds((prev) => new Set(prev).add(notification.id));
+    setItemErrorIds((prev) => {
+      const next = new Set(prev);
+      next.delete(notification.id);
+      return next;
+    });
+
+    let success = false;
+    try {
+      success = await markAsRead(notification.id);
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err);
+      success = false;
+    } finally {
+      setMarkingItemIds((prev) => {
+        const next = new Set(prev);
+        next.delete(notification.id);
+        return next;
+      });
+    }
+
+    // If success === false:
+    // - keep the notification unread
+    // - show a small visible error/retry state inside the dropdown
+    // - do not silently console.warn only
+    // - do not pretend the action succeeded
+    // - do not navigate away until the mark-read attempt succeeds
+    if (!success) {
+      setItemErrorIds((prev) => new Set(prev).add(notification.id));
+      return;
+    }
+
+    // 3. Mark read succeeded! Navigate safely if route exists
     const route = notification.route;
     if (isSafeNotificationRoute(route)) {
       setIsOpen(false);
       navigate(route!);
     }
-    // 3. Otherwise remain in notification UI without breaking navigation
   };
 
   // Mark all as read action
@@ -238,9 +281,9 @@ export const NotificationDropdown: React.FC = () => {
               const meta = getNotificationVisualMeta(item.event_key, item.category, item.severity, item.layer);
               const IconComponent = meta.icon;
               const title =
-                language === 'bn' ? item.title_bn || item.title_en : item.title_en;
+                language === 'bn' ? item.title_bn || item.title_en : item.title_en || item.title_bn;
               const body =
-                language === 'bn' ? item.body_bn || item.body_en : item.body_en;
+                language === 'bn' ? item.body_bn || item.body_en : item.body_en || item.body_bn;
               const relativeTime = formatRelativeTime(item.created_at, language);
               const hasRoute = isSafeNotificationRoute(item.route);
 
@@ -292,9 +335,39 @@ export const NotificationDropdown: React.FC = () => {
                       </span>
                     </div>
 
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed break-words">
-                      {body}
-                    </p>
+                    {body && (
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed break-words">
+                        {body}
+                      </p>
+                    )}
+
+                    {/* Mark-Read Error & Retry State */}
+                    {itemErrorIds.has(item.id) && (
+                      <div
+                        id={`notification-mark-read-error-${item.id}`}
+                        className="mt-2 p-1.5 rounded bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900/60 flex items-center justify-between gap-2 text-left"
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-center gap-1.5 text-[11px] text-rose-700 dark:text-rose-300 font-medium min-w-0">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600 dark:text-rose-400" />
+                          <span className="truncate">{t.notifications.errorMarkRead}</span>
+                        </div>
+                        <button
+                          type="button"
+                          id={`notification-retry-mark-read-${item.id}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleItemClick(item);
+                          }}
+                          disabled={markingItemIds.has(item.id)}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold text-rose-700 dark:text-rose-200 bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-800 rounded hover:bg-rose-50 dark:hover:bg-slate-800 transition-colors shrink-0 disabled:opacity-50"
+                        >
+                          <RotateCcw className={cn('w-2.5 h-2.5', markingItemIds.has(item.id) && 'animate-spin')} />
+                          <span>{t.notifications.retry}</span>
+                        </button>
+                      </div>
+                    )}
 
                     {/* Secondary Route Hint & Status */}
                     <div className="flex items-center gap-2 mt-1.5">

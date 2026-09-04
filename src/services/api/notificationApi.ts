@@ -86,13 +86,13 @@ const FALLBACK_NOTIFICATIONS: AdminNotification[] = [
     actor_user_id: null,
     actor_display_name: 'Superadmin',
     target_type: 'admin_user',
-    target_id: 'u-operator-01',
+    target_id: 'a0000001-0000-4000-8000-000000000001',
     target_label: 'Field Moderator',
     title_en: 'Administrative role assignment modified',
     title_bn: 'প্রশাসনিক ভূমিকা বরাদ্দ পরিবর্তন করা হয়েছে',
     body_en: 'Your administrative role was elevated to Senior Moderator.',
     body_bn: 'আপনার প্রশাসনিক ভূমিকা সিনিয়র মডারেটরে উন্নীত করা হয়েছে।',
-    metadata: { user_id: 'u-operator-01' },
+    metadata: { user_id: 'a0000001-0000-4000-8000-000000000001' },
     route: '/users',
     created_at: new Date(Date.now() - 70 * 60 * 1000).toISOString(),
     read_at: null,
@@ -152,13 +152,13 @@ const FALLBACK_NOTIFICATIONS: AdminNotification[] = [
     actor_user_id: null,
     actor_display_name: 'System Admin',
     target_type: 'admin_user',
-    target_id: 'u-field-99',
+    target_id: 'a0000099-0000-4000-8000-000000000099',
     target_label: 'Zonal Inspector',
     title_en: 'New administrator account provisioned',
     title_bn: 'নতুন প্রশাসক অ্যাকাউন্ট যুক্ত করা হয়েছে',
     body_en: 'Administrator account for Zonal Inspector was successfully created.',
     body_bn: 'জোনাল পরিদর্শকের জন্য নতুন প্রশাসক অ্যাকাউন্ট সফলভাবে তৈরি করা হয়েছে।',
-    metadata: { user_id: 'u-field-99' },
+    metadata: { user_id: 'a0000099-0000-4000-8000-000000000099' },
     route: '/users',
     created_at: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
     read_at: new Date(Date.now() - 20 * 3600 * 1000).toISOString(),
@@ -174,13 +174,13 @@ const FALLBACK_NOTIFICATIONS: AdminNotification[] = [
     actor_user_id: null,
     actor_display_name: 'Superadmin',
     target_type: 'admin_user',
-    target_id: 'u-field-99',
+    target_id: 'a0000099-0000-4000-8000-000000000099',
     target_label: 'Zonal Inspector',
     title_en: 'Administrator activated',
     title_bn: 'প্রশাসক সক্রিয় করা হয়েছে',
     body_en: 'Administrator account for Zonal Inspector is now active.',
     body_bn: 'জোনাল পরিদর্শকের প্রশাসক অ্যাকাউন্ট এখন সক্রিয়।',
-    metadata: { user_id: 'u-field-99' },
+    metadata: { user_id: 'a0000099-0000-4000-8000-000000000099' },
     route: '/users',
     created_at: new Date(Date.now() - 28 * 3600 * 1000).toISOString(),
     read_at: null,
@@ -283,12 +283,9 @@ export const notificationApi = {
     let hasMoreSecurityAfterCollection = false;
 
     const BACKEND_BATCH_SIZE = 50; // max allowed by RPC
-    let iterations = 0;
-    const MAX_ITERATIONS = 20; // safety ceiling: up to 1000 rows evaluated per fetch
+    const visitedCursors = new Set<string>();
 
-    while (collected.length < limit && backendHasMore && iterations < MAX_ITERATIONS) {
-      iterations++;
-
+    while (collected.length < limit && backendHasMore) {
       const { data, error } = await supabase.rpc('admin_list_notifications', {
         p_limit: BACKEND_BATCH_SIZE,
         p_before_created_at: cursorCreatedAt,
@@ -324,8 +321,13 @@ export const notificationApi = {
 
           if (collected.length === limit) {
             // Target limit reached. Check if more rows exist in this batch or in next batches
-            const hasMoreInThisBatch = i < batch.length - 1;
-            hasMoreSecurityAfterCollection = hasMoreInThisBatch || !isBatchExhausted;
+            if (!isBatchExhausted) {
+              hasMoreSecurityAfterCollection = true;
+            } else {
+              hasMoreSecurityAfterCollection = batch
+                .slice(i + 1)
+                .some((remainingItem) => isSecurityNotification(remainingItem));
+            }
             break;
           }
         }
@@ -335,8 +337,28 @@ export const notificationApi = {
       // update cursor to the last scanned item of this batch to fetch the next batch
       if (collected.length < limit && backendHasMore) {
         const lastBatchItem = batch[batch.length - 1];
-        cursorCreatedAt = lastBatchItem.created_at;
-        cursorId = lastBatchItem.id;
+        const nextCursorCreatedAt = lastBatchItem.created_at;
+        const nextCursorId = lastBatchItem.id;
+
+        // Detect cursor stall
+        if (nextCursorCreatedAt === cursorCreatedAt && nextCursorId === cursorId) {
+          throw new NotificationApiError(
+            'Security pagination failed: cursor did not advance',
+            'CURSOR_STALLED'
+          );
+        }
+
+        const cursorKey = `${nextCursorCreatedAt}_${nextCursorId}`;
+        if (visitedCursors.has(cursorKey)) {
+          throw new NotificationApiError(
+            'Security pagination failed: cursor cycle detected',
+            'CURSOR_CYCLE'
+          );
+        }
+        visitedCursors.add(cursorKey);
+
+        cursorCreatedAt = nextCursorCreatedAt;
+        cursorId = nextCursorId;
       }
     }
 

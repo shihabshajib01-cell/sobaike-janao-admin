@@ -272,28 +272,30 @@ export const NotificationsPage: React.FC = () => {
     if (!notification.read_at) {
       try {
         const success = await markAsRead(notification.id);
-        if (isMountedRef.current) {
-          if (success) {
-            if (activeFilter === 'unread') {
-              setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
-            } else {
-              setNotifications((prev) =>
-                prev.map((n) =>
-                  n.id === notification.id
-                    ? { ...n, read_at: new Date().toISOString() }
-                    : n
-                )
-              );
-            }
+        if (!isMountedRef.current) return;
+
+        if (success) {
+          if (activeFilter === 'unread') {
+            setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
           } else {
-            setActionError(t.notifications.errorMarkRead);
+            setNotifications((prev) =>
+              prev.map((n) =>
+                n.id === notification.id
+                  ? { ...n, read_at: new Date().toISOString() }
+                  : n
+              )
+            );
           }
+        } else {
+          setActionError(t.notifications.errorMarkRead);
+          return;
         }
       } catch (err) {
-        console.warn('Silent mark-read error on navigate:', err);
+        console.error('Mark-read error on navigate:', err);
         if (isMountedRef.current) {
           setActionError(t.notifications.errorMarkRead);
         }
+        return;
       }
     }
 
