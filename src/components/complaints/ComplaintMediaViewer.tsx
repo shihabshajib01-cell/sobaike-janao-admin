@@ -100,7 +100,7 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
               </Badge>
             </div>
           ) : error ? (
-            /* 1. Real Evidence Error State */
+            /* 1. Error State when evidence fails to load */
             <div className="flex flex-col items-center justify-center p-8 rounded-lg border border-amber-200 dark:border-amber-900/40 text-center bg-amber-50/50 dark:bg-amber-950/20 space-y-3">
               <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
                 <AlertCircle className="w-6 h-6 text-amber-600 dark:text-amber-400" />
@@ -129,18 +129,18 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
               )}
             </div>
           ) : !hasMedia ? (
-            /* 2. Empty / No Evidence State */
+            /* 2. Empty / No Media State */
             <div className="flex flex-col items-center justify-center p-8 rounded-lg border-2 border-dashed border-slate-200 dark:border-slate-800 text-center bg-slate-50/50 dark:bg-slate-900/40">
               <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-2">
                 <ImageIcon className="w-6 h-6 text-slate-400" />
               </div>
               <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                {isBn ? 'কোনো প্রমাণ সংযুক্ত নেই' : 'No evidence attached'}
+                {isBn ? 'কোনো ছবি বা ডকুমেন্ট সংযুক্ত নেই' : 'No Media Attached'}
               </p>
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm">
                 {isBn
-                  ? 'এই অভিযোগের সঙ্গে কোনো ফাইল বা মিডিয়া জমা দেওয়া হয়নি।'
-                  : 'No files or media were submitted with this complaint.'}
+                  ? 'নাগরিক এই অভিযোগটির সাথে কোনো ডিজিটাল ছবি বা প্রমাণ ফাইল যুক্ত করেননি।'
+                  : 'Citizen submitted this complaint with textual description only.'}
               </p>
             </div>
           ) : (

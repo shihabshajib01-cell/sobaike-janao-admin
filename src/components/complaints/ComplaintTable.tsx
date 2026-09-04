@@ -122,7 +122,7 @@ export const ComplaintTable: React.FC<ComplaintTableProps> = ({
 
             const category = isBn ? c.categoryBn : c.categoryEn;
             const subcategory = isBn ? c.subcategoryBn : c.subcategoryEn;
-            const title = (isBn ? c.titleBn : c.titleEn) || c.titleEn || c.titleBn || c.id;
+            const title = isBn ? c.titleBn : c.titleEn;
             const location = isBn ? c.location.addressBn : c.location.addressEn;
 
             return (

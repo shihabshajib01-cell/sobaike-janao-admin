@@ -204,14 +204,6 @@ export async function getDistinctLocations(): Promise<string[]> {
 /**
  * Map raw Supabase row to domain Complaint model
  */
-/**
- * Helper to detect Bengali Unicode characters
- */
-export function containsBengali(text?: string | null): boolean {
-  if (!text) return false;
-  return /[\u0980-\u09FF]/.test(text);
-}
-
 export function mapSupabaseRowToComplaint(
   row: SupabaseComplaintRow,
   segmentsMap: Map<string, SupabaseSegment>,
@@ -222,55 +214,13 @@ export function mapSupabaseRowToComplaint(
     ? subcategoriesMap.get(row.subcategory_id)
     : undefined;
 
-  // Title mapping - preserve single language submissions without duplicating fallback content
-  const rawTitle = row.title?.trim() || '';
-  const rawTitleEn = row.title_en?.trim() || '';
+  // Title mapping
+  const titleBn = row.title?.trim() || row.title_en?.trim() || row.id;
+  const titleEn = row.title_en?.trim() || row.title?.trim() || row.id;
 
-  let titleBn = '';
-  let titleEn = '';
-
-  if (rawTitleEn && rawTitle && rawTitleEn !== rawTitle) {
-    titleEn = rawTitleEn;
-    titleBn = rawTitle;
-  } else if (rawTitleEn && !rawTitle) {
-    titleEn = rawTitleEn;
-    titleBn = '';
-  } else if (rawTitle) {
-    if (containsBengali(rawTitle)) {
-      titleBn = rawTitle;
-      titleEn = '';
-    } else {
-      titleEn = rawTitle;
-      titleBn = '';
-    }
-  } else {
-    // If no title provided, fallback to ID
-    titleBn = row.id;
-    titleEn = row.id;
-  }
-
-  // Description mapping - preserve single language submissions without duplicating fallback content
-  const rawDesc = row.description?.trim() || '';
-  const rawDescEn = row.description_en?.trim() || '';
-
-  let descriptionBn = '';
-  let descriptionEn = '';
-
-  if (rawDescEn && rawDesc && rawDescEn !== rawDesc) {
-    descriptionEn = rawDescEn;
-    descriptionBn = rawDesc;
-  } else if (rawDescEn && !rawDesc) {
-    descriptionEn = rawDescEn;
-    descriptionBn = '';
-  } else if (rawDesc) {
-    if (containsBengali(rawDesc)) {
-      descriptionBn = rawDesc;
-      descriptionEn = '';
-    } else {
-      descriptionEn = rawDesc;
-      descriptionBn = '';
-    }
-  }
+  // Description mapping
+  const descriptionBn = row.description?.trim() || row.description_en?.trim() || '';
+  const descriptionEn = row.description_en?.trim() || row.description?.trim() || '';
 
   // Taxonomy mapping
   const categoryId = row.segment_id || '';
@@ -368,12 +318,6 @@ export function mapSupabaseRowToComplaint(
     citizenName,
     citizenPhone,
     isAnonymous,
-    hasSupportingInfo: Boolean(
-      row.has_supporting_info ||
-      (Array.isArray(row.evidence_types) && row.evidence_types.length > 0)
-    ),
-    evidenceTypes: Array.isArray(row.evidence_types) ? row.evidence_types : [],
-    evidenceDescription: row.evidence_description || undefined,
     upvotesCount: 0,
     commentsCount: 0,
     createdAt,
@@ -713,28 +657,31 @@ export const supabaseComplaintService = {
     complaintId: string
   ): Promise<{ media: ComplaintMedia[]; error?: string | null }> {
     try {
-      // 1. Call secure RPC admin_get_complaint_evidence
+      let evidenceRows: SupabaseComplaintEvidenceRow[] = [];
+
+      // 1. First attempt secure RPC admin_get_complaint_evidence
       const { data: rpcRows, error: rpcError } = await supabase.rpc('admin_get_complaint_evidence', {
         p_complaint_id: complaintId,
       });
 
-      if (rpcError) {
-        console.error(`Error calling admin_get_complaint_evidence for ${complaintId}:`, rpcError);
-        if (rpcError.code === '42501' || rpcError.message?.includes('42501')) {
+      if (!rpcError && Array.isArray(rpcRows)) {
+        evidenceRows = rpcRows as SupabaseComplaintEvidenceRow[];
+      } else {
+        if (rpcError && (rpcError.code === '42501' || rpcError.message?.includes('42501'))) {
           return {
             media: [],
             error: 'You do not have permission to view private complaint evidence.',
           };
         }
+
+        console.warn(`Error loading evidence via RPC for complaint ${complaintId}:`, rpcError?.message);
         return {
           media: [],
-          error: rpcError.message || 'Evidence images could not be loaded. Please retry.',
+          error: 'Evidence images could not be loaded. Please retry.',
         };
       }
 
-      const evidenceRows = (Array.isArray(rpcRows) ? rpcRows : []) as SupabaseComplaintEvidenceRow[];
-
-      if (evidenceRows.length === 0) {
+      if (!evidenceRows || evidenceRows.length === 0) {
         return { media: [] };
       }
 

@@ -75,9 +75,6 @@ export interface Complaint {
   assignedDepartment?: string;
   upvotesCount: number;
   commentsCount: number;
-  hasSupportingInfo?: boolean;
-  evidenceTypes?: string[];
-  evidenceDescription?: string;
   versions?: ComplaintVersion[];
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string

@@ -118,7 +118,7 @@ export const MobileComplaintCardList: React.FC<MobileComplaintCardListProps> = (
             labelBn: complaint.status,
           };
 
-          const title = (isBn ? complaint.titleBn : complaint.titleEn) || complaint.titleEn || complaint.titleBn || complaint.id;
+          const title = isBn ? complaint.titleBn : complaint.titleEn;
           const location = isBn ? complaint.location.addressBn : complaint.location.addressEn;
           const category = isBn ? complaint.categoryBn : complaint.categoryEn;
 
@@ -217,7 +217,7 @@ export const MobileComplaintCardList: React.FC<MobileComplaintCardListProps> = (
             <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
               <div>
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">
-                  {isBn ? 'অভিযোগ আইডি' : 'Complaint ID'}
+                  {isBn ? 'ট্র্যাকিং আইডি' : 'Tracking ID'}
                 </span>
                 <span className="font-mono text-sm font-bold text-sky-700 dark:text-sky-400">
                   {selectedComplaint.id}
@@ -239,10 +239,10 @@ export const MobileComplaintCardList: React.FC<MobileComplaintCardListProps> = (
             {/* Title & Description */}
             <div className="space-y-1.5">
               <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                {(isBn ? selectedComplaint.titleBn : selectedComplaint.titleEn) || selectedComplaint.titleEn || selectedComplaint.titleBn || selectedComplaint.id}
+                {isBn ? selectedComplaint.titleBn : selectedComplaint.titleEn}
               </h4>
               <p className="text-slate-600 dark:text-slate-300 leading-relaxed bg-slate-50/70 dark:bg-slate-800/40 p-3 rounded-lg border border-slate-100 dark:border-slate-800">
-                {(isBn ? selectedComplaint.descriptionBn : selectedComplaint.descriptionEn) || selectedComplaint.descriptionEn || selectedComplaint.descriptionBn}
+                {isBn ? selectedComplaint.descriptionBn : selectedComplaint.descriptionEn}
               </p>
             </div>
 
