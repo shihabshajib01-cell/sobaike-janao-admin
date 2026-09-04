@@ -207,11 +207,18 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
               </div>
 
               <div className="space-y-1.5 text-xs">
-                <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
-                  <span className="text-slate-400">{language === 'bn' ? 'কর্তৃপক্ষ:' : 'Actor:'}</span>
-                  <span className="font-medium text-slate-900 dark:text-slate-100 truncate max-w-[200px]">
-                    {actorInfo.primary}
-                  </span>
+                <div className="flex items-start justify-between text-slate-600 dark:text-slate-300">
+                  <span className="text-slate-400 pt-0.5">{language === 'bn' ? 'কর্তৃপক্ষ:' : 'Actor:'}</span>
+                  <div className="text-right max-w-[200px]">
+                    <span className="font-medium text-slate-900 dark:text-slate-100 truncate block">
+                      {actorInfo.primary}
+                    </span>
+                    {actorInfo.secondary && (
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate block">
+                        {actorInfo.secondary}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
