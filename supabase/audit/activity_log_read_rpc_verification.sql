@@ -50,7 +50,8 @@ BEGIN
         p.proname,
         p.prosecdef,
         p.prosrc,
-        p.proconfig
+        p.proconfig,
+        p.proacl
     INTO v_proc_record
     FROM pg_proc p
     JOIN pg_namespace n ON n.oid = p.pronamespace
@@ -80,9 +81,6 @@ BEGIN
     SELECT has_function_privilege('anon', 'public.admin_list_audit_logs(int,int,text,text,text,uuid,timestamptz,timestamptz)', 'EXECUTE')
     INTO v_has_anon_execute;
 
-    SELECT has_function_privilege('public', 'public.admin_list_audit_logs(int,int,text,text,text,uuid,timestamptz,timestamptz)', 'EXECUTE')
-    INTO v_has_public_execute;
-
     IF v_has_auth_execute IS NOT TRUE THEN
         RAISE EXCEPTION 'Static Assertion FAILED: authenticated role must have EXECUTE on admin_list_audit_logs!';
     END IF;
@@ -91,8 +89,33 @@ BEGIN
         RAISE EXCEPTION 'Static Assertion FAILED: anon role must NOT have EXECUTE on admin_list_audit_logs!';
     END IF;
 
+    -- Verify PUBLIC has EXECUTE revoked via ACL catalog inspection (grantee = 0 in aclexplode & routine_privileges)
+    IF v_proc_record.proacl IS NULL THEN
+        RAISE EXCEPTION 'Static Assertion FAILED: admin_list_audit_logs proacl is NULL (default PUBLIC permissions active)!';
+    END IF;
+
+    SELECT EXISTS (
+        SELECT 1
+        FROM aclexplode(v_proc_record.proacl) acl
+        WHERE acl.grantee = 0
+          AND acl.privilege_type = 'EXECUTE'
+    ) INTO v_has_public_execute;
+
     IF v_has_public_execute IS TRUE THEN
-        RAISE EXCEPTION 'Static Assertion FAILED: PUBLIC role must NOT have EXECUTE on admin_list_audit_logs!';
+        RAISE EXCEPTION 'Static Assertion FAILED: PUBLIC must NOT have EXECUTE on admin_list_audit_logs (found in pg_proc.proacl)!';
+    END IF;
+
+    SELECT EXISTS (
+        SELECT 1
+        FROM information_schema.routine_privileges
+        WHERE routine_schema = 'public'
+          AND routine_name = 'admin_list_audit_logs'
+          AND grantee = 'PUBLIC'
+          AND privilege_type = 'EXECUTE'
+    ) INTO v_has_public_execute;
+
+    IF v_has_public_execute IS TRUE THEN
+        RAISE EXCEPTION 'Static Assertion FAILED: PUBLIC must NOT have EXECUTE on admin_list_audit_logs (found in information_schema.routine_privileges)!';
     END IF;
 
     -- 1.3 Verify direct SELECT on admin_audit_logs is REVOKED
