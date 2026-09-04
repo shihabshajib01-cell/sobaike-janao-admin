@@ -27,7 +27,6 @@ export interface ComplaintMediaViewerProps {
   className?: string;
   error?: string | null;
   onRetry?: () => void;
-  hasSupportingInfo?: boolean;
 }
 
 export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
@@ -35,7 +34,6 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
   className,
   error,
   onRetry,
-  hasSupportingInfo,
 }) => {
   const { language, t } = useLanguage();
   const { hasPermission } = useAuth();
@@ -101,8 +99,8 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
                 complaints.evidence_view
               </Badge>
             </div>
-          ) : error && hasSupportingInfo !== false ? (
-            /* 1. Error State when evidence exists/expected but fails to load */
+          ) : error ? (
+            /* 1. Real Evidence Error State */
             <div className="flex flex-col items-center justify-center p-8 rounded-lg border border-amber-200 dark:border-amber-900/40 text-center bg-amber-50/50 dark:bg-amber-950/20 space-y-3">
               <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
                 <AlertCircle className="w-6 h-6 text-amber-600 dark:text-amber-400" />

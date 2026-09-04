@@ -713,44 +713,28 @@ export const supabaseComplaintService = {
     complaintId: string
   ): Promise<{ media: ComplaintMedia[]; error?: string | null }> {
     try {
-      let evidenceRows: SupabaseComplaintEvidenceRow[] = [];
-
-      // 1. First attempt secure RPC admin_get_complaint_evidence
+      // 1. Call secure RPC admin_get_complaint_evidence
       const { data: rpcRows, error: rpcError } = await supabase.rpc('admin_get_complaint_evidence', {
         p_complaint_id: complaintId,
       });
 
-      if (!rpcError && Array.isArray(rpcRows)) {
-        evidenceRows = rpcRows as SupabaseComplaintEvidenceRow[];
-      } else {
-        if (rpcError && (rpcError.code === '42501' || rpcError.message?.includes('42501'))) {
+      if (rpcError) {
+        console.error(`Error calling admin_get_complaint_evidence for ${complaintId}:`, rpcError);
+        if (rpcError.code === '42501' || rpcError.message?.includes('42501')) {
           return {
             media: [],
             error: 'You do not have permission to view private complaint evidence.',
           };
         }
-
-        // Fallback: Query public.complaint_evidence table directly with RLS
-        const { data: tableRows, error: tableError } = await supabase
-          .from('complaint_evidence')
-          .select('*')
-          .eq('complaint_id', complaintId);
-
-        if (!tableError && Array.isArray(tableRows)) {
-          evidenceRows = tableRows as SupabaseComplaintEvidenceRow[];
-        } else {
-          if (tableError && (tableError.code === '42501' || tableError.message?.includes('42501'))) {
-            return {
-              media: [],
-              error: 'You do not have permission to view private complaint evidence.',
-            };
-          }
-          // If no evidence rows exist or table query returned 0 rows, there is no evidence attached
-          return { media: [] };
-        }
+        return {
+          media: [],
+          error: rpcError.message || 'Evidence images could not be loaded. Please retry.',
+        };
       }
 
-      if (!evidenceRows || evidenceRows.length === 0) {
+      const evidenceRows = (Array.isArray(rpcRows) ? rpcRows : []) as SupabaseComplaintEvidenceRow[];
+
+      if (evidenceRows.length === 0) {
         return { media: [] };
       }
 
@@ -884,16 +868,6 @@ export const supabaseComplaintService = {
       segmentsMap,
       subcategoriesMap
     );
-
-    // If the complaint has no evidence attached, ensure media is empty and evidenceError is null
-    if (!complaint.hasSupportingInfo) {
-      complaint.media = [];
-      return {
-        complaint,
-        timeline,
-        evidenceError: null,
-      };
-    }
 
     // Replace initial empty media array with real evidence media
     complaint.media = evidenceResult.media || [];

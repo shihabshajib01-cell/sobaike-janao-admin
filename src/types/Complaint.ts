@@ -78,8 +78,6 @@ export interface Complaint {
   hasSupportingInfo?: boolean;
   evidenceTypes?: string[];
   evidenceDescription?: string;
-  availableLanguages?: ('en' | 'bn')[];
-  sourceLanguage?: 'en' | 'bn';
   versions?: ComplaintVersion[];
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
