@@ -146,17 +146,22 @@ export interface NotificationVisualMeta {
  * Derived from canonical events, security severity, security_privilege layer, or security category.
  */
 export const isSecurityNotification = (notification: {
-  event_key?: string;
-  category?: string;
-  layer?: string;
-  severity?: string;
+  event_key?: string | null;
+  category?: string | null;
+  layer?: string | null;
+  severity?: string | null;
 }): boolean => {
+  const eventKey = notification.event_key?.trim();
+  const category = notification.category?.trim();
+  const layer = notification.layer?.trim();
+  const severity = notification.severity?.trim();
+
   return (
-    notification.event_key === 'admin.role_changed' ||
-    notification.event_key === 'role.permissions_changed' ||
-    notification.severity === 'security' ||
-    notification.layer === 'security_privilege' ||
-    notification.category === 'security'
+    eventKey === 'admin.role_changed' ||
+    eventKey === 'role.permissions_changed' ||
+    severity === 'security' ||
+    layer === 'security_privilege' ||
+    category === 'security'
   );
 };
 
