@@ -55,17 +55,18 @@ export const NotificationDropdown: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
 
-  // Refresh notifications when dropdown is opened (Section 5)
+  // Refresh notifications and clear errors when dropdown is opened
+  useEffect(() => {
+    if (isOpen) {
+      setItemErrorIds(new Set());
+      refreshRecent();
+    }
+  }, [isOpen, refreshRecent]);
+
+  // Toggle dropdown
   const handleToggle = useCallback(() => {
-    setIsOpen((prev) => {
-      const next = !prev;
-      if (next) {
-        setItemErrorIds(new Set());
-        refreshRecent();
-      }
-      return next;
-    });
-  }, [refreshRecent]);
+    setIsOpen((prev) => !prev);
+  }, []);
 
   // Notification item click: Mark read, validate route, navigate safely or stay
   const handleItemClick = async (notification: AdminNotification) => {
