@@ -14,17 +14,22 @@
 --      ADMIN_USER_UPDATED, ROLE_CREATED, ROLE_UPDATED, ROLE_PERMISSIONS_REPLACED).
 --   5. Normalizes target_type output & filtering to canonical values:
 --      'complaint', 'admin_user', 'role'.
---   6. Provides server-side filtering (search, action, target_type, actor_id, date range).
---   7. Provides deterministic server-side pagination (ORDER BY created_at DESC, id DESC).
---   8. Recursively sanitizes audit details JSONB to ensure no secrets, credentials,
+--   6. Resolves effective admin user target reference: for admin_user targets,
+--      if details->>'target_user_id' is non-empty, use it as target_id;
+--      otherwise fall back to stored target_id.
+--   7. Provides server-side filtering (search, action, target_type, actor_id, date range).
+--   8. Provides deterministic server-side pagination with explicit ordering
+--      (ORDER BY created_at DESC, id DESC) in both query CTE and jsonb_agg.
+--   9. Recursively sanitizes audit details JSONB to ensure no secrets, credentials,
 --      tokens, private evidence URLs, or password hashes leak to client.
---   9. Direct SELECT on public.admin_audit_logs remains revoked from client roles.
+--  10. Sanitizer helper function is internal-only (EXECUTE revoked from authenticated).
+--  11. Direct SELECT on public.admin_audit_logs remains revoked from client roles.
 -- ==============================================================================
 
 BEGIN;
 
 -- ------------------------------------------------------------------------------
--- 1. HELPER: Recursive JSONB Sanitizer for Audit Details
+-- 1. HELPER: Recursive JSONB Sanitizer for Audit Details (Internal Only)
 -- ------------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.sanitize_audit_details(p_val jsonb)
 RETURNS jsonb
@@ -158,17 +163,26 @@ BEGIN
                 WHEN lower(btrim(a.target_type)) = 'role' THEN 'role'
                 ELSE lower(btrim(a.target_type))
             END AS target_type,
-            a.target_id,
+            CASE
+                WHEN lower(btrim(a.target_type)) IN ('user', 'admin_user')
+                     AND nullif(btrim(a.details->>'target_user_id'), '') IS NOT NULL
+                THEN btrim(a.details->>'target_user_id')
+                ELSE a.target_id
+            END AS target_id,
             a.details,
             a.created_at
         FROM public.admin_audit_logs a
         LEFT JOIN public.admin_users u ON u.user_id = a.actor_id
         LEFT JOIN auth.users au ON au.id = a.actor_id
         WHERE
-            -- Search: case-insensitive across safe fields only
+            -- Search: case-insensitive across safe fields including effective target reference
             (v_search IS NULL OR (
                 a.action ILIKE ('%' || v_search || '%')
                 OR a.target_id ILIKE ('%' || v_search || '%')
+                OR (
+                    lower(btrim(a.target_type)) IN ('user', 'admin_user')
+                    AND (a.details->>'target_user_id') ILIKE ('%' || v_search || '%')
+                )
                 OR u.display_name ILIKE ('%' || v_search || '%')
                 OR au.email ILIKE ('%' || v_search || '%')
             ))
@@ -224,6 +238,7 @@ BEGIN
                         'details', details,
                         'created_at', created_at
                     )
+                    ORDER BY created_at DESC, id DESC
                 )
                 FROM paginated
             ),
@@ -242,10 +257,12 @@ $$;
 -- ------------------------------------------------------------------------------
 -- 3. PERMISSION HARDENING & PRIVILEGES
 -- ------------------------------------------------------------------------------
+-- Sanitizer helper is strictly internal to SECURITY DEFINER RPCs
 REVOKE ALL ON FUNCTION public.sanitize_audit_details(jsonb) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.sanitize_audit_details(jsonb) FROM anon;
-GRANT EXECUTE ON FUNCTION public.sanitize_audit_details(jsonb) TO authenticated;
+REVOKE ALL ON FUNCTION public.sanitize_audit_details(jsonb) FROM authenticated;
 
+-- Only admin_list_audit_logs is callable by authenticated admins
 REVOKE ALL ON FUNCTION public.admin_list_audit_logs(INT, INT, TEXT, TEXT, TEXT, UUID, TIMESTAMPTZ, TIMESTAMPTZ) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.admin_list_audit_logs(INT, INT, TEXT, TEXT, TEXT, UUID, TIMESTAMPTZ, TIMESTAMPTZ) FROM anon;
 GRANT EXECUTE ON FUNCTION public.admin_list_audit_logs(INT, INT, TEXT, TEXT, TEXT, UUID, TIMESTAMPTZ, TIMESTAMPTZ) TO authenticated;
