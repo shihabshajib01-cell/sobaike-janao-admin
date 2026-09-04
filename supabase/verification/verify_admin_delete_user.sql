@@ -11,12 +11,15 @@
 --   6. admin_users.manage permission enforcement (42501 for unpermitted callers)
 --   7. Input validation (NULL target rejected with 22000, non-existent admin rejected with P0002)
 --   8. Self-deletion guard (CANNOT_DELETE_SELF)
---   9. Super Admin account protection (SUPER_ADMIN_CANNOT_BE_DELETED)
+--   9. Super Admin account protection tested with caller != target (SUPER_ADMIN_CANNOT_BE_DELETED)
 --  10. Delegation ceiling guard (can_manage_user_target)
---  11. Foreign Key cascade integrity (auth.users -> admin_users -> user_roles)
---  12. Audit referential integrity (admin_audit_logs.actor_id ON DELETE SET NULL)
---  13. Audit logging integration (ADMIN_USER_DELETED event emission & direct fallback)
---  14. Notification catalogue integrity (no unsolicited delete events)
+--  11. Exact Foreign Key cascade: auth.users(id) -> public.admin_users(user_id) ON DELETE CASCADE
+--  12. Exact Foreign Key cascade: public.admin_users(user_id) -> public.user_roles(user_id) ON DELETE CASCADE
+--  13. Exact Audit history FK: public.admin_users(user_id) -> public.admin_audit_logs(actor_id) ON DELETE SET NULL
+--  14. Audit logging integration (ADMIN_USER_DELETED event emission & direct service-role insert)
+--  15. Real notification catalogue (public.admin_notification_event_catalogue) integrity:
+--      - Confirms exactly the existing 12 canonical notification events remain
+--      - Confirms no admin.deleted or delete notification event exists
 --
 -- NOTE: Safe for live deployment verification. Uses transactional rollbacks and metadata
 -- inspections without destructively deleting real administrative users.
@@ -40,6 +43,9 @@ DECLARE
     v_normal_admin_id UUID;
     v_test_err_detail TEXT;
     v_audit_id UUID;
+    v_catalogue_count INTEGER;
+    v_canonical_events TEXT[];
+    v_missing_events TEXT[];
 BEGIN
     RAISE NOTICE '==================================================';
     RAISE NOTICE 'STARTING: Delete Administrator Backend Verification';
@@ -131,162 +137,190 @@ BEGIN
     END;
 
     -- --------------------------------------------------
-    -- 6. INPUT VALIDATION (NULL & NOT FOUND)
+    -- ENSURE TEST IDENTITIES FOR SECURITY CHECKS
+    -- (Rollback guarantees zero persistent changes)
     -- --------------------------------------------------
     SELECT user_id INTO v_super_admin_id
     FROM public.admin_users
     WHERE is_super_admin = true
     LIMIT 1;
 
-    IF v_super_admin_id IS NOT NULL THEN
-        PERFORM set_config('request.jwt.claim.sub', v_super_admin_id::text, true);
-        PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+    IF v_super_admin_id IS NULL THEN
+        v_super_admin_id := gen_random_uuid();
+        INSERT INTO auth.users (id, email, aud, role)
+        VALUES (v_super_admin_id, 'test_super_admin@example.internal', 'authenticated', 'authenticated')
+        ON CONFLICT (id) DO NOTHING;
 
-        -- Test NULL target user ID
-        BEGIN
-            PERFORM public.admin_delete_user(NULL);
-            RAISE EXCEPTION 'VERIFICATION FAILED: NULL target user ID must be rejected.';
-        EXCEPTION WHEN SQLSTATE '22000' THEN
-            RAISE NOTICE '✓ [PASS] NULL target user ID safely rejected with 22000.';
-        END;
-
-        -- Test non-existent administrator target
-        BEGIN
-            PERFORM public.admin_delete_user(gen_random_uuid());
-            RAISE EXCEPTION 'VERIFICATION FAILED: Non-existent administrator must raise P0002.';
-        EXCEPTION WHEN SQLSTATE 'P0002' THEN
-            RAISE NOTICE '✓ [PASS] Non-existent administrator target safely rejected with P0002.';
-        END;
+        INSERT INTO public.admin_users (user_id, display_name, active, is_super_admin)
+        VALUES (v_super_admin_id, 'Test Super Administrator', true, true)
+        ON CONFLICT (user_id) DO UPDATE SET is_super_admin = true, active = true;
     END IF;
+
+    SELECT user_id INTO v_normal_admin_id
+    FROM public.admin_users
+    WHERE user_id <> v_super_admin_id
+    LIMIT 1;
+
+    IF v_normal_admin_id IS NULL THEN
+        v_normal_admin_id := gen_random_uuid();
+        INSERT INTO auth.users (id, email, aud, role)
+        VALUES (v_normal_admin_id, 'test_normal_admin@example.internal', 'authenticated', 'authenticated')
+        ON CONFLICT (id) DO NOTHING;
+
+        INSERT INTO public.admin_users (user_id, display_name, active, is_super_admin)
+        VALUES (v_normal_admin_id, 'Test Normal Administrator', true, false)
+        ON CONFLICT (user_id) DO UPDATE SET is_super_admin = false, active = true;
+    END IF;
+
+    -- --------------------------------------------------
+    -- 6. INPUT VALIDATION (NULL & NOT FOUND)
+    -- --------------------------------------------------
+    PERFORM set_config('request.jwt.claim.sub', v_super_admin_id::text, true);
+    PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+
+    -- Test NULL target user ID
+    BEGIN
+        PERFORM public.admin_delete_user(NULL);
+        RAISE EXCEPTION 'VERIFICATION FAILED: NULL target user ID must be rejected.';
+    EXCEPTION WHEN SQLSTATE '22000' THEN
+        RAISE NOTICE '✓ [PASS] NULL target user ID safely rejected with 22000.';
+    END;
+
+    -- Test non-existent administrator target
+    BEGIN
+        PERFORM public.admin_delete_user(gen_random_uuid());
+        RAISE EXCEPTION 'VERIFICATION FAILED: Non-existent administrator must raise P0002.';
+    EXCEPTION WHEN SQLSTATE 'P0002' THEN
+        RAISE NOTICE '✓ [PASS] Non-existent administrator target safely rejected with P0002.';
+    END;
 
     -- --------------------------------------------------
     -- 7. SELF-DELETION GUARD (CANNOT_DELETE_SELF)
     -- --------------------------------------------------
-    IF v_super_admin_id IS NOT NULL THEN
-        PERFORM set_config('request.jwt.claim.sub', v_super_admin_id::text, true);
-        PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+    PERFORM set_config('request.jwt.claim.sub', v_super_admin_id::text, true);
+    PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
 
-        BEGIN
-            PERFORM public.admin_delete_user(v_super_admin_id);
-            RAISE EXCEPTION 'VERIFICATION FAILED: Self-deletion was not blocked.';
-        EXCEPTION WHEN SQLSTATE '42501' THEN
-            GET STACKED DIAGNOSTICS v_test_err_detail = PG_EXCEPTION_DETAIL;
-            IF v_test_err_detail = 'CANNOT_DELETE_SELF' THEN
-                RAISE NOTICE '✓ [PASS] Self-deletion blocked with CANNOT_DELETE_SELF.';
-            ELSE
-                RAISE NOTICE '✓ [PASS] Self-deletion rejected with 42501 (detail: %).', v_test_err_detail;
-            END IF;
-        END;
-    END IF;
-
-    -- --------------------------------------------------
-    -- 8. SUPER ADMIN PROTECTION GUARD
-    -- --------------------------------------------------
-    IF v_super_admin_id IS NOT NULL THEN
-        SELECT user_id INTO v_normal_admin_id
-        FROM public.admin_users
-        WHERE user_id <> v_super_admin_id
-        LIMIT 1;
-
-        IF v_normal_admin_id IS NOT NULL THEN
-            -- Temporarily elevate target within this rolled-back transaction
-            UPDATE public.admin_users SET is_super_admin = true WHERE user_id = v_normal_admin_id;
-
-            PERFORM set_config('request.jwt.claim.sub', v_super_admin_id::text, true);
-            PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
-
-            BEGIN
-                PERFORM public.admin_delete_user(v_normal_admin_id);
-                RAISE EXCEPTION 'VERIFICATION FAILED: Super Administrator account deletion was not blocked.';
-            EXCEPTION WHEN SQLSTATE '42501' THEN
-                GET STACKED DIAGNOSTICS v_test_err_detail = PG_EXCEPTION_DETAIL;
-                IF v_test_err_detail = 'SUPER_ADMIN_CANNOT_BE_DELETED' THEN
-                    RAISE NOTICE '✓ [PASS] Super Admin protection enforced with SUPER_ADMIN_CANNOT_BE_DELETED.';
-                ELSE
-                    RAISE NOTICE '✓ [PASS] Super Admin protection rejected with 42501 (detail: %).', v_test_err_detail;
-                END IF;
-            END;
-
-            -- Revert elevation
-            UPDATE public.admin_users SET is_super_admin = false WHERE user_id = v_normal_admin_id;
+    BEGIN
+        PERFORM public.admin_delete_user(v_super_admin_id);
+        RAISE EXCEPTION 'VERIFICATION FAILED: Self-deletion was not blocked.';
+    EXCEPTION WHEN SQLSTATE '42501' THEN
+        GET STACKED DIAGNOSTICS v_test_err_detail = PG_EXCEPTION_DETAIL;
+        IF v_test_err_detail = 'CANNOT_DELETE_SELF' THEN
+            RAISE NOTICE '✓ [PASS] Self-deletion blocked with CANNOT_DELETE_SELF.';
+        ELSE
+            RAISE NOTICE '✓ [PASS] Self-deletion rejected with 42501 (detail: %).', v_test_err_detail;
         END IF;
-    END IF;
+    END;
+
+    -- --------------------------------------------------
+    -- 8. SUPER ADMIN PROTECTION GUARD (caller != target)
+    -- --------------------------------------------------
+    -- Ensure target is marked Super Admin and caller != target
+    UPDATE public.admin_users SET is_super_admin = true WHERE user_id = v_normal_admin_id;
+
+    PERFORM set_config('request.jwt.claim.sub', v_super_admin_id::text, true);
+    PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+
+    BEGIN
+        PERFORM public.admin_delete_user(v_normal_admin_id);
+        RAISE EXCEPTION 'VERIFICATION FAILED: Super Administrator account deletion was not blocked.';
+    EXCEPTION WHEN SQLSTATE '42501' THEN
+        GET STACKED DIAGNOSTICS v_test_err_detail = PG_EXCEPTION_DETAIL;
+        IF v_test_err_detail = 'SUPER_ADMIN_CANNOT_BE_DELETED' THEN
+            RAISE NOTICE '✓ [PASS] Super Admin protection enforced with caller != target (SUPER_ADMIN_CANNOT_BE_DELETED).';
+        ELSE
+            RAISE NOTICE '✓ [PASS] Super Admin protection rejected with 42501 (detail: %).', v_test_err_detail;
+        END IF;
+    END;
+
+    -- Reset target back to non-super-admin
+    UPDATE public.admin_users SET is_super_admin = false WHERE user_id = v_normal_admin_id;
 
     -- --------------------------------------------------
     -- 9. DELEGATION CEILING GUARD (can_manage_user_target)
     -- --------------------------------------------------
-    IF v_super_admin_id IS NOT NULL AND v_normal_admin_id IS NOT NULL THEN
-        -- Super Admin caller cannot manage target when target is marked super admin
-        UPDATE public.admin_users SET is_super_admin = true WHERE user_id = v_normal_admin_id;
-        PERFORM set_config('request.jwt.claim.sub', v_super_admin_id::text, true);
-        PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+    -- Super Admin caller cannot manage target when target is marked super admin
+    UPDATE public.admin_users SET is_super_admin = true WHERE user_id = v_normal_admin_id;
+    PERFORM set_config('request.jwt.claim.sub', v_super_admin_id::text, true);
+    PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
 
-        IF public.can_manage_user_target(v_normal_admin_id) IS TRUE THEN
-            RAISE EXCEPTION 'VERIFICATION FAILED: can_manage_user_target must return FALSE for Super Admin target.';
-        END IF;
-        RAISE NOTICE '✓ [PASS] can_manage_user_target correctly blocks Super Admin target.';
-
-        -- Super Admin caller can manage target when normal admin
-        UPDATE public.admin_users SET is_super_admin = false WHERE user_id = v_normal_admin_id;
-        IF public.can_manage_user_target(v_normal_admin_id) IS NOT TRUE THEN
-            RAISE EXCEPTION 'VERIFICATION FAILED: can_manage_user_target must return TRUE for normal admin target.';
-        END IF;
-        RAISE NOTICE '✓ [PASS] can_manage_user_target correctly permits normal admin target under Super Admin.';
+    IF public.can_manage_user_target(v_normal_admin_id) IS TRUE THEN
+        RAISE EXCEPTION 'VERIFICATION FAILED: can_manage_user_target must return FALSE for Super Admin target.';
     END IF;
+    RAISE NOTICE '✓ [PASS] can_manage_user_target correctly blocks Super Admin target.';
+
+    -- Super Admin caller can manage target when normal admin
+    UPDATE public.admin_users SET is_super_admin = false WHERE user_id = v_normal_admin_id;
+    IF public.can_manage_user_target(v_normal_admin_id) IS NOT TRUE THEN
+        RAISE EXCEPTION 'VERIFICATION FAILED: can_manage_user_target must return TRUE for normal admin target.';
+    END IF;
+    RAISE NOTICE '✓ [PASS] can_manage_user_target correctly permits normal admin target under Super Admin.';
 
     -- --------------------------------------------------
-    -- 10. FOREIGN KEY CASCADE & REFERENTIAL INTEGRITY
+    -- 10. EXACT FOREIGN KEY CASCADE & REFERENTIAL INTEGRITY
     -- --------------------------------------------------
-    -- Verify public.admin_users has ON DELETE CASCADE referencing auth.users(id)
+    -- Verify exact FK: auth.users(id) -> public.admin_users(user_id) ON DELETE CASCADE
     SELECT EXISTS (
         SELECT 1
         FROM pg_constraint c
         JOIN pg_class t ON c.conrelid = t.oid
         JOIN pg_namespace n ON t.relnamespace = n.oid
+        JOIN pg_class ref_t ON c.confrelid = ref_t.oid
+        JOIN pg_namespace ref_n ON ref_t.relnamespace = ref_n.oid
         WHERE n.nspname = 'public'
           AND t.relname = 'admin_users'
+          AND ref_n.nspname = 'auth'
+          AND ref_t.relname = 'users'
           AND c.contype = 'f'
           AND c.confdeltype = 'c' -- 'c' = CASCADE
     ) INTO v_fk_admin_cascade;
 
     IF NOT v_fk_admin_cascade THEN
-        RAISE EXCEPTION 'VERIFICATION FAILED: admin_users must have ON DELETE CASCADE foreign key to auth.users.';
+        RAISE EXCEPTION 'VERIFICATION FAILED: auth.users(id) -> public.admin_users(user_id) ON DELETE CASCADE foreign key missing or incorrect.';
     END IF;
-    RAISE NOTICE '✓ [PASS] admin_users ON DELETE CASCADE verified.';
+    RAISE NOTICE '✓ [PASS] Exact FK verified: auth.users(id) -> public.admin_users(user_id) ON DELETE CASCADE.';
 
-    -- Verify public.user_roles has ON DELETE CASCADE referencing public.admin_users(user_id)
+    -- Verify exact FK: public.admin_users(user_id) -> public.user_roles(user_id) ON DELETE CASCADE
     SELECT EXISTS (
         SELECT 1
         FROM pg_constraint c
         JOIN pg_class t ON c.conrelid = t.oid
         JOIN pg_namespace n ON t.relnamespace = n.oid
+        JOIN pg_class ref_t ON c.confrelid = ref_t.oid
+        JOIN pg_namespace ref_n ON ref_t.relnamespace = ref_n.oid
         WHERE n.nspname = 'public'
           AND t.relname = 'user_roles'
+          AND ref_n.nspname = 'public'
+          AND ref_t.relname = 'admin_users'
           AND c.contype = 'f'
           AND c.confdeltype = 'c' -- 'c' = CASCADE
     ) INTO v_fk_roles_cascade;
 
     IF NOT v_fk_roles_cascade THEN
-        RAISE EXCEPTION 'VERIFICATION FAILED: user_roles must have ON DELETE CASCADE foreign key.';
+        RAISE EXCEPTION 'VERIFICATION FAILED: public.admin_users(user_id) -> public.user_roles(user_id) ON DELETE CASCADE foreign key missing or incorrect.';
     END IF;
-    RAISE NOTICE '✓ [PASS] user_roles ON DELETE CASCADE verified.';
+    RAISE NOTICE '✓ [PASS] Exact FK verified: public.admin_users(user_id) -> public.user_roles(user_id) ON DELETE CASCADE.';
 
-    -- Verify public.admin_audit_logs has ON DELETE SET NULL referencing actor_id
+    -- Verify exact FK: public.admin_users(user_id) -> public.admin_audit_logs(actor_id) ON DELETE SET NULL
     SELECT EXISTS (
         SELECT 1
         FROM pg_constraint c
         JOIN pg_class t ON c.conrelid = t.oid
         JOIN pg_namespace n ON t.relnamespace = n.oid
+        JOIN pg_class ref_t ON c.confrelid = ref_t.oid
+        JOIN pg_namespace ref_n ON ref_t.relnamespace = ref_n.oid
         WHERE n.nspname = 'public'
           AND t.relname = 'admin_audit_logs'
+          AND ref_n.nspname = 'public'
+          AND ref_t.relname = 'admin_users'
           AND c.contype = 'f'
           AND c.confdeltype = 'n' -- 'n' = SET NULL
     ) INTO v_fk_audit_set_null;
 
     IF NOT v_fk_audit_set_null THEN
-        RAISE EXCEPTION 'VERIFICATION FAILED: admin_audit_logs actor_id must have ON DELETE SET NULL foreign key.';
+        RAISE EXCEPTION 'VERIFICATION FAILED: admin_audit_logs actor_id ON DELETE SET NULL foreign key missing or incorrect.';
     END IF;
-    RAISE NOTICE '✓ [PASS] admin_audit_logs referential integrity (SET NULL on actor deletion) verified.';
+    RAISE NOTICE '✓ [PASS] Exact FK verified: public.admin_users(user_id) -> public.admin_audit_logs(actor_id) ON DELETE SET NULL.';
 
     -- --------------------------------------------------
     -- 11. AUDIT LOGGING CAPABILITY
@@ -343,33 +377,60 @@ BEGIN
     END;
 
     -- --------------------------------------------------
-    -- 12. NOTIFICATION CATALOGUE INTEGRITY
+    -- 12. REAL NOTIFICATION CATALOGUE INTEGRITY
     -- --------------------------------------------------
-    -- Verify that no unsolicited notification templates or channels were injected
-    IF EXISTS (
-        SELECT 1
-        FROM pg_tables
-        WHERE schemaname = 'public' AND tablename = 'notification_events'
-    ) THEN
-        IF EXISTS (
-            SELECT 1 FROM public.notification_events WHERE event_name ILIKE '%DELETE%'
-        ) THEN
-            RAISE EXCEPTION 'VERIFICATION FAILED: Unexpected notification event registered.';
-        END IF;
-    END IF;
-
-    IF EXISTS (
+    -- Verify real table public.admin_notification_event_catalogue exists
+    IF NOT EXISTS (
         SELECT 1
         FROM pg_tables
         WHERE schemaname = 'public' AND tablename = 'admin_notification_event_catalogue'
     ) THEN
-        IF EXISTS (
-            SELECT 1 FROM public.admin_notification_event_catalogue WHERE event_key ILIKE '%delete%'
-        ) THEN
-            RAISE EXCEPTION 'VERIFICATION FAILED: Unexpected notification event in catalogue.';
-        END IF;
+        RAISE EXCEPTION 'VERIFICATION FAILED: public.admin_notification_event_catalogue table not found.';
     END IF;
-    RAISE NOTICE '✓ [PASS] Notification catalogue remains unchanged (no unsolicited delete events).';
+
+    -- Confirm exactly the existing 12 canonical notification events remain
+    SELECT count(*) INTO v_catalogue_count
+    FROM public.admin_notification_event_catalogue;
+
+    IF v_catalogue_count <> 12 THEN
+        RAISE EXCEPTION 'VERIFICATION FAILED: Expected exactly 12 canonical notification events, found %.', v_catalogue_count;
+    END IF;
+
+    v_canonical_events := ARRAY[
+        'complaint.submitted',
+        'complaint.evidence_attached',
+        'complaint.published',
+        'complaint.unpublished',
+        'complaint.rejected',
+        'admin.created',
+        'admin.activated',
+        'admin.deactivated',
+        'admin.role_changed',
+        'role.created',
+        'role.updated',
+        'role.permissions_changed'
+    ];
+
+    -- Verify every canonical event is present in the catalogue
+    SELECT ARRAY(
+        SELECT unnest(v_canonical_events)
+        EXCEPT
+        SELECT event_key FROM public.admin_notification_event_catalogue
+    ) INTO v_missing_events;
+
+    IF cardinality(v_missing_events) > 0 THEN
+        RAISE EXCEPTION 'VERIFICATION FAILED: Missing canonical notification events: %', array_to_string(v_missing_events, ', ');
+    END IF;
+
+    -- Confirm no admin.deleted / delete notification event exists
+    IF EXISTS (
+        SELECT 1
+        FROM public.admin_notification_event_catalogue
+        WHERE event_key ILIKE '%delete%'
+    ) THEN
+        RAISE EXCEPTION 'VERIFICATION FAILED: Unexpected delete notification event found in admin_notification_event_catalogue.';
+    END IF;
+    RAISE NOTICE '✓ [PASS] Real notification catalogue verified: exactly 12 canonical events remain, no delete event exists.';
 
     RAISE NOTICE '==================================================';
     RAISE NOTICE 'ALL DELETE ADMINISTRATOR VERIFICATION CHECKS PASSED.';
@@ -379,4 +440,3 @@ $$;
 
 -- Always rollback test mutations to maintain clean state
 ROLLBACK;
-
