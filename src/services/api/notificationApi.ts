@@ -178,8 +178,8 @@ const FALLBACK_NOTIFICATIONS: AdminNotification[] = [
     target_label: 'Zonal Inspector',
     title_en: 'Administrator activated',
     title_bn: 'প্রশাসক সক্রিয় করা হয়েছে',
-    body_en: null,
-    body_bn: null,
+    body_en: 'Administrator account for Zonal Inspector is now active.',
+    body_bn: 'জোনাল পরিদর্শকের প্রশাসক অ্যাকাউন্ট এখন সক্রিয়।',
     metadata: { user_id: 'a0000099-0000-4000-8000-000000000099' },
     route: '/users',
     created_at: new Date(Date.now() - 28 * 3600 * 1000).toISOString(),
@@ -284,9 +284,6 @@ export const notificationApi = {
 
     const BACKEND_BATCH_SIZE = 50; // max allowed by RPC
     const visitedCursors = new Set<string>();
-    if (cursorCreatedAt && cursorId) {
-      visitedCursors.add(`${cursorCreatedAt}_${cursorId}`);
-    }
 
     while (collected.length < limit && backendHasMore) {
       const { data, error } = await supabase.rpc('admin_list_notifications', {
@@ -340,15 +337,11 @@ export const notificationApi = {
       // update cursor to the last scanned item of this batch to fetch the next batch
       if (collected.length < limit && backendHasMore) {
         const lastBatchItem = batch[batch.length - 1];
-        const nextCursorCreatedAt = lastBatchItem?.created_at;
-        const nextCursorId = lastBatchItem?.id;
+        const nextCursorCreatedAt = lastBatchItem.created_at;
+        const nextCursorId = lastBatchItem.id;
 
         // Detect cursor stall
-        if (
-          !nextCursorCreatedAt ||
-          !nextCursorId ||
-          (nextCursorCreatedAt === cursorCreatedAt && nextCursorId === cursorId)
-        ) {
+        if (nextCursorCreatedAt === cursorCreatedAt && nextCursorId === cursorId) {
           throw new NotificationApiError(
             'Security pagination failed: cursor did not advance',
             'CURSOR_STALLED'

@@ -533,11 +533,8 @@ export const NotificationsPage: React.FC = () => {
               const IconComponent = meta.icon;
               const title = isBn
                 ? item.title_bn || item.title_en
-                : item.title_en || item.title_bn;
-              const body = isBn
-                ? item.body_bn || item.body_en
-                : item.body_en || item.body_bn;
-              const hasBody = Boolean(body && body.trim().length > 0);
+                : item.title_en;
+              const body = isBn ? item.body_bn || item.body_en : item.body_en;
               const relativeTime = formatRelativeTime(item.created_at, language);
               const hasRoute = isSafeNotificationRoute(item.route);
 
@@ -624,12 +621,10 @@ export const NotificationsPage: React.FC = () => {
                         {title}
                       </h3>
 
-                      {/* Full Body / Description (omitted if both bodies are null) */}
-                      {hasBody && body && (
-                        <p className="mt-1 text-xs text-slate-600 dark:text-slate-400 leading-relaxed break-words">
-                          {body}
-                        </p>
-                      )}
+                      {/* Full Body / Description */}
+                      <p className="mt-1 text-xs text-slate-600 dark:text-slate-400 leading-relaxed break-words">
+                        {body}
+                      </p>
 
                       {/* Card Footer: Action Buttons */}
                       <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2">

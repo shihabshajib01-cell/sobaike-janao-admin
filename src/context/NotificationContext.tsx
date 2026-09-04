@@ -122,20 +122,16 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const success = await notificationApi.markAsRead(notificationId);
       if (!success) {
         // Revert on failure
-        if (isMountedRef.current) {
-          setRecentNotifications(previousRecent);
-          setUnreadCount(previousUnreadCount);
-        }
+        setRecentNotifications(previousRecent);
+        setUnreadCount(previousUnreadCount);
         return false;
       }
       return true;
     } catch (err) {
       console.error('Error marking notification as read:', err);
       // Revert on exception
-      if (isMountedRef.current) {
-        setRecentNotifications(previousRecent);
-        setUnreadCount(previousUnreadCount);
-      }
+      setRecentNotifications(previousRecent);
+      setUnreadCount(previousUnreadCount);
       return false;
     }
   }, [recentNotifications, unreadCount]);
@@ -159,10 +155,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } catch (err) {
       console.error('Error marking all notifications as read:', err);
       // Revert on exception
-      if (isMountedRef.current) {
-        setRecentNotifications(previousRecent);
-        setUnreadCount(previousUnreadCount);
-      }
+      setRecentNotifications(previousRecent);
+      setUnreadCount(previousUnreadCount);
       throw err;
     }
   }, [recentNotifications, unreadCount]);

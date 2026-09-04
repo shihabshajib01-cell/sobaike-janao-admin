@@ -106,13 +106,16 @@ export const locationActivityService = {
     pageSize = 20
   ): Promise<LocationActivityResponse> {
     if (!isSupabaseConfigured) {
-      return {
-        sessions: DEV_MOCK_SESSIONS,
-        total: DEV_MOCK_SESSIONS.length,
-        page: 1,
-        pageSize,
-        totalPages: 1,
-      };
+      if (isDev) {
+        return {
+          sessions: DEV_MOCK_SESSIONS,
+          total: DEV_MOCK_SESSIONS.length,
+          page: 1,
+          pageSize,
+          totalPages: 1,
+        };
+      }
+      throw new Error('Supabase location activity service is not configured in this environment.');
     }
 
     const fromIndex = (page - 1) * pageSize;
@@ -191,7 +194,10 @@ export const locationActivityService = {
    */
   async getLocationActivityStats(): Promise<LocationActivityStats> {
     if (!isSupabaseConfigured) {
-      return DEV_MOCK_STATS;
+      if (isDev) {
+        return DEV_MOCK_STATS;
+      }
+      throw new Error('Supabase location activity service is not configured in this environment.');
     }
 
     const fifteenMinutesAgoIso = new Date(Date.now() - 15 * 60 * 1000).toISOString();

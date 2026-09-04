@@ -284,7 +284,6 @@ export const NotificationDropdown: React.FC = () => {
                 language === 'bn' ? item.title_bn || item.title_en : item.title_en || item.title_bn;
               const body =
                 language === 'bn' ? item.body_bn || item.body_en : item.body_en || item.body_bn;
-              const hasBody = Boolean(body && body.trim().length > 0);
               const relativeTime = formatRelativeTime(item.created_at, language);
               const hasRoute = isSafeNotificationRoute(item.route);
 
@@ -336,7 +335,7 @@ export const NotificationDropdown: React.FC = () => {
                       </span>
                     </div>
 
-                    {hasBody && body && (
+                    {body && (
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed break-words">
                         {body}
                       </p>

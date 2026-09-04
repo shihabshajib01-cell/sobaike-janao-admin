@@ -27,7 +27,14 @@ function assertAdminUserApiConfigured(): 'configured' | 'dev_fallback' {
   if (isSupabaseConfigured) {
     return 'configured';
   }
-  return 'dev_fallback';
+  const isDev = Boolean(typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV);
+  if (isDev) {
+    return 'dev_fallback';
+  }
+  throw new AdminUserApiError(
+    'Supabase user management is not configured in this environment.',
+    'CONFIG_ERROR'
+  );
 }
 
 // ==============================================================================
