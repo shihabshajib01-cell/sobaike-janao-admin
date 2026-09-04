@@ -67,7 +67,10 @@ export const NotificationDropdown: React.FC = () => {
     // 1. Mark it read
     if (!notification.read_at) {
       try {
-        await markAsRead(notification.id);
+        const success = await markAsRead(notification.id);
+        if (!success) {
+          console.warn('Failed to mark notification as read:', notification.id);
+        }
       } catch (err) {
         console.warn('Failed to mark notification as read:', err);
       }
@@ -232,7 +235,7 @@ export const NotificationDropdown: React.FC = () => {
             {/* Render Recent Notifications */}
             {recentNotifications.map((item) => {
               const isUnread = !item.read_at;
-              const meta = getNotificationVisualMeta(item.event_key, item.category, item.severity);
+              const meta = getNotificationVisualMeta(item.event_key, item.category, item.severity, item.layer);
               const IconComponent = meta.icon;
               const title =
                 language === 'bn' ? item.title_bn || item.title_en : item.title_en;

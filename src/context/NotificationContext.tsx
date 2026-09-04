@@ -132,7 +132,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       // Revert on exception
       setRecentNotifications(previousRecent);
       setUnreadCount(previousUnreadCount);
-      throw err;
+      return false;
     }
   }, [recentNotifications, unreadCount]);
 

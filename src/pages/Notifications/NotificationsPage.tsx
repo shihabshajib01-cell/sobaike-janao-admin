@@ -92,7 +92,11 @@ export const NotificationsPage: React.FC = () => {
         if (!isMountedRef.current) return;
 
         setNotifications(results);
-        setHasMore(results.length === PAGE_SIZE);
+        setHasMore(
+          results.hasMore !== undefined
+            ? results.hasMore
+            : results.length === PAGE_SIZE
+        );
       } catch (err: unknown) {
         if (!isMountedRef.current) return;
         console.error('Failed to load notifications list:', err);
@@ -142,9 +146,18 @@ export const NotificationsPage: React.FC = () => {
       if (!isMountedRef.current) return;
 
       if (nextBatch.length > 0) {
-        setNotifications((prev) => [...prev, ...nextBatch]);
+        setNotifications((prev) => {
+          const existingIds = new Set(prev.map((n) => n.id));
+          const deduplicated = nextBatch.filter((n) => !existingIds.has(n.id));
+          return [...prev, ...deduplicated];
+        });
       }
-      setHasMore(nextBatch.length === PAGE_SIZE);
+
+      const batchHasMore =
+        nextBatch.hasMore !== undefined
+          ? nextBatch.hasMore
+          : nextBatch.length === PAGE_SIZE;
+      setHasMore(batchHasMore);
     } catch (err: unknown) {
       if (!isMountedRef.current) return;
       console.error('Failed to load more notifications:', err);
@@ -170,17 +183,27 @@ export const NotificationsPage: React.FC = () => {
     setActionError(null);
 
     try {
-      await markAsRead(notification.id);
+      const success = await markAsRead(notification.id);
       if (!isMountedRef.current) return;
 
-      // Update local state
-      setNotifications((prev) =>
-        prev.map((n) =>
-          n.id === notification.id
-            ? { ...n, read_at: new Date().toISOString() }
-            : n
-        )
-      );
+      if (success) {
+        if (activeFilter === 'unread') {
+          // Immediately remove the item from unread list
+          setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+        } else {
+          // Update local state to read
+          setNotifications((prev) =>
+            prev.map((n) =>
+              n.id === notification.id
+                ? { ...n, read_at: new Date().toISOString() }
+                : n
+            )
+          );
+        }
+      } else {
+        // Keep notification unread and show error
+        setActionError(t.notifications.errorMarkRead);
+      }
     } catch (err) {
       console.error('Failed to mark item read:', err);
       if (isMountedRef.current) {
@@ -209,10 +232,15 @@ export const NotificationsPage: React.FC = () => {
       await markAllAsRead();
       if (!isMountedRef.current) return;
 
-      const nowIso = new Date().toISOString();
-      setNotifications((prev) =>
-        prev.map((n) => (!n.read_at ? { ...n, read_at: nowIso } : n))
-      );
+      if (activeFilter === 'unread') {
+        setNotifications([]);
+        setHasMore(false);
+      } else {
+        const nowIso = new Date().toISOString();
+        setNotifications((prev) =>
+          prev.map((n) => (!n.read_at ? { ...n, read_at: nowIso } : n))
+        );
+      }
       setActionSuccess(t.notifications.markAllAsReadSuccess);
       setTimeout(() => {
         if (isMountedRef.current) setActionSuccess(null);
@@ -243,16 +271,29 @@ export const NotificationsPage: React.FC = () => {
     // 1. Mark read if unread
     if (!notification.read_at) {
       try {
-        await markAsRead(notification.id);
-        setNotifications((prev) =>
-          prev.map((n) =>
-            n.id === notification.id
-              ? { ...n, read_at: new Date().toISOString() }
-              : n
-          )
-        );
+        const success = await markAsRead(notification.id);
+        if (isMountedRef.current) {
+          if (success) {
+            if (activeFilter === 'unread') {
+              setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+            } else {
+              setNotifications((prev) =>
+                prev.map((n) =>
+                  n.id === notification.id
+                    ? { ...n, read_at: new Date().toISOString() }
+                    : n
+                )
+              );
+            }
+          } else {
+            setActionError(t.notifications.errorMarkRead);
+          }
+        }
       } catch (err) {
         console.warn('Silent mark-read error on navigate:', err);
+        if (isMountedRef.current) {
+          setActionError(t.notifications.errorMarkRead);
+        }
       }
     }
 
@@ -484,7 +525,8 @@ export const NotificationsPage: React.FC = () => {
               const meta = getNotificationVisualMeta(
                 item.event_key,
                 item.category,
-                item.severity
+                item.severity,
+                item.layer
               );
               const IconComponent = meta.icon;
               const title = isBn

@@ -142,18 +142,39 @@ export interface NotificationVisualMeta {
 }
 
 /**
+ * Authoritative check if a notification belongs to the Security category view.
+ * Derived from canonical events, security severity, security_privilege layer, or security category.
+ */
+export const isSecurityNotification = (notification: {
+  event_key?: string;
+  category?: string;
+  layer?: string;
+  severity?: string;
+}): boolean => {
+  return (
+    notification.event_key === 'admin.role_changed' ||
+    notification.event_key === 'role.permissions_changed' ||
+    notification.severity === 'security' ||
+    notification.layer === 'security_privilege' ||
+    notification.category === 'security'
+  );
+};
+
+/**
  * Returns tailored visual metadata (icon, colors, group tag) for all 12 canonical events.
  */
 export const getNotificationVisualMeta = (
   eventKey: NotificationEventKey,
   category: NotificationCategory,
-  severity?: string
+  severity?: string,
+  layer?: string
 ): NotificationVisualMeta => {
-  const isSecurity =
-    category === 'security' ||
-    severity === 'security' ||
-    eventKey === 'role.permissions_changed' ||
-    eventKey === 'admin.role_changed';
+  const isSecurity = isSecurityNotification({
+    event_key: eventKey,
+    category,
+    severity,
+    layer,
+  });
 
   switch (eventKey) {
     case 'complaint.submitted':

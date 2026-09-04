@@ -13,16 +13,11 @@ export type NotificationCategory =
 
 export type NotificationSeverity =
   | 'info'
-  | 'warning'
-  | 'critical'
   | 'action_required'
+  | 'warning'
   | 'security';
 
 export type NotificationLayer =
-  | 'toast'
-  | 'feed'
-  | 'both'
-  | 'silent'
   | 'action_required'
   | 'workflow_activity'
   | 'administrative_oversight'
@@ -31,11 +26,15 @@ export type NotificationLayer =
   | 'system_operational';
 
 export type NotificationAudienceMode =
-  | 'broadcast'
-  | 'personal'
-  | 'role_scoped'
   | 'permission'
+  | 'personal'
   | 'super_admin_only';
+
+export type NotificationTargetType =
+  | 'complaint'
+  | 'admin_user'
+  | 'role'
+  | null;
 
 export type NotificationEventKey =
   | 'complaint.submitted'
@@ -62,7 +61,7 @@ export interface AdminNotification {
   audience_mode: NotificationAudienceMode;
   actor_user_id: string | null;
   actor_display_name: string | null;
-  target_type: string | null;
+  target_type: NotificationTargetType;
   target_id: string | null;
   target_label: string | null;
   title_en: string;
@@ -89,4 +88,8 @@ export interface NotificationListParams {
   before_id?: string | null;
   unread_only?: boolean;
   category?: string | null;
+}
+
+export interface NotificationListResult extends Array<AdminNotification> {
+  hasMore?: boolean;
 }
