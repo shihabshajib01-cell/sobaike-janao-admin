@@ -3,10 +3,10 @@
 -- ==============================================================================
 -- Migration: 20260904000006_phase2_live_sync_corrections.sql
 -- Description: Synchronizes live database corrections back into repository:
---   1. admin_publish_complaint(text): Remove nonexistent published_at column reference;
+--   1. admin_publish_complaint(text): Remove nonexistent column reference;
 --      preserve submitted/unpublished -> published workflow and notification wiring.
---   2. admin_update_user(uuid, text, text, boolean): Remove nonexistent has_role_permission()
---      pre-check; preserve atomic resulting-state count_effective_role_managers() protection
+--   2. admin_update_user(uuid, text, text, boolean): Align authorization and role management;
+--      preserve atomic resulting-state count_effective_role_managers() protection
 --      and admin.activated, admin.deactivated, admin.role_changed notifications.
 --   3. admin_update_role: DROP accidental conflicting overload
 --      admin_update_role(text, text, text, text, boolean, text[], text, text) and retain
@@ -14,6 +14,8 @@
 --      admin_update_role(text, text, text, boolean, text[], text, boolean, boolean);
 --      preserve bilingual update behavior and role.updated & role.permissions_changed notifications.
 -- ==============================================================================
+
+BEGIN;
 
 -- ------------------------------------------------------------------------------
 -- 1. admin_publish_complaint(text)
@@ -50,7 +52,7 @@ BEGIN
             USING ERRCODE = '22023';
     END IF;
 
-    -- Update status without nonexistent published_at column
+    -- Update status and timestamp
     UPDATE public.complaints
     SET 
         status = 'published',
@@ -137,6 +139,10 @@ DECLARE
     v_role_changed BOOLEAN := false;
     v_audit_id UUID;
 BEGIN
+    PERFORM pg_advisory_xact_lock(
+        hashtext('sobaike_user_management_mutation_lock')
+    );
+
     IF NOT public.is_active_admin() THEN
         RAISE EXCEPTION 'Access denied. Active administrator session required.' USING ERRCODE = '42501';
     END IF;
@@ -452,15 +458,10 @@ BEGIN
     -- Concurrency serialization
     PERFORM pg_advisory_xact_lock(hashtext('sobaike_role_management_mutation_lock'));
 
-    -- Check caller active admin session
-    IF NOT public.is_active_admin() THEN
-        RAISE EXCEPTION 'Access denied. Active administrator session required.' USING ERRCODE = '42501';
-    END IF;
-
-    -- Check caller authorization via roles.manage permission
-    IF NOT public.has_permission('roles.manage') THEN
-        RAISE EXCEPTION 'Access denied. You do not have permission to update roles.'
-            USING ERRCODE = '42501';
+    IF NOT public.can_manage_roles() THEN
+        RAISE EXCEPTION
+          'Access denied. You do not have permission to update roles.'
+          USING ERRCODE = '42501';
     END IF;
 
     -- Validate technical role ID
@@ -746,3 +747,6 @@ $$;
 
 REVOKE ALL ON FUNCTION public.admin_update_role(TEXT, TEXT, TEXT, BOOLEAN, TEXT[], TEXT, BOOLEAN, BOOLEAN) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.admin_update_role(TEXT, TEXT, TEXT, BOOLEAN, TEXT[], TEXT, BOOLEAN, BOOLEAN) TO authenticated, service_role;
+
+COMMIT;
+
