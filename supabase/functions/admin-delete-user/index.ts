@@ -197,45 +197,138 @@ serve(async (req: Request) => {
       );
     }
 
-    // 12. Explicit cleanup safeguard (in case cascade was delayed or FK was modified)
-    try {
-      await supabaseAdmin.from("user_roles").delete().eq("user_id", cleanUserId);
-      await supabaseAdmin.from("admin_users").delete().eq("user_id", cleanUserId);
-    } catch (cleanupErr) {
-      console.warn("Explicit table cleanup safeguard warning (cascade handled):", cleanupErr);
+    // 12. Verify Post-Delete State (Cascade & Referential Integrity Confirmation)
+    // Confirm auth identity is gone
+    const { data: authUserCheck } = await supabaseAdmin.auth.admin.getUserById(cleanUserId);
+    if (authUserCheck?.user) {
+      console.error("Post-delete verification failed: auth identity still exists for", cleanUserId);
+      return new Response(
+        JSON.stringify({
+          error: "Cleanup inconsistency detected: authentication identity remains after delete operation.",
+          code: "AUTH_IDENTITY_REMAINS",
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // 13. Record canonical audit event: ADMIN_USER_DELETED (only after successful deletion)
+    // Confirm admin_users record was cascaded
+    const { data: remainingAdmin, error: checkAdminError } = await supabaseAdmin
+      .from("admin_users")
+      .select("user_id")
+      .eq("user_id", cleanUserId)
+      .maybeSingle();
+
+    if (checkAdminError) {
+      console.error("Post-delete verification query error for admin_users:", checkAdminError);
+      return new Response(
+        JSON.stringify({
+          error: "Post-delete verification query failed for admin_users.",
+          code: "POST_DELETE_CHECK_FAILED",
+          details: checkAdminError.message,
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (remainingAdmin) {
+      console.error("Post-delete verification failed: admin_users row still exists for", cleanUserId);
+      return new Response(
+        JSON.stringify({
+          error: "Cleanup inconsistency detected: administrator record was not removed by foreign key cascade.",
+          code: "CASCADE_INCONSISTENCY",
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Confirm user_roles records were cascaded
+    const { data: remainingRoles, error: checkRolesError } = await supabaseAdmin
+      .from("user_roles")
+      .select("user_id")
+      .eq("user_id", cleanUserId);
+
+    if (checkRolesError) {
+      console.error("Post-delete verification query error for user_roles:", checkRolesError);
+      return new Response(
+        JSON.stringify({
+          error: "Post-delete verification query failed for user_roles.",
+          code: "POST_DELETE_CHECK_FAILED",
+          details: checkRolesError.message,
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (remainingRoles && remainingRoles.length > 0) {
+      console.error("Post-delete verification failed: user_roles rows still exist for", cleanUserId);
+      return new Response(
+        JSON.stringify({
+          error: "Cleanup inconsistency detected: user role assignments were not removed by foreign key cascade.",
+          code: "CASCADE_INCONSISTENCY",
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 13. Record canonical audit event: ADMIN_USER_DELETED (only after successful deletion & verification)
+    const auditDetails = {
+      target_user_id: cleanUserId,
+      display_name: targetAdmin.display_name,
+      email: targetEmail,
+      previous_role_id: previousRoleId,
+      actor: callerUser.id,
+      timestamp: new Date().toISOString(),
+    };
+
+    let auditLogged = false;
+    let callerAuditErrorMsg = "";
+
     try {
-      const { error: auditError } = await supabaseCaller.rpc("log_role_audit_event", {
+      const { error: callerAuditError } = await supabaseCaller.rpc("log_role_audit_event", {
         p_action: "ADMIN_USER_DELETED",
         p_target_id: cleanUserId,
-        p_details: {
-          target_user_id: cleanUserId,
-          display_name: targetAdmin.display_name,
-          email: targetEmail,
-          previous_role_id: previousRoleId,
-        },
+        p_details: auditDetails,
       });
 
-      if (auditError) {
-        console.warn("Caller RPC audit logging warning, trying service_role insert fallback:", auditError);
-        await supabaseAdmin.from("admin_audit_logs").insert({
+      if (!callerAuditError) {
+        auditLogged = true;
+      } else {
+        callerAuditErrorMsg = callerAuditError.message || "Caller RPC error";
+        console.warn("Caller RPC audit logging failed, attempting service_role fallback:", callerAuditError);
+      }
+    } catch (auditErr: unknown) {
+      callerAuditErrorMsg = auditErr instanceof Error ? auditErr.message : String(auditErr);
+      console.warn("Caller RPC audit threw exception, attempting service_role fallback:", auditErr);
+    }
+
+    if (!auditLogged) {
+      const { error: serviceAuditError } = await supabaseAdmin
+        .from("admin_audit_logs")
+        .insert({
           actor_id: callerUser.id,
           action: "ADMIN_USER_DELETED",
           target_type: "USER",
           target_id: cleanUserId,
-          details: {
-            target_user_id: cleanUserId,
-            display_name: targetAdmin.display_name,
-            email: targetEmail,
-            previous_role_id: previousRoleId,
-          },
-          created_at: new Date().toISOString(),
+          details: auditDetails,
+          created_at: auditDetails.timestamp,
         });
+
+      if (!serviceAuditError) {
+        auditLogged = true;
+      } else {
+        console.error("Both audit paths failed after deleting user:", serviceAuditError);
+        return new Response(
+          JSON.stringify({
+            error: "Administrator was removed, but audit log creation failed permanently.",
+            code: "AUDIT_LOG_FAILED",
+            details: {
+              caller_error: callerAuditErrorMsg,
+              service_error: serviceAuditError.message,
+            },
+          }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
-    } catch (auditErr) {
-      console.warn("Audit logging warning during user deletion:", auditErr);
     }
 
     // 14. Return clean success response
