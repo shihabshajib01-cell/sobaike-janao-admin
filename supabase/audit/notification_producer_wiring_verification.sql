@@ -35,6 +35,7 @@ DECLARE
     v_missing_events TEXT[];
     v_func_src TEXT;
     v_proc_name TEXT;
+    v_proc_sig TEXT;
     v_ret_type TEXT;
     v_anon_grant_count INT;
     v_canonical_perms TEXT[] := ARRAY[
@@ -107,47 +108,42 @@ BEGIN
 
     -- Check producers exist as SECURITY DEFINER
     RAISE NOTICE '>>> [AUDIT 1.2] Inspecting Producer Routines & Security Definer Status...';
-    FOR v_proc_name IN SELECT unnest(ARRAY[
-        'submit_public_complaint',
-        'register_public_complaint_evidence',
-        'admin_publish_complaint',
-        'admin_unpublish_complaint',
-        'admin_reject_complaint',
-        'admin_finalize_user_membership',
-        'admin_update_user',
-        'admin_create_role',
-        'admin_update_role',
-        'admin_replace_role_permissions',
-        'log_role_audit_event'
+    FOR v_proc_sig IN SELECT unnest(ARRAY[
+        'submit_public_complaint(jsonb, text)',
+        'register_public_complaint_evidence(text, text, text, bigint, text)',
+        'admin_publish_complaint(text)',
+        'admin_unpublish_complaint(text, text)',
+        'admin_reject_complaint(text, text, text)',
+        'admin_finalize_user_membership(uuid, text, text, boolean)',
+        'admin_update_user(uuid, text, text, boolean)',
+        'admin_create_role(text, text, boolean, text[], text)',
+        'admin_update_role(text, text, text, boolean, text[], text, boolean, boolean)',
+        'admin_replace_role_permissions(text, text[])',
+        'log_role_audit_event(text, text, jsonb)'
     ])
     LOOP
         IF NOT EXISTS (
             SELECT 1 FROM pg_proc p
-            JOIN pg_namespace n ON n.oid = p.pronamespace
-            WHERE n.nspname = 'public'
-              AND p.proname = v_proc_name
+            WHERE p.oid = ('public.' || v_proc_sig)::regprocedure
               AND p.prosecdef = true
         ) THEN
-            RAISE EXCEPTION 'Producer Routine FAILED: % is not defined or is not SECURITY DEFINER!', v_proc_name;
+            RAISE EXCEPTION 'Producer Routine FAILED: % is not defined or is not SECURITY DEFINER!', v_proc_sig;
         END IF;
     END LOOP;
 
     -- Verify log_role_audit_event returns UUID for deterministic deduplication
     SELECT t.typname INTO v_ret_type
     FROM pg_proc p
-    JOIN pg_namespace n ON n.oid = p.pronamespace
     JOIN pg_type t ON t.oid = p.prorettype
-    WHERE n.nspname = 'public'
-      AND p.proname = 'log_role_audit_event';
+    WHERE p.oid = 'public.log_role_audit_event(text, text, jsonb)'::regprocedure;
 
     IF v_ret_type <> 'uuid' THEN
         RAISE EXCEPTION 'Audit Logger FAILED: log_role_audit_event must return uuid, found %', v_ret_type;
     END IF;
 
     -- Verify log_role_audit_event preserves uppercase target_type USER and ROLE
-    SELECT pg_get_functiondef(p.oid) INTO v_func_src
-    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public' AND p.proname = 'log_role_audit_event' LIMIT 1;
+    SELECT pg_get_functiondef('public.log_role_audit_event(text, text, jsonb)'::regprocedure)
+    INTO v_func_src;
 
     IF v_func_src NOT LIKE '%''USER''%' OR v_func_src NOT LIKE '%''ROLE''%' THEN
         RAISE EXCEPTION 'Audit Logger FAILED: log_role_audit_event must preserve target_type USER and ROLE!';
@@ -188,9 +184,8 @@ BEGIN
     RAISE NOTICE '>>> [AUDIT 1.4] Static Inspection of All 12 Producer Events via pg_get_functiondef()...';
 
     -- Event 1: complaint.submitted (submit_public_complaint)
-    SELECT pg_get_functiondef(p.oid) INTO v_func_src
-    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public' AND p.proname = 'submit_public_complaint' LIMIT 1;
+    SELECT pg_get_functiondef('public.submit_public_complaint(jsonb, text)'::regprocedure)
+    INTO v_func_src;
 
     IF v_func_src NOT LIKE '%complaint.submitted%' THEN
         RAISE EXCEPTION 'Static Check 1 FAILED: submit_public_complaint does not emit complaint.submitted';
@@ -200,9 +195,8 @@ BEGIN
     END IF;
 
     -- Event 2: complaint.evidence_attached (register_public_complaint_evidence)
-    SELECT pg_get_functiondef(p.oid) INTO v_func_src
-    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public' AND p.proname = 'register_public_complaint_evidence' LIMIT 1;
+    SELECT pg_get_functiondef('public.register_public_complaint_evidence(text, text, text, bigint, text)'::regprocedure)
+    INTO v_func_src;
 
     IF v_func_src NOT LIKE '%complaint.evidence_attached%' THEN
         RAISE EXCEPTION 'Static Check 2 FAILED: register_public_complaint_evidence does not emit complaint.evidence_attached';
@@ -212,9 +206,8 @@ BEGIN
     END IF;
 
     -- Event 3: complaint.published (admin_publish_complaint)
-    SELECT pg_get_functiondef(p.oid) INTO v_func_src
-    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public' AND p.proname = 'admin_publish_complaint' LIMIT 1;
+    SELECT pg_get_functiondef('public.admin_publish_complaint(text)'::regprocedure)
+    INTO v_func_src;
 
     IF v_func_src NOT LIKE '%complaint.published%' THEN
         RAISE EXCEPTION 'Static Check 3 FAILED: admin_publish_complaint does not emit complaint.published';
@@ -225,11 +218,13 @@ BEGIN
     IF v_func_src NOT LIKE '%submitted%' OR v_func_src NOT LIKE '%unpublished%' THEN
         RAISE EXCEPTION 'Static Check 3 FAILED: admin_publish_complaint must accept status submitted or unpublished';
     END IF;
+    IF v_func_src LIKE '%published_at%' THEN
+        RAISE EXCEPTION 'Static Check 3 FAILED: admin_publish_complaint references nonexistent published_at!';
+    END IF;
 
     -- Event 4: complaint.unpublished (admin_unpublish_complaint)
-    SELECT pg_get_functiondef(p.oid) INTO v_func_src
-    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public' AND p.proname = 'admin_unpublish_complaint' LIMIT 1;
+    SELECT pg_get_functiondef('public.admin_unpublish_complaint(text, text)'::regprocedure)
+    INTO v_func_src;
 
     IF v_func_src NOT LIKE '%complaint.unpublished%' THEN
         RAISE EXCEPTION 'Static Check 4 FAILED: admin_unpublish_complaint does not emit complaint.unpublished';
@@ -239,9 +234,8 @@ BEGIN
     END IF;
 
     -- Event 5: complaint.rejected (admin_reject_complaint)
-    SELECT pg_get_functiondef(p.oid) INTO v_func_src
-    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public' AND p.proname = 'admin_reject_complaint' LIMIT 1;
+    SELECT pg_get_functiondef('public.admin_reject_complaint(text, text, text)'::regprocedure)
+    INTO v_func_src;
 
     IF v_func_src NOT LIKE '%complaint.rejected%' THEN
         RAISE EXCEPTION 'Static Check 5 FAILED: admin_reject_complaint does not emit complaint.rejected';
@@ -251,9 +245,8 @@ BEGIN
     END IF;
 
     -- Event 6: admin.created (admin_finalize_user_membership)
-    SELECT pg_get_functiondef(p.oid) INTO v_func_src
-    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public' AND p.proname = 'admin_finalize_user_membership' LIMIT 1;
+    SELECT pg_get_functiondef('public.admin_finalize_user_membership(uuid, text, text, boolean)'::regprocedure)
+    INTO v_func_src;
 
     IF v_func_src NOT LIKE '%admin.created%' THEN
         RAISE EXCEPTION 'Static Check 6 FAILED: admin_finalize_user_membership does not emit admin.created';
@@ -266,9 +259,8 @@ BEGIN
     END IF;
 
     -- Events 7, 8, 9: admin.activated, admin.deactivated, admin.role_changed (admin_update_user)
-    SELECT pg_get_functiondef(p.oid) INTO v_func_src
-    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public' AND p.proname = 'admin_update_user' LIMIT 1;
+    SELECT pg_get_functiondef('public.admin_update_user(uuid, text, text, boolean)'::regprocedure)
+    INTO v_func_src;
 
     IF v_func_src NOT LIKE '%admin.activated%' THEN
         RAISE EXCEPTION 'Static Check 7 FAILED: admin_update_user does not emit admin.activated';
@@ -282,11 +274,16 @@ BEGIN
     IF v_func_src NOT LIKE '%ADMIN_USER_UPDATED%' THEN
         RAISE EXCEPTION 'Static Check 9 FAILED: admin_update_user must preserve audit event ADMIN_USER_UPDATED';
     END IF;
+    IF v_func_src LIKE '%has_role_permission%' THEN
+        RAISE EXCEPTION 'Static Check 9 FAILED: admin_update_user references nonexistent has_role_permission!';
+    END IF;
+    IF v_func_src NOT LIKE '%count_effective_role_managers%' THEN
+        RAISE EXCEPTION 'Static Check 9 FAILED: admin_update_user must preserve count_effective_role_managers protection!';
+    END IF;
 
     -- Event 10: role.created (admin_create_role)
-    SELECT pg_get_functiondef(p.oid) INTO v_func_src
-    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public' AND p.proname = 'admin_create_role' LIMIT 1;
+    SELECT pg_get_functiondef('public.admin_create_role(text, text, boolean, text[], text)'::regprocedure)
+    INTO v_func_src;
 
     IF v_func_src NOT LIKE '%role.created%' THEN
         RAISE EXCEPTION 'Static Check 10 FAILED: admin_create_role does not emit role.created';
@@ -298,10 +295,19 @@ BEGIN
         RAISE EXCEPTION 'Static Check 10 FAILED: admin_create_role must use generate_role_slug';
     END IF;
 
+    -- Check that conflicting overload was dropped
+    IF EXISTS (
+        SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+        WHERE n.nspname = 'public'
+          AND p.proname = 'admin_update_role'
+          AND oidvectortypes(p.proargtypes) = 'text, text, text, text, boolean, text[], text, text'
+    ) THEN
+        RAISE EXCEPTION 'Static Check 11 FAILED: Conflicting overload admin_update_role(text, text, text, text, boolean, text[], text, text) must be DROPPED!';
+    END IF;
+
     -- Event 11: role.updated (admin_update_role)
-    SELECT pg_get_functiondef(p.oid) INTO v_func_src
-    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public' AND p.proname = 'admin_update_role' LIMIT 1;
+    SELECT pg_get_functiondef('public.admin_update_role(text, text, text, boolean, text[], text, boolean, boolean)'::regprocedure)
+    INTO v_func_src;
 
     IF v_func_src NOT LIKE '%role.updated%' THEN
         RAISE EXCEPTION 'Static Check 11 FAILED: admin_update_role does not emit role.updated';
@@ -315,9 +321,8 @@ BEGIN
         RAISE EXCEPTION 'Static Check 12 FAILED: admin_update_role does not emit role.permissions_changed';
     END IF;
 
-    SELECT pg_get_functiondef(p.oid) INTO v_func_src
-    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public' AND p.proname = 'admin_replace_role_permissions' LIMIT 1;
+    SELECT pg_get_functiondef('public.admin_replace_role_permissions(text, text[])'::regprocedure)
+    INTO v_func_src;
 
     IF v_func_src NOT LIKE '%role.permissions_changed%' THEN
         RAISE EXCEPTION 'Static Check 12 FAILED: admin_replace_role_permissions does not emit role.permissions_changed';
@@ -360,29 +365,27 @@ BEGIN
     END IF;
 
     -- Ensure nonexistent permissions are NOT referenced in producer routines
-    FOR v_proc_name IN SELECT unnest(ARRAY[
-        'admin_create_role',
-        'admin_update_role',
-        'admin_replace_role_permissions',
-        'admin_publish_complaint',
-        'admin_unpublish_complaint',
-        'admin_reject_complaint',
-        'admin_finalize_user_membership',
-        'admin_update_user'
+    FOR v_proc_sig IN SELECT unnest(ARRAY[
+        'admin_create_role(text, text, boolean, text[], text)',
+        'admin_update_role(text, text, text, boolean, text[], text, boolean, boolean)',
+        'admin_replace_role_permissions(text, text[])',
+        'admin_publish_complaint(text)',
+        'admin_unpublish_complaint(text, text)',
+        'admin_reject_complaint(text, text, text)',
+        'admin_finalize_user_membership(uuid, text, text, boolean)',
+        'admin_update_user(uuid, text, text, boolean)'
     ])
     LOOP
-        SELECT pg_get_functiondef(p.oid) INTO v_func_src
-        FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-        WHERE n.nspname = 'public' AND p.proname = v_proc_name LIMIT 1;
+        SELECT pg_get_functiondef(('public.' || v_proc_sig)::regprocedure) INTO v_func_src;
 
         IF v_func_src LIKE '%roles.view%' THEN
-            RAISE EXCEPTION 'Permissions Verification FAILED: Routine % references deprecated roles.view!', v_proc_name;
+            RAISE EXCEPTION 'Permissions Verification FAILED: Routine % references deprecated roles.view!', v_proc_sig;
         END IF;
         IF v_func_src LIKE '%complaints.manage%' THEN
-            RAISE EXCEPTION 'Permissions Verification FAILED: Routine % references deprecated complaints.manage!', v_proc_name;
+            RAISE EXCEPTION 'Permissions Verification FAILED: Routine % references deprecated complaints.manage!', v_proc_sig;
         END IF;
         IF v_func_src LIKE '%notifications.view%' THEN
-            RAISE EXCEPTION 'Permissions Verification FAILED: Routine % references nonexistent notifications.view!', v_proc_name;
+            RAISE EXCEPTION 'Permissions Verification FAILED: Routine % references nonexistent notifications.view!', v_proc_sig;
         END IF;
     END LOOP;
 
