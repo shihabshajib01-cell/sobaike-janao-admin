@@ -44,7 +44,8 @@ export const ComplaintInfoSection: React.FC<ComplaintInfoSectionProps> = ({
   const hasBothTitles = hasBnTitle && hasEnTitle;
 
   // Allow switching description language tab or viewing both
-  const [descLangTab, setDescLangTab] = useState<'both' | 'bn' | 'en'>('both');
+  const initialTab = hasBothDesc ? 'both' : (hasOnlyBn ? 'bn' : (hasOnlyEn ? 'en' : 'both'));
+  const [descLangTab, setDescLangTab] = useState<'both' | 'bn' | 'en'>(initialTab);
 
   // Synchronize active tab based on available language narratives
   useEffect(() => {
@@ -160,7 +161,7 @@ export const ComplaintInfoSection: React.FC<ComplaintInfoSectionProps> = ({
               <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800 space-y-1.5">
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
                   <Globe2 className="w-3.5 h-3.5 text-sky-600" />
-                  <span>{isBn ? 'ইংরেজি বিবরণ / অনুবাদ' : 'English Submission Statement'}</span>
+                  <span>{isBn ? 'ইংরেজি বিবরণ' : 'English Submission Statement'}</span>
                 </div>
                 <p className="text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
                   {complaint.descriptionEn}
