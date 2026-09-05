@@ -40,9 +40,23 @@ export interface ComplaintLocationCardProps {
 }
 
 /**
- * Ensures Leaflet centers and invalidates container size upon rendering
+ * Capability check for desktop devices with fine pointer (mouse / trackpad)
+ * Avoids trapping page scroll on touch / mobile devices while enabling normal zoom on desktop
  */
-const MapRecenter: React.FC<{ center: [number, number] }> = ({ center }) => {
+const checkDesktopFinePointer = (): boolean => {
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  }
+  return false;
+};
+
+/**
+ * Ensures Leaflet centers, synchronizes wheel zoom capabilities, and invalidates container size upon rendering
+ */
+const MapRecenter: React.FC<{ center: [number, number]; scrollWheelZoom?: boolean }> = ({
+  center,
+  scrollWheelZoom,
+}) => {
   const map = useMap();
   useEffect(() => {
     map.setView(center, 14);
@@ -51,6 +65,15 @@ const MapRecenter: React.FC<{ center: [number, number] }> = ({ center }) => {
     }, 150);
     return () => clearTimeout(timer);
   }, [center, map]);
+
+  useEffect(() => {
+    if (scrollWheelZoom) {
+      map.scrollWheelZoom.enable();
+    } else {
+      map.scrollWheelZoom.disable();
+    }
+  }, [scrollWheelZoom, map]);
+
   return null;
 };
 
@@ -68,6 +91,27 @@ export const ComplaintLocationCard: React.FC<ComplaintLocationCardProps> = ({
 
   const [copiedIncident, setCopiedIncident] = useState<boolean>(false);
   const [copiedDevice, setCopiedDevice] = useState<boolean>(false);
+
+  // Desktop fine-pointer capability detection for normal desktop wheel/trackpad zoom
+  const [scrollWheelZoomEnabled, setScrollWheelZoomEnabled] = useState<boolean>(checkDesktopFinePointer);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mediaQuery = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const handler = (e: MediaQueryListEvent) => {
+      setScrollWheelZoomEnabled(e.matches);
+    };
+
+    setScrollWheelZoomEnabled(mediaQuery.matches);
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handler);
+      return () => mediaQuery.removeEventListener('change', handler);
+    } else if ('addListener' in mediaQuery) {
+      (mediaQuery as any).addListener(handler);
+      return () => (mediaQuery as any).removeListener(handler);
+    }
+  }, []);
 
   // 1. Incident Location Coordinate Validation
   const hasIncidentCoords = Boolean(
@@ -252,7 +296,7 @@ export const ComplaintLocationCard: React.FC<ComplaintLocationCardProps> = ({
                   center={[incidentLat, incidentLng]}
                   zoom={14}
                   zoomControl={false}
-                  scrollWheelZoom={false}
+                  scrollWheelZoom={scrollWheelZoomEnabled}
                   className="w-full h-full z-0 outline-none"
                   style={{ width: '100%', height: '100%' }}
                 >
@@ -261,7 +305,7 @@ export const ComplaintLocationCard: React.FC<ComplaintLocationCardProps> = ({
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     maxZoom={19}
                   />
-                  <MapRecenter center={[incidentLat, incidentLng]} />
+                  <MapRecenter center={[incidentLat, incidentLng]} scrollWheelZoom={scrollWheelZoomEnabled} />
                   <Marker position={[incidentLat, incidentLng]} icon={incidentMarkerIcon}>
                     <Popup className="custom-map-popup">
                       <div className="p-0.5 text-xs text-slate-800 dark:text-slate-100">
@@ -441,7 +485,7 @@ export const ComplaintLocationCard: React.FC<ComplaintLocationCardProps> = ({
                     center={[deviceLat, deviceLng]}
                     zoom={14}
                     zoomControl={false}
-                    scrollWheelZoom={false}
+                    scrollWheelZoom={scrollWheelZoomEnabled}
                     className="w-full h-full z-0 outline-none"
                     style={{ width: '100%', height: '100%' }}
                   >
@@ -450,7 +494,7 @@ export const ComplaintLocationCard: React.FC<ComplaintLocationCardProps> = ({
                       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                       maxZoom={19}
                     />
-                    <MapRecenter center={[deviceLat, deviceLng]} />
+                    <MapRecenter center={[deviceLat, deviceLng]} scrollWheelZoom={scrollWheelZoomEnabled} />
                     <Marker position={[deviceLat, deviceLng]} icon={deviceMarkerIcon}>
                       <Popup className="custom-map-popup">
                         <div className="p-0.5 text-xs text-slate-800 dark:text-slate-100">
