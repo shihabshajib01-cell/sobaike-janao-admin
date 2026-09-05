@@ -15,8 +15,17 @@ import {
   ComplaintTimelineEvent,
   ComplaintUrgency,
   TimelineEventType,
+  ReporterDeviceLocation,
 } from '@/types/Complaint';
 import { WorkflowActionResult } from '@/services/fallback/complaintFallback';
+
+export interface SupabaseReporterLocationRow {
+  complaint_id: string;
+  reporter_latitude: number | null;
+  reporter_longitude: number | null;
+  accuracy_meters: number | null;
+  captured_at: string | null;
+}
 
 export interface SupabaseSegment {
   id: string;
@@ -838,22 +847,105 @@ export const supabaseComplaintService = {
   },
 
   /**
+   * Fetch private reporter device location from secure RPC admin_get_complaint_reporter_location
+   * Strictly isolated from incident location. Returns null if not captured, or flags permission denied / errors.
+   */
+  async getComplaintReporterLocation(
+    complaintId: string
+  ): Promise<{
+    data: ReporterDeviceLocation | null;
+    error?: string | null;
+    isPermissionDenied?: boolean;
+  }> {
+    try {
+      const { data: rpcRows, error: rpcError } = await supabase.rpc(
+        'admin_get_complaint_reporter_location',
+        { p_complaint_id: complaintId }
+      );
+
+      if (rpcError) {
+        console.warn(`Error calling admin_get_complaint_reporter_location for ${complaintId}:`, rpcError);
+        const isDenied =
+          rpcError.code === '42501' ||
+          rpcError.message?.toLowerCase().includes('denied') ||
+          rpcError.message?.toLowerCase().includes('restricted') ||
+          rpcError.message?.toLowerCase().includes('permission');
+
+        if (isDenied) {
+          return {
+            data: null,
+            error: 'Access restricted. You do not have permission to view private reporter device location.',
+            isPermissionDenied: true,
+          };
+        }
+        return {
+          data: null,
+          error: rpcError.message || 'Failed to load reporter device location.',
+          isPermissionDenied: false,
+        };
+      }
+
+      const rows = (Array.isArray(rpcRows) ? rpcRows : rpcRows ? [rpcRows] : []) as SupabaseReporterLocationRow[];
+      if (rows.length === 0 || !rows[0]) {
+        return { data: null };
+      }
+
+      const row = rows[0];
+      if (
+        typeof row.reporter_latitude !== 'number' ||
+        typeof row.reporter_longitude !== 'number' ||
+        isNaN(row.reporter_latitude) ||
+        isNaN(row.reporter_longitude) ||
+        (row.reporter_latitude === 0 && row.reporter_longitude === 0)
+      ) {
+        return { data: null };
+      }
+
+      return {
+        data: {
+          complaintId: row.complaint_id,
+          latitude: row.reporter_latitude,
+          longitude: row.reporter_longitude,
+          accuracyMeters: typeof row.accuracy_meters === 'number' ? row.accuracy_meters : null,
+          capturedAt: row.captured_at || null,
+        },
+      };
+    } catch (err: any) {
+      console.error(`Failed to load reporter device location for ${complaintId}:`, err);
+      return {
+        data: null,
+        error: err?.message || 'Failed to load reporter device location.',
+        isPermissionDenied: false,
+      };
+    }
+  },
+
+  /**
    * Fetch complaint detail and timeline bundle
    */
   async getComplaintDetail(
     id: string,
-    options?: { loadEvidence?: boolean }
-  ): Promise<{ complaint: Complaint; timeline: ComplaintTimelineEvent[]; evidenceError?: string | null } | null> {
+    options?: { loadEvidence?: boolean; loadReporterLocation?: boolean }
+  ): Promise<{
+    complaint: Complaint;
+    timeline: ComplaintTimelineEvent[];
+    evidenceError?: string | null;
+    reporterLocation?: ReporterDeviceLocation | null;
+    reporterLocationError?: string | null;
+    reporterLocationPermissionDenied?: boolean;
+  } | null> {
     const { segments, subcategories } = await getTaxonomy();
     const segmentsMap = new Map(segments.map((s) => [s.id, s]));
     const subcategoriesMap = new Map(subcategories.map((s) => [s.id, s]));
 
     const shouldLoadEvidence = options?.loadEvidence ?? true;
+    const shouldLoadReporterLocation = options?.loadReporterLocation ?? true;
 
-    const [complaintRowRes, timeline, evidenceResult] = await Promise.all([
+    const [complaintRowRes, timeline, evidenceResult, reporterLocResult] = await Promise.all([
       supabase.from('complaints').select('*').eq('id', id).maybeSingle(),
       this.getComplaintTimeline(id),
       shouldLoadEvidence ? this.getComplaintEvidence(id) : Promise.resolve({ media: [] }),
+      shouldLoadReporterLocation ? this.getComplaintReporterLocation(id) : Promise.resolve({ data: null }),
     ]);
 
     if (complaintRowRes.error) {
@@ -872,10 +964,18 @@ export const supabaseComplaintService = {
     // Replace initial empty media array with real evidence media
     complaint.media = evidenceResult.media || [];
 
+    // Attach private reporter device location separately if loaded
+    if (reporterLocResult.data) {
+      complaint.reporterDeviceLocation = reporterLocResult.data;
+    }
+
     return {
       complaint,
       timeline,
       evidenceError: evidenceResult.error || null,
+      reporterLocation: reporterLocResult.data || null,
+      reporterLocationError: reporterLocResult.error || null,
+      reporterLocationPermissionDenied: Boolean(reporterLocResult.isPermissionDenied),
     };
   },
 

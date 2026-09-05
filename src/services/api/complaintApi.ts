@@ -12,6 +12,7 @@ import {
   ComplaintListResponse,
   ComplaintStatusTabCount,
   ComplaintTimelineEvent,
+  ReporterDeviceLocation,
 } from '@/types/Complaint';
 import { complaintFallback, WorkflowActionResult } from '@/services/fallback/complaintFallback';
 import {
@@ -26,6 +27,9 @@ export interface ComplaintDetailData {
   complaint: Complaint;
   timeline: ComplaintTimelineEvent[];
   evidenceError?: string | null;
+  reporterLocation?: ReporterDeviceLocation | null;
+  reporterLocationError?: string | null;
+  reporterLocationPermissionDenied?: boolean;
 }
 
 const isDev = Boolean(typeof import.meta !== 'undefined' && import.meta.env?.DEV);
@@ -127,17 +131,30 @@ export class ComplaintApi {
   }
 
   /**
-   * Get complete complaint detail workspace package (complaint + timeline + evidence)
+   * Get complete complaint detail workspace package (complaint + timeline + evidence + reporter location)
    */
   async getComplaintDetail(
     id: string,
-    options?: { loadEvidence?: boolean }
+    options?: { loadEvidence?: boolean; loadReporterLocation?: boolean }
   ): Promise<ComplaintDetailData | null> {
     if (isSupabaseConfigured) {
       return await supabaseComplaintService.getComplaintDetail(id, options);
     }
     if (isDev) {
       return complaintFallback.getComplaintDetail(id);
+    }
+    throw new Error('Supabase complaint service is not configured in this environment.');
+  }
+
+  /**
+   * Get private reporter device location from secure RPC
+   */
+  async getComplaintReporterLocation(id: string) {
+    if (isSupabaseConfigured) {
+      return await supabaseComplaintService.getComplaintReporterLocation(id);
+    }
+    if (isDev) {
+      return { data: null };
     }
     throw new Error('Supabase complaint service is not configured in this environment.');
   }

@@ -22,6 +22,18 @@ export interface ComplaintLocation {
   coordinates?: [number, number]; // [latitude, longitude]
 }
 
+/**
+ * Citizen reporter device location captured privately at submission time.
+ * MUST NEVER be mixed with or substituted for ComplaintLocation (incident location).
+ */
+export interface ReporterDeviceLocation {
+  complaintId: string;
+  latitude: number;
+  longitude: number;
+  accuracyMeters?: number | null;
+  capturedAt?: string | null;
+}
+
 export interface ComplaintMedia {
   id: string;
   type: 'image' | 'video' | 'document';
@@ -79,6 +91,7 @@ export interface Complaint {
   evidenceTypes?: string[];
   evidenceDescription?: string;
   versions?: ComplaintVersion[];
+  reporterDeviceLocation?: ReporterDeviceLocation | null;
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
 }

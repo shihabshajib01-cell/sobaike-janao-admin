@@ -11,6 +11,7 @@ import {
   Complaint,
   ComplaintLifecycleStatus,
   ComplaintTimelineEvent,
+  ReporterDeviceLocation,
 } from '@/types/Complaint';
 import { complaintApi } from '@/services/api';
 import {
@@ -42,6 +43,10 @@ export const ComplaintDetailPage: React.FC = () => {
   const [complaint, setComplaint] = useState<Complaint | null>(null);
   const [timeline, setTimeline] = useState<ComplaintTimelineEvent[]>([]);
   const [evidenceError, setEvidenceError] = useState<string | null>(null);
+  const [reporterLocation, setReporterLocation] = useState<ReporterDeviceLocation | null>(null);
+  const [reporterLocationLoading, setReporterLocationLoading] = useState<boolean>(false);
+  const [reporterLocationError, setReporterLocationError] = useState<string | null>(null);
+  const [reporterLocationDenied, setReporterLocationDenied] = useState<boolean>(false);
   const [error, setError] = useState<boolean>(false);
 
   const fetchComplaintData = useCallback(async () => {
@@ -49,9 +54,12 @@ export const ComplaintDetailPage: React.FC = () => {
     setLoading(true);
     setError(false);
     setEvidenceError(null);
+    setReporterLocationError(null);
+    setReporterLocationDenied(false);
     try {
       const detailRes = await complaintApi.getComplaintDetail(id, {
         loadEvidence: canViewEvidence,
+        loadReporterLocation: true,
       });
 
       if (!detailRes || !detailRes.complaint) {
@@ -60,6 +68,9 @@ export const ComplaintDetailPage: React.FC = () => {
         setComplaint(detailRes.complaint);
         setTimeline(detailRes.timeline || []);
         setEvidenceError(detailRes.evidenceError || null);
+        setReporterLocation(detailRes.reporterLocation || detailRes.complaint.reporterDeviceLocation || null);
+        setReporterLocationError(detailRes.reporterLocationError || null);
+        setReporterLocationDenied(Boolean(detailRes.reporterLocationPermissionDenied));
       }
     } catch (err) {
       console.error('Failed to fetch complaint detail:', err);
@@ -68,6 +79,32 @@ export const ComplaintDetailPage: React.FC = () => {
       setLoading(false);
     }
   }, [id, canViewEvidence]);
+
+  const handleRetryReporterLocation = useCallback(async () => {
+    if (!id) return;
+    setReporterLocationLoading(true);
+    setReporterLocationError(null);
+    setReporterLocationDenied(false);
+    try {
+      const res = await complaintApi.getComplaintReporterLocation(id);
+      if (res.error) {
+        setReporterLocationError(res.error);
+        setReporterLocationDenied(Boolean(res.isPermissionDenied));
+      } else {
+        setReporterLocation(res.data);
+        if (complaint && res.data) {
+          setComplaint({
+            ...complaint,
+            reporterDeviceLocation: res.data,
+          });
+        }
+      }
+    } catch (err: any) {
+      setReporterLocationError(err?.message || 'Failed to reload reporter device location.');
+    } finally {
+      setReporterLocationLoading(false);
+    }
+  }, [id, complaint]);
 
   useEffect(() => {
     fetchComplaintData();
@@ -231,8 +268,15 @@ export const ComplaintDetailPage: React.FC = () => {
             onRetry={fetchComplaintData}
           />
 
-          {/* Location & Jurisdictional Area */}
-          <ComplaintLocationCard location={complaint.location} />
+          {/* Location & Jurisdictional Area (Incident Location + Reporter Device Location) */}
+          <ComplaintLocationCard
+            location={complaint.location}
+            reporterDeviceLocation={reporterLocation || complaint.reporterDeviceLocation}
+            reporterLocationLoading={reporterLocationLoading}
+            reporterLocationError={reporterLocationError}
+            reporterLocationPermissionDenied={reporterLocationDenied}
+            onRetryReporterLocation={handleRetryReporterLocation}
+          />
         </div>
 
         {/* Right Column (4-5 cols on desktop): Action Area & Lifecycle Timeline */}
