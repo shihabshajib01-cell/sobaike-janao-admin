@@ -3,7 +3,6 @@ export * from './Dashboard/DashboardPage';
 export * from './Complaints/ComplaintsPage';
 export * from './Complaints/ComplaintDetailPage';
 export * from './Responses/ResponsesPage';
-export * from './Responses/ResponseDetailPage';
 export * from './Categories/CategoriesPage';
 export * from './Map/MapPage';
 export * from './LocationActivity/LocationActivityPage';

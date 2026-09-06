@@ -1,2 +1,2 @@
 export * from './ResponsesPage';
-export * from './ResponseDetailPage';
+export { default as ResponsesPage } from './ResponsesPage';

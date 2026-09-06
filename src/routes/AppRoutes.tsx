@@ -18,7 +18,6 @@ import {
   ComplaintsPage,
   ComplaintDetailPage,
   ResponsesPage,
-  ResponseDetailPage,
   CategoriesPage,
   MapPage,
   LocationActivityPage,
@@ -182,14 +181,6 @@ const routes = createRoutesFromElements(
         element={
           <PermissionGuard requiredPermission="responses.view">
             <ResponsesPage />
-          </PermissionGuard>
-        }
-      />
-      <Route
-        path="/responses/:id"
-        element={
-          <PermissionGuard requiredPermission="responses.view">
-            <ResponseDetailPage />
           </PermissionGuard>
         }
       />

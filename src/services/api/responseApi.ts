@@ -1,7 +1,6 @@
 /**
  * Response API Service Layer
- * UI contract retained for future real Response API integration.
- * Currently disconnected until backend/schema audit phase.
+ * Authoritative integration with Supabase RPC for Response Read operations.
  */
 
 import {
@@ -9,19 +8,28 @@ import {
   ResponseFilterState,
   ResponseListResponse,
   ResponseStatusFilter,
-  ResponseTimelineEvent,
-  ResponseWorkflowResult,
 } from '@/types/Response';
-import { responseFallback } from '@/services/fallback/responseFallback';
+import { supabaseResponseService } from './supabaseResponseService';
+import { isSupabaseConfigured } from '@/lib/supabase';
 
-export const RESPONSE_MANAGEMENT_CONNECTED = true;
+export const RESPONSE_READ_CONNECTED = isSupabaseConfigured;
+export const RESPONSE_MODERATION_CONNECTED = false;
 
 export class ResponseFeatureUnavailableError extends Error {
   code = 'FEATURE_NOT_CONNECTED';
 
-  constructor() {
-    super('Response management API is not connected.');
+  constructor(message = 'Response moderation is not connected in this phase.') {
+    super(message);
     this.name = 'ResponseFeatureUnavailableError';
+  }
+}
+
+export class ResponseConfigurationError extends Error {
+  code = 'SUPABASE_NOT_CONFIGURED';
+
+  constructor() {
+    super('Supabase is not configured. Please check your Supabase environment variables.');
+    this.name = 'ResponseConfigurationError';
   }
 }
 
@@ -32,80 +40,34 @@ export class ResponseApi {
   async getResponses(
     filters: Partial<ResponseFilterState> = {},
     page = 1,
-    limit = 10
+    limit = 20
   ): Promise<ResponseListResponse> {
-    return responseFallback.getResponses(filters, page, limit);
+    if (!RESPONSE_READ_CONNECTED) {
+      throw new ResponseConfigurationError();
+    }
+    return supabaseResponseService.getResponses(filters, page, limit);
   }
 
   /**
    * Get single response by ID
    */
   async getResponseById(id: string): Promise<ResponseItem | null> {
-    return responseFallback.getResponseById(id);
+    if (!RESPONSE_READ_CONNECTED) {
+      throw new ResponseConfigurationError();
+    }
+    return supabaseResponseService.getResponseById(id);
   }
 
   /**
    * Get response status metrics
    */
   async getStatusCounts(): Promise<Record<ResponseStatusFilter, number>> {
-    return responseFallback.getStatusCounts();
-  }
-
-  /**
-   * Approve official response
-   */
-  async approveResponse(responseId: string, notes?: string): Promise<ResponseWorkflowResult> {
-    return responseFallback.approveResponse(responseId, notes);
-  }
-
-  /**
-   * Publish response
-   */
-  async publishResponse(
-    responseId: string,
-    options?: { notes?: string }
-  ): Promise<ResponseWorkflowResult> {
-    return responseFallback.publishResponse(responseId, options);
-  }
-
-  /**
-   * Unpublish response
-   */
-  async unpublishResponse(responseId: string, reason: string): Promise<ResponseWorkflowResult> {
-    return responseFallback.unpublishResponse(responseId, reason);
-  }
-
-  /**
-   * Reject response
-   */
-  async rejectResponse(
-    responseId: string,
-    reason: string,
-    explanation: string
-  ): Promise<ResponseWorkflowResult> {
-    return responseFallback.rejectResponse(responseId, reason, explanation);
-  }
-
-  /**
-   * Update public-facing copy
-   */
-  async updatePublicVersion(
-    responseId: string,
-    publicContentEn: string,
-    publicContentBn: string
-  ): Promise<ResponseWorkflowResult> {
-    return responseFallback.updatePublicVersion(responseId, publicContentEn, publicContentBn);
-  }
-
-  /**
-   * Get audit timeline events for response
-   */
-  async getResponseTimeline(responseId: string): Promise<ResponseTimelineEvent[]> {
-    return responseFallback.getResponseTimeline(responseId);
+    if (!RESPONSE_READ_CONNECTED) {
+      throw new ResponseConfigurationError();
+    }
+    return supabaseResponseService.getStatusCounts();
   }
 }
 
 export const responseApi = new ResponseApi();
 export default responseApi;
-export { type ResponseWorkflowResult };
-
