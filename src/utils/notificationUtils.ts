@@ -61,6 +61,7 @@ export const isSafeNotificationRoute = (route: string | null | undefined): boole
     /^\/users\/[a-zA-Z0-9_-]+\/?$/,
     /^\/users\/[a-zA-Z0-9_-]+\/edit\/?$/,
     /^\/notifications\/?$/,
+    /^\/activity-log\/?$/,
   ];
 
   return safePatterns.some((pattern) => pattern.test(trimmed));
