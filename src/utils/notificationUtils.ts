@@ -49,6 +49,7 @@ export const isSafeNotificationRoute = (route: string | null | undefined): boole
     /^\/complaints\/?$/,
     /^\/complaints\/[a-zA-Z0-9_-]+\/?$/,
     /^\/responses\/?$/,
+    /^\/responses\/[a-zA-Z0-9_-]+\/?$/,
     /^\/categories\/?$/,
     /^\/map\/?$/,
     /^\/location-activity\/?$/,

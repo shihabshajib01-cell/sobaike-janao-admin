@@ -12,8 +12,9 @@ import {
   ResponseTimelineEvent,
   ResponseWorkflowResult,
 } from '@/types/Response';
+import { responseFallback } from '@/services/fallback/responseFallback';
 
-export const RESPONSE_MANAGEMENT_CONNECTED = false;
+export const RESPONSE_MANAGEMENT_CONNECTED = true;
 
 export class ResponseFeatureUnavailableError extends Error {
   code = 'FEATURE_NOT_CONNECTED';
@@ -29,81 +30,82 @@ export class ResponseApi {
    * Get filtered and paginated responses list
    */
   async getResponses(
-    _filters: Partial<ResponseFilterState> = {},
-    _page = 1,
-    _limit = 10
+    filters: Partial<ResponseFilterState> = {},
+    page = 1,
+    limit = 10
   ): Promise<ResponseListResponse> {
-    throw new ResponseFeatureUnavailableError();
+    return responseFallback.getResponses(filters, page, limit);
   }
 
   /**
    * Get single response by ID
    */
-  async getResponseById(_id: string): Promise<ResponseItem | null> {
-    throw new ResponseFeatureUnavailableError();
+  async getResponseById(id: string): Promise<ResponseItem | null> {
+    return responseFallback.getResponseById(id);
   }
 
   /**
    * Get response status metrics
    */
   async getStatusCounts(): Promise<Record<ResponseStatusFilter, number>> {
-    throw new ResponseFeatureUnavailableError();
+    return responseFallback.getStatusCounts();
   }
 
   /**
    * Approve official response
    */
-  async approveResponse(_responseId: string, _notes?: string): Promise<ResponseWorkflowResult> {
-    throw new ResponseFeatureUnavailableError();
+  async approveResponse(responseId: string, notes?: string): Promise<ResponseWorkflowResult> {
+    return responseFallback.approveResponse(responseId, notes);
   }
 
   /**
    * Publish response
    */
   async publishResponse(
-    _responseId: string,
-    _options?: { notes?: string }
+    responseId: string,
+    options?: { notes?: string }
   ): Promise<ResponseWorkflowResult> {
-    throw new ResponseFeatureUnavailableError();
+    return responseFallback.publishResponse(responseId, options);
   }
 
   /**
    * Unpublish response
    */
-  async unpublishResponse(_responseId: string, _reason: string): Promise<ResponseWorkflowResult> {
-    throw new ResponseFeatureUnavailableError();
+  async unpublishResponse(responseId: string, reason: string): Promise<ResponseWorkflowResult> {
+    return responseFallback.unpublishResponse(responseId, reason);
   }
 
   /**
    * Reject response
    */
   async rejectResponse(
-    _responseId: string,
-    _reason: string,
-    _explanation: string
+    responseId: string,
+    reason: string,
+    explanation: string
   ): Promise<ResponseWorkflowResult> {
-    throw new ResponseFeatureUnavailableError();
+    return responseFallback.rejectResponse(responseId, reason, explanation);
   }
 
   /**
    * Update public-facing copy
    */
   async updatePublicVersion(
-    _responseId: string,
-    _publicContentEn: string,
-    _publicContentBn: string
+    responseId: string,
+    publicContentEn: string,
+    publicContentBn: string
   ): Promise<ResponseWorkflowResult> {
-    throw new ResponseFeatureUnavailableError();
+    return responseFallback.updatePublicVersion(responseId, publicContentEn, publicContentBn);
   }
 
   /**
    * Get audit timeline events for response
    */
-  async getResponseTimeline(_responseId: string): Promise<ResponseTimelineEvent[]> {
-    throw new ResponseFeatureUnavailableError();
+  async getResponseTimeline(responseId: string): Promise<ResponseTimelineEvent[]> {
+    return responseFallback.getResponseTimeline(responseId);
   }
 }
 
 export const responseApi = new ResponseApi();
 export default responseApi;
 export { type ResponseWorkflowResult };
+
