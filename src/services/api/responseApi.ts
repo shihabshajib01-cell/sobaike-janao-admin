@@ -8,6 +8,7 @@ import {
   ResponseFilterState,
   ResponseListResponse,
   ResponseStatusFilter,
+  ResponseModerationResult,
 } from '@/types/Response';
 import { supabaseResponseService } from './supabaseResponseService';
 import { isSupabaseConfigured } from '@/lib/supabase';
@@ -66,6 +67,39 @@ export class ResponseApi {
       throw new ResponseConfigurationError();
     }
     return supabaseResponseService.getStatusCounts();
+  }
+
+  /**
+   * Publish response
+   * Gated behind RESPONSE_MODERATION_CONNECTED.
+   */
+  async publishResponse(responseId: string): Promise<ResponseModerationResult> {
+    if (!RESPONSE_MODERATION_CONNECTED) {
+      throw new ResponseFeatureUnavailableError();
+    }
+    return supabaseResponseService.publishResponse(responseId);
+  }
+
+  /**
+   * Reject response
+   * Gated behind RESPONSE_MODERATION_CONNECTED.
+   */
+  async rejectResponse(responseId: string, note?: string): Promise<ResponseModerationResult> {
+    if (!RESPONSE_MODERATION_CONNECTED) {
+      throw new ResponseFeatureUnavailableError();
+    }
+    return supabaseResponseService.rejectResponse(responseId, note);
+  }
+
+  /**
+   * Unpublish response
+   * Gated behind RESPONSE_MODERATION_CONNECTED.
+   */
+  async unpublishResponse(responseId: string, reason?: string): Promise<ResponseModerationResult> {
+    if (!RESPONSE_MODERATION_CONNECTED) {
+      throw new ResponseFeatureUnavailableError();
+    }
+    return supabaseResponseService.unpublishResponse(responseId, reason);
   }
 }
 

@@ -13,6 +13,7 @@ import {
   ResponseStatusFilter,
   ResponseType,
   ResponseStatus,
+  ResponseModerationResult,
 } from '@/types/Response';
 
 export interface RawComplaintSummary {
@@ -59,6 +60,29 @@ export interface RawAdminGetResponsesResult {
     published: number;
     rejected: number;
     unpublished: number;
+  };
+}
+
+export interface RawResponseModerationResult {
+  success: boolean;
+  response_id: string;
+  previous_status: ResponseStatus;
+  status: ResponseStatus;
+  updated_at: string;
+  published_at?: string | null;
+}
+
+/**
+ * Maps raw RPC response moderation JSON into the authoritative ResponseModerationResult type.
+ */
+export function mapModerationResult(raw: RawResponseModerationResult): ResponseModerationResult {
+  return {
+    success: Boolean(raw.success),
+    responseId: raw.response_id,
+    previousStatus: raw.previous_status,
+    status: raw.status,
+    updatedAt: raw.updated_at,
+    publishedAt: raw.published_at || null,
   };
 }
 
@@ -214,6 +238,96 @@ export class SupabaseResponseService {
   async getStatusCounts(): Promise<Record<ResponseStatusFilter, number>> {
     const res = await this.getResponses({}, 1, 1);
     return res.statusCounts;
+  }
+
+  /**
+   * Publishes a response using admin_publish_response RPC
+   */
+  async publishResponse(responseId: string): Promise<ResponseModerationResult> {
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase client is not configured.');
+    }
+
+    const trimmedId = responseId?.trim();
+    if (!trimmedId) {
+      throw new Error('Response ID cannot be empty.');
+    }
+
+    const { data, error } = await supabase.rpc('admin_publish_response', {
+      p_response_id: trimmedId,
+    });
+
+    if (error) {
+      throw new Error(`Failed to publish response: ${error.message}`);
+    }
+
+    if (!data) {
+      throw new Error('No data returned from admin_publish_response RPC.');
+    }
+
+    return mapModerationResult(data as RawResponseModerationResult);
+  }
+
+  /**
+   * Rejects a response using admin_reject_response RPC
+   */
+  async rejectResponse(responseId: string, note?: string): Promise<ResponseModerationResult> {
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase client is not configured.');
+    }
+
+    const trimmedId = responseId?.trim();
+    if (!trimmedId) {
+      throw new Error('Response ID cannot be empty.');
+    }
+
+    const normalizedNote = note?.trim() ? note.trim() : null;
+
+    const { data, error } = await supabase.rpc('admin_reject_response', {
+      p_response_id: trimmedId,
+      p_note: normalizedNote,
+    });
+
+    if (error) {
+      throw new Error(`Failed to reject response: ${error.message}`);
+    }
+
+    if (!data) {
+      throw new Error('No data returned from admin_reject_response RPC.');
+    }
+
+    return mapModerationResult(data as RawResponseModerationResult);
+  }
+
+  /**
+   * Unpublishes a response using admin_unpublish_response RPC
+   */
+  async unpublishResponse(responseId: string, reason?: string): Promise<ResponseModerationResult> {
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase client is not configured.');
+    }
+
+    const trimmedId = responseId?.trim();
+    if (!trimmedId) {
+      throw new Error('Response ID cannot be empty.');
+    }
+
+    const normalizedReason = reason?.trim() ? reason.trim() : null;
+
+    const { data, error } = await supabase.rpc('admin_unpublish_response', {
+      p_response_id: trimmedId,
+      p_reason: normalizedReason,
+    });
+
+    if (error) {
+      throw new Error(`Failed to unpublish response: ${error.message}`);
+    }
+
+    if (!data) {
+      throw new Error('No data returned from admin_unpublish_response RPC.');
+    }
+
+    return mapModerationResult(data as RawResponseModerationResult);
   }
 }
 

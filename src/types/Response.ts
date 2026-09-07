@@ -90,3 +90,12 @@ export interface ResponseListResponse {
     unpublished: number;
   };
 }
+
+export interface ResponseModerationResult {
+  success: boolean;
+  responseId: string;
+  previousStatus: ResponseStatus;
+  status: ResponseStatus;
+  updatedAt: string;
+  publishedAt?: string | null;
+}
