@@ -3,6 +3,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
 import { useDebounce } from '@/hooks/useDebounce';
 import {
   ResponseItem,
@@ -16,12 +17,18 @@ import { ResponseFilters } from './components/ResponseFilters';
 import { ResponseTable } from './components/ResponseTable';
 import { ResponseDetailDrawer } from './components/ResponseDetailDrawer';
 import {
+  ResponseModerationModal,
+  ResponseModerationAction,
+} from './components/ResponseModerationModal';
+import {
   RefreshCw,
   ChevronLeft,
   ChevronRight,
   AlertTriangle,
   MessageSquareOff,
   Inbox,
+  CheckCircle2,
+  X,
 } from 'lucide-react';
 
 const INITIAL_FILTERS: ResponseFilterState = {
@@ -34,6 +41,12 @@ const INITIAL_FILTERS: ResponseFilterState = {
 export const ResponsesPage: React.FC = () => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
+  const { hasPermission } = useAuth();
+
+  // Authoritative moderation permissions
+  const canPublish = hasPermission('responses.publish');
+  const canReject = hasPermission('responses.reject');
+  const canUnpublish = hasPermission('responses.unpublish');
 
   // State
   const [loading, setLoading] = useState<boolean>(true);
@@ -66,6 +79,16 @@ export const ResponsesPage: React.FC = () => {
   // Drawer state
   const [selectedResponse, setSelectedResponse] = useState<ResponseItem | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
+
+  // Moderation state
+  const [activeModerationAction, setActiveModerationAction] = useState<ResponseModerationAction | null>(null);
+  const [moderationNote, setModerationNote] = useState<string>('');
+  const [isModerating, setIsModerating] = useState<boolean>(false);
+  const [moderationError, setModerationError] = useState<string | null>(null);
+  const [moderationFeedback, setModerationFeedback] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
 
   const hasActiveFilters = Boolean(
     filters.search.trim() !== '' ||
@@ -142,6 +165,158 @@ export const ResponsesPage: React.FC = () => {
     setIsDrawerOpen(false);
   };
 
+  // Moderation Trigger Handlers from Detail Drawer
+  const handleTriggerPublish = () => {
+    if (!selectedResponse) return;
+    setModerationNote('');
+    setModerationError(null);
+    setActiveModerationAction('publish');
+  };
+
+  const handleTriggerReject = () => {
+    if (!selectedResponse) return;
+    setModerationNote('');
+    setModerationError(null);
+    setActiveModerationAction('reject');
+  };
+
+  const handleTriggerUnpublish = () => {
+    if (!selectedResponse) return;
+    setModerationNote('');
+    setModerationError(null);
+    setActiveModerationAction('unpublish');
+  };
+
+  const handleCloseModerationModal = () => {
+    if (isModerating) return;
+    setActiveModerationAction(null);
+    setModerationNote('');
+    setModerationError(null);
+  };
+
+  // Confirmed Moderation Execution
+  const handleConfirmModeration = async () => {
+    if (!selectedResponse || !activeModerationAction) return;
+
+    // Runtime Permission Re-Check before RPC invocation
+    if (activeModerationAction === 'publish' && !hasPermission('responses.publish')) {
+      setModerationError(
+        isBn
+          ? 'আপনার প্রতিক্রিয়া প্রকাশ করার অনুমতি নেই।'
+          : 'You do not have permission to publish responses.'
+      );
+      return;
+    }
+
+    if (activeModerationAction === 'reject' && !hasPermission('responses.reject')) {
+      setModerationError(
+        isBn
+          ? 'আপনার প্রতিক্রিয়া প্রত্যাখ্যান করার অনুমতি নেই।'
+          : 'You do not have permission to reject responses.'
+      );
+      return;
+    }
+
+    if (activeModerationAction === 'unpublish' && !hasPermission('responses.unpublish')) {
+      setModerationError(
+        isBn
+          ? 'আপনার প্রতিক্রিয়া অপ্রকাশিত করার অনুমতি নেই।'
+          : 'You do not have permission to unpublish responses.'
+      );
+      return;
+    }
+
+    setIsModerating(true);
+    setModerationError(null);
+
+    try {
+      const responseId = selectedResponse.id;
+
+      // 1. Invoke authoritative RPC via responseApi
+      if (activeModerationAction === 'publish') {
+        await responseApi.publishResponse(responseId);
+      } else if (activeModerationAction === 'reject') {
+        await responseApi.rejectResponse(responseId, moderationNote);
+      } else if (activeModerationAction === 'unpublish') {
+        await responseApi.unpublishResponse(responseId, moderationNote);
+      }
+
+      // 2. Authoritative detail refresh: call getResponseById
+      const freshResponse = await responseApi.getResponseById(responseId);
+      if (freshResponse) {
+        setSelectedResponse(freshResponse);
+      }
+
+      // 3. Close moderation modal
+      setActiveModerationAction(null);
+      setModerationNote('');
+      setModerationError(null);
+
+      // 4. Success feedback banner
+      const successMessage =
+        activeModerationAction === 'publish'
+          ? isBn
+            ? 'প্রতিক্রিয়াটি সফলভাবে প্রকাশিত হয়েছে।'
+            : 'Response published successfully.'
+          : activeModerationAction === 'reject'
+          ? isBn
+            ? 'প্রতিক্রিয়াটি সফলভাবে প্রত্যাখ্যান করা হয়েছে।'
+            : 'Response rejected successfully.'
+          : isBn
+          ? 'প্রতিক্রিয়াটি সফলভাবে অপ্রকাশিত করা হয়েছে।'
+          : 'Response unpublished successfully.';
+
+      setModerationFeedback({
+        type: 'success',
+        message: successMessage,
+      });
+
+      // 5. Refresh queue & status metrics with pagination recovery
+      try {
+        const queryFilters: Partial<ResponseFilterState> = {
+          search: debouncedSearch.trim(),
+          status: filters.status,
+          responseType: filters.responseType,
+          dateRange: filters.dateRange,
+        };
+
+        const res = await responseApi.getResponses(queryFilters, pagination.page, 20);
+
+        // Pagination recovery: if current page is now beyond totalPages, re-fetch last valid page
+        if (res.totalPages > 0 && pagination.page > res.totalPages) {
+          const recoveredPage = res.totalPages;
+          const recoveredRes = await responseApi.getResponses(queryFilters, recoveredPage, 20);
+          setResponses(recoveredRes.responses);
+          setPagination({
+            page: recoveredRes.page,
+            limit: recoveredRes.limit,
+            total: recoveredRes.total,
+            totalPages: recoveredRes.totalPages,
+          });
+          setStatusCounts(recoveredRes.statusCounts);
+        } else {
+          setResponses(res.responses);
+          setPagination({
+            page: res.page,
+            limit: res.limit,
+            total: res.total,
+            totalPages: res.totalPages,
+          });
+          setStatusCounts(res.statusCounts);
+        }
+      } catch (refreshErr) {
+        console.error('Failed to refresh responses queue after moderation:', refreshErr);
+      }
+    } catch (err: unknown) {
+      console.error('Moderation error:', err);
+      const message =
+        err instanceof Error ? err.message : 'Moderation failed due to an unexpected error.';
+      setModerationError(message);
+    } finally {
+      setIsModerating(false);
+    }
+  };
+
   const formatNumber = (num: number): string => {
     if (!isBn) return num.toLocaleString();
     const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
@@ -176,6 +351,24 @@ export const ResponsesPage: React.FC = () => {
           </Button>
         }
       />
+
+      {/* Success / Info Feedback Banner */}
+      {moderationFeedback && (
+        <div className="flex items-center justify-between gap-3 p-3.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 text-emerald-800 dark:text-emerald-200 text-sm animate-in fade-in">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span className="font-medium">{moderationFeedback.message}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setModerationFeedback(null)}
+            className="p-1 rounded-md text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors"
+            aria-label="Dismiss message"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* 2. Status Filter Tabs */}
       <ResponseStatusTabs
@@ -346,6 +539,26 @@ export const ResponsesPage: React.FC = () => {
         response={selectedResponse}
         isOpen={isDrawerOpen}
         onClose={handleCloseDrawer}
+        canPublish={canPublish}
+        canReject={canReject}
+        canUnpublish={canUnpublish}
+        isModerating={isModerating}
+        onPublish={handleTriggerPublish}
+        onReject={handleTriggerReject}
+        onUnpublish={handleTriggerUnpublish}
+      />
+
+      {/* 6. Response Moderation Confirmation Modal */}
+      <ResponseModerationModal
+        isOpen={activeModerationAction !== null}
+        action={activeModerationAction}
+        responseId={selectedResponse?.id || ''}
+        isSubmitting={isModerating}
+        error={moderationError}
+        note={moderationNote}
+        onNoteChange={setModerationNote}
+        onClose={handleCloseModerationModal}
+        onConfirm={handleConfirmModeration}
       />
     </div>
   );

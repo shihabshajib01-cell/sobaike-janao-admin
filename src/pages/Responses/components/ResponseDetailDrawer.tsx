@@ -22,12 +22,26 @@ export interface ResponseDetailDrawerProps {
   response: ResponseItem | null;
   isOpen: boolean;
   onClose: () => void;
+  canPublish: boolean;
+  canReject: boolean;
+  canUnpublish: boolean;
+  isModerating?: boolean;
+  onPublish: () => void;
+  onReject: () => void;
+  onUnpublish: () => void;
 }
 
 export const ResponseDetailDrawer: React.FC<ResponseDetailDrawerProps> = ({
   response,
   isOpen,
   onClose,
+  canPublish,
+  canReject,
+  canUnpublish,
+  isModerating = false,
+  onPublish,
+  onReject,
+  onUnpublish,
 }) => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
@@ -119,14 +133,58 @@ export const ResponseDetailDrawer: React.FC<ResponseDetailDrawerProps> = ({
       title={isBn ? 'প্রতিক্রিয়ার বিস্তারিত' : 'Response Details'}
       description={`ID: #${response.id}`}
       footer={
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={onClose}
-          className="px-6 min-h-[44px]"
-        >
-          {isBn ? 'বন্ধ করুন' : 'Close'}
-        </Button>
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2.5 sm:gap-3 w-full">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+            disabled={isModerating}
+            className="w-full sm:w-auto px-5 min-h-[44px]"
+          >
+            {isBn ? 'বন্ধ করুন' : 'Close'}
+          </Button>
+
+          {/* Pending Review Actions: Reject and/or Publish */}
+          {response.status === 'pending_review' && (
+            <>
+              {canReject && (
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={onReject}
+                  disabled={isModerating}
+                  className="w-full sm:w-auto px-5 min-h-[44px]"
+                >
+                  {isBn ? 'প্রত্যাখ্যান করুন' : 'Reject'}
+                </Button>
+              )}
+              {canPublish && (
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={onPublish}
+                  disabled={isModerating}
+                  className="w-full sm:w-auto px-5 min-h-[44px]"
+                >
+                  {isBn ? 'প্রকাশ করুন' : 'Publish'}
+                </Button>
+              )}
+            </>
+          )}
+
+          {/* Published Actions: Unpublish */}
+          {response.status === 'published' && canUnpublish && (
+            <Button
+              type="button"
+              variant="danger"
+              onClick={onUnpublish}
+              disabled={isModerating}
+              className="w-full sm:w-auto px-5 min-h-[44px]"
+            >
+              {isBn ? 'অপ্রকাশিত করুন' : 'Unpublish'}
+            </Button>
+          )}
+        </div>
       }
     >
       <div className="space-y-6 pb-2">

@@ -14,7 +14,7 @@ import { supabaseResponseService } from './supabaseResponseService';
 import { isSupabaseConfigured } from '@/lib/supabase';
 
 export const RESPONSE_READ_CONNECTED = isSupabaseConfigured;
-export const RESPONSE_MODERATION_CONNECTED = false;
+export const RESPONSE_MODERATION_CONNECTED = isSupabaseConfigured;
 
 export class ResponseFeatureUnavailableError extends Error {
   code = 'FEATURE_NOT_CONNECTED';
@@ -75,7 +75,7 @@ export class ResponseApi {
    */
   async publishResponse(responseId: string): Promise<ResponseModerationResult> {
     if (!RESPONSE_MODERATION_CONNECTED) {
-      throw new ResponseFeatureUnavailableError();
+      throw new ResponseConfigurationError();
     }
     return supabaseResponseService.publishResponse(responseId);
   }
@@ -86,7 +86,7 @@ export class ResponseApi {
    */
   async rejectResponse(responseId: string, note?: string): Promise<ResponseModerationResult> {
     if (!RESPONSE_MODERATION_CONNECTED) {
-      throw new ResponseFeatureUnavailableError();
+      throw new ResponseConfigurationError();
     }
     return supabaseResponseService.rejectResponse(responseId, note);
   }
@@ -97,7 +97,7 @@ export class ResponseApi {
    */
   async unpublishResponse(responseId: string, reason?: string): Promise<ResponseModerationResult> {
     if (!RESPONSE_MODERATION_CONNECTED) {
-      throw new ResponseFeatureUnavailableError();
+      throw new ResponseConfigurationError();
     }
     return supabaseResponseService.unpublishResponse(responseId, reason);
   }
