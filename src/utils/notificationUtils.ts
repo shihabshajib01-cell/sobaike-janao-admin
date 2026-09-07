@@ -31,7 +31,6 @@ export const isSafeNotificationRoute = (route: string | null | undefined): boole
   // - /dashboard
   // - /complaints
   // - /complaints/:id
-  // - /responses
   // - /categories
   // - /map
   // - /location-activity
@@ -48,8 +47,6 @@ export const isSafeNotificationRoute = (route: string | null | undefined): boole
     /^\/dashboard\/?$/,
     /^\/complaints\/?$/,
     /^\/complaints\/[a-zA-Z0-9_-]+\/?$/,
-    /^\/responses\/?$/,
-    /^\/responses\/[a-zA-Z0-9_-]+\/?$/,
     /^\/categories\/?$/,
     /^\/map\/?$/,
     /^\/location-activity\/?$/,

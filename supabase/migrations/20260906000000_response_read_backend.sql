@@ -37,7 +37,9 @@ BEGIN
 
     IF NOT EXISTS (
         SELECT 1 FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid
-        WHERE n.nspname = 'public' AND p.proname = 'is_active_admin'
+        WHERE n.nspname = 'public'
+          AND p.proname = 'is_active_admin'
+          AND oidvectortypes(p.proargtypes) = ''
     ) THEN
         RAISE EXCEPTION 'Prerequisite failed: public.is_active_admin() function does not exist.'
             USING ERRCODE = '42883';
@@ -45,14 +47,16 @@ BEGIN
 
     IF NOT EXISTS (
         SELECT 1 FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid
-        WHERE n.nspname = 'public' AND p.proname = 'has_permission'
+        WHERE n.nspname = 'public'
+          AND p.proname = 'has_permission'
+          AND oidvectortypes(p.proargtypes) = 'text'
     ) THEN
         RAISE EXCEPTION 'Prerequisite failed: public.has_permission(text) function does not exist.'
             USING ERRCODE = '42883';
     END IF;
 
     IF NOT EXISTS (
-        SELECT 1 FROM public.permissions WHERE name = 'responses.view'
+        SELECT 1 FROM public.permissions WHERE id = 'responses.view'
     ) THEN
         RAISE EXCEPTION 'Prerequisite failed: permission responses.view does not exist in public.permissions.'
             USING ERRCODE = 'P0002';
@@ -371,37 +375,70 @@ BEGIN
         RAISE EXCEPTION 'Pre-commit check failed: public.complaint_responses does not exist.';
     END IF;
 
-    IF NOT EXISTS (SELECT 1 FROM public.permissions WHERE name = 'responses.view') THEN
+    IF NOT EXISTS (SELECT 1 FROM public.permissions WHERE id = 'responses.view') THEN
         RAISE EXCEPTION 'Pre-commit check failed: responses.view permission does not exist.';
     END IF;
 
+    -- Exact signature resolution for admin_get_responses
     SELECT p.oid, p.prosecdef, p.proconfig
     INTO v_list_oid, v_list_secdef, v_list_config
     FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid
-    WHERE n.nspname = 'public' AND p.proname = 'admin_get_responses';
+    WHERE n.nspname = 'public'
+      AND p.proname = 'admin_get_responses'
+      AND oidvectortypes(p.proargtypes) = 'text, text, text, date, date, integer, integer';
 
     IF v_list_oid IS NULL THEN
-        RAISE EXCEPTION 'Pre-commit check failed: admin_get_responses RPC not found.';
+        RAISE EXCEPTION 'Pre-commit check failed: admin_get_responses RPC with exact signature (text, text, text, date, date, integer, integer) not found.';
     END IF;
 
     IF NOT v_list_secdef THEN
         RAISE EXCEPTION 'Pre-commit check failed: admin_get_responses must be SECURITY DEFINER.';
     END IF;
 
+    IF NOT (
+        v_list_config @> ARRAY['search_path=pg_catalog, public']
+        OR v_list_config @> ARRAY['search_path=pg_catalog,public']
+    ) THEN
+        RAISE EXCEPTION 'Pre-commit check failed: admin_get_responses must have search_path = pg_catalog, public.';
+    END IF;
+
+    -- Exact signature resolution for admin_get_response_detail
     SELECT p.oid, p.prosecdef, p.proconfig
     INTO v_detail_oid, v_detail_secdef, v_detail_config
     FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid
-    WHERE n.nspname = 'public' AND p.proname = 'admin_get_response_detail';
+    WHERE n.nspname = 'public'
+      AND p.proname = 'admin_get_response_detail'
+      AND oidvectortypes(p.proargtypes) = 'text';
 
     IF v_detail_oid IS NULL THEN
-        RAISE EXCEPTION 'Pre-commit check failed: admin_get_response_detail RPC not found.';
+        RAISE EXCEPTION 'Pre-commit check failed: admin_get_response_detail RPC with exact signature (text) not found.';
     END IF;
 
     IF NOT v_detail_secdef THEN
         RAISE EXCEPTION 'Pre-commit check failed: admin_get_response_detail must be SECURITY DEFINER.';
     END IF;
 
-    IF has_function_privilege('public', v_list_oid, 'EXECUTE') OR has_function_privilege('public', v_detail_oid, 'EXECUTE') THEN
+    IF NOT (
+        v_detail_config @> ARRAY['search_path=pg_catalog, public']
+        OR v_detail_config @> ARRAY['search_path=pg_catalog,public']
+    ) THEN
+        RAISE EXCEPTION 'Pre-commit check failed: admin_get_response_detail must have search_path = pg_catalog, public.';
+    END IF;
+
+    -- Verify PUBLIC execute is completely blocked via ACL examination (no has_function_privilege('public', ...))
+    IF EXISTS (
+        SELECT 1
+        FROM pg_proc p
+        JOIN pg_namespace n ON p.pronamespace = n.oid
+        CROSS JOIN LATERAL aclexplode(COALESCE(p.proacl, acldefault('f', p.proowner))) acl
+        WHERE n.nspname = 'public'
+          AND (
+              (p.proname = 'admin_get_responses' AND oidvectortypes(p.proargtypes) = 'text, text, text, date, date, integer, integer')
+              OR (p.proname = 'admin_get_response_detail' AND oidvectortypes(p.proargtypes) = 'text')
+          )
+          AND acl.grantee = 0
+          AND acl.privilege_type = 'EXECUTE'
+    ) THEN
         RAISE EXCEPTION 'Pre-commit check failed: PUBLIC execute must be blocked.';
     END IF;
 
@@ -428,23 +465,58 @@ COMMIT;
 -- ------------------------------------------------------------------------------
 SELECT
     (SELECT to_regclass('public.complaint_responses') IS NOT NULL) AS response_table,
-    (SELECT EXISTS (SELECT 1 FROM public.permissions WHERE name = 'responses.view')) AS response_view_permission,
+    (SELECT EXISTS (SELECT 1 FROM public.permissions WHERE id = 'responses.view')) AS response_view_permission,
     (SELECT EXISTS (
         SELECT 1 FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid
-        WHERE n.nspname = 'public' AND p.proname = 'admin_get_responses'
+        WHERE n.nspname = 'public'
+          AND p.proname = 'admin_get_responses'
+          AND oidvectortypes(p.proargtypes) = 'text, text, text, date, date, integer, integer'
     )) AS response_list_rpc,
     (SELECT EXISTS (
         SELECT 1 FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid
-        WHERE n.nspname = 'public' AND p.proname = 'admin_get_response_detail'
+        WHERE n.nspname = 'public'
+          AND p.proname = 'admin_get_response_detail'
+          AND oidvectortypes(p.proargtypes) = 'text'
     )) AS response_detail_rpc,
-    (SELECT p.prosecdef FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE n.nspname = 'public' AND p.proname = 'admin_get_responses') AS list_security_definer,
-    (SELECT p.prosecdef FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE n.nspname = 'public' AND p.proname = 'admin_get_response_detail') AS detail_security_definer,
-    (SELECT p.proconfig @> ARRAY['search_path=pg_catalog, public'] OR p.proconfig @> ARRAY['search_path=pg_catalog,public'] FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE n.nspname = 'public' AND p.proname = 'admin_get_responses') AS list_safe_search_path,
-    (SELECT p.proconfig @> ARRAY['search_path=pg_catalog, public'] OR p.proconfig @> ARRAY['search_path=pg_catalog,public'] FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE n.nspname = 'public' AND p.proname = 'admin_get_response_detail') AS detail_safe_search_path,
-    (SELECT NOT has_function_privilege('public', 'public.admin_get_responses(text,text,text,date,date,integer,integer)', 'EXECUTE')
-        AND NOT has_function_privilege('public', 'public.admin_get_response_detail(text)', 'EXECUTE')) AS public_execute_blocked,
-    (SELECT NOT has_function_privilege('anon', 'public.admin_get_responses(text,text,text,date,date,integer,integer)', 'EXECUTE')
+    (SELECT p.prosecdef FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid
+     WHERE n.nspname = 'public'
+       AND p.proname = 'admin_get_responses'
+       AND oidvectortypes(p.proargtypes) = 'text, text, text, date, date, integer, integer'
+    ) AS list_security_definer,
+    (SELECT p.prosecdef FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid
+     WHERE n.nspname = 'public'
+       AND p.proname = 'admin_get_response_detail'
+       AND oidvectortypes(p.proargtypes) = 'text'
+    ) AS detail_security_definer,
+    (SELECT p.proconfig @> ARRAY['search_path=pg_catalog, public'] OR p.proconfig @> ARRAY['search_path=pg_catalog,public']
+     FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid
+     WHERE n.nspname = 'public'
+       AND p.proname = 'admin_get_responses'
+       AND oidvectortypes(p.proargtypes) = 'text, text, text, date, date, integer, integer'
+    ) AS list_safe_search_path,
+    (SELECT p.proconfig @> ARRAY['search_path=pg_catalog, public'] OR p.proconfig @> ARRAY['search_path=pg_catalog,public']
+     FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid
+     WHERE n.nspname = 'public'
+       AND p.proname = 'admin_get_response_detail'
+       AND oidvectortypes(p.proargtypes) = 'text'
+    ) AS detail_safe_search_path,
+    (
+        SELECT NOT EXISTS (
+            SELECT 1
+            FROM pg_proc p
+            JOIN pg_namespace n ON p.pronamespace = n.oid
+            CROSS JOIN LATERAL aclexplode(COALESCE(p.proacl, acldefault('f', p.proowner))) acl
+            WHERE n.nspname = 'public'
+              AND (
+                  (p.proname = 'admin_get_responses' AND oidvectortypes(p.proargtypes) = 'text, text, text, date, date, integer, integer')
+                  OR (p.proname = 'admin_get_response_detail' AND oidvectortypes(p.proargtypes) = 'text')
+              )
+              AND acl.grantee = 0
+              AND acl.privilege_type = 'EXECUTE'
+        )
+    ) AS public_execute_blocked,
+    (SELECT NOT has_function_privilege('anon', 'public.admin_get_responses(text, text, text, date, date, integer, integer)', 'EXECUTE')
         AND NOT has_function_privilege('anon', 'public.admin_get_response_detail(text)', 'EXECUTE')) AS anon_execute_blocked,
-    (SELECT has_function_privilege('authenticated', 'public.admin_get_responses(text,text,text,date,date,integer,integer)', 'EXECUTE')
+    (SELECT has_function_privilege('authenticated', 'public.admin_get_responses(text, text, text, date, date, integer, integer)', 'EXECUTE')
         AND has_function_privilege('authenticated', 'public.admin_get_response_detail(text)', 'EXECUTE')) AS authenticated_execute_allowed,
     (SELECT NOT has_table_privilege('authenticated', 'public.complaint_responses', 'SELECT')) AS authenticated_raw_select_blocked;
