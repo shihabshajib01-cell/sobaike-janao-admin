@@ -329,6 +329,34 @@ export class SupabaseResponseService {
 
     return mapModerationResult(data as RawResponseModerationResult);
   }
+
+  /**
+   * Resubmits a rejected response back to pending_review using admin_resubmit_response RPC
+   */
+  async resubmitResponse(responseId: string): Promise<ResponseModerationResult> {
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase client is not configured.');
+    }
+
+    const trimmedId = responseId?.trim();
+    if (!trimmedId) {
+      throw new Error('Response ID cannot be empty.');
+    }
+
+    const { data, error } = await supabase.rpc('admin_resubmit_response', {
+      p_response_id: trimmedId,
+    });
+
+    if (error) {
+      throw new Error(`Failed to resubmit response: ${error.message}`);
+    }
+
+    if (!data) {
+      throw new Error('No data returned from admin_resubmit_response RPC.');
+    }
+
+    return mapModerationResult(data as RawResponseModerationResult);
+  }
 }
 
 export const supabaseResponseService = new SupabaseResponseService();

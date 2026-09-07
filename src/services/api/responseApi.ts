@@ -15,6 +15,7 @@ import { isSupabaseConfigured } from '@/lib/supabase';
 
 export const RESPONSE_READ_CONNECTED = isSupabaseConfigured;
 export const RESPONSE_MODERATION_CONNECTED = isSupabaseConfigured;
+export const RESPONSE_RESUBMIT_CONNECTED = false;
 
 export class ResponseFeatureUnavailableError extends Error {
   code = 'FEATURE_NOT_CONNECTED';
@@ -100,6 +101,17 @@ export class ResponseApi {
       throw new ResponseConfigurationError();
     }
     return supabaseResponseService.unpublishResponse(responseId, reason);
+  }
+
+  /**
+   * Resubmit response
+   * Gated behind separate rollout flag RESPONSE_RESUBMIT_CONNECTED.
+   */
+  async resubmitResponse(responseId: string): Promise<ResponseModerationResult> {
+    if (!RESPONSE_RESUBMIT_CONNECTED) {
+      throw new ResponseFeatureUnavailableError('Response resubmit is not connected yet.');
+    }
+    return supabaseResponseService.resubmitResponse(responseId);
   }
 }
 
