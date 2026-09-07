@@ -93,13 +93,13 @@ export const ResponseModerationModal: React.FC<ResponseModerationModalProps> = (
       size="md"
       closeOnBackdrop={!isSubmitting}
       footer={
-        <div className="flex items-center justify-end gap-3 w-full sm:w-auto">
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2.5 sm:gap-3 w-full">
           <Button
             type="button"
             variant="secondary"
             onClick={onClose}
             disabled={isSubmitting}
-            className="min-h-[44px] sm:min-h-[36px]"
+            className="w-full sm:w-auto min-h-[44px]"
           >
             {isBn ? 'বাতিল' : 'Cancel'}
           </Button>
@@ -109,7 +109,7 @@ export const ResponseModerationModal: React.FC<ResponseModerationModalProps> = (
             onClick={onConfirm}
             isLoading={isSubmitting}
             disabled={isSubmitting}
-            className="min-h-[44px] sm:min-h-[36px]"
+            className="w-full sm:w-auto min-h-[44px]"
           >
             {config.confirmText}
           </Button>

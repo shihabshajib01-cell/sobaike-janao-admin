@@ -86,7 +86,7 @@ export const ResponsesPage: React.FC = () => {
   const [isModerating, setIsModerating] = useState<boolean>(false);
   const [moderationError, setModerationError] = useState<string | null>(null);
   const [moderationFeedback, setModerationFeedback] = useState<{
-    type: 'success' | 'error';
+    type: 'success' | 'warning';
     message: string;
   } | null>(null);
 
@@ -196,10 +196,15 @@ export const ResponsesPage: React.FC = () => {
 
   // Confirmed Moderation Execution
   const handleConfirmModeration = async () => {
+    if (isModerating) return;
     if (!selectedResponse || !activeModerationAction) return;
 
+    // Capture immutable values at start
+    const responseId = selectedResponse.id;
+    const action = activeModerationAction;
+
     // Runtime Permission Re-Check before RPC invocation
-    if (activeModerationAction === 'publish' && !hasPermission('responses.publish')) {
+    if (action === 'publish' && !hasPermission('responses.publish')) {
       setModerationError(
         isBn
           ? 'আপনার প্রতিক্রিয়া প্রকাশ করার অনুমতি নেই।'
@@ -208,7 +213,7 @@ export const ResponsesPage: React.FC = () => {
       return;
     }
 
-    if (activeModerationAction === 'reject' && !hasPermission('responses.reject')) {
+    if (action === 'reject' && !hasPermission('responses.reject')) {
       setModerationError(
         isBn
           ? 'আপনার প্রতিক্রিয়া প্রত্যাখ্যান করার অনুমতি নেই।'
@@ -217,7 +222,7 @@ export const ResponsesPage: React.FC = () => {
       return;
     }
 
-    if (activeModerationAction === 'unpublish' && !hasPermission('responses.unpublish')) {
+    if (action === 'unpublish' && !hasPermission('responses.unpublish')) {
       setModerationError(
         isBn
           ? 'আপনার প্রতিক্রিয়া অপ্রকাশিত করার অনুমতি নেই।'
@@ -229,89 +234,136 @@ export const ResponsesPage: React.FC = () => {
     setIsModerating(true);
     setModerationError(null);
 
-    try {
-      const responseId = selectedResponse.id;
+    let mutationSucceeded = false;
 
-      // 1. Invoke authoritative RPC via responseApi
-      if (activeModerationAction === 'publish') {
+    // STAGE A: Actual Mutation RPC
+    try {
+      if (action === 'publish') {
         await responseApi.publishResponse(responseId);
-      } else if (activeModerationAction === 'reject') {
+      } else if (action === 'reject') {
         await responseApi.rejectResponse(responseId, moderationNote);
-      } else if (activeModerationAction === 'unpublish') {
+      } else if (action === 'unpublish') {
         await responseApi.unpublishResponse(responseId, moderationNote);
       }
 
-      // 2. Authoritative detail refresh: call getResponseById
+      mutationSucceeded = true;
+    } catch (mutationErr: unknown) {
+      console.error('Moderation mutation error:', mutationErr);
+      const message =
+        mutationErr instanceof Error
+          ? mutationErr.message
+          : 'Moderation failed due to an unexpected error.';
+      setModerationError(message);
+
+      // Concurrent / Stale status recovery: perform ONE safe read-only detail refresh attempt
+      try {
+        const freshResponse = await responseApi.getResponseById(responseId);
+        if (freshResponse) {
+          setSelectedResponse(freshResponse);
+        }
+      } catch (staleCheckErr) {
+        console.warn('Could not re-fetch response detail after mutation error:', staleCheckErr);
+      }
+
+      setIsModerating(false);
+      return;
+    }
+
+    // STAGE B: On Real Mutation Success
+    // Close confirmation modal and clear modal state
+    setActiveModerationAction(null);
+    setModerationNote('');
+    setModerationError(null);
+
+    // Initial success feedback based on captured action
+    const defaultSuccessMessage =
+      action === 'publish'
+        ? isBn
+          ? 'প্রতিক্রিয়াটি সফলভাবে প্রকাশিত হয়েছে।'
+          : 'Response published successfully.'
+        : action === 'reject'
+        ? isBn
+          ? 'প্রতিক্রিয়াটি সফলভাবে প্রত্যাখ্যান করা হয়েছে।'
+          : 'Response rejected successfully.'
+        : isBn
+        ? 'প্রতিক্রিয়াটি সফলভাবে অপ্রকাশিত করা হয়েছে।'
+        : 'Response unpublished successfully.';
+
+    setModerationFeedback({
+      type: 'success',
+      message: defaultSuccessMessage,
+    });
+
+    // STAGE C: Authoritative Detail Refresh (Separate try/catch)
+    let detailRefreshFailed = false;
+    try {
       const freshResponse = await responseApi.getResponseById(responseId);
       if (freshResponse) {
         setSelectedResponse(freshResponse);
+      } else {
+        detailRefreshFailed = true;
       }
+    } catch (detailErr) {
+      console.error('Failed to reload response detail after moderation:', detailErr);
+      detailRefreshFailed = true;
+    }
 
-      // 3. Close moderation modal
-      setActiveModerationAction(null);
-      setModerationNote('');
-      setModerationError(null);
-
-      // 4. Success feedback banner
-      const successMessage =
-        activeModerationAction === 'publish'
-          ? isBn
-            ? 'প্রতিক্রিয়াটি সফলভাবে প্রকাশিত হয়েছে।'
-            : 'Response published successfully.'
-          : activeModerationAction === 'reject'
-          ? isBn
-            ? 'প্রতিক্রিয়াটি সফলভাবে প্রত্যাখ্যান করা হয়েছে।'
-            : 'Response rejected successfully.'
-          : isBn
-          ? 'প্রতিক্রিয়াটি সফলভাবে অপ্রকাশিত করা হয়েছে।'
-          : 'Response unpublished successfully.';
-
+    if (detailRefreshFailed) {
+      // Prevent stale action controls from remaining visible: close drawer and clear selection
+      setIsDrawerOpen(false);
+      setSelectedResponse(null);
       setModerationFeedback({
-        type: 'success',
-        message: successMessage,
+        type: 'warning',
+        message: isBn
+          ? 'প্রতিক্রিয়াটি সফলভাবে আপডেট হয়েছে, তবে সর্বশেষ বিস্তারিত তথ্য পুনরায় লোড করা যায়নি। বর্তমান স্ট্যাটাস দেখতে প্রতিক্রিয়ার তালিকা রিফ্রেশ করুন।'
+          : 'Response was updated successfully, but the latest details could not be reloaded. Refresh the responses list to sync the current status.',
       });
+    }
 
-      // 5. Refresh queue & status metrics with pagination recovery
-      try {
-        const queryFilters: Partial<ResponseFilterState> = {
-          search: debouncedSearch.trim(),
-          status: filters.status,
-          responseType: filters.responseType,
-          dateRange: filters.dateRange,
-        };
+    // STAGE D: Queue Refresh & Pagination Recovery (Separate try/catch)
+    try {
+      const queryFilters: Partial<ResponseFilterState> = {
+        search: debouncedSearch.trim(),
+        status: filters.status,
+        responseType: filters.responseType,
+        dateRange: filters.dateRange,
+      };
 
-        const res = await responseApi.getResponses(queryFilters, pagination.page, 20);
+      const res = await responseApi.getResponses(queryFilters, pagination.page, 20);
 
-        // Pagination recovery: if current page is now beyond totalPages, re-fetch last valid page
-        if (res.totalPages > 0 && pagination.page > res.totalPages) {
-          const recoveredPage = res.totalPages;
-          const recoveredRes = await responseApi.getResponses(queryFilters, recoveredPage, 20);
-          setResponses(recoveredRes.responses);
-          setPagination({
-            page: recoveredRes.page,
-            limit: recoveredRes.limit,
-            total: recoveredRes.total,
-            totalPages: recoveredRes.totalPages,
-          });
-          setStatusCounts(recoveredRes.statusCounts);
-        } else {
-          setResponses(res.responses);
-          setPagination({
-            page: res.page,
-            limit: res.limit,
-            total: res.total,
-            totalPages: res.totalPages,
-          });
-          setStatusCounts(res.statusCounts);
-        }
-      } catch (refreshErr) {
-        console.error('Failed to refresh responses queue after moderation:', refreshErr);
+      // Pagination recovery: if current page is now beyond totalPages, re-fetch last valid page
+      if (res.totalPages > 0 && pagination.page > res.totalPages) {
+        const recoveredPage = res.totalPages;
+        const recoveredRes = await responseApi.getResponses(queryFilters, recoveredPage, 20);
+        setResponses(recoveredRes.responses);
+        setPagination({
+          page: recoveredRes.page,
+          limit: recoveredRes.limit,
+          total: recoveredRes.total,
+          totalPages: recoveredRes.totalPages,
+        });
+        setStatusCounts(recoveredRes.statusCounts);
+      } else {
+        setResponses(res.responses);
+        setPagination({
+          page: res.page,
+          limit: res.limit,
+          total: res.total,
+          totalPages: res.totalPages,
+        });
+        setStatusCounts(res.statusCounts);
       }
-    } catch (err: unknown) {
-      console.error('Moderation error:', err);
-      const message =
-        err instanceof Error ? err.message : 'Moderation failed due to an unexpected error.';
-      setModerationError(message);
+    } catch (queueRefreshErr) {
+      console.error('Failed to refresh responses queue after moderation:', queueRefreshErr);
+      // If detail refresh did not already set a warning, show queue refresh warning
+      if (!detailRefreshFailed) {
+        setModerationFeedback({
+          type: 'warning',
+          message: isBn
+            ? 'প্রতিক্রিয়াটি সফলভাবে আপডেট হয়েছে, তবে তালিকাটি রিফ্রেশ করা যায়নি। সর্বশেষ স্ট্যাটাস দেখতে রিফ্রেশ ব্যবহার করুন।'
+            : 'Response was updated successfully, but the list could not be refreshed. Use Refresh to sync the latest status.',
+        });
+      }
     } finally {
       setIsModerating(false);
     }
@@ -352,18 +404,32 @@ export const ResponsesPage: React.FC = () => {
         }
       />
 
-      {/* Success / Info Feedback Banner */}
+      {/* Success / Warning Feedback Banner */}
       {moderationFeedback && (
-        <div className="flex items-center justify-between gap-3 p-3.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 text-emerald-800 dark:text-emerald-200 text-sm animate-in fade-in">
+        <div
+          className={`flex items-center justify-between gap-3 p-3.5 rounded-lg border text-sm animate-in fade-in ${
+            moderationFeedback.type === 'success'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900/60 text-emerald-800 dark:text-emerald-200'
+              : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/60 text-amber-800 dark:text-amber-200'
+          }`}
+        >
           <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            {moderationFeedback.type === 'success' ? (
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            ) : (
+              <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
+            )}
             <span className="font-medium">{moderationFeedback.message}</span>
           </div>
           <button
             type="button"
             onClick={() => setModerationFeedback(null)}
-            className="p-1 rounded-md text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors"
-            aria-label="Dismiss message"
+            className={`p-1 rounded-md transition-colors ${
+              moderationFeedback.type === 'success'
+                ? 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/60'
+                : 'text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/60'
+            }`}
+            aria-label={isBn ? 'বার্তা বন্ধ করুন' : 'Dismiss message'}
           >
             <X className="w-4 h-4" />
           </button>
