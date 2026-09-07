@@ -15,7 +15,7 @@ import { isSupabaseConfigured } from '@/lib/supabase';
 
 export const RESPONSE_READ_CONNECTED = isSupabaseConfigured;
 export const RESPONSE_MODERATION_CONNECTED = isSupabaseConfigured;
-export const RESPONSE_RESUBMIT_CONNECTED = false;
+export const RESPONSE_RESUBMIT_CONNECTED = isSupabaseConfigured;
 
 export class ResponseFeatureUnavailableError extends Error {
   code = 'FEATURE_NOT_CONNECTED';

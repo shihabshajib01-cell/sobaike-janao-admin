@@ -25,10 +25,12 @@ export interface ResponseDetailDrawerProps {
   canPublish: boolean;
   canReject: boolean;
   canUnpublish: boolean;
+  canResubmit: boolean;
   isModerating?: boolean;
   onPublish: () => void;
   onReject: () => void;
   onUnpublish: () => void;
+  onResubmit: () => void;
 }
 
 export const ResponseDetailDrawer: React.FC<ResponseDetailDrawerProps> = ({
@@ -38,10 +40,12 @@ export const ResponseDetailDrawer: React.FC<ResponseDetailDrawerProps> = ({
   canPublish,
   canReject,
   canUnpublish,
+  canResubmit,
   isModerating = false,
   onPublish,
   onReject,
   onUnpublish,
+  onResubmit,
 }) => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
@@ -182,6 +186,19 @@ export const ResponseDetailDrawer: React.FC<ResponseDetailDrawerProps> = ({
               className="w-full sm:w-auto px-5 min-h-[44px]"
             >
               {isBn ? 'অপ্রকাশিত করুন' : 'Unpublish'}
+            </Button>
+          )}
+
+          {/* Rejected Actions: Resubmit */}
+          {response.status === 'rejected' && canResubmit && (
+            <Button
+              type="button"
+              variant="primary"
+              onClick={onResubmit}
+              disabled={isModerating}
+              className="w-full sm:w-auto px-5 min-h-[44px]"
+            >
+              {isBn ? 'পুনরায় পর্যালোচনায় পাঠান' : 'Resubmit'}
             </Button>
           )}
         </div>

@@ -3,9 +3,9 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
 import { useLanguage } from '@/context/LanguageContext';
-import { AlertTriangle, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, RotateCcw, ShieldAlert } from 'lucide-react';
 
-export type ResponseModerationAction = 'publish' | 'reject' | 'unpublish';
+export type ResponseModerationAction = 'publish' | 'reject' | 'unpublish' | 'resubmit';
 
 export interface ResponseModerationModalProps {
   isOpen: boolean;
@@ -79,6 +79,19 @@ export const ResponseModerationModal: React.FC<ResponseModerationModalProps> = (
             ? 'অপ্রকাশিত করার একটি অভ্যন্তরীণ কারণ যোগ করুন'
             : 'Add an internal reason for unpublishing',
           icon: <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
+        };
+      case 'resubmit':
+        return {
+          title: isBn ? 'প্রতিক্রিয়া পুনরায় পর্যালোচনায় পাঠান' : 'Resubmit Response',
+          body: isBn
+            ? 'এই প্রত্যাখ্যাত প্রতিক্রিয়াটি আবার পর্যালোচনা অপেক্ষমাণ অবস্থায় পাঠাবেন? প্রতিক্রিয়ার বিষয়বস্তু পরিবর্তন হবে না।'
+            : 'Send this rejected response back to Pending Review? The response content will not be changed.',
+          confirmText: isBn ? 'পুনরায় পর্যালোচনায় পাঠান' : 'Resubmit Response',
+          confirmVariant: 'primary' as const,
+          showTextarea: false,
+          textareaLabel: '',
+          textareaPlaceholder: '',
+          icon: <RotateCcw className="w-5 h-5 text-sky-600 dark:text-sky-400" />,
         };
     }
   };

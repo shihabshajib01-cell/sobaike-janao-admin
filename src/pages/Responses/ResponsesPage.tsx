@@ -47,6 +47,7 @@ export const ResponsesPage: React.FC = () => {
   const canPublish = hasPermission('responses.publish');
   const canReject = hasPermission('responses.reject');
   const canUnpublish = hasPermission('responses.unpublish');
+  const canResubmit = hasPermission('responses.resubmit');
 
   // State
   const [loading, setLoading] = useState<boolean>(true);
@@ -187,6 +188,13 @@ export const ResponsesPage: React.FC = () => {
     setActiveModerationAction('unpublish');
   };
 
+  const handleTriggerResubmit = () => {
+    if (!selectedResponse) return;
+    setModerationNote('');
+    setModerationError(null);
+    setActiveModerationAction('resubmit');
+  };
+
   const handleCloseModerationModal = () => {
     if (isModerating) return;
     setActiveModerationAction(null);
@@ -231,6 +239,15 @@ export const ResponsesPage: React.FC = () => {
       return;
     }
 
+    if (action === 'resubmit' && !hasPermission('responses.resubmit')) {
+      setModerationError(
+        isBn
+          ? 'প্রতিক্রিয়া পুনরায় পর্যালোচনায় পাঠানোর অনুমতি আপনার নেই।'
+          : 'You do not have permission to resubmit responses.'
+      );
+      return;
+    }
+
     setIsModerating(true);
     setModerationError(null);
 
@@ -244,6 +261,8 @@ export const ResponsesPage: React.FC = () => {
         await responseApi.rejectResponse(responseId, moderationNote);
       } else if (action === 'unpublish') {
         await responseApi.unpublishResponse(responseId, moderationNote);
+      } else if (action === 'resubmit') {
+        await responseApi.resubmitResponse(responseId);
       }
 
       mutationSucceeded = true;
@@ -285,9 +304,13 @@ export const ResponsesPage: React.FC = () => {
         ? isBn
           ? 'প্রতিক্রিয়াটি সফলভাবে প্রত্যাখ্যান করা হয়েছে।'
           : 'Response rejected successfully.'
+        : action === 'unpublish'
+        ? isBn
+          ? 'প্রতিক্রিয়াটি সফলভাবে অপ্রকাশিত করা হয়েছে।'
+          : 'Response unpublished successfully.'
         : isBn
-        ? 'প্রতিক্রিয়াটি সফলভাবে অপ্রকাশিত করা হয়েছে।'
-        : 'Response unpublished successfully.';
+        ? 'প্রতিক্রিয়াটি সফলভাবে পুনরায় পর্যালোচনার জন্য পাঠানো হয়েছে।'
+        : 'Response resubmitted for review successfully.';
 
     setModerationFeedback({
       type: 'success',
@@ -608,10 +631,12 @@ export const ResponsesPage: React.FC = () => {
         canPublish={canPublish}
         canReject={canReject}
         canUnpublish={canUnpublish}
+        canResubmit={canResubmit}
         isModerating={isModerating}
         onPublish={handleTriggerPublish}
         onReject={handleTriggerReject}
         onUnpublish={handleTriggerUnpublish}
+        onResubmit={handleTriggerResubmit}
       />
 
       {/* 6. Response Moderation Confirmation Modal */}
