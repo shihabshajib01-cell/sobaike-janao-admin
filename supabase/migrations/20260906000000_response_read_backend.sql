@@ -425,7 +425,7 @@ BEGIN
         RAISE EXCEPTION 'Pre-commit check failed: admin_get_response_detail must have search_path = pg_catalog, public.';
     END IF;
 
-    -- Verify PUBLIC execute is completely blocked via ACL examination (no has_function_privilege('public', ...))
+    -- Verify PUBLIC execute is completely blocked via ACL examination (no public execute ACL)
     IF EXISTS (
         SELECT 1
         FROM pg_proc p
