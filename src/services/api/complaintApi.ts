@@ -26,6 +26,7 @@ import { isSupabaseConfigured } from '@/lib/supabase';
 export interface ComplaintDetailData {
   complaint: Complaint;
   timeline: ComplaintTimelineEvent[];
+  timelineError?: string | null;
   evidenceError?: string | null;
   reporterLocation?: ReporterDeviceLocation | null;
   reporterLocationError?: string | null;

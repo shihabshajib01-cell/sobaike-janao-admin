@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge, BadgeStatus } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
 import { useLanguage } from '@/context/LanguageContext';
 import { ComplaintTimelineEvent, TimelineEventType, ComplaintLifecycleStatus } from '@/types/Complaint';
 import {
@@ -14,18 +15,24 @@ import {
   User,
   Shield,
   ArrowRight,
+  AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/utils';
 
 export interface ComplaintTimelineProps {
   timeline: ComplaintTimelineEvent[];
   loading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
   className?: string;
 }
 
 export const ComplaintTimeline: React.FC<ComplaintTimelineProps> = ({
   timeline = [],
   loading = false,
+  error = null,
+  onRetry,
   className,
 }) => {
   const { language } = useLanguage();
@@ -86,9 +93,15 @@ export const ComplaintTimeline: React.FC<ComplaintTimelineProps> = ({
           <span>{isBn ? 'কার্যক্রম ও অডিট টাইমলাইন' : 'Audit Trail & Lifecycle History'}</span>
         </CardTitle>
 
-        <span className="text-xs text-slate-400 font-mono">
-          {timeline.length} {isBn ? 'টি ধাপ' : 'Events'}
-        </span>
+        {error ? (
+          <span className="text-xs text-rose-500 font-medium">
+            {isBn ? 'ত্রুটি' : 'Error'}
+          </span>
+        ) : (
+          <span className="text-xs text-slate-400 font-mono">
+            {timeline.length} {isBn ? 'টি ধাপ' : 'Events'}
+          </span>
+        )}
       </CardHeader>
 
       <CardContent className="pt-4">
@@ -103,6 +116,39 @@ export const ComplaintTimeline: React.FC<ComplaintTimelineProps> = ({
                 </div>
               </div>
             ))}
+          </div>
+        ) : error ? (
+          <div
+            role="alert"
+            className="p-3.5 rounded-lg border border-rose-200 dark:border-rose-900/60 bg-rose-50/70 dark:bg-rose-950/30 text-rose-900 dark:text-rose-200 space-y-2 text-xs"
+          >
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <p className="font-semibold text-rose-900 dark:text-rose-200">
+                  {isBn ? 'টাইমলাইন তথ্য লোড করা যায়নি' : 'Couldn’t load timeline history'}
+                </p>
+                <p className="text-rose-700 dark:text-rose-300 text-[11px]">
+                  {isBn
+                    ? 'সার্ভার থেকে টাইমলাইনের তথ্য সংগ্রহ করা যায়নি। পুনরায় চেষ্টা করুন।'
+                    : 'Timeline history could not be retrieved. Please retry.'}
+                </p>
+              </div>
+            </div>
+            {onRetry && (
+              <div className="pt-1 flex justify-end">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={onRetry}
+                  disabled={loading}
+                  leftIcon={<RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />}
+                  className="h-7 text-xs border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 hover:bg-rose-100 dark:hover:bg-rose-900/40"
+                >
+                  <span>{isBn ? 'আবার চেষ্টা করুন' : 'Retry'}</span>
+                </Button>
+              </div>
+            )}
           </div>
         ) : timeline.length === 0 ? (
           <p className="text-xs text-slate-400 py-6 text-center">

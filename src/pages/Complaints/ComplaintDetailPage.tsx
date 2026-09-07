@@ -29,6 +29,7 @@ import {
   FileQuestion,
   RotateCcw,
   ArrowLeft,
+  AlertTriangle,
 } from 'lucide-react';
 
 export const ComplaintDetailPage: React.FC = () => {
@@ -40,19 +41,24 @@ export const ComplaintDetailPage: React.FC = () => {
   const canViewEvidence = hasPermission('complaints.evidence_view');
 
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<boolean>(false);
+  const [notFound, setNotFound] = useState<boolean>(false);
   const [complaint, setComplaint] = useState<Complaint | null>(null);
   const [timeline, setTimeline] = useState<ComplaintTimelineEvent[]>([]);
+  const [timelineLoading, setTimelineLoading] = useState<boolean>(false);
+  const [timelineError, setTimelineError] = useState<string | null>(null);
   const [evidenceError, setEvidenceError] = useState<string | null>(null);
   const [reporterLocation, setReporterLocation] = useState<ReporterDeviceLocation | null>(null);
   const [reporterLocationLoading, setReporterLocationLoading] = useState<boolean>(false);
   const [reporterLocationError, setReporterLocationError] = useState<string | null>(null);
   const [reporterLocationDenied, setReporterLocationDenied] = useState<boolean>(false);
-  const [error, setError] = useState<boolean>(false);
 
   const fetchComplaintData = useCallback(async () => {
     if (!id) return;
     setLoading(true);
-    setError(false);
+    setLoadError(false);
+    setNotFound(false);
+    setTimelineError(null);
     setEvidenceError(null);
     setReporterLocationError(null);
     setReporterLocationDenied(false);
@@ -63,10 +69,11 @@ export const ComplaintDetailPage: React.FC = () => {
       });
 
       if (!detailRes || !detailRes.complaint) {
-        setError(true);
+        setNotFound(true);
       } else {
         setComplaint(detailRes.complaint);
         setTimeline(detailRes.timeline || []);
+        setTimelineError(detailRes.timelineError || null);
         setEvidenceError(detailRes.evidenceError || null);
         setReporterLocation(detailRes.reporterLocation || detailRes.complaint.reporterDeviceLocation || null);
         setReporterLocationError(detailRes.reporterLocationError || null);
@@ -74,11 +81,25 @@ export const ComplaintDetailPage: React.FC = () => {
       }
     } catch (err) {
       console.error('Failed to fetch complaint detail:', err);
-      setError(true);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
   }, [id, canViewEvidence]);
+
+  const handleRetryTimeline = useCallback(async () => {
+    if (!id) return;
+    setTimelineLoading(true);
+    setTimelineError(null);
+    try {
+      const res = await complaintApi.getComplaintTimeline(id);
+      setTimeline(res || []);
+    } catch (err: any) {
+      setTimelineError(err?.message || 'Failed to reload timeline history.');
+    } finally {
+      setTimelineLoading(false);
+    }
+  }, [id]);
 
   const handleRetryReporterLocation = useCallback(async () => {
     if (!id) return;
@@ -121,8 +142,8 @@ export const ComplaintDetailPage: React.FC = () => {
     edited: { badgeStatus: 'info', labelEn: 'Edited', labelBn: 'সম্পাদিত' },
   };
 
-  // 1. Loading Skeleton State
-  if (loading) {
+  // 1. Initial Loading Skeleton State
+  if (loading && !complaint) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -149,8 +170,8 @@ export const ComplaintDetailPage: React.FC = () => {
     );
   }
 
-  // 2. Not Found / Error State
-  if (error || !complaint) {
+  // 2. Genuine Not Found State (404)
+  if (notFound && !complaint) {
     return (
       <div className="space-y-6">
         <PageHeader
@@ -180,13 +201,54 @@ export const ComplaintDetailPage: React.FC = () => {
                   >
                     <span>{isBn ? 'অভিযোগের তালিকায় যান' : 'Go to Complaints List'}</span>
                   </Button>
+                </div>
+              }
+            />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // 3. Recoverable Initial Load Error State
+  if (loadError && !complaint) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title={isBn ? 'অভিযোগ লোড করা যায়নি' : 'Couldn’t load complaint'}
+          backButton={{
+            label: isBn ? 'অভিযোগ তালিকায় ফিরুন' : 'Back to Complaints',
+            onClick: () => navigate('/complaints'),
+          }}
+        />
+        <Card variant="default">
+          <CardContent className="py-12">
+            <EmptyState
+              title={isBn ? 'অভিযোগের তথ্য লোড করা যায়নি' : 'Complaint Details Could Not Be Loaded'}
+              description={
+                isBn
+                  ? 'সার্ভার বা নেটওয়ার্ক ত্রুটির কারণে অভিযোগের বিস্তারিত তথ্য লোড করা সম্ভব হয়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।'
+                  : 'The complaint details could not be loaded due to a network or server issue. Check your connection and try again.'
+              }
+              icon={AlertTriangle}
+              action={
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => navigate('/complaints')}
+                    leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}
+                  >
+                    <span>{isBn ? 'অভিযোগের তালিকায় যান' : 'Back to Complaints'}</span>
+                  </Button>
                   <Button
                     variant="primary"
                     size="sm"
                     onClick={fetchComplaintData}
-                    leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+                    disabled={loading}
+                    leftIcon={<RotateCcw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />}
                   >
-                    <span>{isBn ? 'পুনরায় চেষ্টা করুন' : 'Retry Request'}</span>
+                    <span>{isBn ? 'আবার চেষ্টা করুন' : 'Retry'}</span>
                   </Button>
                 </div>
               }
@@ -196,6 +258,8 @@ export const ComplaintDetailPage: React.FC = () => {
       </div>
     );
   }
+
+  if (!complaint) return null;
 
   const statusCfg = statusBadgeMap[complaint.status] || {
     badgeStatus: 'default',
@@ -209,6 +273,7 @@ export const ComplaintDetailPage: React.FC = () => {
   ) => {
     setComplaint(updatedComplaint);
     setTimeline(updatedTimeline);
+    setTimelineError(null);
   };
 
   return (
@@ -239,7 +304,8 @@ export const ComplaintDetailPage: React.FC = () => {
               variant="secondary"
               size="sm"
               onClick={fetchComplaintData}
-              leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
+              disabled={loading}
+              leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />}
               aria-label="Refresh complaint"
             >
               <span className="hidden sm:inline">{isBn ? 'রিফ্রেশ' : 'Refresh'}</span>
@@ -247,6 +313,38 @@ export const ComplaintDetailPage: React.FC = () => {
           </div>
         }
       />
+
+      {/* Recoverable Reload Error Banner */}
+      {loadError && (
+        <div
+          role="alert"
+          className="p-4 rounded-lg border border-rose-200 dark:border-rose-900/60 bg-rose-50/70 dark:bg-rose-950/30 text-rose-900 dark:text-rose-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in duration-200"
+        >
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              <h3 className="text-sm font-semibold">
+                {isBn ? 'সর্বশেষ তথ্য আপডেট করা যায়নি' : 'Couldn’t refresh complaint'}
+              </h3>
+              <p className="text-xs text-rose-700 dark:text-rose-300">
+                {isBn
+                  ? 'সর্বশেষ তথ্য লোড করা যায়নি। পূর্বে লোড করা তথ্য প্রদর্শিত হচ্ছে।'
+                  : 'The latest details could not be reloaded. Previously loaded data is still shown.'}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={fetchComplaintData}
+            disabled={loading}
+            leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />}
+            className="shrink-0 border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 hover:bg-rose-100 dark:hover:bg-rose-900/40"
+          >
+            <span>{isBn ? 'আবার চেষ্টা করুন' : 'Retry'}</span>
+          </Button>
+        </div>
+      )}
 
       {/* 2. Complaint Summary Card (Full Width) */}
       <ComplaintSummaryCard complaint={complaint} />
@@ -288,7 +386,12 @@ export const ComplaintDetailPage: React.FC = () => {
           />
 
           {/* Audit Trail & Lifecycle History */}
-          <ComplaintTimeline timeline={timeline} />
+          <ComplaintTimeline
+            timeline={timeline}
+            loading={timelineLoading}
+            error={timelineError}
+            onRetry={handleRetryTimeline}
+          />
         </div>
       </div>
     </div>

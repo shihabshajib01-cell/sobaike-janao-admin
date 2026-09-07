@@ -21,7 +21,7 @@ import {
 } from '@/types/Complaint';
 import { complaintApi } from '@/services/api';
 import { exportComplaintsToCsv, exportComplaintsToPdf } from '@/utils';
-import { RefreshCw, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react';
+import { RefreshCw, ChevronLeft, ChevronRight, SlidersHorizontal, AlertTriangle } from 'lucide-react';
 
 export const ComplaintsPage: React.FC = () => {
   const { language } = useLanguage();
@@ -32,6 +32,7 @@ export const ComplaintsPage: React.FC = () => {
 
   // State
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<boolean>(false);
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [statusCounts, setStatusCounts] = useState<ComplaintStatusTabCount[]>([]);
   const [pagination, setPagination] = useState<ComplaintPagination>({
@@ -67,6 +68,7 @@ export const ComplaintsPage: React.FC = () => {
   const fetchComplaints = useCallback(
     async (pageToLoad = pagination.currentPage) => {
       setLoading(true);
+      setLoadError(false);
       try {
         const response = await complaintApi.getComplaints(
           filters,
@@ -75,14 +77,15 @@ export const ComplaintsPage: React.FC = () => {
         );
         setComplaints(response.items);
         setPagination(response.pagination);
-        setStatusCounts(response.statusCounts);
+        setStatusCounts(response.statusCounts || []);
       } catch (error) {
         console.error('Failed to load complaints:', error);
+        setLoadError(true);
       } finally {
         setLoading(false);
       }
     },
-    [filters, pagination.pageSize]
+    [filters, pagination.currentPage, pagination.pageSize]
   );
 
   useEffect(() => {
@@ -255,6 +258,42 @@ export const ComplaintsPage: React.FC = () => {
         }
       />
 
+      {/* Recoverable Complaint List Load Error */}
+      {loadError && (
+        <div
+          role="alert"
+          className="p-4 rounded-lg border border-rose-200 dark:border-rose-900/60 bg-rose-50/70 dark:bg-rose-950/30 text-rose-900 dark:text-rose-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in duration-200"
+        >
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              <h3 className="text-sm font-semibold">
+                {isBn ? 'অভিযোগ লোড করা যায়নি' : 'Couldn’t load complaints'}
+              </h3>
+              <p className="text-xs text-rose-700 dark:text-rose-300">
+                {complaints.length > 0
+                  ? isBn
+                    ? 'সর্বশেষ তথ্য লোড করা যায়নি। আগে লোড করা ফলাফল দেখানো হচ্ছে।'
+                    : 'The latest data could not be loaded. Previously loaded results are still shown.'
+                  : isBn
+                  ? 'অভিযোগের তথ্য লোড করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।'
+                  : 'Complaint data could not be loaded. Check the connection and try again.'}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => fetchComplaints(pagination.currentPage)}
+            disabled={loading}
+            leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />}
+            className="shrink-0 border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 hover:bg-rose-100 dark:hover:bg-rose-900/40"
+          >
+            <span>{isBn ? 'আবার চেষ্টা করুন' : 'Retry'}</span>
+          </Button>
+        </div>
+      )}
+
       {/* 2. Status Tabs Bar */}
       <ComplaintStatusTabs
         tabs={statusCounts}
@@ -317,89 +356,91 @@ export const ComplaintsPage: React.FC = () => {
       </Card>
 
       {/* 4. Results Stats & Table */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between px-1 text-xs text-slate-500 dark:text-slate-400">
-          <span>
-            {isBn
-              ? `মোট ${formatNumber(pagination.totalItems)} টি অভিযোগ পাওয়া গেছে`
-              : `Showing ${complaints.length} of ${pagination.totalItems} total complaints`}
-          </span>
-          {pagination.totalPages > 1 && (
+      {!(loadError && complaints.length === 0) && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between px-1 text-xs text-slate-500 dark:text-slate-400">
             <span>
               {isBn
-                ? `পৃষ্ঠা ${formatNumber(pagination.currentPage)} / ${formatNumber(pagination.totalPages)}`
-                : `Page ${pagination.currentPage} of ${pagination.totalPages}`}
+                ? `মোট ${formatNumber(pagination.totalItems)} টি অভিযোগ পাওয়া গেছে`
+                : `Showing ${complaints.length} of ${pagination.totalItems} total complaints`}
             </span>
+            {pagination.totalPages > 1 && (
+              <span>
+                {isBn
+                  ? `পৃষ্ঠা ${formatNumber(pagination.currentPage)} / ${formatNumber(pagination.totalPages)}`
+                  : `Page ${pagination.currentPage} of ${pagination.totalPages}`}
+              </span>
+            )}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block">
+            <ComplaintTable
+              complaints={complaints}
+              loading={loading}
+              hasActiveFilters={hasActiveFilters}
+              onResetFilters={handleResetFilters}
+              onRetry={() => fetchComplaints(pagination.currentPage)}
+            />
+          </div>
+
+          {/* Mobile Card List View */}
+          <div className="md:hidden">
+            <MobileComplaintCardList
+              complaints={complaints}
+              loading={loading}
+              hasActiveFilters={hasActiveFilters}
+              onResetFilters={handleResetFilters}
+              onRetry={() => fetchComplaints(pagination.currentPage)}
+            />
+          </div>
+
+          {/* 5. Pagination Footer */}
+          {pagination.totalPages > 1 && (
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 px-1 w-full max-w-full">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handlePageChange(pagination.currentPage - 1)}
+                disabled={pagination.currentPage <= 1 || loading}
+                leftIcon={<ChevronLeft className="w-4 h-4" />}
+              >
+                <span>{isBn ? 'পূর্ববর্তী' : 'Previous'}</span>
+              </Button>
+
+              <div className="flex items-center gap-1 overflow-x-auto max-w-full py-1">
+                {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((p) => {
+                  const isCurrent = p === pagination.currentPage;
+                  return (
+                    <button
+                      key={p}
+                      onClick={() => handlePageChange(p)}
+                      disabled={loading}
+                      className={`w-8 h-8 rounded-md text-xs font-mono font-medium transition-colors ${
+                        isCurrent
+                          ? 'bg-sky-600 text-white font-bold'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      {formatNumber(p)}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handlePageChange(pagination.currentPage + 1)}
+                disabled={pagination.currentPage >= pagination.totalPages || loading}
+                rightIcon={<ChevronRight className="w-4 h-4" />}
+              >
+                <span>{isBn ? 'পরবর্তী' : 'Next'}</span>
+              </Button>
+            </div>
           )}
         </div>
-
-        {/* Desktop Table View */}
-        <div className="hidden md:block">
-          <ComplaintTable
-            complaints={complaints}
-            loading={loading}
-            hasActiveFilters={hasActiveFilters}
-            onResetFilters={handleResetFilters}
-            onRetry={() => fetchComplaints(pagination.currentPage)}
-          />
-        </div>
-
-        {/* Mobile Card List View */}
-        <div className="md:hidden">
-          <MobileComplaintCardList
-            complaints={complaints}
-            loading={loading}
-            hasActiveFilters={hasActiveFilters}
-            onResetFilters={handleResetFilters}
-            onRetry={() => fetchComplaints(pagination.currentPage)}
-          />
-        </div>
-
-        {/* 5. Pagination Footer */}
-        {pagination.totalPages > 1 && (
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 px-1 w-full max-w-full">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => handlePageChange(pagination.currentPage - 1)}
-              disabled={pagination.currentPage <= 1 || loading}
-              leftIcon={<ChevronLeft className="w-4 h-4" />}
-            >
-              <span>{isBn ? 'পূর্ববর্তী' : 'Previous'}</span>
-            </Button>
-
-            <div className="flex items-center gap-1 overflow-x-auto max-w-full py-1">
-              {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((p) => {
-                const isCurrent = p === pagination.currentPage;
-                return (
-                  <button
-                    key={p}
-                    onClick={() => handlePageChange(p)}
-                    disabled={loading}
-                    className={`w-8 h-8 rounded-md text-xs font-mono font-medium transition-colors ${
-                      isCurrent
-                        ? 'bg-sky-600 text-white font-bold'
-                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
-                  >
-                    {formatNumber(p)}
-                  </button>
-                );
-              })}
-            </div>
-
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => handlePageChange(pagination.currentPage + 1)}
-              disabled={pagination.currentPage >= pagination.totalPages || loading}
-              rightIcon={<ChevronRight className="w-4 h-4" />}
-            >
-              <span>{isBn ? 'পরবর্তী' : 'Next'}</span>
-            </Button>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 };

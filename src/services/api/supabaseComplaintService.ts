@@ -703,9 +703,8 @@ export const supabaseComplaintService = {
       .order('created_at', { ascending: true });
 
     if (error) {
-      console.warn(`Error loading timeline for complaint ${id}:`, error.message);
-      // Fallback to initial submitted event if updates table query fails
-      return mapComplaintUpdatesToTimeline(complaint, []);
+      console.error(`Error loading timeline for complaint ${id}:`, error.message);
+      throw new Error(`Failed to load timeline for complaint ${id}: ${error.message}`);
     }
 
     return mapComplaintUpdatesToTimeline(
@@ -929,6 +928,7 @@ export const supabaseComplaintService = {
   ): Promise<{
     complaint: Complaint;
     timeline: ComplaintTimelineEvent[];
+    timelineError?: string | null;
     evidenceError?: string | null;
     reporterLocation?: ReporterDeviceLocation | null;
     reporterLocationError?: string | null;
@@ -941,9 +941,18 @@ export const supabaseComplaintService = {
     const shouldLoadEvidence = options?.loadEvidence ?? true;
     const shouldLoadReporterLocation = options?.loadReporterLocation ?? true;
 
-    const [complaintRowRes, timeline, evidenceResult, reporterLocResult] = await Promise.all([
+    const [complaintRowRes, timelineRes, evidenceResult, reporterLocResult] = await Promise.all([
       supabase.from('complaints').select('*').eq('id', id).maybeSingle(),
-      this.getComplaintTimeline(id),
+      this.getComplaintTimeline(id).then(
+        (events) => ({ timeline: events, error: null }),
+        (err) => {
+          console.error(`Error loading timeline for complaint ${id}:`, err);
+          return {
+            timeline: [] as ComplaintTimelineEvent[],
+            error: err instanceof Error ? err.message : 'Failed to load complaint timeline',
+          };
+        }
+      ),
       shouldLoadEvidence ? this.getComplaintEvidence(id) : Promise.resolve({ media: [] }),
       shouldLoadReporterLocation ? this.getComplaintReporterLocation(id) : Promise.resolve({ data: null }),
     ]);
@@ -971,7 +980,8 @@ export const supabaseComplaintService = {
 
     return {
       complaint,
-      timeline,
+      timeline: timelineRes.timeline,
+      timelineError: timelineRes.error || null,
       evidenceError: evidenceResult.error || null,
       reporterLocation: reporterLocResult.data || null,
       reporterLocationError: reporterLocResult.error || null,
