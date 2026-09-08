@@ -81,7 +81,6 @@ export const UtilityOutageDetailsCard: React.FC<UtilityOutageDetailsCardProps> =
 
   return (
     <Card
-      id="utility-outage-details-card"
       variant="default"
       className={cn(
         'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900',
@@ -141,10 +140,7 @@ export const UtilityOutageDetailsCard: React.FC<UtilityOutageDetailsCardProps> =
 
           {/* End Time (only if available) */}
           {hasEndTime && (
-            <div
-              id="utility-outage-end-time"
-              className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 space-y-1"
-            >
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 space-y-1">
               <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 font-medium">
                 <Clock className="w-3.5 h-3.5 text-slate-400" />
                 {isBn ? 'শেষের সময়' : 'End Time'}
