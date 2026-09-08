@@ -32,7 +32,7 @@ export const AdminHeader: React.FC<HeaderProps> = ({
   onToggleSidebar,
 }) => {
   const { t, language } = useLanguage();
-  const { user, logout, role, isBootstrapMode, hasPermission } = useAuth();
+  const { user, logout, role, isBootstrapMode, isSuperAdmin, hasPermission } = useAuth();
   const isBn = language === 'bn';
   const location = useLocation();
   const navigate = useNavigate();
@@ -43,6 +43,10 @@ export const AdminHeader: React.FC<HeaderProps> = ({
     ? isBn
       ? 'বুটস্ট্র্যাপ অ্যাডমিন'
       : 'Bootstrap Admin'
+    : isSuperAdmin
+    ? isBn
+      ? 'সুপার অ্যাডমিন'
+      : 'Super Administrator'
     : role
     ? (isBn && role.name_bn ? role.name_bn : role.name_en)
     : isBn

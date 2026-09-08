@@ -723,8 +723,8 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
             </p>
             <p>
               {isBn
-                ? 'প্রকাশের পর সংশ্লিষ্ট এলাকার নাগরিকরা অভিযোগটিতে আপভোট করতে পারবেন এবং প্ল্যাটফর্ম ফিডে অগ্রগতি দেখতে পাবেন।'
-                : 'Citizens in this ward will be able to upvote this issue and track live resolution milestones.'}
+                ? 'প্রকাশের পর অভিযোগটি পাবলিক ফিডে দৃশ্যমান হবে।'
+                : 'After publishing, this complaint will become visible on the public feed.'}
             </p>
           </div>
         </div>
