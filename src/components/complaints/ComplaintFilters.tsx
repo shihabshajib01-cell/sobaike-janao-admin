@@ -30,9 +30,6 @@ export const ComplaintFilters: React.FC<ComplaintFiltersProps> = ({
   const [availableSegments, setAvailableSegments] = useState<{ id: string; name_en: string; name_bn: string }[]>(
     propCategories || []
   );
-  const [availableSubcategories, setAvailableSubcategories] = useState<
-    { id: string; name_en: string; name_bn: string; segment_id?: string }[]
-  >([]);
   const [availableDistricts, setAvailableDistricts] = useState<string[]>(
     propLocations || []
   );
@@ -51,16 +48,6 @@ export const ComplaintFilters: React.FC<ComplaintFiltersProps> = ({
         .catch((err) => console.warn('Failed to load taxonomy segments for filter:', err));
     }
   }, [propCategories]);
-
-  // Load subcategories when selected category changes
-  useEffect(() => {
-    complaintApi
-      .getSubcategories(filters.category)
-      .then((subs) => {
-        setAvailableSubcategories(subs || []);
-      })
-      .catch((err) => console.warn('Failed to load subcategories for filter:', err));
-  }, [filters.category]);
 
   useEffect(() => {
     if (propLocations && propLocations.length > 0) {
@@ -85,14 +72,6 @@ export const ComplaintFilters: React.FC<ComplaintFiltersProps> = ({
     })),
   ];
 
-  const subcategoryOptions = [
-    { value: 'all', label: isBn ? 'সকল উপ-বিভাগ' : 'All Subcategories' },
-    ...availableSubcategories.map((s) => ({
-      value: s.id,
-      label: isBn ? (s.name_bn || s.name_en) : (s.name_en || s.name_bn),
-    })),
-  ];
-
   const locationOptions = [
     { value: 'all', label: isBn ? 'সকল এলাকা' : 'All Locations' },
     ...availableDistricts.map((loc) => ({
@@ -111,37 +90,21 @@ export const ComplaintFilters: React.FC<ComplaintFiltersProps> = ({
   // Helper to get readable label for active filter badges
   const getCategoryLabel = (val: string) =>
     categoryOptions.find((o) => o.value === val)?.label || val;
-  const getSubcategoryLabel = (val: string) =>
-    subcategoryOptions.find((o) => o.value === val)?.label || val;
   const getLocationLabel = (val: string) =>
     locationOptions.find((o) => o.value === val)?.label || val;
   const getDateLabel = (val: string) =>
     dateOptions.find((o) => o.value === val)?.label || val;
 
-  const handleCategoryChange = (newCat: string) => {
-    onFilterChange('category', newCat);
-    onFilterChange('subcategory', 'all');
-  };
-
   return (
     <div className="space-y-3">
       {/* Filters Form Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
         {/* Category Select */}
         <Select
-          label={isBn ? 'বিভাগ' : 'Category'}
+          label={isBn ? 'বিভাগ নির্বাচন' : 'Category'}
           value={filters.category}
-          onChange={(e) => handleCategoryChange(e.target.value)}
+          onChange={(e) => onFilterChange('category', e.target.value)}
           options={categoryOptions}
-        />
-
-        {/* Subcategory Select */}
-        <Select
-          label={isBn ? 'উপ-বিভাগ' : 'Subcategory'}
-          value={filters.subcategory}
-          onChange={(e) => onFilterChange('subcategory', e.target.value)}
-          options={subcategoryOptions}
-          disabled={subcategoryOptions.length <= 1}
         />
 
         {/* Location Select */}
@@ -203,23 +166,9 @@ export const ComplaintFilters: React.FC<ComplaintFiltersProps> = ({
               <span>{getCategoryLabel(filters.category)}</span>
               <button
                 type="button"
-                onClick={() => handleCategoryChange('all')}
+                onClick={() => onFilterChange('category', 'all')}
                 className="hover:opacity-75 cursor-pointer"
                 aria-label="Remove category filter"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </Badge>
-          )}
-
-          {filters.subcategory !== 'all' && (
-            <Badge status="info" size="sm" className="inline-flex items-center gap-1">
-              <span>{getSubcategoryLabel(filters.subcategory)}</span>
-              <button
-                type="button"
-                onClick={() => onFilterChange('subcategory', 'all')}
-                className="hover:opacity-75 cursor-pointer"
-                aria-label="Remove subcategory filter"
               >
                 <X className="w-3 h-3" />
               </button>

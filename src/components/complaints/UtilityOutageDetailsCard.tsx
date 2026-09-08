@@ -60,18 +60,11 @@ export const UtilityOutageDetailsCard: React.FC<UtilityOutageDetailsCardProps> =
 
   const isUtility = complaint.categoryId === 'load_shedding';
   const isLoadShedding =
-    (isUtility && complaint.subcategoryId === 'load-shedding-outage') ||
-    complaint.subcategoryId === 'load-shedding-outage';
+    isUtility && complaint.subcategoryId === 'load-shedding-outage';
   const isGasShortage =
-    (isUtility && complaint.subcategoryId === 'gas-shortage') ||
-    complaint.subcategoryId === 'gas-shortage';
+    isUtility && complaint.subcategoryId === 'gas-shortage';
 
-  // Explicitly forbid rendering for excess-electricity-bill
-  if (complaint.subcategoryId === 'excess-electricity-bill') {
-    return null;
-  }
-
-  // Only render for load shedding or gas shortage (or outage complaints)
+  // Only render for Load Shedding or Gas Shortage utility complaints
   if (!isLoadShedding && !isGasShortage) {
     return null;
   }

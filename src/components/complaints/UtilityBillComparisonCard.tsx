@@ -85,8 +85,7 @@ export const UtilityBillComparisonCard: React.FC<UtilityBillComparisonCardProps>
 
   const isUtility = complaint.categoryId === 'load_shedding';
   const isExcessElectricityBill =
-    (isUtility && complaint.subcategoryId === 'excess-electricity-bill') ||
-    complaint.subcategoryId === 'excess-electricity-bill';
+    isUtility && complaint.subcategoryId === 'excess-electricity-bill';
 
   // Only render for Excess Electricity Bill complaints
   if (!isExcessElectricityBill) {
