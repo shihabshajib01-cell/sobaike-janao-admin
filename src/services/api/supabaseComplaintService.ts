@@ -67,6 +67,7 @@ export interface SupabaseComplaintRow {
   description_en: string | null;
   incident_date: string | null;
   incident_time: string | null;
+  utility_end_time?: string | null;
   frequency: string | null;
   status: string | null;
   priority: string | null;
@@ -399,7 +400,7 @@ export function mapSupabaseRowToComplaint(
         : null,
     incidentDate: row.incident_date ?? null,
     incidentTime: row.incident_time ?? null,
-    utilityEndTime: undefined,
+    utilityEndTime: row.utility_end_time ?? null,
     frequency: row.frequency ?? null,
     upvotesCount: 0,
     commentsCount: 0,
