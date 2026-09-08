@@ -92,6 +92,14 @@ export interface Complaint {
   evidenceDescription?: string;
   versions?: ComplaintVersion[];
   reporterDeviceLocation?: ReporterDeviceLocation | null;
+  // Utility Service Complaints specific attributes
+  recentBillMonth?: string | null;
+  recentBillAmount?: number | null;
+  previousBillMonth?: string | null;
+  previousBillAmount?: number | null;
+  incidentDate?: string | null;
+  incidentTime?: string | null;
+  frequency?: string | null;
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
 }

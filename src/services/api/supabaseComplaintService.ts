@@ -91,6 +91,10 @@ export interface SupabaseComplaintRow {
   evidence_types: string[] | null;
   evidence_description: string | null;
   publication_preferences: Record<string, unknown> | null;
+  recent_bill_month?: string | null;
+  recent_bill_amount?: number | null;
+  previous_bill_month?: string | null;
+  previous_bill_amount?: number | null;
   created_at: string;
   updated_at: string | null;
 }
@@ -383,6 +387,19 @@ export function mapSupabaseRowToComplaint(
     ),
     evidenceTypes: Array.isArray(row.evidence_types) ? row.evidence_types : [],
     evidenceDescription: row.evidence_description || undefined,
+    recentBillMonth: row.recent_bill_month ?? null,
+    recentBillAmount:
+      row.recent_bill_amount !== null && row.recent_bill_amount !== undefined
+        ? Number(row.recent_bill_amount)
+        : null,
+    previousBillMonth: row.previous_bill_month ?? null,
+    previousBillAmount:
+      row.previous_bill_amount !== null && row.previous_bill_amount !== undefined
+        ? Number(row.previous_bill_amount)
+        : null,
+    incidentDate: row.incident_date ?? null,
+    incidentTime: row.incident_time ?? null,
+    frequency: row.frequency ?? null,
     upvotesCount: 0,
     commentsCount: 0,
     createdAt,
@@ -507,6 +524,11 @@ export const supabaseComplaintService = {
     // Filter by Category (segment_id)
     if (filters.category && filters.category !== 'all') {
       query = query.eq('segment_id', filters.category);
+    }
+
+    // Filter by Subcategory (subcategory_id)
+    if (filters.subcategory && filters.subcategory !== 'all') {
+      query = query.eq('subcategory_id', filters.subcategory);
     }
 
     // Filter by Location (district)

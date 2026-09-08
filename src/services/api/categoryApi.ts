@@ -26,6 +26,7 @@ const DEV_FALLBACK_SEGMENTS: TaxonomySegment[] = [
   { id: 'waste_management', nameEn: 'Waste Management', nameBn: 'বর্জ্য ব্যবস্থাপনা', status: 'active', order: 4 },
   { id: 'water_sanitation', nameEn: 'Water & Sanitation', nameBn: 'পানি ও পয়ঃনিষ্কাশন', status: 'active', order: 5 },
   { id: 'public_lighting', nameEn: 'Street & Public Lighting', nameBn: 'সড়ক ও পাবলিক বাতি', status: 'active', order: 6 },
+  { id: 'load_shedding', nameEn: 'Utility Service Complaints', nameBn: 'ইউটিলিটি সেবা অভিযোগ', status: 'active', order: 7 },
 ];
 
 const DEV_FALLBACK_SUBCATEGORIES: TaxonomySubcategory[] = [
@@ -38,6 +39,9 @@ const DEV_FALLBACK_SUBCATEGORIES: TaxonomySubcategory[] = [
   { id: 'uncollected_garbage', segmentId: 'waste_management', nameEn: 'Uncollected Garbage', nameBn: 'অনপসারিত বর্জ্য', status: 'active', order: 1 },
   { id: 'drainage_blockage', segmentId: 'water_sanitation', nameEn: 'Drainage Overflow', nameBn: 'ড্রেনেজ উপচে পড়া', status: 'active', order: 1 },
   { id: 'broken_streetlamp', segmentId: 'public_lighting', nameEn: 'Broken Streetlamp', nameBn: 'অকেজো সড়কবাতি', status: 'active', order: 1 },
+  { id: 'load-shedding-outage', segmentId: 'load_shedding', nameEn: 'Load Shedding', nameBn: 'লোডশেডিং', status: 'active', order: 1 },
+  { id: 'gas-shortage', segmentId: 'load_shedding', nameEn: 'Gas Shortage', nameBn: 'গ্যাস সংকট', status: 'active', order: 2 },
+  { id: 'excess-electricity-bill', segmentId: 'load_shedding', nameEn: 'Excess Electricity Bill', nameBn: 'অতিরিক্ত বিদ্যুৎ বিল', status: 'active', order: 3 },
 ];
 
 const isDev = Boolean(typeof import.meta !== 'undefined' && import.meta.env?.DEV);

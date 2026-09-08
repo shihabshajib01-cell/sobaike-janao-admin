@@ -13,6 +13,8 @@ import {
   Lock,
 } from 'lucide-react';
 import { cn } from '@/utils';
+import { UtilityBillComparisonCard } from './UtilityBillComparisonCard';
+import { UtilityOutageDetailsCard } from './UtilityOutageDetailsCard';
 
 export interface ComplaintInfoSectionProps {
   complaint: Complaint;
@@ -177,6 +179,12 @@ export const ComplaintInfoSection: React.FC<ComplaintInfoSectionProps> = ({
           </div>
         </CardContent>
       </Card>
+
+      {/* Utility Bill Comparison Card (if electricity bill data is present) */}
+      <UtilityBillComparisonCard complaint={complaint} />
+
+      {/* Utility Outage / Event Details Card (if incident date/time or outage info is present) */}
+      <UtilityOutageDetailsCard complaint={complaint} />
 
       {/* 2. Reporter Information & Verification Card */}
       <Card variant="default">

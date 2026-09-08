@@ -17,9 +17,11 @@ import {
 import { complaintFallback, WorkflowActionResult } from '@/services/fallback/complaintFallback';
 import {
   supabaseComplaintService,
+  getTaxonomy,
   getTaxonomySegments,
   getDistinctLocations,
   SupabaseSegment,
+  SupabaseSubcategory,
 } from './supabaseComplaintService';
 import { isSupabaseConfigured } from '@/lib/supabase';
 
@@ -57,9 +59,36 @@ export class ComplaintApi {
         { id: 'harassment', name_en: 'Public Harassment', name_bn: 'পাবলিক হয়রানি', active: true },
         { id: 'civic_issues', name_en: 'Civic Problems & Drainage', name_bn: 'নাগরিক সমস্যা ও ড্রেনেজ', active: true },
         { id: 'corruption', name_en: 'Public Office Irregularities', name_bn: 'সরকারি দপ্তরের অনিয়ম', active: true },
+        { id: 'load_shedding', name_en: 'Utility Service Complaints', name_bn: 'ইউটিলিটি সেবা অভিযোগ', active: true },
       ];
     }
     throw new Error('Supabase complaint service is not configured in this environment.');
+  }
+
+  /**
+   * Get subcategories for filtering, optionally filtered by segment
+   */
+  async getSubcategories(segmentId?: string): Promise<SupabaseSubcategory[]> {
+    if (isSupabaseConfigured) {
+      const { subcategories } = await getTaxonomy();
+      const activeSubs = subcategories.filter((s) => s.active !== false);
+      if (segmentId && segmentId !== 'all') {
+        return activeSubs.filter((s) => s.segment_id === segmentId);
+      }
+      return activeSubs;
+    }
+    if (isDev) {
+      const devSubs: SupabaseSubcategory[] = [
+        { id: 'load-shedding-outage', segment_id: 'load_shedding', name_en: 'Load Shedding', name_bn: 'লোডশেডিং', active: true },
+        { id: 'gas-shortage', segment_id: 'load_shedding', name_en: 'Gas Shortage', name_bn: 'গ্যাস সংকট', active: true },
+        { id: 'excess-electricity-bill', segment_id: 'load_shedding', name_en: 'Excess Electricity Bill', name_bn: 'অতিরিক্ত বিদ্যুৎ বিল', active: true },
+      ];
+      if (segmentId && segmentId !== 'all') {
+        return devSubs.filter((s) => s.segment_id === segmentId);
+      }
+      return devSubs;
+    }
+    return [];
   }
 
   /**
