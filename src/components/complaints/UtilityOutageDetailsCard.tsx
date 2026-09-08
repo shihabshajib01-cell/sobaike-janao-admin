@@ -1,17 +1,8 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
 import { useLanguage } from '@/context/LanguageContext';
 import { Complaint } from '@/types/Complaint';
-import {
-  Zap,
-  Flame,
-  Clock,
-  Calendar,
-  RotateCw,
-  AlertCircle,
-  Activity,
-} from 'lucide-react';
+import { Zap, Flame, Clock, Calendar } from 'lucide-react';
 import { cn } from '@/utils';
 
 export interface UtilityOutageDetailsCardProps {
@@ -29,9 +20,10 @@ function toBengaliNumerals(input: string | number): string {
 }
 
 function formatIncidentTime(timeStr: string | null | undefined, isBn: boolean): string {
-  if (!timeStr) return isBn ? 'অনির্দিষ্ট সময়' : 'Unspecified Time';
-  // Check if HH:MM
-  const match = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+  if (!timeStr || !timeStr.trim()) {
+    return isBn ? 'তথ্য নেই' : 'Not specified';
+  }
+  const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})$/);
   if (match) {
     const hours = parseInt(match[1], 10);
     const minutes = match[2];
@@ -44,7 +36,9 @@ function formatIncidentTime(timeStr: string | null | undefined, isBn: boolean): 
 }
 
 function formatIncidentDate(dateStr: string | null | undefined, isBn: boolean): string {
-  if (!dateStr) return isBn ? 'অনির্দিষ্ট তারিখ' : 'Unspecified Date';
+  if (!dateStr || !dateStr.trim()) {
+    return isBn ? 'তথ্য নেই' : 'Not specified';
+  }
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) {
     return isBn ? toBengaliNumerals(dateStr) : dateStr;
@@ -57,38 +51,6 @@ function formatIncidentDate(dateStr: string | null | undefined, isBn: boolean): 
   });
 }
 
-function formatFrequency(freq: string | null | undefined, isBn: boolean): { label: string; badgeStatus: 'pending' | 'rejected' | 'default' } {
-  if (!freq) {
-    return {
-      label: isBn ? 'এককালীন ঘটনা' : 'One-time Outage',
-      badgeStatus: 'default',
-    };
-  }
-  const f = freq.toLowerCase();
-  if (f === 'repeated' || f === 'recurring' || f === 'daily') {
-    return {
-      label: isBn ? 'বারবার / পুনরাবৃত্তিমূলক বিভ্রাট' : 'Repeated / Recurring Outage',
-      badgeStatus: 'rejected',
-    };
-  }
-  if (f === 'continuous' || f === 'ongoing') {
-    return {
-      label: isBn ? 'চলমান / দীর্ঘস্থায়ী সংকট' : 'Continuous / Ongoing Outage',
-      badgeStatus: 'rejected',
-    };
-  }
-  if (f === 'intermittent') {
-    return {
-      label: isBn ? 'বিরতিহীন / অনির্ধারিত বিভ্রাট' : 'Intermittent Outage',
-      badgeStatus: 'pending',
-    };
-  }
-  return {
-    label: isBn ? toBengaliNumerals(freq) : freq,
-    badgeStatus: 'default',
-  };
-}
-
 export const UtilityOutageDetailsCard: React.FC<UtilityOutageDetailsCardProps> = ({
   complaint,
   className,
@@ -96,36 +58,33 @@ export const UtilityOutageDetailsCard: React.FC<UtilityOutageDetailsCardProps> =
   const { language } = useLanguage();
   const isBn = language === 'bn';
 
-  const isUtility =
-    complaint.categoryId === 'load_shedding' ||
-    complaint.subcategoryId === 'load-shedding-outage' ||
+  const isUtility = complaint.categoryId === 'load_shedding';
+  const isLoadShedding =
+    (isUtility && complaint.subcategoryId === 'load-shedding-outage') ||
+    complaint.subcategoryId === 'load-shedding-outage';
+  const isGasShortage =
+    (isUtility && complaint.subcategoryId === 'gas-shortage') ||
     complaint.subcategoryId === 'gas-shortage';
 
-  const hasIncidentDate = Boolean(complaint.incidentDate);
-  const hasIncidentTime = Boolean(complaint.incidentTime);
-  const hasFrequency = Boolean(complaint.frequency);
-
-  // If not utility and has no incident details, do not render
-  if (!isUtility && !hasIncidentDate && !hasIncidentTime && !hasFrequency) {
+  // Explicitly forbid rendering for excess-electricity-bill
+  if (complaint.subcategoryId === 'excess-electricity-bill') {
     return null;
   }
 
-  // If utility is electricity bill, comparison card is primary; only render this if date/time is specifically recorded
-  if (
-    complaint.subcategoryId === 'excess-electricity-bill' &&
-    !hasIncidentDate &&
-    !hasIncidentTime
-  ) {
+  // Only render for load shedding or gas shortage (or outage complaints)
+  if (!isLoadShedding && !isGasShortage) {
     return null;
   }
 
-  const isGas = complaint.subcategoryId === 'gas-shortage';
-  const isElectricity =
-    complaint.subcategoryId === 'load-shedding-outage' ||
-    complaint.subcategoryId === 'excess-electricity-bill' ||
-    complaint.categoryId === 'load_shedding';
+  const typeLabel = isGasShortage
+    ? isBn
+      ? 'গ্যাস সংকট'
+      : 'Gas Shortage'
+    : isBn
+    ? 'লোডশেডিং'
+    : 'Load Shedding';
 
-  const freqInfo = formatFrequency(complaint.frequency, isBn);
+  const hasEndTime = Boolean(complaint.utilityEndTime && complaint.utilityEndTime.trim());
 
   return (
     <Card
@@ -141,37 +100,29 @@ export const UtilityOutageDetailsCard: React.FC<UtilityOutageDetailsCardProps> =
             <div
               className={cn(
                 'w-6 h-6 rounded-md flex items-center justify-center',
-                isGas
+                isGasShortage
                   ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
                   : 'bg-sky-500/10 text-sky-600 dark:text-sky-400'
               )}
             >
-              {isGas ? (
+              {isGasShortage ? (
                 <Flame className="w-3.5 h-3.5" />
               ) : (
                 <Zap className="w-3.5 h-3.5" />
               )}
             </div>
-            <span>
-              {isGas
-                ? isBn
-                  ? 'গ্যাস সংকট ও বিভ্রাটের বিবরণ'
-                  : 'Gas Supply Disruption Incident Details'
-                : isBn
-                ? 'লোডশেডিং ও বিদ্যুৎ বিভ্রাটের বিবরণ'
-                : 'Power Outage & Load Shedding Incident Details'}
-            </span>
+            <span>{typeLabel}</span>
           </CardTitle>
-
-          <Badge status={freqInfo.badgeStatus} size="sm">
-            <RotateCw className="w-3 h-3 mr-1" />
-            {freqInfo.label}
-          </Badge>
         </div>
       </CardHeader>
 
       <CardContent className="pt-4 space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div
+          className={cn(
+            'grid grid-cols-1 gap-3',
+            hasEndTime ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
+          )}
+        >
           {/* Incident Date */}
           <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 space-y-1">
             <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 font-medium">
@@ -183,27 +134,29 @@ export const UtilityOutageDetailsCard: React.FC<UtilityOutageDetailsCardProps> =
             </p>
           </div>
 
-          {/* Incident Time */}
+          {/* Start Time */}
           <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 space-y-1">
             <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 font-medium">
               <Clock className="w-3.5 h-3.5 text-slate-400" />
-              {isBn ? 'বিভ্রাটের শুরু/সময়' : 'Outage Start Time'}
+              {isBn ? 'শুরুর সময়' : 'Start Time'}
             </span>
             <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
               {formatIncidentTime(complaint.incidentTime, isBn)}
             </p>
           </div>
 
-          {/* Outage Nature & Frequency */}
-          <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 space-y-1">
-            <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 font-medium">
-              <Activity className="w-3.5 h-3.5 text-slate-400" />
-              {isBn ? 'বিভ্রাটের ধারাবাহিকতা' : 'Disruption Pattern'}
-            </span>
-            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
-              {freqInfo.label}
-            </p>
-          </div>
+          {/* End Time (only if available) */}
+          {hasEndTime && (
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 space-y-1">
+              <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 font-medium">
+                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                {isBn ? 'শেষের সময়' : 'End Time'}
+              </span>
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                {formatIncidentTime(complaint.utilityEndTime, isBn)}
+              </p>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

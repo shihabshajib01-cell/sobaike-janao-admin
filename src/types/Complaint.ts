@@ -99,6 +99,7 @@ export interface Complaint {
   previousBillAmount?: number | null;
   incidentDate?: string | null;
   incidentTime?: string | null;
+  utilityEndTime?: string | null;
   frequency?: string | null;
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string

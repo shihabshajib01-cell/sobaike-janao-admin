@@ -12,9 +12,6 @@ import {
   Building2,
   ThumbsUp,
   MessageSquare,
-  Zap,
-  Receipt,
-  Flame,
 } from 'lucide-react';
 import { cn } from '@/utils';
 
@@ -187,96 +184,6 @@ export const ComplaintSummaryCard: React.FC<ComplaintSummaryCardProps> = ({
             </span>
           </div>
         </div>
-
-        {/* Utility Service Quick Metrics Banner */}
-        {complaint.recentBillAmount !== null && complaint.recentBillAmount !== undefined && (
-          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 bg-amber-50/50 dark:bg-amber-950/20 p-3 rounded-lg border border-amber-200/60 dark:border-amber-900/40 text-xs">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
-                <Receipt className="w-3.5 h-3.5" />
-              </div>
-              <div>
-                <span className="font-semibold text-slate-900 dark:text-slate-100 block">
-                  {isBn ? 'অতিরিক্ত বিদ্যুৎ বিল নিরীক্ষা' : 'Excess Electricity Bill Audit'}
-                </span>
-                <span className="text-slate-500 dark:text-slate-400">
-                  {isBn ? 'চলতি বিল:' : 'Recent:'}{' '}
-                  <span className="font-mono font-bold text-amber-700 dark:text-amber-300">
-                    ৳ {formatNumber(complaint.recentBillAmount)}
-                  </span>
-                  {complaint.previousBillAmount !== null && complaint.previousBillAmount !== undefined && (
-                    <>
-                      {' '}
-                      • {isBn ? 'পূর্ববর্তী:' : 'Prev:'}{' '}
-                      <span className="font-mono text-slate-700 dark:text-slate-300">
-                        ৳ {formatNumber(complaint.previousBillAmount)}
-                      </span>
-                      {' '}
-                      (
-                      <span className="font-mono font-bold text-rose-600 dark:text-rose-400">
-                        +৳ {formatNumber(complaint.recentBillAmount - complaint.previousBillAmount)}
-                      </span>
-                      )
-                    </>
-                  )}
-                </span>
-              </div>
-            </div>
-
-            {complaint.previousBillAmount && complaint.previousBillAmount > 0 && (
-              <Badge
-                status="rejected"
-                size="sm"
-                className="bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800"
-              >
-                +
-                {formatNumber(
-                  Math.round(
-                    ((complaint.recentBillAmount - complaint.previousBillAmount) /
-                      complaint.previousBillAmount) *
-                      100
-                  )
-                )}
-                % {isBn ? 'বৃদ্ধি' : 'Surge'}
-              </Badge>
-            )}
-          </div>
-        )}
-
-        {/* Utility Incident Outage Time Banner (for load shedding & gas outage) */}
-        {(complaint.incidentDate || complaint.incidentTime) &&
-          complaint.recentBillAmount === null && (
-            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-lg border border-slate-200/80 dark:border-slate-700/80 text-xs">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded bg-sky-500/10 flex items-center justify-center text-sky-600 dark:text-sky-400 shrink-0">
-                  {complaint.subcategoryId === 'gas-shortage' ? (
-                    <Flame className="w-3.5 h-3.5 text-orange-500" />
-                  ) : (
-                    <Zap className="w-3.5 h-3.5" />
-                  )}
-                </div>
-                <div>
-                  <span className="font-semibold text-slate-900 dark:text-slate-100 block">
-                    {isBn ? 'বিভ্রাটের সময়কাল' : 'Incident Timing'}
-                  </span>
-                  <span className="text-slate-600 dark:text-slate-400">
-                    {complaint.incidentDate && <span>{complaint.incidentDate}</span>}
-                    {complaint.incidentTime && <span> • {complaint.incidentTime}</span>}
-                  </span>
-                </div>
-              </div>
-
-              {complaint.frequency && (
-                <Badge status="pending" size="sm">
-                  {complaint.frequency === 'repeated'
-                    ? isBn
-                      ? 'পুনরাবৃত্তিমূলক বিভ্রাট'
-                      : 'Repeated Outage'
-                    : complaint.frequency}
-                </Badge>
-              )}
-            </div>
-          )}
       </CardContent>
     </Card>
   );

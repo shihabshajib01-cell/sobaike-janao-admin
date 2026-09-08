@@ -399,6 +399,7 @@ export function mapSupabaseRowToComplaint(
         : null,
     incidentDate: row.incident_date ?? null,
     incidentTime: row.incident_time ?? null,
+    utilityEndTime: undefined,
     frequency: row.frequency ?? null,
     upvotesCount: 0,
     commentsCount: 0,
