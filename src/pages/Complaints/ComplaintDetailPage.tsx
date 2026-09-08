@@ -269,11 +269,12 @@ export const ComplaintDetailPage: React.FC = () => {
 
   const handleComplaintUpdated = (
     updatedComplaint: Complaint,
-    updatedTimeline: ComplaintTimelineEvent[]
+    updatedTimeline: ComplaintTimelineEvent[],
+    updatedTimelineError?: string | null
   ) => {
     setComplaint(updatedComplaint);
     setTimeline(updatedTimeline);
-    setTimelineError(null);
+    setTimelineError(updatedTimelineError !== undefined ? updatedTimelineError : null);
   };
 
   return (

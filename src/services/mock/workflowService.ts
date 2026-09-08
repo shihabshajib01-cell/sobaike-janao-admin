@@ -13,6 +13,7 @@ export interface WorkflowActionResult {
   success: boolean;
   complaint: Complaint;
   timeline: ComplaintTimelineEvent[];
+  timelineError?: string | null;
   messageEn: string;
   messageBn: string;
 }

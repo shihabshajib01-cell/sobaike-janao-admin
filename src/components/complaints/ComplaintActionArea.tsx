@@ -31,7 +31,11 @@ import { cn } from '@/utils';
 export interface ComplaintActionAreaProps {
   complaint: Complaint;
   className?: string;
-  onComplaintUpdated?: (complaint: Complaint, timeline: ComplaintTimelineEvent[]) => void;
+  onComplaintUpdated?: (
+    complaint: Complaint,
+    timeline: ComplaintTimelineEvent[],
+    timelineError?: string | null
+  ) => void;
 }
 
 type ActionModalType = ComplaintActionId | null;
@@ -212,7 +216,7 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
       const result = await complaintApi.editComplaint(complaint.id, updates, editNotes);
       showToast(isBn ? result.messageBn : result.messageEn, 'success');
       if (onComplaintUpdated) {
-        onComplaintUpdated(result.complaint, result.timeline);
+        onComplaintUpdated(result.complaint, result.timeline, result.timelineError || null);
       }
       closeModal();
     } catch (err: unknown) {
@@ -249,7 +253,7 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
             ? result.complaint.media
             : complaint.media,
         };
-        onComplaintUpdated(preservedComplaint, result.timeline);
+        onComplaintUpdated(preservedComplaint, result.timeline, result.timelineError || null);
       }
       closeModal();
     } catch (err: unknown) {
@@ -274,7 +278,7 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
             ? result.complaint.media
             : complaint.media,
         };
-        onComplaintUpdated(preservedComplaint, result.timeline);
+        onComplaintUpdated(preservedComplaint, result.timeline, result.timelineError || null);
       }
       closeModal();
     } catch (err: unknown) {
@@ -299,7 +303,7 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
             ? result.complaint.media
             : complaint.media,
         };
-        onComplaintUpdated(preservedComplaint, result.timeline);
+        onComplaintUpdated(preservedComplaint, result.timeline, result.timelineError || null);
       }
       closeModal();
     } catch (err: unknown) {

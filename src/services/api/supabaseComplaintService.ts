@@ -1020,6 +1020,7 @@ export const supabaseComplaintService = {
       success: true,
       complaint: refreshed.complaint,
       timeline: refreshed.timeline,
+      timelineError: refreshed.timelineError || null,
       messageEn: 'Complaint published successfully to public feed.',
       messageBn: 'অভিযোগটি সফলভাবে পাবলিক ফিডে প্রকাশ করা হয়েছে।',
     };
@@ -1057,6 +1058,7 @@ export const supabaseComplaintService = {
       success: true,
       complaint: refreshed.complaint,
       timeline: refreshed.timeline,
+      timelineError: refreshed.timelineError || null,
       messageEn: 'Complaint unpublished successfully.',
       messageBn: 'অভিযোগের প্রকাশনা সফলভাবে বন্ধ করা হয়েছে।',
     };
@@ -1099,6 +1101,7 @@ export const supabaseComplaintService = {
       success: true,
       complaint: refreshed.complaint,
       timeline: refreshed.timeline,
+      timelineError: refreshed.timelineError || null,
       messageEn: 'Complaint rejected successfully.',
       messageBn: 'অভিযোগটি সফলভাবে বাতিল করা হয়েছে।',
     };
