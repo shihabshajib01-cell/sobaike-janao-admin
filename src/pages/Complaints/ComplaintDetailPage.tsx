@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
-import { Card, CardContent } from '@/components/ui/Card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge, BadgeStatus } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/common/EmptyState';
 import { useLanguage } from '@/context/LanguageContext';
@@ -30,6 +30,7 @@ import {
   RotateCcw,
   ArrowLeft,
   AlertTriangle,
+  History,
 } from 'lucide-react';
 
 export const ComplaintDetailPage: React.FC = () => {
@@ -94,8 +95,8 @@ export const ComplaintDetailPage: React.FC = () => {
     try {
       const res = await complaintApi.getComplaintTimeline(id);
       setTimeline(res || []);
-    } catch (err: any) {
-      setTimelineError(err?.message || 'Failed to reload timeline history.');
+    } catch {
+      setTimelineError('Failed to load complaint timeline.');
     } finally {
       setTimelineLoading(false);
     }
@@ -126,6 +127,42 @@ export const ComplaintDetailPage: React.FC = () => {
       setReporterLocationLoading(false);
     }
   }, [id, complaint]);
+
+  const handleComplaintUpdated = useCallback(
+    (
+      updatedComplaint: Complaint,
+      updatedTimeline?: ComplaintTimelineEvent[],
+      newTimelineError?: string | null
+    ) => {
+      setComplaint((prev) => ({
+        ...(prev || {}),
+        ...updatedComplaint,
+        media:
+          updatedComplaint.media && updatedComplaint.media.length > 0
+            ? updatedComplaint.media
+            : prev?.media || [],
+      }));
+
+      if (updatedTimeline !== undefined) {
+        setTimeline(updatedTimeline);
+        setTimelineError(newTimelineError || null);
+      }
+    },
+    []
+  );
+
+  // Reset complaint state when navigating to a different complaint ID
+  useEffect(() => {
+    setComplaint(null);
+    setTimeline([]);
+    setTimelineError(null);
+    setEvidenceError(null);
+    setReporterLocation(null);
+    setReporterLocationError(null);
+    setReporterLocationDenied(false);
+    setNotFound(false);
+    setLoadError(false);
+  }, [id]);
 
   useEffect(() => {
     fetchComplaintData();
@@ -224,11 +261,11 @@ export const ComplaintDetailPage: React.FC = () => {
         <Card variant="default">
           <CardContent className="py-12">
             <EmptyState
-              title={isBn ? 'অভিযোগের তথ্য লোড করা যায়নি' : 'Complaint Details Could Not Be Loaded'}
+              title={isBn ? 'অভিযোগের তথ্য লোড করা যায়নি' : 'Complaint data could not be loaded'}
               description={
                 isBn
-                  ? 'সার্ভার বা নেটওয়ার্ক ত্রুটির কারণে অভিযোগের বিস্তারিত তথ্য লোড করা সম্ভব হয়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।'
-                  : 'The complaint details could not be loaded due to a network or server issue. Check your connection and try again.'
+                  ? 'অভিযোগটি লোড করতে সমস্যা হয়েছে। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।'
+                  : 'There was a problem loading this complaint. Check the connection and try again.'
               }
               icon={AlertTriangle}
               action={
@@ -239,7 +276,7 @@ export const ComplaintDetailPage: React.FC = () => {
                     onClick={() => navigate('/complaints')}
                     leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}
                   >
-                    <span>{isBn ? 'অভিযোগের তালিকায় যান' : 'Back to Complaints'}</span>
+                    <span>{isBn ? 'অভিযোগ তালিকায় ফিরুন' : 'Back to Complaints'}</span>
                   </Button>
                   <Button
                     variant="primary"
@@ -265,16 +302,6 @@ export const ComplaintDetailPage: React.FC = () => {
     badgeStatus: 'default',
     labelEn: complaint.status,
     labelBn: complaint.status,
-  };
-
-  const handleComplaintUpdated = (
-    updatedComplaint: Complaint,
-    updatedTimeline: ComplaintTimelineEvent[],
-    updatedTimelineError?: string | null
-  ) => {
-    setComplaint(updatedComplaint);
-    setTimeline(updatedTimeline);
-    setTimelineError(updatedTimelineError !== undefined ? updatedTimelineError : null);
   };
 
   return (
@@ -387,12 +414,53 @@ export const ComplaintDetailPage: React.FC = () => {
           />
 
           {/* Audit Trail & Lifecycle History */}
-          <ComplaintTimeline
-            timeline={timeline}
-            loading={timelineLoading}
-            error={timelineError}
-            onRetry={handleRetryTimeline}
-          />
+          {timelineError !== null ? (
+            <Card variant="default" className="overflow-hidden">
+              <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <History className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  <span>{isBn ? 'কার্যক্রম ও অডিট টাইমলাইন' : 'Audit Trail & Lifecycle History'}</span>
+                </CardTitle>
+                <span className="text-xs text-rose-500 font-medium">
+                  {isBn ? 'ত্রুটি' : 'Error'}
+                </span>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <div
+                  role="alert"
+                  className="p-4 rounded-lg border border-rose-200 dark:border-rose-900/60 bg-rose-50/70 dark:bg-rose-950/30 text-rose-900 dark:text-rose-200 space-y-3"
+                >
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                    <div className="space-y-0.5">
+                      <h4 className="text-sm font-semibold">
+                        {isBn ? 'টাইমলাইন লোড করা যায়নি' : 'Timeline could not be loaded'}
+                      </h4>
+                      <p className="text-xs text-rose-700 dark:text-rose-300">
+                        {isBn
+                          ? 'অভিযোগের ইতিহাস সাময়িকভাবে পাওয়া যাচ্ছে না।'
+                          : 'Complaint history is temporarily unavailable.'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="pt-1 flex justify-end">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleRetryTimeline}
+                      disabled={timelineLoading}
+                      leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${timelineLoading ? 'animate-spin' : ''}`} />}
+                      className="border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 hover:bg-rose-100 dark:hover:bg-rose-900/40"
+                    >
+                      <span>{isBn ? 'টাইমলাইন আবার লোড করুন' : 'Retry Timeline'}</span>
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <ComplaintTimeline timeline={timeline} />
+          )}
         </div>
       </div>
     </div>

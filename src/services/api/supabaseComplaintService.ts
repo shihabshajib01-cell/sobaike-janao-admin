@@ -703,8 +703,8 @@ export const supabaseComplaintService = {
       .order('created_at', { ascending: true });
 
     if (error) {
-      console.error(`Error loading timeline for complaint ${id}:`, error.message);
-      throw new Error(`Failed to load timeline for complaint ${id}: ${error.message}`);
+      console.error(`Error loading timeline for complaint ${id}:`, error);
+      throw new Error('Failed to load complaint timeline.');
     }
 
     return mapComplaintUpdatesToTimeline(
@@ -941,18 +941,22 @@ export const supabaseComplaintService = {
     const shouldLoadEvidence = options?.loadEvidence ?? true;
     const shouldLoadReporterLocation = options?.loadReporterLocation ?? true;
 
-    const [complaintRowRes, timelineRes, evidenceResult, reporterLocResult] = await Promise.all([
+    const timelinePromise = this.getComplaintTimeline(id)
+      .then((data) => ({
+        data,
+        error: null as string | null,
+      }))
+      .catch((err: unknown) => ({
+        data: [] as ComplaintTimelineEvent[],
+        error:
+          err instanceof Error
+            ? err.message
+            : 'Failed to load complaint timeline.',
+      }));
+
+    const [complaintRowRes, timelineResult, evidenceResult, reporterLocResult] = await Promise.all([
       supabase.from('complaints').select('*').eq('id', id).maybeSingle(),
-      this.getComplaintTimeline(id).then(
-        (events) => ({ timeline: events, error: null }),
-        (err) => {
-          console.error(`Error loading timeline for complaint ${id}:`, err);
-          return {
-            timeline: [] as ComplaintTimelineEvent[],
-            error: err instanceof Error ? err.message : 'Failed to load complaint timeline',
-          };
-        }
-      ),
+      timelinePromise,
       shouldLoadEvidence ? this.getComplaintEvidence(id) : Promise.resolve({ media: [] }),
       shouldLoadReporterLocation ? this.getComplaintReporterLocation(id) : Promise.resolve({ data: null }),
     ]);
@@ -980,8 +984,8 @@ export const supabaseComplaintService = {
 
     return {
       complaint,
-      timeline: timelineRes.timeline,
-      timelineError: timelineRes.error || null,
+      timeline: timelineResult.data,
+      timelineError: timelineResult.error,
       evidenceError: evidenceResult.error || null,
       reporterLocation: reporterLocResult.data || null,
       reporterLocationError: reporterLocResult.error || null,
