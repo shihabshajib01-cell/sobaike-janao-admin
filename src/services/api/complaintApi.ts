@@ -180,7 +180,7 @@ export class ComplaintApi {
     notes?: string
   ): Promise<WorkflowActionResult> {
     if (isSupabaseConfigured) {
-      throw new Error('Direct complaint editing is not supported on configured backend.');
+      return await supabaseComplaintService.editComplaint(complaintId, updates, notes);
     }
     if (isDev) {
       return complaintFallback.editComplaint(complaintId, updates, notes);
