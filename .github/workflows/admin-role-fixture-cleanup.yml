@@ -1,0 +1,155 @@
+name: Admin Role Fixture Cleanup
+
+on:
+  push:
+    branches:
+      - cleanup/mock-dead-code
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cleanup/mock-dead-code
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Remove role dev fixtures with TypeScript AST positions
+        shell: bash
+        run: |
+          cat > /tmp/cleanup-role.mjs <<'NODE'
+          import fs from 'node:fs';
+          import ts from 'typescript';
+
+          const path = 'src/services/api/roleApi.ts';
+          const text = fs.readFileSync(path, 'utf8');
+          const sf = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+          const edits = [];
+          const addEdit = (start, end, replacement) => edits.push({ start, end, replacement });
+
+          const fixtureNames = new Set([
+            'FALLBACK_ROLES',
+            'inMemoryRoles',
+            'inMemoryRolePermissions',
+            'CANONICAL_FALLBACK_CATALOGUE',
+          ]);
+
+          for (const stmt of sf.statements) {
+            if (ts.isVariableStatement(stmt)) {
+              const names = stmt.declarationList.declarations
+                .map((d) => ts.isIdentifier(d.name) ? d.name.text : '')
+                .filter(Boolean);
+              if (names.some((n) => fixtureNames.has(n))) {
+                addEdit(stmt.getFullStart(), stmt.end, '');
+              }
+            }
+            if (ts.isFunctionDeclaration(stmt) && stmt.name?.text === 'assertRoleApiConfigured') {
+              const replacement = `function assertRoleApiConfigured(): void {\n  if (!isSupabaseConfigured) {\n    throw new RoleApiError(\n      'Supabase role management is not configured in this environment.',\n      'CONFIG_ERROR'\n    );\n  }\n}`;
+              addEdit(stmt.getStart(sf), stmt.end, replacement);
+            }
+          }
+
+          const roleClass = sf.statements.find(
+            (s) => ts.isClassDeclaration(s) && s.name?.text === 'RoleApi'
+          );
+          if (!roleClass || !ts.isClassDeclaration(roleClass)) {
+            throw new Error('RoleApi class not found');
+          }
+
+          for (const member of roleClass.members) {
+            if (!ts.isMethodDeclaration(member) || !member.body) continue;
+            const statements = member.body.statements;
+            const modeDecl = statements.find((s) =>
+              ts.isVariableStatement(s) &&
+              s.declarationList.declarations.some((d) =>
+                ts.isIdentifier(d.name) &&
+                d.name.text === 'mode' &&
+                d.initializer &&
+                ts.isCallExpression(d.initializer) &&
+                d.initializer.expression.getText(sf) === 'assertRoleApiConfigured'
+              )
+            );
+            if (modeDecl) {
+              addEdit(modeDecl.getStart(sf), modeDecl.end, 'assertRoleApiConfigured();');
+            }
+
+            const configuredIfIndex = statements.findIndex((s) =>
+              ts.isIfStatement(s) &&
+              s.expression.getText(sf).replace(/\s+/g, '') === "mode==='configured'"
+            );
+            if (configuredIfIndex === -1) continue;
+
+            const configuredIf = statements[configuredIfIndex];
+            if (!ts.isIfStatement(configuredIf) || !ts.isBlock(configuredIf.thenStatement)) {
+              throw new Error(`Unexpected configured branch shape in ${member.name.getText(sf)}`);
+            }
+
+            const block = configuredIf.thenStatement;
+            const innerStart = block.getStart(sf) + 1;
+            const innerEnd = block.end - 1;
+            const innerText = text.slice(innerStart, innerEnd).replace(/^\n/, '').replace(/\n\s*$/, '');
+            const dedented = innerText
+              .split('\n')
+              .map((line) => line.startsWith('    ') ? line.slice(4) : line)
+              .join('\n');
+
+            const fallbackStart = configuredIf.getStart(sf);
+            const fallbackEnd = statements.length > configuredIfIndex + 1
+              ? statements[statements.length - 1].end
+              : configuredIf.end;
+            addEdit(fallbackStart, fallbackEnd, dedented);
+          }
+
+          edits.sort((a, b) => b.start - a.start);
+          let out = text;
+          for (const edit of edits) {
+            out = out.slice(0, edit.start) + edit.replacement + out.slice(edit.end);
+          }
+
+          out = out
+            .replace(/\n\/\/ ={20,}\n\/\/ DEV-ONLY IN-MEMORY FIXTURES[^\n]*\n\/\/ ={20,}\n+/g, '\n')
+            .replace(/\n{3,}/g, '\n\n');
+
+          fs.writeFileSync(path, out);
+          NODE
+          node /tmp/cleanup-role.mjs
+
+      - name: Verify no role fixture identifiers remain
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git grep -n -E 'FALLBACK_ROLES|inMemoryRoles|inMemoryRolePermissions|CANONICAL_FALLBACK_CATALOGUE|dev_fallback' -- src/services/api/roleApi.ts; then
+            echo 'Role fixture identifiers remain.' >&2
+            exit 1
+          fi
+
+      - name: Typecheck and build
+        run: |
+          npm run lint
+          npm run build
+
+      - name: Commit cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'No role fixture cleanup changes needed.'
+            exit 0
+          fi
+          git config user.name 'shihabshajib01-cell'
+          git config user.email 'shihabshajib01@gmail.com'
+          git add src/services/api/roleApi.ts
+          git commit -m 'cleanup(admin): remove role dev fixtures'
+          git push origin HEAD:cleanup/mock-dead-code
