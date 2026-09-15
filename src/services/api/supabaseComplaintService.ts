@@ -1134,4 +1134,57 @@ export const supabaseComplaintService = {
       messageBn: 'অভিযোগটি সফলভাবে বাতিল করা হয়েছে।',
     };
   },
+
+  /**
+   * Edit complaint via RPC public.admin_edit_complaint(...)
+   */
+  async editComplaint(
+    complaintId: string,
+    updates: Partial<Complaint>,
+    notes?: string
+  ): Promise<WorkflowActionResult> {
+    const { data, error } = await supabase.rpc('admin_edit_complaint', {
+      p_complaint_id: complaintId,
+      p_title_en: updates.titleEn ?? null,
+      p_title_bn: updates.titleBn ?? null,
+      p_description_en: updates.descriptionEn ?? null,
+      p_description_bn: updates.descriptionBn ?? null,
+      p_segment_id: updates.categoryId ?? null,
+      p_subcategory_id: updates.subcategoryId ?? null,
+      p_priority: updates.urgency ?? null,
+      p_ward: updates.location?.ward ?? null,
+      p_zone: updates.location?.zone ?? null,
+      p_address_en: updates.location?.addressEn ?? null,
+      p_address_bn: updates.location?.addressBn ?? null,
+      p_notes: notes ?? null,
+    });
+
+    if (error) {
+      console.error(`Error editing complaint ${complaintId}:`, error);
+      throw new Error(error.message || 'Failed to edit complaint');
+    }
+
+    if (data && typeof data === 'object' && 'success' in data && (data as { success: boolean }).success === false) {
+      const errMsg =
+        (data as { message?: string; error?: string }).message ||
+        (data as { message?: string; error?: string }).error ||
+        'Failed to edit complaint';
+      throw new Error(errMsg);
+    }
+
+    // Re-fetch the refreshed complaint & timeline directly from Supabase (without re-requesting private evidence)
+    const refreshed = await this.getComplaintDetail(complaintId, { loadEvidence: false });
+    if (!refreshed) {
+      throw new Error(`Failed to reload complaint ${complaintId} after edit.`);
+    }
+
+    return {
+      success: true,
+      complaint: refreshed.complaint,
+      timeline: refreshed.timeline,
+      timelineError: refreshed.timelineError || null,
+      messageEn: 'Complaint updated successfully.',
+      messageBn: 'অভিযোগের বিবরণ সফলভাবে আপডেট করা হয়েছে।',
+    };
+  },
 };
