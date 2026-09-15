@@ -1,4 +1,4 @@
-name: Release v1.0.0 Tag
+name: Release v1.0.1 Tag
 
 on:
   push:
@@ -33,13 +33,13 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Create v1.0.0 tag
+      - name: Create v1.0.1 tag
         run: |
-          if git ls-remote --exit-code --tags origin refs/tags/v1.0.0 >/dev/null 2>&1; then
-            echo "v1.0.0 already exists; leaving it unchanged."
+          if git ls-remote --exit-code --tags origin refs/tags/v1.0.1 >/dev/null 2>&1; then
+            echo "v1.0.1 already exists; leaving it unchanged."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a v1.0.0 "$GITHUB_SHA" -m "Production release v1.0.0"
-          git push origin v1.0.0
+          git tag -a v1.0.1 "$GITHUB_SHA" -m "Production release v1.0.1"
+          git push origin v1.0.1
