@@ -31,7 +31,9 @@ jobs:
         run: |
           cat > /tmp/cleanup-role.mjs <<'NODE'
           import fs from 'node:fs';
-          import ts from 'typescript';
+          import { createRequire } from 'node:module';
+          const require = createRequire(`${process.cwd()}/package.json`);
+          const ts = require('typescript');
 
           const path = 'src/services/api/roleApi.ts';
           const text = fs.readFileSync(path, 'utf8');
