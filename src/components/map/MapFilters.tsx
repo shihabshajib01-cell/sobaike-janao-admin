@@ -312,10 +312,13 @@ export const MapFilters: React.FC<MapFiltersProps> = ({
                     type="button"
                     onClick={() =>
                       onChange({
-                        ...filters,
-                        segment: 'all',
-                        subcategory: 'all',
-                      })
+              ...filters,
+              segment: 'all',
+              subcategory: 'all',
+              affectedPersonAgeGroup: 'all',
+              allegedAbuserRelationship: 'all',
+              reportingFor: 'all',
+            })
                     }
                     className="hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
                     aria-label="Remove segment filter"
