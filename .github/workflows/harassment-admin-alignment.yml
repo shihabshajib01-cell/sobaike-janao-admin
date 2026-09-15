@@ -1,4 +1,4 @@
-name: Harassment Admin Alignment
+name: Harassment Admin Verification
 
 on:
   push:
@@ -6,11 +6,10 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  materialize-and-verify:
-    if: github.actor != 'github-actions[bot]'
+  verify:
     runs-on: ubuntu-latest
 
     steps:
@@ -26,9 +25,6 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Apply deterministic Admin alignment patch
-        run: node scripts/apply-harassment-admin-alignment.mjs
-
       - name: Install dependencies
         run: npm ci
 
@@ -40,17 +36,3 @@ jobs:
 
       - name: Diff check
         run: git diff --check
-
-      - name: Commit verified source
-        shell: bash
-        run: |
-          rm -f scripts/apply-harassment-admin-alignment.mjs
-          git add -A
-          if git diff --cached --quiet; then
-            echo "No materialized source changes to commit."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "feat(harassment): align admin classifications"
-          git push origin HEAD:harassment-classification-impl
