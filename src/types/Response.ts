@@ -45,6 +45,8 @@ export interface ResponseItem {
   publishedAt?: string | null;
 
   contactConsent: boolean;
+  contactInfo?: string | null;
+  contactEmailOrPhone?: string | null;
 
   responderType?:
     | 'mentioned_person'

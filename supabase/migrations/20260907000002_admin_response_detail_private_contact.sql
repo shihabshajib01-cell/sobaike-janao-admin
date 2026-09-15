@@ -86,11 +86,24 @@ BEGIN
     SELECT jsonb_build_object(
         'id', r.id,
         'complaint_id', r.complaint_id,
-        'complaint_title', c.title,
-        'complaint_district', c.district,
-        'complaint_status', c.status,
+        'complaint', jsonb_build_object(
+            'id', c.id,
+            'title', c.title,
+            'segment_id', c.segment_id,
+            'segment_name_en', s.name_en,
+            'segment_name_bn', s.name_bn,
+            'district', c.district,
+            'status', c.status
+        ),
         'response_type', r.response_type,
         'responder_type', r.responder_type,
+        'responder_name', r.responder_name,
+        'designation', r.designation,
+        'organization_name', r.organization_name,
+        'official_statement', r.official_statement,
+        'supporting_documents_note', r.supporting_documents_note,
+        'request_correction_or_removal', COALESCE(r.request_correction_or_removal, false),
+        'correction_details', r.correction_details,
         'status', r.status,
         'content', r.content,
         'incident_date', r.incident_date,
@@ -111,8 +124,9 @@ BEGIN
     )
     INTO v_response_json
     FROM public.complaint_responses r
-    LEFT JOIN public.complaints c ON c.id = r.complaint_id
-    WHERE r.id = v_id;
+    JOIN public.complaints c ON c.id = r.complaint_id
+    LEFT JOIN public.segments s ON s.id = c.segment_id
+    WHERE r.id::text = v_id;
 
     IF v_response_json IS NULL THEN
         RAISE EXCEPTION 'Response with ID % not found', v_id

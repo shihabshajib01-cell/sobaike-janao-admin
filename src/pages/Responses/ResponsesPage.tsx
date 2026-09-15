@@ -157,9 +157,17 @@ export const ResponsesPage: React.FC = () => {
     setFilters(INITIAL_FILTERS);
   };
 
-  const handleViewDetails = (item: ResponseItem) => {
+  const handleViewDetails = async (item: ResponseItem) => {
     setSelectedResponse(item);
     setIsDrawerOpen(true);
+    try {
+      const fullDetail = await responseApi.getResponseById(item.id);
+      if (fullDetail) {
+        setSelectedResponse(fullDetail);
+      }
+    } catch (detailErr) {
+      console.warn('Could not fetch full response details:', detailErr);
+    }
   };
 
   const handleCloseDrawer = () => {

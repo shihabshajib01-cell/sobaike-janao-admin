@@ -377,22 +377,40 @@ export const ResponseDetailDrawer: React.FC<ResponseDetailDrawerProps> = ({
               </h4>
             </div>
 
-            <div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                {isBn ? 'যোগাযোগের সম্মতি' : 'Contact Consent'}
-              </p>
-              <div className="mt-1">
-                {response.contactConsent ? (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
-                    <FileCheck className="w-3.5 h-3.5" />
-                    {isBn ? 'হ্যাঁ (সম্মত)' : 'Yes (Consented)'}
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                    {isBn ? 'না' : 'No'}
-                  </span>
-                )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                  {isBn ? 'যোগাযোগের সম্মতি' : 'Contact Consent'}
+                </p>
+                <div className="mt-1">
+                  {response.contactConsent ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
+                      <FileCheck className="w-3.5 h-3.5" />
+                      {isBn ? 'হ্যাঁ (সম্মত)' : 'Yes (Consented)'}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                      {isBn ? 'না' : 'No'}
+                    </span>
+                  )}
+                </div>
               </div>
+
+              {response.contactConsent && (
+                <div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    {isBn ? 'ফলো-আপ যোগাযোগ' : 'Follow-up contact'}
+                  </p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100 mt-1 break-all">
+                    {response.contactInfo || (isBn ? 'যোগাযোগের তথ্য পাওয়া যায়নি' : 'Contact information unavailable')}
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    {isBn
+                      ? 'ব্যক্তিগত — শুধুমাত্র অনুমোদিত প্রশাসকের জন্য দৃশ্যমান'
+                      : 'Private — visible to authorized administrators only'}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -445,6 +463,22 @@ export const ResponseDetailDrawer: React.FC<ResponseDetailDrawerProps> = ({
                   </p>
                   <p className="text-sm text-slate-800 dark:text-slate-200 mt-0.5">
                     {response.organizationName}
+                  </p>
+                </div>
+              )}
+
+              {(response.contactEmailOrPhone || response.contactInfo) && (
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    {isBn ? 'উত্তরদাতার যোগাযোগ' : 'Responder contact'}
+                  </p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100 mt-1 break-all">
+                    {response.contactEmailOrPhone || response.contactInfo}
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    {isBn
+                      ? 'ব্যক্তিগত — শুধুমাত্র অনুমোদিত প্রশাসকের জন্য দৃশ্যমান'
+                      : 'Private — visible to authorized administrators only'}
                   </p>
                 </div>
               )}

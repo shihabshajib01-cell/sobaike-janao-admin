@@ -37,6 +37,8 @@ export interface RawResponseRow {
   updated_at: string;
   published_at?: string | null;
   contact_consent: boolean;
+  contact_info?: string | null;
+  contact_email_or_phone?: string | null;
   responder_type?: 'mentioned_person' | 'organization_rep' | 'legal_rep' | null;
   responder_name?: string | null;
   designation?: string | null;
@@ -46,6 +48,9 @@ export interface RawResponseRow {
   request_correction_or_removal: boolean;
   correction_details?: string | null;
   complaint?: RawComplaintSummary | null;
+  complaint_title?: string | null;
+  complaint_district?: string | null;
+  complaint_status?: string | null;
 }
 
 export interface RawAdminGetResponsesResult {
@@ -101,6 +106,8 @@ export function mapResponseRow(raw: RawResponseRow): ResponseItem {
     updatedAt: raw.updated_at,
     publishedAt: raw.published_at || null,
     contactConsent: Boolean(raw.contact_consent),
+    contactInfo: raw.contact_info || null,
+    contactEmailOrPhone: raw.contact_email_or_phone || null,
     responderType: raw.responder_type || null,
     responderName: raw.responder_name || null,
     designation: raw.designation || null,
@@ -111,12 +118,12 @@ export function mapResponseRow(raw: RawResponseRow): ResponseItem {
     correctionDetails: raw.correction_details || null,
     complaint: {
       id: raw.complaint?.id || raw.complaint_id,
-      title: raw.complaint?.title || '',
+      title: raw.complaint?.title || raw.complaint_title || '',
       segmentId: raw.complaint?.segment_id || null,
       segmentNameEn: raw.complaint?.segment_name_en || null,
       segmentNameBn: raw.complaint?.segment_name_bn || null,
-      district: raw.complaint?.district || null,
-      status: raw.complaint?.status || null,
+      district: raw.complaint?.district || raw.complaint_district || null,
+      status: raw.complaint?.status || raw.complaint_status || null,
     },
   };
 }
