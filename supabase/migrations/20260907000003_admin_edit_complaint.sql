@@ -1,28 +1,25 @@
 -- ==============================================================================
 -- SOBAIKE JANAO ADMIN — COMPLAINT EDITING BACKEND CONTRACT
 -- ==============================================================================
--- Migration: 20260907000003_admin_edit_complaint.sql
--- Description:
---   1. Authoritative implementation of public.admin_edit_complaint RPC.
---   2. Enables production live Supabase complaint editing from the Admin UI.
---   3. Enforces RBAC permissions: is_active_admin() AND (complaints.edit OR
---      complaints.publish OR complaints.unpublish OR complaints.reject).
---   4. Validates taxonomy dynamically against active public.segments and
---      public.subcategories tables.
---   5. Enforces valid priority ('low', 'medium', 'high', 'urgent').
---   6. Preserves immutable/sensitive columns: status, coordinates (latitude,
---      longitude), reporter metadata, submission context, created_at.
---   7. Records lifecycle update in public.complaint_updates ('edited' type)
---      and audit log in public.admin_audit_logs ('complaint.edit').
---   8. Function is SECURITY DEFINER with fixed search_path = pg_catalog, public.
---   9. Pre-commit catalog assertions verify security definer and RBAC grants.
+-- Repository contract synchronized with live Supabase migration:
+--   20260915044537 phase13_admin_edit_complaint_live
+--
+-- The Admin UI exposes Edit only to active admins who hold at least one of:
+--   complaints.publish / complaints.unpublish / complaints.reject
+-- This RPC mirrors that exact authorization rule. There is intentionally no
+-- separate complaints.edit permission in the current live permission catalogue.
+--
+-- Location mapping follows the live Admin mapper:
+--   location.ward -> public.complaints.upazila_or_thana
+--   location.zone -> public.complaints.district
+--   addressEn/addressBn -> public.complaints.formatted_address
+--
+-- This mutation preserves moderation status, reporter/device coordinates,
+-- evidence, publication preferences, submission metadata, and created_at.
 -- ==============================================================================
 
 BEGIN;
 
--- ------------------------------------------------------------------------------
--- 1. PREREQUISITE VALIDATION & SCHEMA PREPARATION
--- ------------------------------------------------------------------------------
 DO $$
 BEGIN
     IF to_regclass('public.complaints') IS NULL THEN
@@ -41,15 +38,6 @@ BEGIN
     END IF;
 END $$;
 
--- Ensure bilingual and priority columns exist idempotently
-ALTER TABLE public.complaints
-    ADD COLUMN IF NOT EXISTS title_en text,
-    ADD COLUMN IF NOT EXISTS description_en text,
-    ADD COLUMN IF NOT EXISTS priority text DEFAULT 'medium';
-
--- ------------------------------------------------------------------------------
--- 2. HARDENED ADMIN EDIT COMPLAINT RPC
--- ------------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.admin_edit_complaint(
     p_complaint_id text,
     p_title_en text DEFAULT NULL,
@@ -72,21 +60,19 @@ SET search_path = pg_catalog, public
 AS $$
 DECLARE
     v_complaint public.complaints%ROWTYPE;
-    v_clean_complaint_id text;
-    v_new_title text;
-    v_new_title_en text;
-    v_new_desc text;
-    v_new_desc_en text;
-    v_new_segment text;
-    v_new_subcategory text;
-    v_new_priority text;
-    v_new_address text;
-    v_new_area text;
-    v_new_district text;
-    v_audit_id uuid;
-    v_clean_notes text;
+    v_complaint_id text;
+    v_segment_id text;
+    v_subcategory_id text;
+    v_priority text;
+    v_title_bn text;
+    v_title_en text;
+    v_description_bn text;
+    v_description_en text;
+    v_ward text;
+    v_district text;
+    v_address text;
+    v_notes text;
 BEGIN
-    -- 1. Security Check: Must be an authenticated active administrator
     IF auth.uid() IS NULL THEN
         RAISE EXCEPTION 'Authentication required.' USING ERRCODE = '42501';
     END IF;
@@ -95,104 +81,107 @@ BEGIN
         RAISE EXCEPTION 'Access denied. Active administrative session required.' USING ERRCODE = '42501';
     END IF;
 
-    -- 2. Authorization Check: Caller must hold administrative complaint privileges
+    -- Match the current Admin UI contract exactly: Edit is available only to
+    -- active admins who already hold at least one complaint moderation authority.
     IF NOT (
-        public.has_permission('complaints.edit') OR
         public.has_permission('complaints.publish') OR
         public.has_permission('complaints.unpublish') OR
         public.has_permission('complaints.reject')
     ) THEN
-        RAISE EXCEPTION 'Access denied. You do not have permission to edit complaints.' USING ERRCODE = '42501';
+        RAISE EXCEPTION 'Access denied. Complaint moderation permission required.' USING ERRCODE = '42501';
     END IF;
 
-    -- 3. Validate Complaint Existence & Lock Row
-    v_clean_complaint_id := NULLIF(TRIM(p_complaint_id), '');
-    IF v_clean_complaint_id IS NULL THEN
+    v_complaint_id := NULLIF(btrim(p_complaint_id), '');
+    IF v_complaint_id IS NULL THEN
         RAISE EXCEPTION 'Complaint ID cannot be empty.' USING ERRCODE = '22023';
     END IF;
 
-    SELECT * INTO v_complaint
-    FROM public.complaints
-    WHERE id = v_clean_complaint_id
-    FOR UPDATE;
+    SELECT *
+      INTO v_complaint
+      FROM public.complaints
+     WHERE id = v_complaint_id
+     FOR UPDATE;
 
-    IF v_complaint.id IS NULL THEN
-        RAISE EXCEPTION 'Complaint with ID % not found', v_clean_complaint_id USING ERRCODE = 'P0002';
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Complaint with ID % not found.', v_complaint_id USING ERRCODE = 'P0002';
     END IF;
 
-    -- 4. Dynamic Taxonomy Validation (against public.segments & public.subcategories)
-    v_new_segment := COALESCE(NULLIF(TRIM(p_segment_id), ''), v_complaint.segment_id);
+    v_segment_id := COALESCE(NULLIF(btrim(p_segment_id), ''), v_complaint.segment_id);
 
-    IF v_new_segment IS NOT NULL THEN
-        IF NOT EXISTS (
-            SELECT 1 FROM public.segments
-            WHERE id = v_new_segment
-              AND (active IS NULL OR active = true)
-        ) THEN
-            RAISE EXCEPTION 'Invalid category/segment "%": does not exist in active taxonomy.', v_new_segment
-                USING ERRCODE = '22023';
-        END IF;
+    IF v_segment_id IS NOT NULL AND NOT EXISTS (
+        SELECT 1
+          FROM public.segments s
+         WHERE s.id = v_segment_id
+           AND COALESCE(s.active, true) = true
+    ) THEN
+        RAISE EXCEPTION 'Invalid active complaint segment: %', v_segment_id USING ERRCODE = '22023';
     END IF;
 
-    v_new_subcategory := COALESCE(NULLIF(TRIM(p_subcategory_id), ''), v_complaint.subcategory_id);
+    v_subcategory_id := COALESCE(NULLIF(btrim(p_subcategory_id), ''), v_complaint.subcategory_id);
 
-    IF v_new_subcategory IS NOT NULL THEN
-        IF NOT EXISTS (
-            SELECT 1 FROM public.subcategories
-            WHERE id = v_new_subcategory
-              AND segment_id = v_new_segment
-              AND (active IS NULL OR active = true)
-        ) THEN
-            RAISE EXCEPTION 'Invalid subcategory "%": does not belong to segment "%".', v_new_subcategory, v_new_segment
-                USING ERRCODE = '22023';
-        END IF;
+    IF v_subcategory_id IS NOT NULL AND NOT EXISTS (
+        SELECT 1
+          FROM public.subcategories sc
+         WHERE sc.id = v_subcategory_id
+           AND sc.segment_id = v_segment_id
+           AND COALESCE(sc.active, true) = true
+    ) THEN
+        RAISE EXCEPTION 'Invalid subcategory % for segment %', v_subcategory_id, v_segment_id USING ERRCODE = '22023';
     END IF;
 
-    -- 5. Priority Validation
-    v_new_priority := COALESCE(NULLIF(LOWER(TRIM(p_priority)), ''), LOWER(COALESCE(v_complaint.priority, 'medium')));
-    IF v_new_priority NOT IN ('low', 'medium', 'high', 'urgent') THEN
-        RAISE EXCEPTION 'Invalid priority "%". Must be one of: low, medium, high, urgent.', v_new_priority
-            USING ERRCODE = '22023';
+    v_priority := COALESCE(
+        NULLIF(lower(btrim(p_priority)), ''),
+        lower(COALESCE(v_complaint.priority, 'medium'))
+    );
+
+    IF v_priority NOT IN ('low', 'medium', 'high', 'urgent') THEN
+        RAISE EXCEPTION 'Invalid priority: %', v_priority USING ERRCODE = '22023';
     END IF;
 
-    -- 6. Content Resolution (Title & Description)
-    v_new_title := COALESCE(NULLIF(TRIM(p_title_bn), ''), NULLIF(TRIM(p_title_en), ''), v_complaint.title);
-    IF v_new_title IS NULL OR length(trim(v_new_title)) = 0 THEN
-        RAISE EXCEPTION 'Title cannot be empty.' USING ERRCODE = '22000';
+    -- Live schema stores Bengali/default text in title/description and English in *_en.
+    v_title_bn := COALESCE(NULLIF(btrim(p_title_bn), ''), v_complaint.title);
+    v_title_en := COALESCE(NULLIF(btrim(p_title_en), ''), v_complaint.title_en);
+    v_description_bn := COALESCE(NULLIF(btrim(p_description_bn), ''), v_complaint.description);
+    v_description_en := COALESCE(NULLIF(btrim(p_description_en), ''), v_complaint.description_en);
+
+    IF COALESCE(NULLIF(btrim(v_title_bn), ''), NULLIF(btrim(v_title_en), '')) IS NULL THEN
+        RAISE EXCEPTION 'At least one complaint title is required.' USING ERRCODE = '22023';
     END IF;
 
-    v_new_title_en := COALESCE(NULLIF(TRIM(p_title_en), ''), NULLIF(TRIM(p_title_bn), ''), v_complaint.title_en, v_complaint.title);
-
-    v_new_desc := COALESCE(NULLIF(TRIM(p_description_bn), ''), NULLIF(TRIM(p_description_en), ''), v_complaint.description);
-    IF v_new_desc IS NULL OR length(trim(v_new_desc)) = 0 THEN
-        RAISE EXCEPTION 'Description cannot be empty.' USING ERRCODE = '22000';
+    IF COALESCE(NULLIF(btrim(v_description_bn), ''), NULLIF(btrim(v_description_en), '')) IS NULL THEN
+        RAISE EXCEPTION 'At least one complaint description is required.' USING ERRCODE = '22023';
     END IF;
 
-    v_new_desc_en := COALESCE(NULLIF(TRIM(p_description_en), ''), NULLIF(TRIM(p_description_bn), ''), v_complaint.description_en, v_complaint.description);
+    -- Admin domain mapping:
+    --   location.ward -> upazila_or_thana (mapper fallback may display area)
+    --   location.zone -> district (mapper fallback may display division)
+    --   addressEn/addressBn -> single live formatted_address field
+    v_ward := COALESCE(NULLIF(btrim(p_ward), ''), v_complaint.upazila_or_thana);
+    v_district := COALESCE(NULLIF(btrim(p_zone), ''), v_complaint.district);
+    v_address := COALESCE(
+        NULLIF(btrim(p_address_bn), ''),
+        NULLIF(btrim(p_address_en), ''),
+        v_complaint.formatted_address
+    );
+    v_notes := NULLIF(btrim(p_notes), '');
 
-    -- 7. Location & Address Resolution (Preserving coordinates and submission contexts)
-    v_new_address := COALESCE(NULLIF(TRIM(p_address_bn), ''), NULLIF(TRIM(p_address_en), ''), v_complaint.formatted_address);
-    v_new_area := COALESCE(NULLIF(TRIM(p_ward), ''), v_complaint.area);
-    v_new_district := COALESCE(NULLIF(TRIM(p_zone), ''), v_complaint.district);
-
-    -- 8. Perform Mutation (Strictly preserving status, reporter metadata, coordinates, and created_at)
     UPDATE public.complaints
-    SET
-        title = v_new_title,
-        title_en = v_new_title_en,
-        description = v_new_desc,
-        description_en = v_new_desc_en,
-        segment_id = v_new_segment,
-        subcategory_id = v_new_subcategory,
-        priority = v_new_priority,
-        formatted_address = v_new_address,
-        area = v_new_area,
-        district = v_new_district,
-        updated_at = now()
-    WHERE id = v_complaint.id;
+       SET title = v_title_bn,
+           title_en = v_title_en,
+           description = v_description_bn,
+           description_en = v_description_en,
+           segment_id = v_segment_id,
+           subcategory_id = v_subcategory_id,
+           priority = v_priority,
+           upazila_or_thana = v_ward,
+           district = v_district,
+           formatted_address = v_address,
+           updated_at = now()
+     WHERE id = v_complaint.id;
 
-    -- 9. Record Timeline Event in public.complaint_updates
-    v_clean_notes := NULLIF(TRIM(p_notes), '');
+    -- Preserve moderation state, reporter/device data, coordinates, evidence,
+    -- publication preferences, submission context, and creation metadata.
+
     INSERT INTO public.complaint_updates (
         complaint_id,
         update_type,
@@ -202,18 +191,18 @@ BEGIN
     ) VALUES (
         v_complaint.id,
         'edited',
-        COALESCE(v_clean_notes, 'Complaint details updated by administrator.'),
+        COALESCE(v_notes, 'Complaint details updated by administrator.'),
         false,
         now()
     );
 
-    -- 10. Record Audit Log in public.admin_audit_logs
     INSERT INTO public.admin_audit_logs (
         actor_id,
         action,
         target_type,
         target_id,
-        details
+        details,
+        created_at
     ) VALUES (
         auth.uid(),
         'complaint.edit',
@@ -221,78 +210,86 @@ BEGIN
         v_complaint.id,
         jsonb_build_object(
             'complaint_id', v_complaint.id,
-            'status', v_complaint.status,
-            'title_en', v_new_title_en,
-            'title_bn', v_new_title,
-            'segment_id', v_new_segment,
-            'subcategory_id', v_new_subcategory,
-            'priority', v_new_priority,
-            'ward', v_new_area,
-            'address', v_new_address,
-            'notes', v_clean_notes,
-            'timestamp', now()
-        )
-    )
-    RETURNING id INTO v_audit_id;
+            'status_preserved', v_complaint.status,
+            'segment_id', v_segment_id,
+            'subcategory_id', v_subcategory_id,
+            'priority', v_priority,
+            'ward', v_ward,
+            'district', v_district,
+            'notes', v_notes
+        ),
+        now()
+    );
 
-    -- 11. Return Success Result
     RETURN jsonb_build_object(
         'success', true,
         'complaint_id', v_complaint.id,
         'status', v_complaint.status,
-        'message', 'Complaint updated successfully'
+        'message', 'Complaint updated successfully.'
     );
 END;
 $$;
 
--- ------------------------------------------------------------------------------
--- 3. PERMISSION & ACCESS ENFORCEMENT
--- ------------------------------------------------------------------------------
-REVOKE ALL ON FUNCTION public.admin_edit_complaint(text, text, text, text, text, text, text, text, text, text, text, text, text) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.admin_edit_complaint(text, text, text, text, text, text, text, text, text, text, text, text, text) FROM anon;
-GRANT EXECUTE ON FUNCTION public.admin_edit_complaint(text, text, text, text, text, text, text, text, text, text, text, text, text) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_edit_complaint(text, text, text, text, text, text, text, text, text, text, text, text, text) TO service_role;
+REVOKE ALL ON FUNCTION public.admin_edit_complaint(
+    text, text, text, text, text, text, text,
+    text, text, text, text, text, text
+) FROM PUBLIC;
 
--- ------------------------------------------------------------------------------
--- 4. PRE-COMMIT CATALOG ASSERTIONS
--- ------------------------------------------------------------------------------
+REVOKE ALL ON FUNCTION public.admin_edit_complaint(
+    text, text, text, text, text, text, text,
+    text, text, text, text, text, text
+) FROM anon;
+
+GRANT EXECUTE ON FUNCTION public.admin_edit_complaint(
+    text, text, text, text, text, text, text,
+    text, text, text, text, text, text
+) TO authenticated;
+
+GRANT EXECUTE ON FUNCTION public.admin_edit_complaint(
+    text, text, text, text, text, text, text,
+    text, text, text, text, text, text
+) TO service_role;
+
 DO $$
 DECLARE
     v_secdef boolean;
-    v_schema text;
-    v_has_anon_execute boolean;
-    v_has_auth_execute boolean;
+    v_search_path text[];
+    v_anon_execute boolean;
+    v_auth_execute boolean;
 BEGIN
-    SELECT 
-        p.prosecdef,
-        n.nspname
-    INTO
-        v_secdef,
-        v_schema
-    FROM pg_proc p
-    JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE p.proname = 'admin_edit_complaint'
-      AND n.nspname = 'public';
+    SELECT p.prosecdef, p.proconfig
+      INTO v_secdef, v_search_path
+      FROM pg_proc p
+      JOIN pg_namespace n ON n.oid = p.pronamespace
+     WHERE n.nspname = 'public'
+       AND p.oid = 'public.admin_edit_complaint(text,text,text,text,text,text,text,text,text,text,text,text,text)'::regprocedure;
 
     IF v_secdef IS DISTINCT FROM true THEN
-        RAISE EXCEPTION 'Assertion failed: admin_edit_complaint must be SECURITY DEFINER'
-            USING ERRCODE = '28000';
+        RAISE EXCEPTION 'Assertion failed: admin_edit_complaint must be SECURITY DEFINER';
     END IF;
 
-    SELECT has_function_privilege('anon', 'public.admin_edit_complaint(text, text, text, text, text, text, text, text, text, text, text, text, text)', 'EXECUTE')
-    INTO v_has_anon_execute;
-
-    IF v_has_anon_execute THEN
-        RAISE EXCEPTION 'Assertion failed: anon must not have EXECUTE on admin_edit_complaint'
-            USING ERRCODE = '42501';
+    IF v_search_path IS NULL OR NOT ('search_path=pg_catalog, public' = ANY(v_search_path)) THEN
+        RAISE EXCEPTION 'Assertion failed: admin_edit_complaint must use fixed search_path';
     END IF;
 
-    SELECT has_function_privilege('authenticated', 'public.admin_edit_complaint(text, text, text, text, text, text, text, text, text, text, text, text, text)', 'EXECUTE')
-    INTO v_has_auth_execute;
+    SELECT has_function_privilege(
+        'anon',
+        'public.admin_edit_complaint(text,text,text,text,text,text,text,text,text,text,text,text,text)',
+        'EXECUTE'
+    ) INTO v_anon_execute;
 
-    IF NOT v_has_auth_execute THEN
-        RAISE EXCEPTION 'Assertion failed: authenticated must have EXECUTE on admin_edit_complaint'
-            USING ERRCODE = '42501';
+    IF v_anon_execute THEN
+        RAISE EXCEPTION 'Assertion failed: anon must not execute admin_edit_complaint';
+    END IF;
+
+    SELECT has_function_privilege(
+        'authenticated',
+        'public.admin_edit_complaint(text,text,text,text,text,text,text,text,text,text,text,text,text)',
+        'EXECUTE'
+    ) INTO v_auth_execute;
+
+    IF NOT v_auth_execute THEN
+        RAISE EXCEPTION 'Assertion failed: authenticated must execute admin_edit_complaint';
     END IF;
 END $$;
 
