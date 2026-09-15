@@ -35,12 +35,15 @@ jobs:
             sleep 10
           done
           test "$ok" = "1"
-          grep -Eqi '<div[^>]+id=["'"']root["'"']' /tmp/admin-index.html
-          if grep -q '/src/main.tsx' /tmp/admin-index.html; then
-            echo "ERROR: production page references source entry instead of bundled assets"
-            exit 1
-          fi
-          echo "Admin site smoke check passed"
+          python - <<'PY'
+          from pathlib import Path
+          html = Path('/tmp/admin-index.html').read_text(errors='replace')
+          if 'id="root"' not in html and "id='root'" not in html:
+              raise SystemExit('ERROR: production HTML is missing the React root element')
+          if '/src/main.tsx' in html:
+              raise SystemExit('ERROR: production page references source entry instead of bundled assets')
+          print('Admin site smoke check passed')
+          PY
 
       - name: Verify private Admin RPC rejects anonymous access
         shell: bash
@@ -64,9 +67,7 @@ jobs:
           fi
 
           python - <<'PY'
-          import json
           from pathlib import Path
-
           raw = Path('/tmp/admin-private-rpc.json').read_text(errors='replace')
           forbidden = ('contact_info', 'contact_email_or_phone', 'responder_contact')
           lowered = raw.lower()
