@@ -51,12 +51,9 @@ export class ComplaintApi {
     }
     if (isDev) {
       return [
-        { id: 'roads_traffic', name_en: 'Roads & Traffic', name_bn: 'রাস্তাঘাট ও ট্রাফিক', active: true },
-        { id: 'waste_management', name_en: 'Waste Management', name_bn: 'বর্জ্য ব্যবস্থাপনা', active: true },
-        { id: 'extortion', name_en: 'Extortion & Illegal Tolls', name_bn: 'চাঁদাবাজি ও অবৈধ টোল', active: true },
-        { id: 'harassment', name_en: 'Public Harassment', name_bn: 'পাবলিক হয়রানি', active: true },
-        { id: 'civic_issues', name_en: 'Civic Problems & Drainage', name_bn: 'নাগরিক সমস্যা ও ড্রেনেজ', active: true },
-        { id: 'corruption', name_en: 'Public Office Irregularities', name_bn: 'সরকারি দপ্তরের অনিয়ম', active: true },
+        { id: 'harassment', name_en: 'Harassment & Abuse', name_bn: 'হয়রানি ও নির্যাতন', active: true },
+        { id: 'rickshaw', name_en: 'Illegal Auto-Rickshaw Charging', name_bn: 'অবৈধ অটো চার্জিং', active: true },
+        { id: 'extortion', name_en: 'Extortion', name_bn: 'চাঁদাবাজি', active: true },
         { id: 'load_shedding', name_en: 'Utility Service Complaints', name_bn: 'ইউটিলিটি সেবা অভিযোগ', active: true },
       ];
     }

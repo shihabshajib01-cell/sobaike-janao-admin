@@ -41,44 +41,34 @@ export interface ComplaintActionAreaProps {
 type ActionModalType = ComplaintActionId | null;
 
 const CATEGORIES = [
-  { value: 'roads_traffic', labelEn: 'Roads & Traffic', labelBn: 'রাস্তাঘাট ও ট্রাফিক' },
-  { value: 'waste_management', labelEn: 'Waste Management', labelBn: 'বর্জ্য ব্যবস্থাপনা' },
-  { value: 'extortion', labelEn: 'Extortion & Tolls', labelBn: 'চাঁদাবাজি ও অবৈধ টোল' },
-  { value: 'harassment', labelEn: 'Public Harassment', labelBn: 'পাবলিক হয়রানি' },
-  { value: 'civic_issues', labelEn: 'Civic Problems & Drainage', labelBn: 'নাগরিক সমস্যা ও ড্রেনেজ' },
-  { value: 'corruption', labelEn: 'Public Office Irregularities', labelBn: 'সরকারি দপ্তরের অনিয়ম' },
+  { value: 'harassment', labelEn: 'Harassment & Abuse', labelBn: 'হয়রানি ও নির্যাতন' },
+  { value: 'rickshaw', labelEn: 'Illegal Auto-Rickshaw Charging', labelBn: 'অবৈধ অটো চার্জিং' },
+  { value: 'extortion', labelEn: 'Extortion', labelBn: 'চাঁদাবাজি' },
+  { value: 'load_shedding', labelEn: 'Utility Service Complaints', labelBn: 'ইউটিলিটি সেবা অভিযোগ' },
 ];
 
 const SUBCATEGORIES: Record<string, { value: string; labelEn: string; labelBn: string }[]> = {
-  roads_traffic: [
-    { value: 'open_manhole', labelEn: 'Open Manhole', labelBn: 'উন্মুক্ত ম্যানহোল' },
-    { value: 'pothole', labelEn: 'Pothole & Broken Road', labelBn: 'ভাঙা রাস্তা ও গর্ত' },
-    { value: 'traffic_signal', labelEn: 'Broken Traffic Signal', labelBn: 'নষ্ট ট্রাফিক সিগন্যাল' },
-    { value: 'footpath_encroachment', labelEn: 'Footpath Encroachment', labelBn: 'ফুটপাত দখল' },
+  harassment: [
+    { value: 'rape-sexual-violence', labelEn: 'Rape / Sexual Violence', labelBn: 'ধর্ষণ / যৌন সহিংসতা' },
+    { value: 'sexual-harassment', labelEn: 'Sexual Harassment', labelBn: 'যৌন হয়রানি' },
+    { value: 'domestic-violence', labelEn: 'Domestic Violence', labelBn: 'পারিবারিক সহিংসতা' },
+    { value: 'blackmail-coercion', labelEn: 'Blackmailing / Coercion', labelBn: 'ব্ল্যাকমেইল / জবরদস্তি' },
+    { value: 'honeytrap', labelEn: 'Honeytrap', labelBn: 'হানিট্র্যাপ' },
   ],
-  waste_management: [
-    { value: 'uncollected_garbage', labelEn: 'Uncollected Garbage', labelBn: 'অনপসারিত বর্জ্য' },
-    { value: 'overflowing_dustbin', labelEn: 'Overflowing Dustbin', labelBn: 'উপচে পড়া ডাস্টবিন' },
-    { value: 'drainage_blockage', labelEn: 'Drainage Blockage', labelBn: 'ড্রেনেজ বন্ধ' },
-    { value: 'illegal_dumping', labelEn: 'Illegal Dumping', labelBn: 'অবৈধ বর্জ্য নিক্ষেপ' },
+  rickshaw: [
+    { value: 'charging-station-location', labelEn: 'Illegal Auto-Rickshaw Charging', labelBn: 'অবৈধ অটো চার্জিং' },
   ],
   extortion: [
-    { value: 'market_toll', labelEn: 'Unlawful Market Toll', labelBn: 'অবৈধ বাজার টোল' },
-    { value: 'transport_extortion', labelEn: 'Transport Extortion', labelBn: 'পরিবহন চাঁদাবাজি' },
-    { value: 'construction_demand', labelEn: 'Construction Syndicate Toll', labelBn: 'নির্মাণ চাঁদা' },
+    { value: 'shop-business', labelEn: 'Shops & Businesses', labelBn: 'দোকান ও ব্যবসা' },
+    { value: 'transport-movement', labelEn: 'Transport & Transit', labelBn: 'পরিবহন ও চলাচল' },
+    { value: 'construction-property', labelEn: 'Construction & Property', labelBn: 'নির্মাণ ও সম্পত্তি' },
+    { value: 'threat-money-demand', labelEn: 'Threats & Demands', labelBn: 'হুমকি ও টাকা দাবি' },
+    { value: 'extortion-other', labelEn: 'Other Extortion', labelBn: 'অন্যান্য চাঁদাবাজি' },
   ],
-  harassment: [
-    { value: 'street_harassment', labelEn: 'Street Harassment', labelBn: 'ইভটিজিং বা রাস্তায় হয়রানি' },
-    { value: 'public_transport_harassment', labelEn: 'Bus & Transport Harassment', labelBn: 'গণপরিবহনে হয়রানি' },
-  ],
-  civic_issues: [
-    { value: 'water_stagnation', labelEn: 'Waterlogging & Stagnation', labelBn: 'জলাবদ্ধতা' },
-    { value: 'street_light', labelEn: 'Dead Street Lights', labelBn: 'নষ্ট ল্যাম্পপোস্ট / বাতি' },
-    { value: 'water_supply', labelEn: 'Contaminated Water Supply', labelBn: 'ওয়াসার ময়লা পানি' },
-  ],
-  corruption: [
-    { value: 'bribe_demand', labelEn: 'Bribe Demand', labelBn: 'ঘুষ দাবি' },
-    { value: 'service_delay', labelEn: 'Unlawful Service Delay', labelBn: 'সেবা প্রদানে হয়রানি ও অনীহা' },
+  load_shedding: [
+    { value: 'load-shedding-outage', labelEn: 'Load Shedding', labelBn: 'লোডশেডিং' },
+    { value: 'gas-shortage', labelEn: 'Gas Shortage', labelBn: 'গ্যাস সংকট' },
+    { value: 'excess-electricity-bill', labelEn: 'Excess Electricity Bill', labelBn: 'অতিরিক্ত বিদ্যুৎ বিল' },
   ],
 };
 
@@ -117,7 +107,7 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
   const [editTitleBn, setEditTitleBn] = useState(complaint.titleBn || '');
   const [editDescEn, setEditDescEn] = useState(complaint.descriptionEn || '');
   const [editDescBn, setEditDescBn] = useState(complaint.descriptionBn || '');
-  const [editCategoryId, setEditCategoryId] = useState(complaint.categoryId || 'roads_traffic');
+  const [editCategoryId, setEditCategoryId] = useState(complaint.categoryId || 'harassment');
   const [editSubcategoryId, setEditSubcategoryId] = useState(complaint.subcategoryId || '');
   const [editUrgency, setEditUrgency] = useState<ComplaintUrgency>(complaint.urgency || 'medium');
   const [editWard, setEditWard] = useState(complaint.location?.ward || 'Ward 14');
@@ -131,7 +121,7 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
     setEditTitleBn(comp.titleBn || '');
     setEditDescEn(comp.descriptionEn || '');
     setEditDescBn(comp.descriptionBn || '');
-    setEditCategoryId(comp.categoryId || 'roads_traffic');
+    setEditCategoryId(comp.categoryId || 'harassment');
     setEditSubcategoryId(comp.subcategoryId || '');
     setEditUrgency(comp.urgency || 'medium');
     setEditWard(comp.location?.ward || 'Ward 14');
