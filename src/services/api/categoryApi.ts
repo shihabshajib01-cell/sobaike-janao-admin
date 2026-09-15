@@ -19,52 +19,6 @@ export interface TaxonomyBundle {
   stats: TaxonomyStats;
 }
 
-const DEV_FALLBACK_SEGMENTS: TaxonomySegment[] = [
-  { id: 'harassment', nameEn: 'Harassment & Abuse', nameBn: 'হয়রানি ও নির্যাতন', status: 'active', order: 1 },
-  { id: 'rickshaw', nameEn: 'Illegal Auto-Rickshaw Charging', nameBn: 'অবৈধ অটো চার্জিং', status: 'active', order: 2 },
-  { id: 'extortion', nameEn: 'Extortion', nameBn: 'চাঁদাবাজি', status: 'active', order: 3 },
-  { id: 'load_shedding', nameEn: 'Utility Service Complaints', nameBn: 'ইউটিলিটি সেবা অভিযোগ', status: 'active', order: 4 },
-];
-
-const DEV_FALLBACK_SUBCATEGORIES: TaxonomySubcategory[] = [
-  { id: 'rape-sexual-violence', segmentId: 'harassment', nameEn: 'Rape / Sexual Violence', nameBn: 'ধর্ষণ / যৌন সহিংসতা', status: 'active', order: 1 },
-  { id: 'sexual-harassment', segmentId: 'harassment', nameEn: 'Sexual Harassment', nameBn: 'যৌন হয়রানি', status: 'active', order: 2 },
-  { id: 'domestic-violence', segmentId: 'harassment', nameEn: 'Domestic Violence', nameBn: 'পারিবারিক সহিংসতা', status: 'active', order: 3 },
-  { id: 'blackmail-coercion', segmentId: 'harassment', nameEn: 'Blackmailing / Coercion', nameBn: 'ব্ল্যাকমেইল / জবরদস্তি', status: 'active', order: 4 },
-  { id: 'honeytrap', segmentId: 'harassment', nameEn: 'Honeytrap', nameBn: 'হানিট্র্যাপ', status: 'active', order: 5 },
-  { id: 'charging-station-location', segmentId: 'rickshaw', nameEn: 'Illegal Auto-Rickshaw Charging', nameBn: 'অবৈধ অটো চার্জিং', status: 'active', order: 1 },
-  { id: 'shop-business', segmentId: 'extortion', nameEn: 'Shops & Businesses', nameBn: 'দোকান ও ব্যবসা', status: 'active', order: 1 },
-  { id: 'transport-movement', segmentId: 'extortion', nameEn: 'Transport & Transit', nameBn: 'পরিবহন ও চলাচল', status: 'active', order: 2 },
-  { id: 'construction-property', segmentId: 'extortion', nameEn: 'Construction & Property', nameBn: 'নির্মাণ ও সম্পত্তি', status: 'active', order: 3 },
-  { id: 'threat-money-demand', segmentId: 'extortion', nameEn: 'Threats & Demands', nameBn: 'হুমকি ও টাকা দাবি', status: 'active', order: 4 },
-  { id: 'extortion-other', segmentId: 'extortion', nameEn: 'Other Extortion', nameBn: 'অন্যান্য চাঁদাবাজি', status: 'active', order: 5 },
-  { id: 'load-shedding-outage', segmentId: 'load_shedding', nameEn: 'Load Shedding', nameBn: 'লোডশেডিং', status: 'active', order: 1 },
-  { id: 'gas-shortage', segmentId: 'load_shedding', nameEn: 'Gas Shortage', nameBn: 'গ্যাস সংকট', status: 'active', order: 2 },
-  { id: 'excess-electricity-bill', segmentId: 'load_shedding', nameEn: 'Excess Electricity Bill', nameBn: 'অতিরিক্ত বিদ্যুৎ বিল', status: 'active', order: 3 },
-];
-
-const isDev = Boolean(typeof import.meta !== 'undefined' && import.meta.env?.DEV);
-
-function createDevFallbackTaxonomyBundle(): TaxonomyBundle {
-  const fullTree: TaxonomySegmentNode[] = DEV_FALLBACK_SEGMENTS.map((seg) => ({
-    ...seg,
-    subcategories: DEV_FALLBACK_SUBCATEGORIES.filter((sub) => sub.segmentId === seg.id),
-  }));
-
-  const stats: TaxonomyStats = {
-    segments: DEV_FALLBACK_SEGMENTS.length,
-    subcategories: DEV_FALLBACK_SUBCATEGORIES.length,
-    activeItems: DEV_FALLBACK_SEGMENTS.length + DEV_FALLBACK_SUBCATEGORIES.length,
-  };
-
-  return {
-    segments: DEV_FALLBACK_SEGMENTS,
-    subcategories: DEV_FALLBACK_SUBCATEGORIES,
-    fullTree,
-    stats,
-  };
-}
-
 export class CategoryApi {
   /**
    * Fetch all taxonomy data in a single unified read.
@@ -73,9 +27,6 @@ export class CategoryApi {
    */
   async getTaxonomy(): Promise<TaxonomyBundle> {
     if (!isSupabaseConfigured) {
-      if (isDev) {
-        return createDevFallbackTaxonomyBundle();
-      }
       throw new Error('Supabase taxonomy service is not configured in this environment.');
     }
 
