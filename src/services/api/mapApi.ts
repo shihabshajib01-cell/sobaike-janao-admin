@@ -13,73 +13,8 @@ import {
   MapSubcategoryOption,
 } from '@/types/Map';
 import { ComplaintLifecycleStatus } from '@/types/Complaint';
-import { MOCK_COMPLAINTS } from '@/services/mock/complaintService';
 
 export const MAP_MONITORING_CONNECTED = true;
-
-const isDev = Boolean(typeof import.meta !== 'undefined' && import.meta.env?.DEV);
-
-function getFallbackMapDataset(): MapDataset {
-  const mappedComplaints: MapComplaint[] = MOCK_COMPLAINTS.map((c) => ({
-    id: c.id,
-    titleEn: c.titleEn,
-    titleBn: c.titleBn,
-    segmentId: c.categoryId,
-    segmentEn: c.categoryEn,
-    segmentBn: c.categoryBn,
-    subcategoryId: c.subcategoryId,
-    subcategoryEn: c.subcategoryEn,
-    subcategoryBn: c.subcategoryBn,
-    status: c.status,
-    latitude: c.location.coordinates[0],
-    longitude: c.location.coordinates[1],
-    location: {
-      formattedAddress: c.location.addressEn,
-      division: 'Dhaka',
-      district: 'Dhaka',
-      upazilaOrThana: c.location.zone,
-      area: c.location.ward,
-      road: c.location.addressEn,
-      landmark: '',
-    },
-    createdAt: c.createdAt,
-  }));
-
-  const segmentSet = new Map<string, MapSegmentOption>();
-  const subcategorySet = new Map<string, MapSubcategoryOption>();
-  const districtSet = new Set<string>();
-
-  for (const c of mappedComplaints) {
-    if (c.segmentId && !segmentSet.has(c.segmentId)) {
-      segmentSet.set(c.segmentId, {
-        id: c.segmentId,
-        nameEn: c.segmentEn,
-        nameBn: c.segmentBn,
-      });
-    }
-    if (c.subcategoryId && !subcategorySet.has(c.subcategoryId)) {
-      subcategorySet.set(c.subcategoryId, {
-        id: c.subcategoryId,
-        segmentId: c.segmentId,
-        nameEn: c.subcategoryEn,
-        nameBn: c.subcategoryBn,
-      });
-    }
-    if (c.location.district) {
-      districtSet.add(c.location.district);
-    }
-  }
-
-  return {
-    complaints: mappedComplaints,
-    totalSourceCount: mappedComplaints.length,
-    unmappedCount: 0,
-    unsupportedStatusCount: 0,
-    segments: Array.from(segmentSet.values()),
-    subcategories: Array.from(subcategorySet.values()),
-    districts: Array.from(districtSet).sort((a, b) => a.localeCompare(b)),
-  };
-}
 
 export class MapApi {
   /**
@@ -87,9 +22,6 @@ export class MapApi {
    */
   async getMapDataset(): Promise<MapDataset> {
     if (!isSupabaseConfigured) {
-      if (isDev) {
-        return getFallbackMapDataset();
-      }
       throw new Error('Supabase map service is not configured in this environment.');
     }
 
