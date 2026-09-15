@@ -1,0 +1,135 @@
+name: Admin Cleanup Remnants
+
+on:
+  push:
+    branches:
+      - cleanup/mock-dead-code
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cleanup/mock-dead-code
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Remove remaining dev fixture paths
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          def sub(path, pattern, replacement, count=0):
+              p = Path(path)
+              text = p.read_text()
+              new, n = re.subn(pattern, replacement, text, count=count, flags=re.S)
+              if n == 0:
+                  print(f'No change needed for {path}: pattern already absent')
+                  return
+              p.write_text(new)
+              print(f'{path}: replaced {n} block(s)')
+
+          # Taxonomy: remove hardcoded dev taxonomy and fail closed when unconfigured.
+          sub(
+              'src/services/api/categoryApi.ts',
+              r"\nconst DEV_FALLBACK_SEGMENTS:.*?\nexport class CategoryApi",
+              "\nexport class CategoryApi",
+              1,
+          )
+          sub(
+              'src/services/api/categoryApi.ts',
+              r"if \(!isSupabaseConfigured\) \{\n\s*if \(isDev\) \{\n\s*return createDevFallbackTaxonomyBundle\(\);\n\s*\}\n\s*throw new Error\('Supabase taxonomy service is not configured in this environment\.'\);\n\s*\}",
+              "if (!isSupabaseConfigured) {\n      throw new Error('Supabase taxonomy service is not configured in this environment.');\n    }",
+              1,
+          )
+
+          # Location activity: remove hardcoded visitor/session/browser fixtures and fail closed.
+          sub(
+              'src/services/api/locationActivityService.ts',
+              r"\nconst DEV_MOCK_SESSIONS:.*?\n/\*\*\n \* Service for querying visitor location sessions",
+              "\n/**\n * Service for querying visitor location sessions",
+              1,
+          )
+          sub(
+              'src/services/api/locationActivityService.ts',
+              r"if \(!isSupabaseConfigured\) \{\n\s*if \(isDev\) \{.*?\n\s*\}\n\s*throw new Error\('Supabase location activity service is not configured in this environment\.'\);\n\s*\}",
+              "if (!isSupabaseConfigured) {\n      throw new Error('Supabase location activity service is not configured in this environment.');\n    }",
+          )
+
+          # Permissions: remove all-powerful dev authorization profile.
+          sub(
+              'src/services/auth/permissionService.ts',
+              r"\nconst isDev = .*?\nconst DEV_MOCK_PROFILE: UserPermissionProfile = \{.*?\n\};\n",
+              "\n",
+              1,
+          )
+          sub(
+              'src/services/auth/permissionService.ts',
+              r"if \(!isSupabaseConfigured\) \{\n\s*if \(isDev\) \{\n\s*return DEV_MOCK_PROFILE;\n\s*\}\n\s*throw new Error\('Supabase authorization service is not configured in this environment\.'\);\n\s*\}",
+              "if (!isSupabaseConfigured) {\n      throw new Error('Supabase authorization service is not configured in this environment.');\n    }",
+              1,
+          )
+
+          # Authentication: remove dev mock session/token/admin bypass. Remembered email stays real UI preference.
+          sub(
+              'src/services/auth/authService.ts',
+              r"\nconst MOCK_SESSION_KEY = .*?\nconst isDev = .*?\nconst createDevMockSession = .*?\n\};\n",
+              "\n",
+              1,
+          )
+          sub(
+              'src/services/auth/authService.ts',
+              r"\n\s*// Local development fallback strictly isolated to DEV\n\s*if \(!isSupabaseConfigured\) \{\n\s*return isDev;\n\s*\}",
+              "\n  if (!isSupabaseConfigured) {\n    return false;\n  }",
+              1,
+          )
+          # getSession/getAccessToken/getCurrentUser each: remove DEV localStorage fallback.
+          sub(
+              'src/services/auth/authService.ts',
+              r"\n\s*// Fallback strictly isolated to unconfigured DEV; ignored in production\n\s*if \(isDev\) \{.*?\n\s*\}\n\n\s*return null;",
+              "\n\n    return null;",
+          )
+          # login: replace entire unconfigured mock-login tail with one fail-closed result.
+          sub(
+              'src/services/auth/authService.ts',
+              r"\n\s*// Unconfigured environment:.*?\n\s*return \{\n\s*success: true,\n\s*user,\n\s*session,\n\s*\};",
+              "\n\n    return {\n      success: false,\n      isUnconfigured: true,\n      error: 'Authentication service is not configured in this environment.',\n    };",
+              1,
+          )
+          # logout: remove mock-session localStorage cleanup.
+          sub(
+              'src/services/auth/authService.ts',
+              r"\n\s*try \{\n\s*if \(typeof window !== 'undefined'\) \{\n\s*localStorage\.removeItem\(MOCK_SESSION_KEY\);\n\s*\}\n\s*\} catch \{\}\n",
+              "\n",
+              1,
+          )
+
+      - name: Install and verify
+        run: |
+          npm ci
+          npm run lint
+          npm run build
+
+      - name: Commit cleanup if changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'No cleanup changes remaining.'
+            exit 0
+          fi
+          git config user.name 'shihabshajib01-cell'
+          git config user.email 'shihabshajib01@gmail.com'
+          git add src/services/api/categoryApi.ts src/services/api/locationActivityService.ts src/services/auth/authService.ts src/services/auth/permissionService.ts
+          git commit -m 'cleanup(admin): remove remaining dev data fallbacks'
+          git push origin HEAD:cleanup/mock-dead-code
