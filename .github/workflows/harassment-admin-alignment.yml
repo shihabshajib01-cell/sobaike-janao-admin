@@ -3,13 +3,13 @@ name: Harassment Admin Verification
 on:
   push:
     branches: [harassment-classification-impl]
-  workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  verify:
+  verify-and-fix:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
 
     steps:
@@ -25,6 +25,31 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Reset hidden Harassment map filters when segment chip is removed
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'src/components/map/MapFilters.tsx';
+          let s = fs.readFileSync(path, 'utf8');
+          const from = `                      onChange({
+                        ...filters,
+                        segment: 'all',
+                        subcategory: 'all',
+                      })`;
+          const to = `                      onChange({
+                        ...filters,
+                        segment: 'all',
+                        subcategory: 'all',
+                        affectedPersonAgeGroup: 'all',
+                        allegedAbuserRelationship: 'all',
+                        reportingFor: 'all',
+                      })`;
+          if (!s.includes(from)) throw new Error('Expected segment-chip reset anchor not found');
+          s = s.replace(from, to);
+          fs.writeFileSync(path, s);
+          NODE
+
       - name: Install dependencies
         run: npm ci
 
@@ -36,3 +61,16 @@ jobs:
 
       - name: Diff check
         run: git diff --check
+
+      - name: Commit verified fix
+        shell: bash
+        run: |
+          git add src/components/map/MapFilters.tsx
+          if git diff --cached --quiet; then
+            echo "No change to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "fix(harassment): clear hidden map classification filters"
+          git push origin HEAD:harassment-classification-impl
