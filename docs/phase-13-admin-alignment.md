@@ -24,14 +24,16 @@ This document records the end-to-end audit, live database inspection, control su
 
 | Repository | Remote URL | Baseline / Prompt HEAD | Verified Latest HEAD |
 |---|---|---|---|
-| **Public (`sobaike-janao`)** | `https://github.com/shihabshajib01-cell/sobaike-janao.git` | `d27f19893c96f637244c47d1a536dc6f589e1374` | `8b80c396ca1c02888649c58da851289608da6022` |
-| **Admin (`sobaike-janao-admin`)** | `https://github.com/shihabshajib01-cell/sobaike-janao-admin.git` | `38f935af2e9fbe6f1bea641219f9f42554893b99` | `92cce7b2a1649af066a310597823defe3fbaf639` |
+| **Public (`sobaike-janao`)** | `https://github.com/shihabshajib01-cell/sobaike-janao.git` | `8b80c396ca1c02888649c58da851289608da6022` | `98ba9e820939f0870d0719c45e3704b4224d502f` |
+| **Admin (`sobaike-janao-admin`)** | `https://github.com/shihabshajib01-cell/sobaike-janao-admin.git` | `291cd0ad7f404b3613b8988dc7b1191c95b32e4c` | `afbe41a1eb3d5272a74c4314c99732faae9a460b` |
 | **Database** | Live Supabase PostgreSQL (`ahiaymyqfmyyrjkwgvhi.supabase.co`) | Active Schema | Verified Schema & RPCs |
 
 ### Protected Parallel Work
-- **Public `src/pages/ExplorePage.tsx`**: Filter layout and analytical logic (commits `0a595b6`, `8b80c39`) remain intact.
+- **Public `src/pages/ExplorePage.tsx`**: Filter layout, recent area reports display, and analytical logic (commits `0a595b6`, `8b80c39`, `98ba9e8`) remain intact.
+- **Public `src/components/explore/DistrictRankingPanel.tsx`, `MapSectionHeader.tsx`, `PublicIncidentMap.tsx`**: UI enhancements preserved.
 - **Public `src/components/location/LocationReminderBar.tsx`**: UI simplification (commits `50aaf30`, `94f2d43`) protected.
 - **Public `src/services/publicReportService.ts`**: Lazy-loading and in-flight request deduplication preserved.
+- **Admin `supabase/migrations/20260907000002_admin_response_detail_private_contact.sql`**: Synchronized migration contract for response private contact privacy.
 
 ---
 
