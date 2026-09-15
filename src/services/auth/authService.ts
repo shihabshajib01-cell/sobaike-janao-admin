@@ -23,7 +23,7 @@ const REMEMBERED_EMAIL_KEY = 'sobaike_remembered_email';
  * Strict fail-closed semantics:
  * - Returns true ONLY if Supabase is configured, user exists in admin_users, and active === true.
  * - Returns false on missing userId, query error, network error, missing row, or inactive status.
- * - Dev mock exception strictly isolated to (!isSupabaseConfigured && import.meta.env.DEV).
+ * - Unconfigured environments fail closed.
  */
 export async function checkAdminStatus(userId: string): Promise<boolean> {
   if (!userId) {

@@ -12,8 +12,8 @@ import {
   ComplaintStatusTabCount,
   ComplaintTimelineEvent,
   ReporterDeviceLocation,
+  WorkflowActionResult,
 } from '@/types/Complaint';
-import type { WorkflowActionResult } from '@/services/fallback/complaintFallback';
 import {
   supabaseComplaintService,
   getTaxonomySegments,
@@ -156,4 +156,4 @@ export class ComplaintApi {
 
 export const complaintApi = new ComplaintApi();
 export default complaintApi;
-export { type WorkflowActionResult } from '@/services/fallback/complaintFallback';
+export { type WorkflowActionResult } from '@/types/Complaint';

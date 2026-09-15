@@ -22,12 +22,6 @@ export class DashboardApi {
     categorySummary: CategorySummaryItem[];
   }> | null = null;
 
-  /**
-   * Ensures configuration check passes or allows fallback data.
-   */
-  private checkConfiguration(): void {
-    // No-op: complaintApi handles transparent fallback to mock fixtures when needed
-  }
 
   /**
    * Fetch aggregate data via controlled SECURITY DEFINER RPC.
@@ -38,13 +32,17 @@ export class DashboardApi {
     stats: DashboardStats;
     categorySummary: CategorySummaryItem[];
   }> {
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase dashboard service is not configured in this environment.');
+    }
+
     if (this.aggregatesPromise) {
       return this.aggregatesPromise;
     }
 
     this.aggregatesPromise = (async () => {
       try {
-        if (isSupabaseConfigured) {
+        {
           const { data, error } = await supabase.rpc('admin_get_dashboard_aggregates');
           if (error) {
             console.error('admin_get_dashboard_aggregates RPC failed:', error);
@@ -75,11 +73,6 @@ export class DashboardApi {
 
           return { stats, categorySummary };
         }
-
-        // Fallback for unconfigured dev environment
-        const stats = await this.getFallbackStats();
-        const categorySummary = await this.getFallbackCategories(stats.totalComplaints);
-        return { stats, categorySummary };
       } finally {
         // Clear cached promise on next microtask so future manual refreshes trigger a new RPC
         Promise.resolve().then(() => {
@@ -91,54 +84,6 @@ export class DashboardApi {
     return this.aggregatesPromise;
   }
 
-  /**
-   * Fallback stats generator when Supabase is not configured (e.g. dev mock).
-   */
-  private async getFallbackStats(): Promise<DashboardStats> {
-    const stats = await complaintApi.getComplaintStats();
-    const countMap = new Map<string, number>();
-
-    stats.forEach((item) => {
-      countMap.set(item.status, item.count);
-    });
-
-    return {
-      totalComplaints: countMap.get('all') ?? 0,
-      submitted: countMap.get('submitted') ?? 0,
-      published: countMap.get('published') ?? 0,
-      unpublished: countMap.get('unpublished') ?? 0,
-      rejected: countMap.get('rejected') ?? 0,
-      edited: countMap.get('edited') ?? 0,
-    };
-  }
-
-  /**
-   * Fallback category generator when Supabase is not configured (e.g. dev mock).
-   */
-  private async getFallbackCategories(totalComplaints: number): Promise<CategorySummaryItem[]> {
-    const segments = await complaintApi.getSegments();
-    const categoryCounts = await Promise.all(
-      segments.map(async (segment) => {
-        const res = await complaintApi.getComplaints(
-          { category: segment.id },
-          1,
-          1
-        );
-        const count = res.pagination.totalItems ?? 0;
-        const percentage =
-          totalComplaints > 0 ? (count / totalComplaints) * 100 : 0;
-
-        return {
-          id: segment.id,
-          nameEn: segment.name_en,
-          nameBn: segment.name_bn,
-          count,
-          percentage,
-        };
-      })
-    );
-    return categoryCounts;
-  }
 
   /**
    * Fetch high-level operational statistics.
@@ -251,7 +196,6 @@ export class DashboardApi {
    * STRICTLY requires 'complaints.view'.
    */
   async getRecentComplaints(limit = 6): Promise<RecentComplaintItem[]> {
-    this.checkConfiguration();
 
     const response = await complaintApi.getComplaints({}, 1, limit);
 

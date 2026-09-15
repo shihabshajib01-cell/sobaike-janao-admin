@@ -28,8 +28,7 @@ import { generateRoleSlug } from '@/utils/roleUtils';
 /**
  * Asserts whether role management is configured.
  * - When Supabase credentials are configured: proceeds with authoritative Supabase RPCs.
- * - When Supabase credentials are unconfigured AND in local dev (`import.meta.env.DEV`): allows dev fixtures.
- * - When Supabase credentials are unconfigured in production: immediately throws a distinguishable RoleApiError with code 'CONFIG_ERROR'.
+ * - When Supabase credentials are unconfigured: immediately throws RoleApiError with code 'CONFIG_ERROR'.
  */
 function assertRoleApiConfigured(): void {
   if (!isSupabaseConfigured) {
