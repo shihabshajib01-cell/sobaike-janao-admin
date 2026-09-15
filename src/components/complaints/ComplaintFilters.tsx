@@ -6,6 +6,14 @@ import { useLanguage } from '@/context/LanguageContext';
 import { ComplaintFilterState } from '@/types/Complaint';
 import { complaintApi } from '@/services/api';
 import { RotateCcw, X, Filter } from 'lucide-react';
+import {
+  HARASSMENT_AGE_GROUP_OPTIONS,
+  HARASSMENT_ABUSER_RELATIONSHIP_OPTIONS,
+  HARASSMENT_REPORTING_FOR_OPTIONS,
+  getHarassmentAgeGroupLabel,
+  getHarassmentRelationshipLabel,
+  getHarassmentReportingForLabel,
+} from '@/utils/harassmentClassification';
 
 export interface ComplaintFiltersProps {
   filters: ComplaintFilterState;
@@ -26,6 +34,7 @@ export const ComplaintFilters: React.FC<ComplaintFiltersProps> = ({
 }) => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
+  const isHarassmentFilter = filters.category === 'harassment';
 
   const [availableSegments, setAvailableSegments] = useState<{ id: string; name_en: string; name_bn: string }[]>(
     propCategories || []
@@ -123,6 +132,50 @@ export const ComplaintFilters: React.FC<ComplaintFiltersProps> = ({
           options={dateOptions}
         />
 
+
+        {isHarassmentFilter && (
+          <>
+            <Select
+              label={isBn ? 'প্রভাবিত ব্যক্তির বয়স' : "Affected person's age"}
+              value={filters.affectedPersonAgeGroup}
+              onChange={(e) => onFilterChange('affectedPersonAgeGroup', e.target.value)}
+              options={[
+                { value: 'all', label: isBn ? 'সকল বয়সের গ্রুপ' : 'All age groups' },
+                ...HARASSMENT_AGE_GROUP_OPTIONS.map((item) => ({
+                  value: item.value,
+                  label: isBn ? item.labelBn : item.labelEn,
+                })),
+              ]}
+            />
+
+            <Select
+              label={isBn ? 'অভিযুক্ত ব্যক্তির সঙ্গে সম্পর্ক' : 'Relationship'}
+              value={filters.allegedAbuserRelationship}
+              onChange={(e) => onFilterChange('allegedAbuserRelationship', e.target.value)}
+              options={[
+                { value: 'all', label: isBn ? 'সকল সম্পর্ক' : 'All relationships' },
+                ...HARASSMENT_ABUSER_RELATIONSHIP_OPTIONS.map((item) => ({
+                  value: item.value,
+                  label: isBn ? item.labelBn : item.labelEn,
+                })),
+              ]}
+            />
+
+            <Select
+              label={isBn ? 'কার জন্য প্রতিবেদন' : 'Reporting for'}
+              value={filters.reportingFor}
+              onChange={(e) => onFilterChange('reportingFor', e.target.value)}
+              options={[
+                { value: 'all', label: isBn ? 'সকল ধরন' : 'All reporting types' },
+                ...HARASSMENT_REPORTING_FOR_OPTIONS.map((item) => ({
+                  value: item.value,
+                  label: isBn ? item.labelBn : item.labelEn,
+                })),
+              ]}
+            />
+          </>
+        )}
+
         {/* Action button */}
         <div className="flex items-center gap-2">
           {hasActiveFilters && (
@@ -170,6 +223,34 @@ export const ComplaintFilters: React.FC<ComplaintFiltersProps> = ({
                 className="hover:opacity-75 cursor-pointer"
                 aria-label="Remove category filter"
               >
+                <X className="w-3 h-3" />
+              </button>
+            </Badge>
+          )}
+
+
+          {isHarassmentFilter && filters.affectedPersonAgeGroup !== 'all' && (
+            <Badge status="info" size="sm" className="inline-flex items-center gap-1">
+              <span>{getHarassmentAgeGroupLabel(filters.affectedPersonAgeGroup, isBn ? 'bn' : 'en')}</span>
+              <button type="button" onClick={() => onFilterChange('affectedPersonAgeGroup', 'all')} className="hover:opacity-75 cursor-pointer" aria-label="Remove age group filter">
+                <X className="w-3 h-3" />
+              </button>
+            </Badge>
+          )}
+
+          {isHarassmentFilter && filters.allegedAbuserRelationship !== 'all' && (
+            <Badge status="info" size="sm" className="inline-flex items-center gap-1">
+              <span>{getHarassmentRelationshipLabel(filters.allegedAbuserRelationship, isBn ? 'bn' : 'en')}</span>
+              <button type="button" onClick={() => onFilterChange('allegedAbuserRelationship', 'all')} className="hover:opacity-75 cursor-pointer" aria-label="Remove relationship filter">
+                <X className="w-3 h-3" />
+              </button>
+            </Badge>
+          )}
+
+          {isHarassmentFilter && filters.reportingFor !== 'all' && (
+            <Badge status="info" size="sm" className="inline-flex items-center gap-1">
+              <span>{getHarassmentReportingForLabel(filters.reportingFor, isBn ? 'bn' : 'en')}</span>
+              <button type="button" onClick={() => onFilterChange('reportingFor', 'all')} className="hover:opacity-75 cursor-pointer" aria-label="Remove reporting-for filter">
                 <X className="w-3 h-3" />
               </button>
             </Badge>

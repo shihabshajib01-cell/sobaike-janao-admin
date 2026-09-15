@@ -7,6 +7,11 @@
 import { jsPDF } from 'jspdf';
 import autoTable, { UserOptions } from 'jspdf-autotable';
 import { Complaint } from '@/types/Complaint';
+import {
+  getHarassmentAgeGroupLabel,
+  getHarassmentRelationshipLabel,
+  getHarassmentReportingForLabel,
+} from '@/utils/harassmentClassification';
 
 
 // Helper to sanitize text for standard PDF rendering
@@ -180,6 +185,9 @@ export function exportComplaintsToCsv(complaints: Complaint[], customFilename?: 
     'Category (BN)',
     'Subcategory (EN)',
     'Subcategory (BN)',
+    'Affected Person Age Group',
+    'Relationship with Alleged Abuser',
+    'Reporting For',
     'Status',
     'Urgency',
     'Ward',
@@ -204,6 +212,9 @@ export function exportComplaintsToCsv(complaints: Complaint[], customFilename?: 
     c.categoryBn,
     c.subcategoryEn,
     c.subcategoryBn,
+    c.categoryId === 'harassment' ? getHarassmentAgeGroupLabel(c.affectedPersonAgeGroup, 'en') : '',
+    c.categoryId === 'harassment' ? getHarassmentRelationshipLabel(c.allegedAbuserRelationship, 'en') : '',
+    c.categoryId === 'harassment' ? getHarassmentReportingForLabel(c.reportingFor, 'en') : '',
     c.status,
     c.urgency,
     c.location?.ward || '',
@@ -230,6 +241,9 @@ export interface ComplaintFilterSummary {
   urgency?: string;
   dateRange?: string;
   search?: string;
+  affectedPersonAgeGroup?: string;
+  allegedAbuserRelationship?: string;
+  reportingFor?: string;
 }
 
 export function exportComplaintsToPdf(
@@ -258,6 +272,15 @@ export function exportComplaintsToPdf(
     }
     if (filterSummary?.search) {
       filterItems.push({ label: 'Search', value: `"${filterSummary.search}"` });
+    }
+    if (filterSummary?.affectedPersonAgeGroup && filterSummary.affectedPersonAgeGroup !== 'all') {
+      filterItems.push({ label: 'Age Group', value: getHarassmentAgeGroupLabel(filterSummary.affectedPersonAgeGroup, 'en') });
+    }
+    if (filterSummary?.allegedAbuserRelationship && filterSummary.allegedAbuserRelationship !== 'all') {
+      filterItems.push({ label: 'Relationship', value: getHarassmentRelationshipLabel(filterSummary.allegedAbuserRelationship, 'en') });
+    }
+    if (filterSummary?.reportingFor && filterSummary.reportingFor !== 'all') {
+      filterItems.push({ label: 'Reporting For', value: getHarassmentReportingForLabel(filterSummary.reportingFor, 'en') });
     }
 
     const startY = setupPdfHeaderAndFooter(

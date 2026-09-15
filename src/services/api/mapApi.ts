@@ -196,6 +196,9 @@ export class MapApi {
         subcategoryEn: subInfo?.nameEn || subInfo?.nameBn || subcategoryId || '',
         subcategoryBn: subInfo?.nameBn || subInfo?.nameEn || subcategoryId || '',
         status,
+        affectedPersonAgeGroup: row.affected_person_age_group ?? row.affectedPersonAgeGroup ?? null,
+        allegedAbuserRelationship: row.alleged_abuser_relationship ?? row.allegedAbuserRelationship ?? null,
+        reportingFor: row.reporting_for ?? row.reportingFor ?? null,
         latitude: latNum,
         longitude: lngNum,
         location: {

@@ -36,6 +36,9 @@ const INITIAL_FILTERS: MapFilterState = {
   subcategory: 'all',
   status: 'all',
   district: 'all',
+  affectedPersonAgeGroup: 'all',
+  allegedAbuserRelationship: 'all',
+  reportingFor: 'all',
   dateRange: 'all',
 };
 
@@ -138,12 +141,19 @@ export const MapPage: React.FC = () => {
         if (item.subcategoryId !== filters.subcategory) return false;
       }
 
-      // 4. Status
+      // 4. Harassment Classification
+      if (filters.segment === 'harassment') {
+        if (filters.affectedPersonAgeGroup !== 'all' && item.affectedPersonAgeGroup !== filters.affectedPersonAgeGroup) return false;
+        if (filters.allegedAbuserRelationship !== 'all' && item.allegedAbuserRelationship !== filters.allegedAbuserRelationship) return false;
+        if (filters.reportingFor !== 'all' && item.reportingFor !== filters.reportingFor) return false;
+      }
+
+      // 5. Status
       if (filters.status && filters.status !== 'all') {
         if (item.status !== filters.status) return false;
       }
 
-      // 5. District
+      // 6. District
       if (filters.district && filters.district !== 'all') {
         if (
           item.location.district.toLowerCase() !==
@@ -153,7 +163,7 @@ export const MapPage: React.FC = () => {
         }
       }
 
-      // 6. Date Range
+      // 7. Date Range
       if (filters.dateRange && filters.dateRange !== 'all') {
         const itemTime = new Date(item.createdAt).getTime();
         const now = Date.now();

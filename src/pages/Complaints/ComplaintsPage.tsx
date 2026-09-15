@@ -48,6 +48,9 @@ export const ComplaintsPage: React.FC = () => {
     category: 'all',
     subcategory: 'all',
     location: 'all',
+    affectedPersonAgeGroup: 'all',
+    allegedAbuserRelationship: 'all',
+    reportingFor: 'all',
     dateRange: 'all',
   });
 
@@ -61,6 +64,9 @@ export const ComplaintsPage: React.FC = () => {
       filters.category !== 'all' ||
       filters.subcategory !== 'all' ||
       filters.location !== 'all' ||
+      filters.affectedPersonAgeGroup !== 'all' ||
+      filters.allegedAbuserRelationship !== 'all' ||
+      filters.reportingFor !== 'all' ||
       filters.dateRange !== 'all'
   );
 
@@ -108,7 +114,15 @@ export const ComplaintsPage: React.FC = () => {
 
   // Handle Specific Filter Change
   const handleFilterChange = (key: keyof ComplaintFilterState, value: string) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
+    setFilters((prev) => {
+      const next = { ...prev, [key]: value };
+      if (key === 'category' && value !== 'harassment') {
+        next.affectedPersonAgeGroup = 'all';
+        next.allegedAbuserRelationship = 'all';
+        next.reportingFor = 'all';
+      }
+      return next;
+    });
   };
 
   // Reset all filters except current active tab
@@ -119,6 +133,9 @@ export const ComplaintsPage: React.FC = () => {
       category: 'all',
       subcategory: 'all',
       location: 'all',
+      affectedPersonAgeGroup: 'all',
+      allegedAbuserRelationship: 'all',
+      reportingFor: 'all',
       dateRange: 'all',
     });
   };
@@ -193,6 +210,9 @@ export const ComplaintsPage: React.FC = () => {
           ward: filters.location,
           dateRange: filters.dateRange,
           search: filters.searchQuery,
+          affectedPersonAgeGroup: filters.affectedPersonAgeGroup,
+          allegedAbuserRelationship: filters.allegedAbuserRelationship,
+          reportingFor: filters.reportingFor,
         },
         `sobaike_complaints_${filters.status !== 'all' ? filters.status + '_' : ''}${new Date().toISOString().slice(0, 10)}.pdf`
       );

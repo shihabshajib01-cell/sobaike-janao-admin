@@ -20,6 +20,14 @@ import {
   Calendar,
 } from 'lucide-react';
 import { cn } from '@/utils';
+import {
+  HARASSMENT_AGE_GROUP_OPTIONS,
+  HARASSMENT_ABUSER_RELATIONSHIP_OPTIONS,
+  HARASSMENT_REPORTING_FOR_OPTIONS,
+  getHarassmentAgeGroupLabel,
+  getHarassmentRelationshipLabel,
+  getHarassmentReportingForLabel,
+} from '@/utils/harassmentClassification';
 
 export interface MapFiltersProps {
   filters: MapFilterState;
@@ -44,6 +52,7 @@ export const MapFilters: React.FC<MapFiltersProps> = ({
 }) => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
+  const isHarassmentFilter = filters.segment === 'harassment';
 
   // Subcategories filtered by selected segment
   const filteredSubcategories =
@@ -58,6 +67,9 @@ export const MapFilters: React.FC<MapFiltersProps> = ({
       (filters.subcategory && filters.subcategory !== 'all') ||
       (filters.status && filters.status !== 'all') ||
       (filters.district && filters.district !== 'all') ||
+      (filters.affectedPersonAgeGroup && filters.affectedPersonAgeGroup !== 'all') ||
+      (filters.allegedAbuserRelationship && filters.allegedAbuserRelationship !== 'all') ||
+      (filters.reportingFor && filters.reportingFor !== 'all') ||
       (filters.dateRange && filters.dateRange !== 'all')
   );
 
@@ -70,6 +82,9 @@ export const MapFilters: React.FC<MapFiltersProps> = ({
       ...filters,
       segment: e.target.value,
       subcategory: 'all', // Reset subcategory when segment changes
+      affectedPersonAgeGroup: 'all',
+      allegedAbuserRelationship: 'all',
+      reportingFor: 'all',
     });
   };
 
@@ -210,6 +225,30 @@ export const MapFilters: React.FC<MapFiltersProps> = ({
           </Select>
         </div>
 
+
+        {isHarassmentFilter && (
+          <>
+            <div>
+              <Select id="map-harassment-age-select" value={filters.affectedPersonAgeGroup} onChange={(e) => onChange({ ...filters, affectedPersonAgeGroup: e.target.value })} className="h-9 text-xs">
+                <option value="all">{isBn ? 'সকল বয়সের গ্রুপ' : 'All age groups'}</option>
+                {HARASSMENT_AGE_GROUP_OPTIONS.map((item) => <option key={item.value} value={item.value}>{isBn ? item.labelBn : item.labelEn}</option>)}
+              </Select>
+            </div>
+            <div>
+              <Select id="map-harassment-relationship-select" value={filters.allegedAbuserRelationship} onChange={(e) => onChange({ ...filters, allegedAbuserRelationship: e.target.value })} className="h-9 text-xs">
+                <option value="all">{isBn ? 'সকল সম্পর্ক' : 'All relationships'}</option>
+                {HARASSMENT_ABUSER_RELATIONSHIP_OPTIONS.map((item) => <option key={item.value} value={item.value}>{isBn ? item.labelBn : item.labelEn}</option>)}
+              </Select>
+            </div>
+            <div>
+              <Select id="map-harassment-reporting-for-select" value={filters.reportingFor} onChange={(e) => onChange({ ...filters, reportingFor: e.target.value })} className="h-9 text-xs">
+                <option value="all">{isBn ? 'কার জন্য: সকল' : 'Reporting for: all'}</option>
+                {HARASSMENT_REPORTING_FOR_OPTIONS.map((item) => <option key={item.value} value={item.value}>{isBn ? item.labelBn : item.labelEn}</option>)}
+              </Select>
+            </div>
+          </>
+        )}
+
         {/* District */}
         <div>
           <Select
@@ -303,6 +342,28 @@ export const MapFilters: React.FC<MapFiltersProps> = ({
                   >
                     <X className="w-3 h-3" />
                   </button>
+                </span>
+              )}
+
+
+              {isHarassmentFilter && filters.affectedPersonAgeGroup !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs">
+                  <span>{getHarassmentAgeGroupLabel(filters.affectedPersonAgeGroup, isBn ? 'bn' : 'en')}</span>
+                  <button type="button" onClick={() => onChange({ ...filters, affectedPersonAgeGroup: 'all' })} className="hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer" aria-label="Remove map age group filter"><X className="w-3 h-3" /></button>
+                </span>
+              )}
+
+              {isHarassmentFilter && filters.allegedAbuserRelationship !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs">
+                  <span>{getHarassmentRelationshipLabel(filters.allegedAbuserRelationship, isBn ? 'bn' : 'en')}</span>
+                  <button type="button" onClick={() => onChange({ ...filters, allegedAbuserRelationship: 'all' })} className="hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer" aria-label="Remove map relationship filter"><X className="w-3 h-3" /></button>
+                </span>
+              )}
+
+              {isHarassmentFilter && filters.reportingFor !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs">
+                  <span>{getHarassmentReportingForLabel(filters.reportingFor, isBn ? 'bn' : 'en')}</span>
+                  <button type="button" onClick={() => onChange({ ...filters, reportingFor: 'all' })} className="hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer" aria-label="Remove map reporting-for filter"><X className="w-3 h-3" /></button>
                 </span>
               )}
 

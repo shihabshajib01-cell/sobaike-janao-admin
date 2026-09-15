@@ -26,6 +26,9 @@ export interface MapComplaint {
   subcategoryEn: string;
   subcategoryBn: string;
   status: ComplaintLifecycleStatus;
+  affectedPersonAgeGroup?: string | null;
+  allegedAbuserRelationship?: string | null;
+  reportingFor?: string | null;
   latitude: number;
   longitude: number;
   location: MapComplaintLocation;
@@ -38,6 +41,9 @@ export interface MapFilterState {
   subcategory: string;
   status: ComplaintLifecycleStatus | 'all';
   district: string;
+  affectedPersonAgeGroup: string;
+  allegedAbuserRelationship: string;
+  reportingFor: string;
   dateRange: string;
 }
 

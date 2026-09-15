@@ -16,6 +16,9 @@ import {
   ComplaintUrgency,
   TimelineEventType,
   ReporterDeviceLocation,
+  HarassmentAgeGroup,
+  HarassmentAbuserRelationship,
+  HarassmentReportingFor,
 } from '@/types/Complaint';
 import { WorkflowActionResult } from '@/services/fallback/complaintFallback';
 
@@ -91,6 +94,9 @@ export interface SupabaseComplaintRow {
   has_supporting_info: boolean | null;
   evidence_types: string[] | null;
   evidence_description: string | null;
+  affected_person_age_group: string | null;
+  alleged_abuser_relationship: string | null;
+  reporting_for: string | null;
   publication_preferences: Record<string, unknown> | null;
   recent_bill_month?: string | null;
   recent_bill_amount?: number | null;
@@ -388,6 +394,9 @@ export function mapSupabaseRowToComplaint(
     ),
     evidenceTypes: Array.isArray(row.evidence_types) ? row.evidence_types : [],
     evidenceDescription: row.evidence_description || undefined,
+    affectedPersonAgeGroup: (row.affected_person_age_group as HarassmentAgeGroup | null) ?? null,
+    allegedAbuserRelationship: (row.alleged_abuser_relationship as HarassmentAbuserRelationship | null) ?? null,
+    reportingFor: (row.reporting_for as HarassmentReportingFor | null) ?? null,
     recentBillMonth: row.recent_bill_month ?? null,
     recentBillAmount:
       row.recent_bill_amount !== null && row.recent_bill_amount !== undefined
@@ -531,6 +540,19 @@ export const supabaseComplaintService = {
     // Filter by Subcategory (subcategory_id)
     if (filters.subcategory && filters.subcategory !== 'all') {
       query = query.eq('subcategory_id', filters.subcategory);
+    }
+
+    // Filter by Harassment Classification (Harassment segment only)
+    if (filters.category === 'harassment') {
+      if (filters.affectedPersonAgeGroup && filters.affectedPersonAgeGroup !== 'all') {
+        query = query.eq('affected_person_age_group', filters.affectedPersonAgeGroup);
+      }
+      if (filters.allegedAbuserRelationship && filters.allegedAbuserRelationship !== 'all') {
+        query = query.eq('alleged_abuser_relationship', filters.allegedAbuserRelationship);
+      }
+      if (filters.reportingFor && filters.reportingFor !== 'all') {
+        query = query.eq('reporting_for', filters.reportingFor);
+      }
     }
 
     // Filter by Location (district)

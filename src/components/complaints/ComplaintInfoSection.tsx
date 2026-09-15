@@ -15,6 +15,11 @@ import {
 import { cn } from '@/utils';
 import { UtilityBillComparisonCard } from './UtilityBillComparisonCard';
 import { UtilityOutageDetailsCard } from './UtilityOutageDetailsCard';
+import {
+  getHarassmentAgeGroupLabel,
+  getHarassmentRelationshipLabel,
+  getHarassmentReportingForLabel,
+} from '@/utils/harassmentClassification';
 
 export interface ComplaintInfoSectionProps {
   complaint: Complaint;
@@ -185,6 +190,49 @@ export const ComplaintInfoSection: React.FC<ComplaintInfoSectionProps> = ({
 
       {/* Utility Outage / Event Details Card (if incident date/time or outage info is present) */}
       <UtilityOutageDetailsCard complaint={complaint} />
+
+      {/* Harassment Classification Context (read-only citizen-submitted metadata) */}
+      {complaint.categoryId === 'harassment' && (
+        <Card variant="default">
+          <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Layers className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+              <span>{isBn ? 'হয়রানি শ্রেণিবিন্যাস প্রসঙ্গ' : 'Harassment Classification Context'}</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {isBn ? 'প্রভাবিত ব্যক্তির বয়সের গ্রুপ' : "Affected person's age group"}
+                </p>
+                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                  {getHarassmentAgeGroupLabel(complaint.affectedPersonAgeGroup, isBn ? 'bn' : 'en')}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {isBn ? 'অভিযুক্ত ব্যক্তির সঙ্গে সম্পর্ক' : 'Relationship with alleged abuser'}
+                </p>
+                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                  {getHarassmentRelationshipLabel(complaint.allegedAbuserRelationship, isBn ? 'bn' : 'en')}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {isBn ? 'কার জন্য প্রতিবেদন' : 'Reporting for'}
+                </p>
+                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                  {getHarassmentReportingForLabel(complaint.reportingFor, isBn ? 'bn' : 'en')}
+                </p>
+              </div>
+            </div>
+            <p className="mt-3 text-[11px] text-slate-400 dark:text-slate-500">
+              {isBn ? 'নাগরিকের জমা দেওয়া শ্রেণিবিন্যাস; অ্যাডমিন ভিউতে শুধু-পঠনযোগ্য।' : 'Citizen-submitted classification; read-only in the Admin view.'}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 2. Reporter Information & Verification Card */}
       <Card variant="default">

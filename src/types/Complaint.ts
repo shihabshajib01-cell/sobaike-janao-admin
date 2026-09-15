@@ -14,6 +14,25 @@ export type ComplaintLifecycleStatus =
 
 export type ComplaintUrgency = 'low' | 'medium' | 'high' | 'urgent';
 
+export type HarassmentAgeGroup =
+  | 'under_18'
+  | '18_29'
+  | '30_59'
+  | '60_plus'
+  | 'prefer_not_to_say';
+
+export type HarassmentAbuserRelationship =
+  | 'intimate_partner'
+  | 'household_family'
+  | 'other_relative'
+  | 'friend_acquaintance'
+  | 'coworker_classmate'
+  | 'authority_caregiver_service_provider'
+  | 'stranger'
+  | 'other_or_unknown';
+
+export type HarassmentReportingFor = 'self' | 'someone_else';
+
 export interface ComplaintLocation {
   addressEn: string;
   addressBn: string;
@@ -92,6 +111,10 @@ export interface Complaint {
   evidenceDescription?: string;
   versions?: ComplaintVersion[];
   reporterDeviceLocation?: ReporterDeviceLocation | null;
+  // Harassment-only citizen classification dimensions. Read-only in Admin.
+  affectedPersonAgeGroup?: HarassmentAgeGroup | null;
+  allegedAbuserRelationship?: HarassmentAbuserRelationship | null;
+  reportingFor?: HarassmentReportingFor | null;
   // Utility Service Complaints specific attributes
   recentBillMonth?: string | null;
   recentBillAmount?: number | null;
@@ -119,6 +142,9 @@ export interface ComplaintFilterState {
   category: string;
   subcategory: string;
   location: string;
+  affectedPersonAgeGroup: string;
+  allegedAbuserRelationship: string;
+  reportingFor: string;
   dateRange: string;
 }
 
