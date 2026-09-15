@@ -17,45 +17,20 @@ export interface LoginResponse {
 }
 
 const REMEMBERED_EMAIL_KEY = 'sobaike_remembered_email';
-const MOCK_SESSION_KEY = 'sobaike_mock_session';
-
-const isDev = Boolean(typeof import.meta !== 'undefined' && import.meta.env?.DEV);
-
-const createDevMockSession = (email: string): { user: User; session: Session } => {
-  const user: User = {
-    id: 'dev-admin-id-0001',
-    app_metadata: { provider: 'email' },
-    user_metadata: { name: 'System Administrator', full_name: 'System Administrator' },
-    aud: 'authenticated',
-    created_at: new Date().toISOString(),
-    email: email || 'admin@sobaike.org',
-    role: 'authenticated',
-  };
-  const session: Session = {
-    access_token: 'mock-dev-token-sobaike-admin',
-    token_type: 'bearer',
-    expires_in: 86400,
-    refresh_token: 'mock-refresh-token',
-    user,
-  };
-  return { user, session };
-};
 
 /**
  * Verifies if the authenticated user exists in public.admin_users and is marked active.
  * Strict fail-closed semantics:
  * - Returns true ONLY if Supabase is configured, user exists in admin_users, and active === true.
  * - Returns false on missing userId, query error, network error, missing row, or inactive status.
- * - Dev mock exception strictly isolated to (!isSupabaseConfigured && import.meta.env.DEV).
+ * - Unconfigured environments fail closed.
  */
 export async function checkAdminStatus(userId: string): Promise<boolean> {
   if (!userId) {
     return false;
   }
-
-  // Local development fallback strictly isolated to DEV
   if (!isSupabaseConfigured) {
-    return isDev;
+    return false;
   }
 
   try {
@@ -97,16 +72,6 @@ export const authService = {
       }
     }
 
-    // Fallback strictly isolated to unconfigured DEV; ignored in production
-    if (isDev) {
-      try {
-        const stored = typeof window !== 'undefined' ? localStorage.getItem(MOCK_SESSION_KEY) : null;
-        if (stored) {
-          return JSON.parse(stored) as Session;
-        }
-      } catch {}
-    }
-
     return null;
   },
 
@@ -120,17 +85,6 @@ export const authService = {
       }
     }
 
-    // Fallback strictly isolated to unconfigured DEV; ignored in production
-    if (isDev) {
-      try {
-        const stored = typeof window !== 'undefined' ? localStorage.getItem(MOCK_SESSION_KEY) : null;
-        if (stored) {
-          const parsed = JSON.parse(stored) as Session;
-          return parsed.access_token || null;
-        }
-      } catch {}
-    }
-
     return null;
   },
 
@@ -142,17 +96,6 @@ export const authService = {
       } catch {
         return null;
       }
-    }
-
-    // Fallback strictly isolated to unconfigured DEV; ignored in production
-    if (isDev) {
-      try {
-        const stored = typeof window !== 'undefined' ? localStorage.getItem(MOCK_SESSION_KEY) : null;
-        if (stored) {
-          const parsed = JSON.parse(stored) as Session;
-          return parsed.user || null;
-        }
-      } catch {}
     }
 
     return null;
@@ -246,43 +189,14 @@ export const authService = {
       }
     }
 
-    // Unconfigured environment:
-    // Production MUST fail closed: no login, no mock session
-    if (!isDev) {
-      return {
-        success: false,
-        isUnconfigured: true,
-        error: 'Authentication service is not configured in this environment.',
-      };
-    }
-
-    // Dev-only local mock login
-    const { user, session } = createDevMockSession(email || 'admin@sobaike.org');
-    try {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(MOCK_SESSION_KEY, JSON.stringify(session));
-      }
-    } catch {}
-
-    if (isRemembered) {
-      this.setRememberedUser(email || 'admin@sobaike.org');
-    } else {
-      this.clearRememberedUser();
-    }
-
     return {
-      success: true,
-      user,
-      session,
+      success: false,
+      isUnconfigured: true,
+      error: 'Authentication service is not configured in this environment.',
     };
   },
 
   async logout(): Promise<void> {
-    try {
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem(MOCK_SESSION_KEY);
-      }
-    } catch {}
 
     if (!isSupabaseConfigured) return;
 

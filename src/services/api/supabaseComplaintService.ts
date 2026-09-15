@@ -19,8 +19,8 @@ import {
   HarassmentAgeGroup,
   HarassmentAbuserRelationship,
   HarassmentReportingFor,
+  WorkflowActionResult,
 } from '@/types/Complaint';
-import { WorkflowActionResult } from '@/services/fallback/complaintFallback';
 
 export interface SupabaseReporterLocationRow {
   complaint_id: string;

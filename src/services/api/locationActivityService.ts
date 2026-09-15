@@ -6,91 +6,6 @@ import {
   LocationActivityResponse,
 } from '@/types/LocationActivity';
 
-const DEV_MOCK_SESSIONS: PublicVisitSession[] = [
-  {
-    id: 'pvs_101',
-    visitor_id: 'vis_df83a9',
-    session_id: 'sess_991823',
-    permission_status: 'granted',
-    latitude: 23.8103,
-    longitude: 90.4125,
-    accuracy_meters: 15,
-    browser_name: 'Chrome Mobile',
-    browser_version: '128.0',
-    os_name: 'Android 14',
-    device_category: 'Mobile',
-    platform: 'Linux armv8l',
-    language: 'en-US,bn-BD',
-    timezone: 'Asia/Dhaka',
-    screen_width: 390,
-    screen_height: 844,
-    user_agent: 'Mozilla/5.0 (Linux; Android 14; SM-S918B)',
-    consented_at: '2026-09-02T08:30:00Z',
-    first_seen_at: '2026-09-02T08:30:00Z',
-    last_seen_at: '2026-09-02T09:15:00Z',
-    location_updated_at: '2026-09-02T09:15:00Z',
-    created_at: '2026-09-02T08:30:00Z',
-  },
-  {
-    id: 'pvs_102',
-    visitor_id: 'vis_aa44bc',
-    session_id: 'sess_991824',
-    permission_status: 'prompt',
-    latitude: null,
-    longitude: null,
-    accuracy_meters: null,
-    browser_name: 'Chrome',
-    browser_version: '127.0',
-    os_name: 'Windows 11',
-    device_category: 'Desktop',
-    platform: 'Win32',
-    language: 'en-US',
-    timezone: 'Asia/Dhaka',
-    screen_width: 1920,
-    screen_height: 1080,
-    user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-    consented_at: null,
-    first_seen_at: '2026-09-02T08:45:00Z',
-    last_seen_at: '2026-09-02T09:20:00Z',
-    location_updated_at: null,
-    created_at: '2026-09-02T08:45:00Z',
-  },
-  {
-    id: 'pvs_103',
-    visitor_id: 'vis_bb77ef',
-    session_id: 'sess_991825',
-    permission_status: 'denied',
-    latitude: null,
-    longitude: null,
-    accuracy_meters: null,
-    browser_name: 'Safari',
-    browser_version: '18.0',
-    os_name: 'iOS 18.0',
-    device_category: 'Mobile',
-    platform: 'iPhone',
-    language: 'bn-BD',
-    timezone: 'Asia/Dhaka',
-    screen_width: 430,
-    screen_height: 932,
-    user_agent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)',
-    consented_at: null,
-    first_seen_at: '2026-09-02T07:10:00Z',
-    last_seen_at: '2026-09-02T08:50:00Z',
-    location_updated_at: null,
-    created_at: '2026-09-02T07:10:00Z',
-  },
-];
-
-const DEV_MOCK_STATS: LocationActivityStats = {
-  totalSessions: 142,
-  grantedCount: 89,
-  deniedCount: 28,
-  promptCount: 25,
-  recentSessionsCount: 14,
-};
-
-const isDev = Boolean(typeof import.meta !== 'undefined' && import.meta.env?.DEV);
-
 /**
  * Service for querying visitor location sessions and device context.
  * Read-only operations against public.public_visit_sessions.
@@ -106,15 +21,6 @@ export const locationActivityService = {
     pageSize = 20
   ): Promise<LocationActivityResponse> {
     if (!isSupabaseConfigured) {
-      if (isDev) {
-        return {
-          sessions: DEV_MOCK_SESSIONS,
-          total: DEV_MOCK_SESSIONS.length,
-          page: 1,
-          pageSize,
-          totalPages: 1,
-        };
-      }
       throw new Error('Supabase location activity service is not configured in this environment.');
     }
 
@@ -194,9 +100,6 @@ export const locationActivityService = {
    */
   async getLocationActivityStats(): Promise<LocationActivityStats> {
     if (!isSupabaseConfigured) {
-      if (isDev) {
-        return DEV_MOCK_STATS;
-      }
       throw new Error('Supabase location activity service is not configured in this environment.');
     }
 
@@ -255,9 +158,6 @@ export const locationActivityService = {
    */
   async getDistinctBrowsers(): Promise<string[]> {
     if (!isSupabaseConfigured) {
-      if (isDev) {
-        return ['Chrome', 'Chrome Mobile', 'Safari'];
-      }
       throw new Error('Supabase location activity service is not configured in this environment.');
     }
 

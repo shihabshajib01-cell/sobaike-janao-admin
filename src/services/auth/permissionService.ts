@@ -38,21 +38,6 @@ export interface UserPermissionProfile {
   isSuperAdmin: boolean;
 }
 
-const isDev = Boolean(typeof import.meta !== 'undefined' && import.meta.env?.DEV);
-
-const DEV_MOCK_PROFILE: UserPermissionProfile = {
-  role: {
-    id: 'dev_admin',
-    name_en: 'System Administrator (Dev)',
-    name_bn: 'সিস্টেম অ্যাডমিনিস্ট্রেটর (ডেভ)',
-    active: true,
-    is_system: true,
-  },
-  permissions: [...CANONICAL_PERMISSIONS],
-  isBootstrapMode: false,
-  isAdmin: true,
-  isSuperAdmin: true,
-};
 
 /**
  * Service to resolve effective administrative role and permissions for an authenticated admin.
@@ -69,9 +54,6 @@ export const permissionService = {
    */
   async resolveCurrentUserAuthorization(): Promise<UserPermissionProfile> {
     if (!isSupabaseConfigured) {
-      if (isDev) {
-        return DEV_MOCK_PROFILE;
-      }
       throw new Error('Supabase authorization service is not configured in this environment.');
     }
 
