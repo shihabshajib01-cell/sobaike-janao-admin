@@ -32,21 +32,17 @@ jobs:
           const fs = require('fs');
           const path = 'src/components/map/MapFilters.tsx';
           let s = fs.readFileSync(path, 'utf8');
-          const from = `                      onChange({
-                        ...filters,
-                        segment: 'all',
-                        subcategory: 'all',
-                      })`;
-          const to = `                      onChange({
+          const pattern = /onChange\(\{\s*\.\.\.filters,\s*segment:\s*'all',\s*subcategory:\s*'all',\s*\}\)/m;
+          const matches = s.match(new RegExp(pattern.source, 'gm')) || [];
+          if (matches.length !== 1) throw new Error(`Expected exactly one segment-chip reset block; found ${matches.length}`);
+          s = s.replace(pattern, `onChange({
                         ...filters,
                         segment: 'all',
                         subcategory: 'all',
                         affectedPersonAgeGroup: 'all',
                         allegedAbuserRelationship: 'all',
                         reportingFor: 'all',
-                      })`;
-          if (!s.includes(from)) throw new Error('Expected segment-chip reset anchor not found');
-          s = s.replace(from, to);
+                      })`);
           fs.writeFileSync(path, s);
           NODE
 
