@@ -378,6 +378,7 @@ export const CategoriesPage: React.FC = () => {
         isOpen={isDrawerOpen}
         onClose={handleCloseDrawer}
         target={drawerTarget}
+        onUpdated={() => loadTaxonomyData(true)}
       />
     </div>
   );
