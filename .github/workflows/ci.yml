@@ -26,5 +26,11 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Dependency audit
+        run: npm audit --audit-level=moderate
+
+      - name: Moderation regression tests
+        run: npm test
+
       - name: Build
         run: npm run build

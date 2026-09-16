@@ -2,7 +2,6 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
-import viteImagemin from 'vite-plugin-imagemin';
 
 export default defineConfig(() => {
   return {
@@ -10,34 +9,6 @@ export default defineConfig(() => {
     plugins: [
       react(),
       tailwindcss(),
-      viteImagemin({
-        gifsicle: {
-          optimizationLevel: 7,
-          interlaced: false,
-        },
-        optipng: {
-          optimizationLevel: 7,
-        },
-        mozjpeg: {
-          quality: 80,
-        },
-        pngquant: {
-          quality: [0.8, 0.9],
-          speed: 4,
-        },
-        svgo: {
-          plugins: [
-            {
-              name: 'removeViewBox',
-              active: false,
-            },
-            {
-              name: 'removeEmptyAttrs',
-              active: false,
-            },
-          ],
-        },
-      }),
     ],
     resolve: {
       alias: {
@@ -48,27 +19,8 @@ export default defineConfig(() => {
       outDir: 'dist',
       assetsDir: 'assets',
       sourcemap: true,
-      rollupOptions: {
-        output: {
-          manualChunks(id) {
-            if (id.includes('node_modules')) {
-              if (id.includes('react') || id.includes('react-dom')) {
-                return 'vendor-react';
-              }
-              if (id.includes('react-router') || id.includes('react-router-dom')) {
-                return 'vendor-router';
-              }
-              if (id.includes('lucide-react')) {
-                return 'vendor-icons';
-              }
-              if (id.includes('motion')) {
-                return 'vendor-motion';
-              }
-              return 'vendor';
-            }
-          },
-        },
-      },
+      // Let Rollup preserve dependency order; hand-split React/vendor chunks
+      // created a circular dependency. Source images remain unchanged.
     },
     server: {
       host: '0.0.0.0',
