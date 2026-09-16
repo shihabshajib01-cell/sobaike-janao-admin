@@ -45,8 +45,18 @@ export type HarassmentReportingFor = 'self' | 'someone_else';
 export interface ComplaintLocation {
   addressEn: string;
   addressBn: string;
+  /** Legacy Admin aliases kept for existing list/edit components. */
   ward: string;
   zone: string;
+  /** Canonical citizen-submitted incident-location fields. */
+  division?: string;
+  district?: string;
+  upazilaOrThana?: string;
+  area?: string;
+  road?: string;
+  landmark?: string;
+  formattedAddress?: string;
+  placeId?: string;
   coordinates?: [number, number]; // [latitude, longitude]
 }
 
