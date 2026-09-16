@@ -29,7 +29,7 @@ interface ComplaintPartyRpcRow {
 }
 
 export async function getComplaintParties(complaintId: string): Promise<ComplaintParty[]> {
-  if (!isSupabaseConfigured()) {
+  if (!isSupabaseConfigured) {
     throw new Error('Supabase is not configured.');
   }
 
