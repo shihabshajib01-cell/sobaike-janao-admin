@@ -1,13 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   TaxonomySegment,
   TaxonomySubcategory,
   TaxonomySegmentNode,
+  TaxonomyUpdateInput,
 } from '@/types/Category';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
 import { Drawer } from '@/components/ui/Drawer';
 import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
 import { Divider } from '@/components/ui/Divider';
+import { categoryApi } from '@/services/api/categoryApi';
+import { CategoryEditModal } from './CategoryEditModal';
 import {
   Folder,
   Tag,
@@ -16,6 +21,7 @@ import {
   Hash,
   ArrowUpDown,
   Layers,
+  Pencil,
 } from 'lucide-react';
 
 export type DetailDrawerTarget =
@@ -26,21 +32,55 @@ export interface CategoryDetailDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   target: DetailDrawerTarget | null;
+  onUpdated?: () => void;
 }
 
 export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
   isOpen,
   onClose,
   target,
+  onUpdated,
 }) => {
   const { language } = useLanguage();
+  const { hasPermission } = useAuth();
   const isBn = language === 'bn';
+  const canManage = hasPermission('categories.manage');
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   if (!target) return null;
 
   const isSegment = target.type === 'segment';
 
+  const handleOpenEdit = () => {
+    setSaveError(null);
+    setIsEditOpen(true);
+  };
+
+  const handleCloseEdit = () => {
+    if (isSaving) return;
+    setIsEditOpen(false);
+    setSaveError(null);
+  };
+
+  const handleSave = async (input: TaxonomyUpdateInput) => {
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await categoryApi.updateTaxonomyItem(input);
+      setIsEditOpen(false);
+      onClose();
+      onUpdated?.();
+    } catch (error: any) {
+      setSaveError(error?.message || 'Failed to update taxonomy.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
+    <>
     <Drawer
       isOpen={isOpen}
       onClose={onClose}
@@ -63,6 +103,19 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
           : 'Operational details for this reporting subcategory'
       }
       size="md"
+      footer={
+        canManage ? (
+          <Button
+            type="button"
+            variant="primary"
+            onClick={handleOpenEdit}
+            leftIcon={<Pencil className="w-3.5 h-3.5" />}
+            className="w-full sm:w-auto min-h-[44px]"
+          >
+            {isBn ? 'সম্পাদনা করুন' : 'Edit'}
+          </Button>
+        ) : undefined
+      }
     >
       <div className="space-y-6">
         {/* Header Summary Banner */}
@@ -226,12 +279,27 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
 
         {/* Read-Only Notice */}
         <div className="text-[11px] text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl">
-          {isBn
+          {canManage
+            ? isBn
+              ? 'শ্রেণিবিন্যাসের তথ্য সরাসরি সুপাবেজ ডেটাবেসের সাথে সমন্বিত। অনুমোদিত পরিবর্তন পাবলিক রিপোর্টিং অপশনে প্রযোজ্য হবে।'
+              : 'Taxonomy is synchronized directly with Supabase. Authorized changes apply to public reporting options.'
+            : isBn
             ? 'শ্রেণিবিন্যাসের তথ্য সরাসরি সুপাবেজ (Supabase) ডেটাবেস থেকে রীড-অনলি মোডে লোড করা হয়েছে।'
             : 'Taxonomy configuration is synchronized directly from Supabase database tables in read-only mode.'}
         </div>
       </div>
     </Drawer>
+
+    <CategoryEditModal
+      isOpen={isEditOpen}
+      itemType={target.type}
+      item={target.data}
+      isSaving={isSaving}
+      error={saveError}
+      onClose={handleCloseEdit}
+      onSave={handleSave}
+    />
+    </>
   );
 };
 
