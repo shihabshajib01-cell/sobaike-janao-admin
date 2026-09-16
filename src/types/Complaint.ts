@@ -14,6 +14,15 @@ export type ComplaintLifecycleStatus =
 
 export type ComplaintUrgency = 'low' | 'medium' | 'high' | 'urgent';
 
+export type ComplaintPrivacyChoice = 'anonymous' | 'admin_only' | 'public_identity';
+
+export interface ComplaintPublicationPreferences {
+  showSubjectName: boolean;
+  showOrganization: boolean;
+  showGeneralLocation: boolean;
+  showDescription: boolean;
+}
+
 export type HarassmentAgeGroup =
   | 'under_18'
   | '18_29'
@@ -103,6 +112,9 @@ export interface Complaint {
   citizenName?: string;
   citizenPhone?: string;
   isAnonymous?: boolean;
+  privacyChoice?: ComplaintPrivacyChoice;
+  confirmPublicIdentity?: boolean;
+  publicationPreferences?: ComplaintPublicationPreferences;
   assignedDepartment?: string;
   upvotesCount: number;
   commentsCount: number;
