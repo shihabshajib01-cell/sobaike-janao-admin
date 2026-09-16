@@ -106,6 +106,9 @@ export interface SupabaseComplaintRow {
   recent_bill_amount?: number | null;
   previous_bill_month?: string | null;
   previous_bill_amount?: number | null;
+  bribery_department?: string | null;
+  bribery_service?: string | null;
+  bribery_amount?: number | null;
   created_at: string;
   updated_at: string | null;
 }
@@ -418,6 +421,12 @@ export function mapSupabaseRowToComplaint(
     previousBillAmount:
       row.previous_bill_amount !== null && row.previous_bill_amount !== undefined
         ? Number(row.previous_bill_amount)
+        : null,
+    briberyDepartment: row.bribery_department ?? null,
+    briberyService: row.bribery_service ?? null,
+    briberyAmount:
+      row.bribery_amount !== null && row.bribery_amount !== undefined
+        ? Number(row.bribery_amount)
         : null,
     incidentDate: row.incident_date ?? null,
     incidentTime: row.incident_time ?? null,

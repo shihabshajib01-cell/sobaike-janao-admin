@@ -13,6 +13,7 @@ import {
   Lock,
 } from 'lucide-react';
 import { cn } from '@/utils';
+import { getBriberyDepartmentLabel } from '@/utils/briberyDepartment';
 import { UtilityBillComparisonCard } from './UtilityBillComparisonCard';
 import { UtilityOutageDetailsCard } from './UtilityOutageDetailsCard';
 import {
@@ -32,6 +33,13 @@ export const ComplaintInfoSection: React.FC<ComplaintInfoSectionProps> = ({
 }) => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
+  const isBriberyReport =
+    complaint.categoryId === 'extortion' && complaint.subcategoryId === 'bribe-demanded-service';
+  const hasBriberyDetails = Boolean(
+    complaint.briberyDepartment ||
+      complaint.briberyService ||
+      (complaint.briberyAmount !== null && complaint.briberyAmount !== undefined)
+  );
 
   const hasBnDesc = Boolean(complaint.descriptionBn?.trim());
   const hasEnDesc = Boolean(
@@ -221,6 +229,44 @@ export const ComplaintInfoSection: React.FC<ComplaintInfoSectionProps> = ({
 
       {/* Utility Outage / Event Details Card (if incident date/time or outage info is present) */}
       <UtilityOutageDetailsCard complaint={complaint} />
+
+      {isBriberyReport && hasBriberyDetails && (
+        <Card variant="default">
+          <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Layers className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <span>{isBn ? 'ঘুষ সংক্রান্ত তথ্য' : 'Bribery Details'}</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {complaint.briberyDepartment && (
+                <div className="space-y-1">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{isBn ? 'দপ্তর' : 'Department'}</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                    {getBriberyDepartmentLabel(complaint.briberyDepartment, isBn ? 'bn' : 'en')}
+                  </p>
+                </div>
+              )}
+              {complaint.briberyService && (
+                <div className="space-y-1">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{isBn ? 'সেবা বা প্রক্রিয়া' : 'Service or Process'}</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{complaint.briberyService}</p>
+                </div>
+              )}
+              {complaint.briberyAmount !== null && complaint.briberyAmount !== undefined && (
+                <div className="space-y-1">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{isBn ? 'টাকার পরিমাণ' : 'Amount (BDT)'}</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">৳{complaint.briberyAmount.toLocaleString()}</p>
+                </div>
+              )}
+            </div>
+            <p className="mt-3 text-[11px] text-slate-400 dark:text-slate-500">
+              {isBn ? 'নাগরিকের জমা দেওয়া ঘুষ-সংক্রান্ত কাঠামোবদ্ধ তথ্য।' : 'Structured bribery information submitted by the citizen.'}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Harassment Classification Context (read-only citizen-submitted metadata) */}
       {complaint.categoryId === 'harassment' && (

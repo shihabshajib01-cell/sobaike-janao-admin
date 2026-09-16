@@ -142,6 +142,9 @@ export interface Complaint {
   recentBillAmount?: number | null;
   previousBillMonth?: string | null;
   previousBillAmount?: number | null;
+  briberyDepartment?: string | null;
+  briberyService?: string | null;
+  briberyAmount?: number | null;
   incidentDate?: string | null;
   incidentTime?: string | null;
   utilityEndTime?: string | null;
