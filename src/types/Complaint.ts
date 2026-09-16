@@ -17,10 +17,10 @@ export type ComplaintUrgency = 'low' | 'medium' | 'high' | 'urgent';
 export type ComplaintPrivacyChoice = 'anonymous' | 'admin_only' | 'public_identity';
 
 export interface ComplaintPublicationPreferences {
-  showSubjectName: boolean;
-  showOrganization: boolean;
-  showGeneralLocation: boolean;
-  showDescription: boolean;
+  showSubjectName?: boolean;
+  showOrganization?: boolean;
+  showGeneralLocation?: boolean;
+  showDescription?: boolean;
 }
 
 export type HarassmentAgeGroup =
