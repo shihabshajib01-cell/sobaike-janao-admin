@@ -21,6 +21,10 @@ import {
   HarassmentReportingFor,
   WorkflowActionResult,
 } from '@/types/Complaint';
+import {
+  parseComplaintPrivacyChoice,
+  parseComplaintPublicationPreferences,
+} from './complaintPrivacy';
 
 export interface SupabaseReporterLocationRow {
   complaint_id: string;
@@ -319,7 +323,9 @@ export function mapSupabaseRowToComplaint(
     : 'submitted';
 
   // Privacy & Citizen Details
-  const isAnonymous = row.privacy_choice === 'anonymous';
+  const privacyChoice = parseComplaintPrivacyChoice(row.privacy_choice);
+  const isAnonymous = privacyChoice === 'anonymous';
+  const publicationPreferences = parseComplaintPublicationPreferences(row.publication_preferences);
   const citizenName = row.reporter_name?.trim() || undefined;
 
   // Check if reporter_contact looks like a phone number
@@ -388,6 +394,12 @@ export function mapSupabaseRowToComplaint(
     citizenName,
     citizenPhone,
     isAnonymous,
+    privacyChoice,
+    confirmPublicIdentity:
+      typeof row.confirm_public_identity === 'boolean'
+        ? row.confirm_public_identity
+        : undefined,
+    publicationPreferences,
     hasSupportingInfo: Boolean(
       row.has_supporting_info ||
       (Array.isArray(row.evidence_types) && row.evidence_types.length > 0)
