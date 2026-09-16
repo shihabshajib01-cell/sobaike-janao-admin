@@ -65,6 +65,37 @@ export const ComplaintInfoSection: React.FC<ComplaintInfoSectionProps> = ({
     }
   }, [hasBothDesc, hasOnlyBn, hasOnlyEn]);
 
+  const publicationPreferenceRows = complaint.publicationPreferences
+    ? [
+        {
+          key: 'showSubjectName' as const,
+          labelEn: 'Subject name',
+          labelBn: 'অভিযুক্ত/বিষয়ের নাম',
+        },
+        {
+          key: 'showOrganization' as const,
+          labelEn: 'Organization',
+          labelBn: 'প্রতিষ্ঠান',
+        },
+        {
+          key: 'showGeneralLocation' as const,
+          labelEn: 'General location',
+          labelBn: 'সাধারণ অবস্থান',
+        },
+        {
+          key: 'showDescription' as const,
+          labelEn: 'Description',
+          labelBn: 'বিবরণ',
+        },
+      ]
+    : [];
+
+  const renderPreferenceValue = (value: boolean | undefined) => {
+    if (value === true) return isBn ? 'প্রদর্শনের অনুমতি' : 'Show';
+    if (value === false) return isBn ? 'গোপন রাখুন' : 'Hide';
+    return isBn ? 'উল্লেখ করা হয়নি' : 'Not specified';
+  };
+
   return (
     <div className={cn('space-y-6', className)}>
       {/* 1. Description Section */}
@@ -234,7 +265,7 @@ export const ComplaintInfoSection: React.FC<ComplaintInfoSectionProps> = ({
         </Card>
       )}
 
-      {/* 2. Reporter Information & Verification Card */}
+      {/* 2. Reporter Information & Privacy Card */}
       <Card variant="default">
         <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -252,15 +283,24 @@ export const ComplaintInfoSection: React.FC<ComplaintInfoSectionProps> = ({
                 {isBn ? 'নাগরিক পরিচয় ধরন' : 'Submission Identity Mode'}
               </span>
               <div className="pt-0.5">
-                {complaint.isAnonymous ? (
+                {complaint.privacyChoice === 'anonymous' ? (
                   <Badge status="default" size="md">
                     <Lock className="w-3 h-3 mr-1 text-slate-400" />
-                    {isBn ? 'গোপনীয় / বেনামে দাখিলকৃত' : 'Anonymous Citizen Submission'}
+                    {isBn ? 'বেনামী দাখিল' : 'Anonymous submission'}
+                  </Badge>
+                ) : complaint.privacyChoice === 'admin_only' ? (
+                  <Badge status="default" size="md">
+                    <Lock className="w-3 h-3 mr-1 text-slate-400" />
+                    {isBn ? 'পরিচয় শুধু অ্যাডমিনের জন্য দৃশ্যমান' : 'Identity visible to Admin only'}
+                  </Badge>
+                ) : complaint.privacyChoice === 'public_identity' ? (
+                  <Badge status="pending" size="md">
+                    <ShieldCheck className="w-3 h-3 mr-1 text-amber-500" />
+                    {isBn ? 'পাবলিক পরিচয় প্রকাশের অনুরোধ' : 'Public identity requested'}
                   </Badge>
                 ) : (
-                  <Badge status="approved" size="md">
-                    <ShieldCheck className="w-3 h-3 mr-1 text-emerald-500" />
-                    {isBn ? 'যাচাইকৃত নাগরিক' : 'Verified Citizen'}
+                  <Badge status="default" size="md">
+                    {isBn ? 'উল্লেখ করা হয়নি' : 'Not specified'}
                   </Badge>
                 )}
               </div>
@@ -276,7 +316,7 @@ export const ComplaintInfoSection: React.FC<ComplaintInfoSectionProps> = ({
                   ? isBn
                     ? 'বেনামী নাগরিক (সুরক্ষিত)'
                     : 'Anonymous Citizen (Protected)'
-                  : complaint.citizenName || (isBn ? 'নাম প্রকাশে অনিচ্ছুক' : 'Not provided')}
+                  : complaint.citizenName || (isBn ? 'নাম প্রদান করা হয়নি' : 'Not provided')}
               </p>
             </div>
 
@@ -293,6 +333,27 @@ export const ComplaintInfoSection: React.FC<ComplaintInfoSectionProps> = ({
               </div>
             )}
 
+            {complaint.privacyChoice === 'public_identity' && (
+              <div className="space-y-1">
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  {isBn ? 'পাবলিক পরিচয় নিশ্চিতকরণ' : 'Public Identity Confirmation'}
+                </span>
+                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                  {complaint.confirmPublicIdentity === true
+                    ? isBn
+                      ? 'নাগরিক নিশ্চিত করেছেন'
+                      : 'Confirmed by citizen'
+                    : complaint.confirmPublicIdentity === false
+                    ? isBn
+                      ? 'নাগরিক নিশ্চিত করেননি'
+                      : 'Not confirmed by citizen'
+                    : isBn
+                    ? 'উল্লেখ করা হয়নি'
+                    : 'Not specified'}
+                </p>
+              </div>
+            )}
+
             {/* Platform Trust & Protection Note */}
             <div className="space-y-1">
               <span className="text-xs text-slate-500 dark:text-slate-400">
@@ -305,6 +366,36 @@ export const ComplaintInfoSection: React.FC<ComplaintInfoSectionProps> = ({
               </p>
             </div>
           </div>
+
+          {publicationPreferenceRows.length > 0 && (
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
+              <div>
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {isBn ? 'নাগরিকের প্রকাশনা পছন্দ' : 'Citizen Publication Preferences'}
+                </p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  {isBn
+                    ? 'নাগরিক যেভাবে জমা দিয়েছেন সেভাবেই শুধু-পঠনযোগ্যভাবে দেখানো হচ্ছে। অনুপস্থিত পছন্দ অনুমান করা হয়নি।'
+                    : 'Read-only values as submitted by the citizen. Missing preferences are not inferred.'}
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {publicationPreferenceRows.map(({ key, labelEn, labelBn }) => (
+                  <div
+                    key={key}
+                    className="flex items-center justify-between gap-3 rounded-md border border-slate-200 dark:border-slate-800 px-3 py-2"
+                  >
+                    <p className="text-xs text-slate-600 dark:text-slate-400">
+                      {isBn ? labelBn : labelEn}
+                    </p>
+                    <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 text-right">
+                      {renderPreferenceValue(complaint.publicationPreferences?.[key])}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

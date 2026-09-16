@@ -6,6 +6,7 @@ export * from './MobileComplaintCardList';
 export * from './ComplaintEmptyState';
 export * from './ComplaintSummaryCard';
 export * from './ComplaintInfoSection';
+export * from './ComplaintPartiesCard';
 export * from './ComplaintMediaViewer';
 export * from './ComplaintLocationCard';
 export * from './ComplaintTimeline';

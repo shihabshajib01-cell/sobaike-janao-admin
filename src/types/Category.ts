@@ -4,6 +4,7 @@
  */
 
 export type TaxonomyStatus = 'active' | 'inactive';
+export type TaxonomyItemType = 'segment' | 'subcategory';
 
 export interface TaxonomySegment {
   id: string;
@@ -36,4 +37,13 @@ export interface TaxonomyStats {
   segments: number;
   subcategories: number;
   activeItems: number;
+}
+
+export interface TaxonomyUpdateInput {
+  itemType: TaxonomyItemType;
+  id: string;
+  nameEn: string;
+  nameBn: string;
+  status: TaxonomyStatus;
+  order: number;
 }

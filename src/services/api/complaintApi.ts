@@ -20,6 +20,7 @@ import {
   getDistinctLocations,
   SupabaseSegment,
 } from './supabaseComplaintService';
+import { getComplaintIncidentLocation } from './complaintIncidentLocationApi';
 import { isSupabaseConfigured } from '@/lib/supabase';
 
 export interface ComplaintDetailData {
@@ -36,6 +37,19 @@ function assertSupabaseConfigured(): void {
   if (!isSupabaseConfigured) {
     throw new Error('Supabase complaint service is not configured in this environment.');
   }
+}
+
+async function enrichIncidentLocation(complaint: Complaint): Promise<Complaint> {
+  const canonicalLocation = await getComplaintIncidentLocation(complaint.id);
+  if (!canonicalLocation) return complaint;
+
+  return {
+    ...complaint,
+    location: {
+      ...complaint.location,
+      ...canonicalLocation,
+    },
+  };
 }
 
 export class ComplaintApi {
@@ -87,7 +101,8 @@ export class ComplaintApi {
    */
   async getComplaintById(id: string): Promise<Complaint | null> {
     assertSupabaseConfigured();
-    return await supabaseComplaintService.getComplaintById(id);
+    const complaint = await supabaseComplaintService.getComplaintById(id);
+    return complaint ? await enrichIncidentLocation(complaint) : null;
   }
 
   /**
@@ -98,7 +113,13 @@ export class ComplaintApi {
     options?: { loadEvidence?: boolean; loadReporterLocation?: boolean }
   ): Promise<ComplaintDetailData | null> {
     assertSupabaseConfigured();
-    return await supabaseComplaintService.getComplaintDetail(id, options);
+    const detail = await supabaseComplaintService.getComplaintDetail(id, options);
+    if (!detail) return null;
+
+    return {
+      ...detail,
+      complaint: await enrichIncidentLocation(detail.complaint),
+    };
   }
 
   /**

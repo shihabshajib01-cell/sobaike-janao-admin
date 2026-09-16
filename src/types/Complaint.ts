@@ -14,6 +14,15 @@ export type ComplaintLifecycleStatus =
 
 export type ComplaintUrgency = 'low' | 'medium' | 'high' | 'urgent';
 
+export type ComplaintPrivacyChoice = 'anonymous' | 'admin_only' | 'public_identity';
+
+export interface ComplaintPublicationPreferences {
+  showSubjectName?: boolean;
+  showOrganization?: boolean;
+  showGeneralLocation?: boolean;
+  showDescription?: boolean;
+}
+
 export type HarassmentAgeGroup =
   | 'under_18'
   | '18_29'
@@ -36,8 +45,18 @@ export type HarassmentReportingFor = 'self' | 'someone_else';
 export interface ComplaintLocation {
   addressEn: string;
   addressBn: string;
+  /** Legacy Admin aliases kept for existing list/edit components. */
   ward: string;
   zone: string;
+  /** Canonical citizen-submitted incident-location fields. */
+  division?: string;
+  district?: string;
+  upazilaOrThana?: string;
+  area?: string;
+  road?: string;
+  landmark?: string;
+  formattedAddress?: string;
+  placeId?: string;
   coordinates?: [number, number]; // [latitude, longitude]
 }
 
@@ -103,6 +122,9 @@ export interface Complaint {
   citizenName?: string;
   citizenPhone?: string;
   isAnonymous?: boolean;
+  privacyChoice?: ComplaintPrivacyChoice;
+  confirmPublicIdentity?: boolean;
+  publicationPreferences?: ComplaintPublicationPreferences;
   assignedDepartment?: string;
   upvotesCount: number;
   commentsCount: number;

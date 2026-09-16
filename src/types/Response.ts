@@ -44,6 +44,10 @@ export interface ResponseItem {
   updatedAt: string;
   publishedAt?: string | null;
 
+  rejectionReason?: string | null;
+  rejectionNote?: string | null;
+  unpublishReason?: string | null;
+
   contactConsent: boolean;
   contactInfo?: string | null;
   contactEmailOrPhone?: string | null;

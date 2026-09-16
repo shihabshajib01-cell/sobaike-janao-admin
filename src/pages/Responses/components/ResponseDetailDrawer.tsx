@@ -367,6 +367,52 @@ export const ResponseDetailDrawer: React.FC<ResponseDetailDrawerProps> = ({
           </div>
         </div>
 
+        {(response.rejectionReason || response.rejectionNote || response.unpublishReason) && (
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 bg-white dark:bg-slate-900 shadow-xs">
+            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100 dark:border-slate-800">
+              <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                {isBn ? 'অভ্যন্তরীণ মডারেশন রেকর্ড' : 'Internal Moderation Record'}
+              </h4>
+            </div>
+
+            <div className="space-y-3">
+              {response.rejectionReason && (
+                <div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    {isBn ? 'প্রত্যাখ্যানের কারণ' : 'Rejection Reason'}
+                  </p>
+                  <p className="text-sm text-slate-800 dark:text-slate-200 mt-1 whitespace-pre-wrap">
+                    {response.rejectionReason}
+                  </p>
+                </div>
+              )}
+
+              {response.rejectionNote && (
+                <div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    {isBn ? 'প্রত্যাখ্যানের প্রশাসনিক নোট' : 'Rejection Administrative Note'}
+                  </p>
+                  <p className="text-sm text-slate-800 dark:text-slate-200 mt-1 whitespace-pre-wrap">
+                    {response.rejectionNote}
+                  </p>
+                </div>
+              )}
+
+              {response.unpublishReason && (
+                <div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    {isBn ? 'অপ্রকাশিত করার কারণ' : 'Unpublish Reason'}
+                  </p>
+                  <p className="text-sm text-slate-800 dark:text-slate-200 mt-1 whitespace-pre-wrap">
+                    {response.unpublishReason}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* SECTION 4: Type-specific metadata */}
         {response.responseType === 'citizen_information' && (
           <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 bg-white dark:bg-slate-900 shadow-xs">

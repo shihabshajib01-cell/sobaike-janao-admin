@@ -72,18 +72,6 @@ const SUBCATEGORIES: Record<string, { value: string; labelEn: string; labelBn: s
   ],
 };
 
-const WARD_OPTIONS = [
-  'Ward 01',
-  'Ward 09',
-  'Ward 13',
-  'Ward 14',
-  'Ward 18',
-  'Ward 20',
-  'Ward 22',
-  'Ward 31',
-  'Ward 48',
-];
-
 export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
   complaint,
   className,
@@ -110,7 +98,7 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
   const [editCategoryId, setEditCategoryId] = useState(complaint.categoryId || 'harassment');
   const [editSubcategoryId, setEditSubcategoryId] = useState(complaint.subcategoryId || '');
   const [editUrgency, setEditUrgency] = useState<ComplaintUrgency>(complaint.urgency || 'medium');
-  const [editWard, setEditWard] = useState(complaint.location?.ward || 'Ward 14');
+  const [editWard, setEditWard] = useState(complaint.location?.ward || '');
   const [editZone, setEditZone] = useState(complaint.location?.zone || '');
   const [editAddressEn, setEditAddressEn] = useState(complaint.location?.addressEn || '');
   const [editAddressBn, setEditAddressBn] = useState(complaint.location?.addressBn || '');
@@ -124,7 +112,7 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
     setEditCategoryId(comp.categoryId || 'harassment');
     setEditSubcategoryId(comp.subcategoryId || '');
     setEditUrgency(comp.urgency || 'medium');
-    setEditWard(comp.location?.ward || 'Ward 14');
+    setEditWard(comp.location?.ward || '');
     setEditZone(comp.location?.zone || '');
     setEditAddressEn(comp.location?.addressEn || '');
     setEditAddressBn(comp.location?.addressBn || '');
@@ -196,8 +184,8 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
         urgency: editUrgency,
         location: {
           ...complaint.location,
-          ward: editWard,
-          zone: editZone || complaint.location?.zone || '',
+          ward: editWard.trim(),
+          zone: editZone.trim(),
           addressEn: editAddressEn || complaint.location?.addressEn || '',
           addressBn: editAddressBn || complaint.location?.addressBn || '',
         },
@@ -511,7 +499,7 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
             />
           </div>
 
-          {/* Urgency & Ward */}
+          {/* Urgency & Incident Location */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Select
               label={isBn ? 'জরুরিতা / প্রায়োরিটি' : 'Urgency Priority'}
@@ -526,20 +514,24 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
               disabled={isSubmitting}
             />
 
-            <Select
-              label={isBn ? 'ওয়ার্ড / এলাকা' : 'Ward / Zone'}
+            <Input
+              label={isBn ? 'উপজেলা / থানা' : 'Upazila / Thana'}
               value={editWard}
               onChange={(e) => setEditWard(e.target.value)}
-              options={WARD_OPTIONS.map((w) => ({
-                value: w,
-                label: w,
-              }))}
+              placeholder={isBn ? 'উপজেলা বা থানার নাম...' : 'Upazila or thana...'}
               disabled={isSubmitting}
             />
           </div>
 
-          {/* Address & Zone */}
+          {/* Address & District */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input
+              label={isBn ? 'জেলা' : 'District'}
+              value={editZone}
+              onChange={(e) => setEditZone(e.target.value)}
+              placeholder={isBn ? 'জেলার নাম...' : 'District...'}
+              disabled={isSubmitting}
+            />
             <Input
               label={isBn ? 'ঠিকানা (বাংলা)' : 'Address (Bangla)'}
               value={editAddressBn}
@@ -547,14 +539,15 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
               placeholder="ঠিকানা বাংলায়..."
               disabled={isSubmitting}
             />
-            <Input
-              label={isBn ? 'ঠিকানা (ইংরেজি)' : 'Address (English)'}
-              value={editAddressEn}
-              onChange={(e) => setEditAddressEn(e.target.value)}
-              placeholder="Address in English..."
-              disabled={isSubmitting}
-            />
           </div>
+
+          <Input
+            label={isBn ? 'ঠিকানা (ইংরেজি)' : 'Address (English)'}
+            value={editAddressEn}
+            onChange={(e) => setEditAddressEn(e.target.value)}
+            placeholder="Address in English..."
+            disabled={isSubmitting}
+          />
 
           {/* Descriptions */}
           <div className="space-y-3">

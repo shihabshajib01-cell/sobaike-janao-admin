@@ -36,6 +36,9 @@ export interface RawResponseRow {
   created_at: string;
   updated_at: string;
   published_at?: string | null;
+  rejection_reason?: string | null;
+  rejection_note?: string | null;
+  unpublish_reason?: string | null;
   contact_consent: boolean;
   contact_info?: string | null;
   contact_email_or_phone?: string | null;
@@ -105,6 +108,9 @@ export function mapResponseRow(raw: RawResponseRow): ResponseItem {
     createdAt: raw.created_at,
     updatedAt: raw.updated_at,
     publishedAt: raw.published_at || null,
+    rejectionReason: raw.rejection_reason || null,
+    rejectionNote: raw.rejection_note || null,
+    unpublishReason: raw.unpublish_reason || null,
     contactConsent: Boolean(raw.contact_consent),
     contactInfo: raw.contact_info || null,
     contactEmailOrPhone: raw.contact_email_or_phone || null,

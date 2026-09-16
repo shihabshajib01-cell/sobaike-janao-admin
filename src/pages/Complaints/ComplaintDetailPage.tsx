@@ -14,6 +14,7 @@ import {
   ReporterDeviceLocation,
 } from '@/types/Complaint';
 import { complaintApi } from '@/services/api';
+import { getComplaintParties, ComplaintParty } from '@/services/api/complaintPartiesApi';
 import {
   ComplaintSummaryCard,
   ComplaintInfoSection,
@@ -22,6 +23,7 @@ import {
   ComplaintTimeline,
   ComplaintActionArea,
   ComplaintVersionHistory,
+  ComplaintPartiesCard,
 } from '@/components/complaints';
 import {
   RefreshCw,
@@ -53,6 +55,9 @@ export const ComplaintDetailPage: React.FC = () => {
   const [reporterLocationLoading, setReporterLocationLoading] = useState<boolean>(false);
   const [reporterLocationError, setReporterLocationError] = useState<string | null>(null);
   const [reporterLocationDenied, setReporterLocationDenied] = useState<boolean>(false);
+  const [parties, setParties] = useState<ComplaintParty[]>([]);
+  const [partiesLoading, setPartiesLoading] = useState<boolean>(false);
+  const [partiesError, setPartiesError] = useState<string | null>(null);
 
   const fetchComplaintData = useCallback(async () => {
     if (!id) return;
@@ -87,6 +92,19 @@ export const ComplaintDetailPage: React.FC = () => {
       setLoading(false);
     }
   }, [id, canViewEvidence]);
+
+  const fetchParties = useCallback(async () => {
+    if (!id) return;
+    setPartiesLoading(true);
+    setPartiesError(null);
+    try {
+      setParties(await getComplaintParties(id));
+    } catch (err: any) {
+      setPartiesError(err?.message || 'Failed to load mentioned-party information.');
+    } finally {
+      setPartiesLoading(false);
+    }
+  }, [id]);
 
   const handleRetryTimeline = useCallback(async () => {
     if (!id) return;
@@ -160,13 +178,16 @@ export const ComplaintDetailPage: React.FC = () => {
     setReporterLocation(null);
     setReporterLocationError(null);
     setReporterLocationDenied(false);
+    setParties([]);
+    setPartiesError(null);
     setNotFound(false);
     setLoadError(false);
   }, [id]);
 
   useEffect(() => {
     fetchComplaintData();
-  }, [fetchComplaintData]);
+    fetchParties();
+  }, [fetchComplaintData, fetchParties]);
 
   const statusBadgeMap: Record<
     ComplaintLifecycleStatus,
@@ -331,9 +352,12 @@ export const ComplaintDetailPage: React.FC = () => {
             <Button
               variant="secondary"
               size="sm"
-              onClick={fetchComplaintData}
-              disabled={loading}
-              leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />}
+              onClick={() => {
+                fetchComplaintData();
+                fetchParties();
+              }}
+              disabled={loading || partiesLoading}
+              leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${loading || partiesLoading ? 'animate-spin' : ''}`} />}
               aria-label="Refresh complaint"
             >
               <span className="hidden sm:inline">{isBn ? 'রিফ্রেশ' : 'Refresh'}</span>
@@ -383,6 +407,14 @@ export const ComplaintDetailPage: React.FC = () => {
         <div className="lg:col-span-7 xl:col-span-8 space-y-6">
           {/* Complaint Description & Reporter Info */}
           <ComplaintInfoSection complaint={complaint} />
+
+          {/* Mentioned People & Organizations */}
+          <ComplaintPartiesCard
+            parties={parties}
+            loading={partiesLoading}
+            error={partiesError}
+            onRetry={fetchParties}
+          />
 
           {/* Version / Revision History if edited */}
           <ComplaintVersionHistory complaint={complaint} />
