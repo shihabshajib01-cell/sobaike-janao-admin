@@ -21,6 +21,7 @@ import {
   SupabaseSegment,
 } from './supabaseComplaintService';
 import { getComplaintIncidentLocation } from './complaintIncidentLocationApi';
+import { getComplaintMobJusticeDetails } from './mobJusticeDetailsApi';
 import { isSupabaseConfigured } from '@/lib/supabase';
 
 export interface ComplaintDetailData {
@@ -39,16 +40,24 @@ function assertSupabaseConfigured(): void {
   }
 }
 
-async function enrichIncidentLocation(complaint: Complaint): Promise<Complaint> {
-  const canonicalLocation = await getComplaintIncidentLocation(complaint.id);
-  if (!canonicalLocation) return complaint;
+async function enrichComplaintDetail(complaint: Complaint): Promise<Complaint> {
+  const shouldLoadMobJustice =
+    complaint.categoryId === 'public_safety' && complaint.subcategoryId === 'mob-justice';
+
+  const [canonicalLocation, mobJusticeDetails] = await Promise.all([
+    getComplaintIncidentLocation(complaint.id),
+    shouldLoadMobJustice ? getComplaintMobJusticeDetails(complaint.id) : Promise.resolve(null),
+  ]);
 
   return {
     ...complaint,
-    location: {
-      ...complaint.location,
-      ...canonicalLocation,
-    },
+    location: canonicalLocation
+      ? {
+          ...complaint.location,
+          ...canonicalLocation,
+        }
+      : complaint.location,
+    mobJusticeDetails: shouldLoadMobJustice ? mobJusticeDetails : null,
   };
 }
 
@@ -102,7 +111,7 @@ export class ComplaintApi {
   async getComplaintById(id: string): Promise<Complaint | null> {
     assertSupabaseConfigured();
     const complaint = await supabaseComplaintService.getComplaintById(id);
-    return complaint ? await enrichIncidentLocation(complaint) : null;
+    return complaint ? await enrichComplaintDetail(complaint) : null;
   }
 
   /**
@@ -118,7 +127,7 @@ export class ComplaintApi {
 
     return {
       ...detail,
-      complaint: await enrichIncidentLocation(detail.complaint),
+      complaint: await enrichComplaintDetail(detail.complaint),
     };
   }
 
