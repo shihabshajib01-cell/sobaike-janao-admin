@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge, BadgeStatus } from '@/components/ui/Badge';
 import { useLanguage } from '@/context/LanguageContext';
@@ -10,15 +10,21 @@ import {
   Tag,
   AlertTriangle,
   Building2,
-  ThumbsUp,
-  MessageSquare,
+  Eye,
+  Share2,
 } from 'lucide-react';
 import { cn } from '@/utils';
+import {
+  complaintEngagementApi,
+  ComplaintEngagementCounts,
+} from '@/services/api/engagementApi';
 
 export interface ComplaintSummaryCardProps {
   complaint: Complaint;
   className?: string;
 }
+
+const EMPTY_ENGAGEMENT: ComplaintEngagementCounts = { viewCount: 0, shareCount: 0 };
 
 export const ComplaintSummaryCard: React.FC<ComplaintSummaryCardProps> = ({
   complaint,
@@ -26,6 +32,17 @@ export const ComplaintSummaryCard: React.FC<ComplaintSummaryCardProps> = ({
 }) => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
+  const [engagement, setEngagement] = useState<ComplaintEngagementCounts>(EMPTY_ENGAGEMENT);
+
+  useEffect(() => {
+    let active = true;
+    complaintEngagementApi.getByComplaintId(complaint.id).then((counts) => {
+      if (active) setEngagement(counts);
+    });
+    return () => {
+      active = false;
+    };
+  }, [complaint.id]);
 
   const statusBadgeMap: Record<
     ComplaintLifecycleStatus,
@@ -80,7 +97,6 @@ export const ComplaintSummaryCard: React.FC<ComplaintSummaryCardProps> = ({
 
   return (
     <Card variant="default" className={cn('overflow-hidden', className)}>
-      {/* Top Banner / ID Strip */}
       <CardHeader className="bg-slate-50/70 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800/80 pb-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
@@ -101,27 +117,24 @@ export const ComplaintSummaryCard: React.FC<ComplaintSummaryCardProps> = ({
             </div>
           </div>
 
-          {/* Social Stats */}
           <div className="flex items-center gap-3 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-md border border-slate-200/80 dark:border-slate-700/80 text-xs">
             <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
-              <ThumbsUp className="w-3.5 h-3.5 text-sky-500" />
-              <span className="font-semibold">{formatNumber(complaint.upvotesCount)}</span>
-              <span className="text-slate-400">{isBn ? 'ভোট' : 'votes'}</span>
+              <Eye className="w-3.5 h-3.5 text-sky-500" aria-hidden="true" />
+              <span className="font-semibold">{formatNumber(engagement.viewCount)}</span>
+              <span className="text-slate-400">{isBn ? 'ভিউ' : 'views'}</span>
             </div>
             <span className="text-slate-300 dark:text-slate-600">|</span>
             <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
-              <MessageSquare className="w-3.5 h-3.5 text-indigo-500" />
-              <span className="font-semibold">{formatNumber(complaint.commentsCount)}</span>
-              <span className="text-slate-400">{isBn ? 'মন্তব্য' : 'comments'}</span>
+              <Share2 className="w-3.5 h-3.5 text-indigo-500" aria-hidden="true" />
+              <span className="font-semibold">{formatNumber(engagement.shareCount)}</span>
+              <span className="text-slate-400">{isBn ? 'শেয়ার' : 'shares'}</span>
             </div>
           </div>
         </div>
       </CardHeader>
 
       <CardContent className="pt-5 space-y-4">
-        {/* Core Metadata Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Category */}
           <div className="space-y-1">
             <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
               <Tag className="w-3.5 h-3.5 text-slate-400" />
@@ -135,7 +148,6 @@ export const ComplaintSummaryCard: React.FC<ComplaintSummaryCardProps> = ({
             </span>
           </div>
 
-          {/* Location Area */}
           <div className="space-y-1">
             <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5 text-slate-400" />
@@ -149,7 +161,6 @@ export const ComplaintSummaryCard: React.FC<ComplaintSummaryCardProps> = ({
             </span>
           </div>
 
-          {/* Created Date */}
           <div className="space-y-1">
             <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-slate-400" />
@@ -164,7 +175,6 @@ export const ComplaintSummaryCard: React.FC<ComplaintSummaryCardProps> = ({
             </span>
           </div>
 
-          {/* Assigned Department */}
           <div className="space-y-1">
             <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
               <Building2 className="w-3.5 h-3.5 text-slate-400" />
