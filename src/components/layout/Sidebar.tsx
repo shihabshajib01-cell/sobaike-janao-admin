@@ -3,7 +3,7 @@ import { NavLink, Link, useLocation } from 'react-router-dom';
 import { ADMIN_NAVIGATION_ITEMS, getFirstAccessibleRoute } from '@/routes/routes.config';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
-import { Shield, ChevronRight, X, ShieldAlert } from 'lucide-react';
+import { Shield, ChevronRight, X, Sparkles, ShieldAlert } from 'lucide-react';
 import { cn } from '@/utils';
 
 export interface SidebarProps {
@@ -22,27 +22,38 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { hasPermission, isBootstrapMode } = useAuth();
   const location = useLocation();
 
+  // Primary accessible landing route for the brand logo
   const brandRoute = getFirstAccessibleRoute(hasPermission, isBootstrapMode);
 
+  // Filter navigation items by strictly assigned permissions
   const accessibleNavItems = ADMIN_NAVIGATION_ITEMS.filter((item) => {
     if (!item.requiredPermission) return true;
     return hasPermission(item.requiredPermission);
   });
 
+  // Close mobile sidebar on route change
   useEffect(() => {
-    if (onClose) onClose();
+    if (onClose) {
+      onClose();
+    }
   }, [location.pathname]);
 
+  // Handle ESC key to dismiss mobile sidebar
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen && onClose) onClose();
+      if (e.key === 'Escape' && isOpen && onClose) {
+        onClose();
+      }
     };
-    if (isOpen) window.addEventListener('keydown', handleKeyDown);
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
   return (
     <>
+      {/* Mobile Backdrop */}
       {isOpen && (
         <div
           onClick={onClose}
@@ -51,16 +62,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
         />
       )}
 
+      {/* Main Sidebar Element */}
       <aside
         className={cn(
           'fixed inset-y-0 left-0 z-50 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-200 ease-in-out',
+          // Desktop fixed styling
           'lg:translate-x-0',
           isCollapsed ? 'lg:w-20' : 'lg:w-64',
+          // Mobile responsive drawer
           isOpen ? 'translate-x-0' : '-translate-x-full',
           'w-64 max-w-[80vw]'
         )}
         aria-label="Admin Navigation"
       >
+        {/* Brand Header */}
         <div className="h-16 flex items-center justify-between px-5 border-b border-slate-200 dark:border-slate-800 shrink-0">
           <Link
             to={brandRoute}
@@ -81,6 +96,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           </Link>
 
+          {/* Close button on mobile */}
           <button
             type="button"
             onClick={onClose}
@@ -91,6 +107,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
 
+        {/* Navigation Items List */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
           {!isCollapsed && (
             <div className="px-3 pb-2 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
@@ -155,6 +172,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         </div>
                       )}
 
+                      {/* Active Accent Bar */}
                       {isActive && (
                         <div className="absolute left-0 top-1 bottom-1 w-1 bg-sky-600 dark:bg-sky-400 rounded-r" />
                       )}
@@ -166,6 +184,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </nav>
 
+        {/* Sidebar Footer */}
         <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
           {!isCollapsed ? (
             <div className="flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500 px-2">
