@@ -21,6 +21,18 @@ export interface ComplaintPublicationPreferences {
   showOrganization?: boolean;
   showGeneralLocation?: boolean;
   showDescription?: boolean;
+  /** Admin-curated public presentation. Raw citizen fields remain untouched. */
+  publicTitleBn?: string;
+  publicTitleEn?: string;
+  publicSummaryBn?: string;
+  publicSummaryEn?: string;
+}
+
+export interface ComplaintPublicationDraft {
+  publicTitleBn: string;
+  publicTitleEn: string;
+  publicSummaryBn: string;
+  publicSummaryEn: string;
 }
 
 export type HarassmentAgeGroup =
@@ -211,7 +223,6 @@ export interface ComplaintListResponse {
   pagination: ComplaintPagination;
   statusCounts: ComplaintStatusTabCount[];
 }
-
 
 export interface WorkflowActionResult {
   success: boolean;
