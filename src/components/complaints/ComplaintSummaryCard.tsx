@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Badge, BadgeStatus } from '@/components/ui/Badge';
 import { useLanguage } from '@/context/LanguageContext';
 import { Complaint, ComplaintLifecycleStatus, ComplaintUrgency } from '@/types/Complaint';
@@ -36,10 +36,7 @@ export const ComplaintSummaryCard: React.FC<ComplaintSummaryCardProps> = ({
   });
 
   useEffect(() => {
-    if (complaint.status !== 'published') {
-      setEngagement({ viewCount: 0, shareCount: 0 });
-      return;
-    }
+    if (complaint.status !== 'published') return;
 
     let active = true;
     void ComplaintEngagementService.getCounts(complaint.id).then((counts) => {
