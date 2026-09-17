@@ -53,38 +53,38 @@ export const ComplaintStatusTabs: React.FC<ComplaintStatusTabsProps> = ({
         className="flex items-center gap-1.5 flex-nowrap min-w-max"
       >
         {tabs.map((tab) => {
-          const isActive = activeStatus === tab.status;
-          const label = isBn ? tab.labelBn : tab.labelEn;
+        const isActive = activeStatus === tab.status;
+        const label = isBn ? tab.labelBn : tab.labelEn;
 
-          return (
-            <button
-              key={tab.status}
-              role="tab"
-              aria-selected={isActive}
-              onClick={() => onSelectStatus(tab.status)}
+        return (
+          <button
+            key={tab.status}
+            role="tab"
+            aria-selected={isActive}
+            onClick={() => onSelectStatus(tab.status)}
+            className={cn(
+              'flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all duration-150 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500',
+              isActive
+                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-2xs font-semibold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-800/40'
+            )}
+          >
+            <span>{label}</span>
+            <Badge
+              size="sm"
+              status={isActive ? tab.badgeStatus : 'default'}
               className={cn(
-                'flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all duration-150 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500',
+                'text-[10px] px-1.5 py-0 font-mono transition-colors',
                 isActive
-                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-2xs font-semibold'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-800/40'
+                  ? 'bg-slate-100 dark:bg-slate-700/80 font-bold'
+                  : 'bg-slate-200/60 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400'
               )}
             >
-              <span>{label}</span>
-              <Badge
-                size="sm"
-                status={isActive ? tab.badgeStatus : 'default'}
-                className={cn(
-                  'text-[10px] px-1.5 py-0 font-mono transition-colors',
-                  isActive
-                    ? 'bg-slate-100 dark:bg-slate-700/80 font-bold'
-                    : 'bg-slate-200/60 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400'
-                )}
-              >
-                {formatNumber(tab.count)}
-              </Badge>
-            </button>
-          );
-        })}
+              {formatNumber(tab.count)}
+            </Badge>
+          </button>
+        );
+      })}
       </div>
     </div>
   );
