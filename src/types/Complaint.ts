@@ -112,9 +112,13 @@ export interface ComplaintLocation {
   landmark?: string;
   formattedAddress?: string;
   placeId?: string;
-  coordinates?: [number, number];
+  coordinates?: [number, number]; // [latitude, longitude]
 }
 
+/**
+ * Citizen reporter device location captured privately at submission time.
+ * MUST NEVER be mixed with or substituted for ComplaintLocation (incident location).
+ */
 export interface ReporterDeviceLocation {
   complaintId: string;
   latitude: number;
@@ -146,7 +150,7 @@ export interface ComplaintVersion {
   location: ComplaintLocation;
   media: ComplaintMedia[];
   urgency: ComplaintUrgency;
-  editedAt: string;
+  editedAt: string; // ISO date string
   editedBy: {
     name: string;
     role: string;
@@ -186,10 +190,13 @@ export interface Complaint {
   evidenceDescription?: string;
   versions?: ComplaintVersion[];
   reporterDeviceLocation?: ReporterDeviceLocation | null;
+  // Harassment-only citizen classification dimensions. Read-only in Admin.
   affectedPersonAgeGroup?: HarassmentAgeGroup | null;
   allegedAbuserRelationship?: HarassmentAbuserRelationship | null;
   reportingFor?: HarassmentReportingFor | null;
+  // Public Safety / Mob Justice specific citizen classification. Read-only in Admin.
   mobJusticeDetails?: MobJusticeDetails | null;
+  // Utility Service Complaints specific attributes
   recentBillMonth?: string | null;
   recentBillAmount?: number | null;
   previousBillMonth?: string | null;
@@ -201,8 +208,8 @@ export interface Complaint {
   incidentTime?: string | null;
   utilityEndTime?: string | null;
   frequency?: string | null;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: string; // ISO date string
+  updatedAt: string; // ISO date string
 }
 
 export interface ComplaintStatusTabCount {
@@ -248,7 +255,7 @@ export interface ComplaintTimelineEvent {
   actorName: string;
   actorRole: string;
   actorAvatar?: string;
-  timestamp: string;
+  timestamp: string; // ISO date string
   titleEn: string;
   titleBn: string;
   descriptionEn?: string;
