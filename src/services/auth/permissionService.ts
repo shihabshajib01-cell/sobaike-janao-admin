@@ -10,6 +10,7 @@ export const CANONICAL_PERMISSIONS = [
   'complaints.unpublish',
   'complaints.reject',
   'categories.view',
+  'banners.manage',
   'location_activity.view',
   'map.view',
   'responses.view',
@@ -38,7 +39,6 @@ export interface UserPermissionProfile {
   isSuperAdmin: boolean;
 }
 
-
 /**
  * Service to resolve effective administrative role and permissions for an authenticated admin.
  * Follows strict database RBAC foundation:
@@ -49,9 +49,6 @@ export interface UserPermissionProfile {
  * 5. Fails closed immediately if RPC fails or caller is unauthorized (NO client table fallbacks)
  */
 export const permissionService = {
-  /**
-   * Resolves the effective authorization profile for the currently authenticated admin caller
-   */
   async resolveCurrentUserAuthorization(): Promise<UserPermissionProfile> {
     if (!isSupabaseConfigured) {
       throw new Error('Supabase authorization service is not configured in this environment.');
@@ -62,7 +59,6 @@ export const permissionService = {
       throw new Error('No authenticated user found for authorization context resolution.');
     }
 
-    // Authoritative check: Database runtime context RPC using auth.uid() exclusively
     const { data: contextData, error: rpcError } = await supabase.rpc(
       'admin_get_my_authorization_context'
     );
@@ -108,9 +104,6 @@ export const permissionService = {
     };
   },
 
-  /**
-   * Resolves the effective permission profile for the current user
-   */
   async resolveUserPermissions(_userId?: string): Promise<UserPermissionProfile> {
     return this.resolveCurrentUserAuthorization();
   },
