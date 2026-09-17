@@ -7,7 +7,7 @@ export interface PublicEngagementMetrics {
 
 export const publicEngagementService = {
   async getForComplaint(complaintId: string): Promise<PublicEngagementMetrics> {
-    if (!isSupabaseConfigured()) {
+    if (!isSupabaseConfigured) {
       return { viewCount: 0, shareCount: 0 };
     }
 
