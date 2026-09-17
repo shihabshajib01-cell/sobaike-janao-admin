@@ -25,9 +25,9 @@ import {
   ComplaintVersionHistory,
   ComplaintPartiesCard,
 } from '@/components/complaints';
+import { MobJusticeDetailsCard } from '@/components/complaints/MobJusticeDetailsCard';
 import {
   RefreshCw,
-  Share2,
   FileQuestion,
   RotateCcw,
   ArrowLeft,
@@ -325,6 +325,9 @@ export const ComplaintDetailPage: React.FC = () => {
     labelBn: complaint.status,
   };
 
+  const isMobJusticeComplaint =
+    complaint.categoryId === 'public_safety' && complaint.subcategoryId === 'mob-justice';
+
   return (
     <div className="space-y-6 pb-24 sm:pb-8">
       {/* 1. Page Header with Back Button and Quick Actions */}
@@ -407,6 +410,11 @@ export const ComplaintDetailPage: React.FC = () => {
         <div className="lg:col-span-7 xl:col-span-8 space-y-6">
           {/* Complaint Description & Reporter Info */}
           <ComplaintInfoSection complaint={complaint} />
+
+          {/* Mob Justice classification details - only for the new Public Safety type */}
+          {isMobJusticeComplaint && (
+            <MobJusticeDetailsCard details={complaint.mobJusticeDetails} />
+          )}
 
           {/* Mentioned People & Organizations */}
           <ComplaintPartiesCard
