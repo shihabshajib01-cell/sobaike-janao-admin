@@ -1,5 +1,5 @@
-import React from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import React, { useEffect, useState } from 'react';
+import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Badge, BadgeStatus } from '@/components/ui/Badge';
 import { useLanguage } from '@/context/LanguageContext';
 import { Complaint, ComplaintLifecycleStatus, ComplaintUrgency } from '@/types/Complaint';
@@ -10,10 +10,14 @@ import {
   Tag,
   AlertTriangle,
   Building2,
-  ThumbsUp,
-  MessageSquare,
+  Eye,
+  Share2,
 } from 'lucide-react';
 import { cn } from '@/utils';
+import {
+  ComplaintEngagementCounts,
+  ComplaintEngagementService,
+} from '@/services/api/complaintEngagementService';
 
 export interface ComplaintSummaryCardProps {
   complaint: Complaint;
@@ -26,6 +30,22 @@ export const ComplaintSummaryCard: React.FC<ComplaintSummaryCardProps> = ({
 }) => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
+  const [engagement, setEngagement] = useState<ComplaintEngagementCounts>({
+    viewCount: 0,
+    shareCount: 0,
+  });
+
+  useEffect(() => {
+    if (complaint.status !== 'published') return;
+
+    let active = true;
+    void ComplaintEngagementService.getCounts(complaint.id).then((counts) => {
+      if (active) setEngagement(counts);
+    });
+    return () => {
+      active = false;
+    };
+  }, [complaint.id, complaint.status]);
 
   const statusBadgeMap: Record<
     ComplaintLifecycleStatus,
@@ -101,20 +121,21 @@ export const ComplaintSummaryCard: React.FC<ComplaintSummaryCardProps> = ({
             </div>
           </div>
 
-          {/* Social Stats */}
-          <div className="flex items-center gap-3 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-md border border-slate-200/80 dark:border-slate-700/80 text-xs">
-            <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
-              <ThumbsUp className="w-3.5 h-3.5 text-sky-500" />
-              <span className="font-semibold">{formatNumber(complaint.upvotesCount)}</span>
-              <span className="text-slate-400">{isBn ? 'ভোট' : 'votes'}</span>
+          {complaint.status === 'published' && (
+            <div className="flex items-center gap-3 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-md border border-slate-200/80 dark:border-slate-700/80 text-xs">
+              <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                <Eye className="w-3.5 h-3.5 text-sky-500" />
+                <span className="font-semibold">{formatNumber(engagement.viewCount)}</span>
+                <span className="text-slate-400">{isBn ? 'ভিউ' : 'views'}</span>
+              </div>
+              <span className="text-slate-300 dark:text-slate-600">|</span>
+              <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                <Share2 className="w-3.5 h-3.5 text-indigo-500" />
+                <span className="font-semibold">{formatNumber(engagement.shareCount)}</span>
+                <span className="text-slate-400">{isBn ? 'শেয়ার' : 'shares'}</span>
+              </div>
             </div>
-            <span className="text-slate-300 dark:text-slate-600">|</span>
-            <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
-              <MessageSquare className="w-3.5 h-3.5 text-indigo-500" />
-              <span className="font-semibold">{formatNumber(complaint.commentsCount)}</span>
-              <span className="text-slate-400">{isBn ? 'মন্তব্য' : 'comments'}</span>
-            </div>
-          </div>
+          )}
         </div>
       </CardHeader>
 
