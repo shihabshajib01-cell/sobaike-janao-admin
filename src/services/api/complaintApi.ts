@@ -22,6 +22,7 @@ import {
 } from './supabaseComplaintService';
 import { getComplaintIncidentLocation } from './complaintIncidentLocationApi';
 import { getComplaintMobJusticeDetails } from './mobJusticeDetailsApi';
+import { getComplaintPublicEngagement } from './publicEngagementApi';
 import { isSupabaseConfigured } from '@/lib/supabase';
 
 export interface ComplaintDetailData {
@@ -44,9 +45,10 @@ async function enrichComplaintDetail(complaint: Complaint): Promise<Complaint> {
   const shouldLoadMobJustice =
     complaint.categoryId === 'public_safety' && complaint.subcategoryId === 'mob-justice';
 
-  const [canonicalLocation, mobJusticeDetails] = await Promise.all([
+  const [canonicalLocation, mobJusticeDetails, publicEngagement] = await Promise.all([
     getComplaintIncidentLocation(complaint.id),
     shouldLoadMobJustice ? getComplaintMobJusticeDetails(complaint.id) : Promise.resolve(null),
+    getComplaintPublicEngagement(complaint.id),
   ]);
 
   return {
@@ -58,6 +60,8 @@ async function enrichComplaintDetail(complaint: Complaint): Promise<Complaint> {
         }
       : complaint.location,
     mobJusticeDetails: shouldLoadMobJustice ? mobJusticeDetails : null,
+    viewCount: publicEngagement.viewCount,
+    shareCount: publicEngagement.shareCount,
   };
 }
 
@@ -68,26 +72,16 @@ export class ComplaintApi {
     this.client = client;
   }
 
-  /**
-   * Get active taxonomy segments
-   */
   async getSegments(): Promise<SupabaseSegment[]> {
     assertSupabaseConfigured();
     return await getTaxonomySegments();
   }
 
-  /**
-   * Get distinct locations
-   */
   async getLocations(): Promise<string[]> {
     assertSupabaseConfigured();
     return await getDistinctLocations();
   }
 
-  /**
-   * Get paginated and filtered complaint list.
-   * Zero rows return the real empty list; missing configuration never returns fixtures.
-   */
   async getComplaints(
     filters: Partial<ComplaintFilterState> = {},
     page = 1,
@@ -97,26 +91,17 @@ export class ComplaintApi {
     return await supabaseComplaintService.getComplaints(filters, page, pageSize);
   }
 
-  /**
-   * Get counts for lifecycle status tabs
-   */
   async getComplaintStats(): Promise<ComplaintStatusTabCount[]> {
     assertSupabaseConfigured();
     return await supabaseComplaintService.getComplaintStats();
   }
 
-  /**
-   * Get single complaint by ID
-   */
   async getComplaintById(id: string): Promise<Complaint | null> {
     assertSupabaseConfigured();
     const complaint = await supabaseComplaintService.getComplaintById(id);
     return complaint ? await enrichComplaintDetail(complaint) : null;
   }
 
-  /**
-   * Get complete complaint detail workspace package (complaint + timeline + evidence + reporter location)
-   */
   async getComplaintDetail(
     id: string,
     options?: { loadEvidence?: boolean; loadReporterLocation?: boolean }
@@ -131,25 +116,16 @@ export class ComplaintApi {
     };
   }
 
-  /**
-   * Get private reporter device location from secure RPC
-   */
   async getComplaintReporterLocation(id: string) {
     assertSupabaseConfigured();
     return await supabaseComplaintService.getComplaintReporterLocation(id);
   }
 
-  /**
-   * Get timeline for complaint
-   */
   async getComplaintTimeline(id: string): Promise<ComplaintTimelineEvent[]> {
     assertSupabaseConfigured();
     return await supabaseComplaintService.getComplaintTimeline(id);
   }
 
-  /**
-   * Workflow Action Methods
-   */
   async editComplaint(
     complaintId: string,
     updates: Partial<Complaint>,
