@@ -44,10 +44,10 @@ export function useComplaintEditTaxonomy(enabled: boolean) {
   }, []);
 
   useEffect(() => {
-    if (enabled && segments.length === 0 && !loading) {
+    if (enabled && segments.length === 0 && !loading && !error) {
       void load();
     }
-  }, [enabled, segments.length, loading, load]);
+  }, [enabled, segments.length, loading, error, load]);
 
   const categories = useMemo<ComplaintEditTaxonomyOption[]>(
     () =>
