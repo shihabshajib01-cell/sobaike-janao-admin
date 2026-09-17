@@ -16,9 +16,9 @@ export function parseComplaintPrivacyChoice(
 }
 
 /**
- * Preserve only explicitly supplied boolean publication preferences.
- * Missing keys are intentionally not defaulted because doing so would invent
- * publication consent that the citizen did not submit.
+ * Preserve only explicitly supplied publication preferences and public-presentation
+ * values. Missing consent keys are intentionally not defaulted because doing so
+ * would invent publication consent that the citizen did not submit.
  */
 export function parseComplaintPublicationPreferences(
   value: Record<string, unknown> | null | undefined
@@ -38,6 +38,19 @@ export function parseComplaintPublicationPreferences(
   }
   if (typeof value.showDescription === 'boolean') {
     parsed.showDescription = value.showDescription;
+  }
+
+  if (typeof value.publicTitleBn === 'string' && value.publicTitleBn.trim()) {
+    parsed.publicTitleBn = value.publicTitleBn.trim();
+  }
+  if (typeof value.publicTitleEn === 'string' && value.publicTitleEn.trim()) {
+    parsed.publicTitleEn = value.publicTitleEn.trim();
+  }
+  if (typeof value.publicSummaryBn === 'string' && value.publicSummaryBn.trim()) {
+    parsed.publicSummaryBn = value.publicSummaryBn.trim();
+  }
+  if (typeof value.publicSummaryEn === 'string' && value.publicSummaryEn.trim()) {
+    parsed.publicSummaryEn = value.publicSummaryEn.trim();
   }
 
   return Object.keys(parsed).length > 0 ? parsed : undefined;
