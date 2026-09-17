@@ -46,12 +46,15 @@ export const COMPLAINT_ACTION_DEFINITIONS: Record<ComplaintActionId, ComplaintAc
 };
 
 /**
- * Returns available actions strictly based on current complaint status.
+ * Returns available direct moderation actions strictly based on current status.
+ * Publishing is intentionally excluded here and is handled by the dedicated
+ * Prepare for Publication workflow so raw citizen content cannot be published
+ * without reviewing the public headline/summary preview first.
  *
  * Status Matrix:
- * - submitted: [publish, reject]
+ * - submitted: [reject] + dedicated publication workflow
  * - published: [unpublish]
- * - unpublished: [publish]
+ * - unpublished: dedicated publication workflow
  * - rejected: []
  * - edited: []
  */
@@ -60,20 +63,13 @@ export function getAvailableComplaintActions(
 ): ComplaintActionConfig[] {
   switch (status) {
     case 'submitted':
-      return [
-        COMPLAINT_ACTION_DEFINITIONS.publish,
-        COMPLAINT_ACTION_DEFINITIONS.reject,
-      ];
+      return [COMPLAINT_ACTION_DEFINITIONS.reject];
 
     case 'published':
-      return [
-        COMPLAINT_ACTION_DEFINITIONS.unpublish,
-      ];
+      return [COMPLAINT_ACTION_DEFINITIONS.unpublish];
 
     case 'unpublished':
-      return [
-        COMPLAINT_ACTION_DEFINITIONS.publish,
-      ];
+      return [];
 
     case 'edited':
       return [];
@@ -97,16 +93,16 @@ export function getComplaintStatusGuidance(
   switch (status) {
     case 'submitted':
       return isBn
-        ? 'নতুন দাখিলকৃত অভিযোগ। পর্যালোচনা করে প্রকাশ করুন অথবা বাতিল করুন।'
-        : 'Newly submitted complaint. Review it, then publish or reject.';
+        ? 'নতুন দাখিলকৃত অভিযোগ। তথ্য যাচাই করুন, পাবলিক পোস্ট প্রস্তুত করে প্রকাশ করুন অথবা প্রয়োজন হলে বাতিল করুন।'
+        : 'Newly submitted complaint. Review the facts, prepare the public post for publication, or reject when appropriate.';
     case 'published':
       return isBn
         ? 'অভিযোগটি বর্তমানে পাবলিক ফিডে প্রকাশিত আছে। জনসমক্ষে আর দেখানো না হলে প্রকাশনা বন্ধ করতে পারেন।'
         : 'This complaint is currently live on the public feed. You can unpublish it if it should no longer be publicly visible.';
     case 'unpublished':
       return isBn
-        ? 'অভিযোগটি বর্তমানে পাবলিক ফিডে দৃশ্যমান নয়। প্রস্তুত হলে আবার প্রকাশ করতে পারেন।'
-        : 'This complaint is not visible on the public feed. You can publish it again when ready.';
+        ? 'অভিযোগটি বর্তমানে পাবলিক ফিডে দৃশ্যমান নয়। পাবলিক পোস্টটি পর্যালোচনা করে প্রস্তুত হলে আবার প্রকাশ করুন।'
+        : 'This complaint is not visible on the public feed. Review its public presentation and republish when ready.';
     case 'rejected':
       return isBn
         ? 'অভিযোগটি বাতিল করা হয়েছে।'
