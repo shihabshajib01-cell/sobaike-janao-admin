@@ -22,6 +22,7 @@ import {
 } from './supabaseComplaintService';
 import { getComplaintIncidentLocation } from './complaintIncidentLocationApi';
 import { getComplaintMobJusticeDetails } from './mobJusticeDetailsApi';
+import { getComplaintHarassmentContext } from './harassmentContextApi';
 import { isSupabaseConfigured } from '@/lib/supabase';
 
 export interface ComplaintDetailData {
@@ -43,10 +44,14 @@ function assertSupabaseConfigured(): void {
 async function enrichComplaintDetail(complaint: Complaint): Promise<Complaint> {
   const shouldLoadMobJustice =
     complaint.categoryId === 'public_safety' && complaint.subcategoryId === 'mob-justice';
+  const shouldLoadHarassmentContext = complaint.categoryId === 'harassment';
 
-  const [canonicalLocation, mobJusticeDetails] = await Promise.all([
+  const [canonicalLocation, mobJusticeDetails, harassmentContext] = await Promise.all([
     getComplaintIncidentLocation(complaint.id),
     shouldLoadMobJustice ? getComplaintMobJusticeDetails(complaint.id) : Promise.resolve(null),
+    shouldLoadHarassmentContext
+      ? getComplaintHarassmentContext(complaint.id)
+      : Promise.resolve(null),
   ]);
 
   return {
@@ -58,6 +63,12 @@ async function enrichComplaintDetail(complaint: Complaint): Promise<Complaint> {
         }
       : complaint.location,
     mobJusticeDetails: shouldLoadMobJustice ? mobJusticeDetails : null,
+    relationshipContext:
+      harassmentContext?.relationshipContext ?? complaint.relationshipContext ?? null,
+    intimateWhatHappened:
+      harassmentContext?.intimateWhatHappened ?? complaint.intimateWhatHappened ?? null,
+    intimatePlatform:
+      harassmentContext?.intimatePlatform ?? complaint.intimatePlatform ?? null,
   };
 }
 
