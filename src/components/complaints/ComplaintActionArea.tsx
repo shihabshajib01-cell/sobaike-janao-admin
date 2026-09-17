@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -9,6 +9,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { Complaint, ComplaintTimelineEvent, ComplaintUrgency } from '@/types/Complaint';
 import { complaintApi } from '@/services';
+import { useComplaintEditTaxonomy } from '@/hooks/useComplaintEditTaxonomy';
 import {
   getAvailableComplaintActions,
   getComplaintStatusGuidance,
@@ -25,6 +26,7 @@ import {
   Check,
   AlertTriangle,
   Lock,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/utils';
 
@@ -40,37 +42,7 @@ export interface ComplaintActionAreaProps {
 
 type ActionModalType = ComplaintActionId | null;
 
-const CATEGORIES = [
-  { value: 'harassment', labelEn: 'Harassment & Abuse', labelBn: 'হয়রানি ও নির্যাতন' },
-  { value: 'rickshaw', labelEn: 'Illegal Auto-Rickshaw Charging', labelBn: 'অবৈধ অটো চার্জিং' },
-  { value: 'extortion', labelEn: 'Extortion', labelBn: 'চাঁদাবাজি' },
-  { value: 'load_shedding', labelEn: 'Utility Service Complaints', labelBn: 'ইউটিলিটি সেবা অভিযোগ' },
-];
-
-const SUBCATEGORIES: Record<string, { value: string; labelEn: string; labelBn: string }[]> = {
-  harassment: [
-    { value: 'rape-sexual-violence', labelEn: 'Rape / Sexual Violence', labelBn: 'ধর্ষণ / যৌন সহিংসতা' },
-    { value: 'sexual-harassment', labelEn: 'Sexual Harassment', labelBn: 'যৌন হয়রানি' },
-    { value: 'domestic-violence', labelEn: 'Domestic Violence', labelBn: 'পারিবারিক সহিংসতা' },
-    { value: 'blackmail-coercion', labelEn: 'Blackmailing / Coercion', labelBn: 'ব্ল্যাকমেইল / জবরদস্তি' },
-    { value: 'honeytrap', labelEn: 'Honeytrap', labelBn: 'হানিট্র্যাপ' },
-  ],
-  rickshaw: [
-    { value: 'charging-station-location', labelEn: 'Illegal Auto-Rickshaw Charging', labelBn: 'অবৈধ অটো চার্জিং' },
-  ],
-  extortion: [
-    { value: 'shop-business', labelEn: 'Shops & Businesses', labelBn: 'দোকান ও ব্যবসা' },
-    { value: 'transport-movement', labelEn: 'Transport & Transit', labelBn: 'পরিবহন ও চলাচল' },
-    { value: 'construction-property', labelEn: 'Construction & Property', labelBn: 'নির্মাণ ও সম্পত্তি' },
-    { value: 'threat-money-demand', labelEn: 'Threats & Demands', labelBn: 'হুমকি ও টাকা দাবি' },
-    { value: 'extortion-other', labelEn: 'Other Extortion', labelBn: 'অন্যান্য চাঁদাবাজি' },
-  ],
-  load_shedding: [
-    { value: 'load-shedding-outage', labelEn: 'Load Shedding', labelBn: 'লোডশেডিং' },
-    { value: 'gas-shortage', labelEn: 'Gas Shortage', labelBn: 'গ্যাস সংকট' },
-    { value: 'excess-electricity-bill', labelEn: 'Excess Electricity Bill', labelBn: 'অতিরিক্ত বিদ্যুৎ বিল' },
-  ],
-};
+const RAW_TITLE_MAX_LENGTH = 100;
 
 export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
   complaint,
@@ -95,7 +67,7 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
   const [editTitleBn, setEditTitleBn] = useState(complaint.titleBn || '');
   const [editDescEn, setEditDescEn] = useState(complaint.descriptionEn || '');
   const [editDescBn, setEditDescBn] = useState(complaint.descriptionBn || '');
-  const [editCategoryId, setEditCategoryId] = useState(complaint.categoryId || 'harassment');
+  const [editCategoryId, setEditCategoryId] = useState(complaint.categoryId || '');
   const [editSubcategoryId, setEditSubcategoryId] = useState(complaint.subcategoryId || '');
   const [editUrgency, setEditUrgency] = useState<ComplaintUrgency>(complaint.urgency || 'medium');
   const [editWard, setEditWard] = useState(complaint.location?.ward || '');
@@ -104,12 +76,56 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
   const [editAddressBn, setEditAddressBn] = useState(complaint.location?.addressBn || '');
   const [editNotes, setEditNotes] = useState('');
 
+  const {
+    categories: liveCategories,
+    getSubcategories,
+    loading: taxonomyLoading,
+    error: taxonomyError,
+    reload: reloadTaxonomy,
+  } = useComplaintEditTaxonomy(activeModal === 'edit');
+
+  const currentCategoryFallback = useMemo(
+    () => ({
+      value: complaint.categoryId,
+      labelEn: complaint.categoryEn || complaint.categoryId,
+      labelBn: complaint.categoryBn || complaint.categoryId,
+    }),
+    [complaint.categoryId, complaint.categoryEn, complaint.categoryBn]
+  );
+
+  const categoryOptions = useMemo(() => {
+    if (liveCategories.length > 0) return liveCategories;
+    return complaint.categoryId ? [currentCategoryFallback] : [];
+  }, [liveCategories, complaint.categoryId, currentCategoryFallback]);
+
+  const selectedLiveSubcategories = getSubcategories(editCategoryId);
+  const subcategoryOptions = useMemo(() => {
+    if (selectedLiveSubcategories.length > 0) return selectedLiveSubcategories;
+    if (editCategoryId === complaint.categoryId && complaint.subcategoryId) {
+      return [
+        {
+          value: complaint.subcategoryId,
+          labelEn: complaint.subcategoryEn || complaint.subcategoryId,
+          labelBn: complaint.subcategoryBn || complaint.subcategoryId,
+        },
+      ];
+    }
+    return [];
+  }, [
+    selectedLiveSubcategories,
+    editCategoryId,
+    complaint.categoryId,
+    complaint.subcategoryId,
+    complaint.subcategoryEn,
+    complaint.subcategoryBn,
+  ]);
+
   const initEditForm = (comp: Complaint) => {
     setEditTitleEn(comp.titleEn || '');
     setEditTitleBn(comp.titleBn || '');
     setEditDescEn(comp.descriptionEn || '');
     setEditDescBn(comp.descriptionBn || '');
-    setEditCategoryId(comp.categoryId || 'harassment');
+    setEditCategoryId(comp.categoryId || '');
     setEditSubcategoryId(comp.subcategoryId || '');
     setEditUrgency(comp.urgency || 'medium');
     setEditWard(comp.location?.ward || '');
@@ -123,13 +139,10 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
     initEditForm(complaint);
   }, [complaint]);
 
-  // Available actions strictly derived from centralized status rule function
   const availableActions = getAvailableComplaintActions(complaint.status);
   const statusGuidance = getComplaintStatusGuidance(complaint.status, language);
-
   const { hasPermission, hasAnyPermission } = useAuth();
 
-  // Filter actions based on effective assigned permissions
   const isActionPermitted = (actionId: ComplaintActionId) => {
     switch (actionId) {
       case 'publish':
@@ -156,31 +169,77 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
 
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
     setFeedbackToast({ type, message });
-    setTimeout(() => {
+    window.setTimeout(() => {
       setFeedbackToast((prev) => (prev?.message === message ? null : prev));
     }, 4500);
   };
 
-  // 0. Handle Edit Complaint
   const handleSaveEdit = async () => {
+    const cleanTitleBn = editTitleBn.trim();
+    const cleanTitleEn = editTitleEn.trim();
+    const cleanDescBn = editDescBn.trim();
+    const cleanDescEn = editDescEn.trim();
+
+    if (!cleanTitleBn && !cleanTitleEn) {
+      setActionError(
+        isBn ? 'অন্তত একটি শিরোনাম প্রয়োজন।' : 'At least one complaint title is required.'
+      );
+      return;
+    }
+
+    if (
+      cleanTitleBn.length > RAW_TITLE_MAX_LENGTH ||
+      cleanTitleEn.length > RAW_TITLE_MAX_LENGTH
+    ) {
+      setActionError(
+        isBn
+          ? `শিরোনাম সর্বোচ্চ ${RAW_TITLE_MAX_LENGTH} অক্ষরের হতে পারবে।`
+          : `Complaint titles are limited to ${RAW_TITLE_MAX_LENGTH} characters.`
+      );
+      return;
+    }
+
+    if (!cleanDescBn && !cleanDescEn) {
+      setActionError(
+        isBn ? 'অন্তত একটি বিবরণ প্রয়োজন।' : 'At least one complaint description is required.'
+      );
+      return;
+    }
+
+    const selectedCategory = categoryOptions.find((item) => item.value === editCategoryId);
+    const selectedSubcategory = subcategoryOptions.find(
+      (item) => item.value === editSubcategoryId
+    );
+
+    if (!selectedCategory || !selectedSubcategory) {
+      setActionError(
+        isBn
+          ? 'লাইভ ক্যাটাগরি ও সাবক্যাটাগরি যাচাই করা যায়নি। আবার চেষ্টা করুন।'
+          : 'The live category/subcategory contract could not be verified. Retry and try again.'
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     setActionError(null);
     try {
-      const selectedCategory = CATEGORIES.find((c) => c.value === editCategoryId);
-      const subs = SUBCATEGORIES[editCategoryId] || [];
-      const selectedSub = subs.find((s) => s.value === editSubcategoryId) || subs[0];
+      // public.complaints.title/description are the canonical/default-language columns.
+      // If a record is English-only, mirror the English value into the canonical column so
+      // Admin edits do not leave stale text behind or create a false Bangla/English pair.
+      const canonicalTitle = cleanTitleBn || cleanTitleEn;
+      const canonicalDescription = cleanDescBn || cleanDescEn;
 
       const updates: Partial<Complaint> = {
-        titleEn: editTitleEn.trim() || complaint.titleEn,
-        titleBn: editTitleBn.trim() || complaint.titleBn,
-        descriptionEn: editDescEn.trim() || complaint.descriptionEn,
-        descriptionBn: editDescBn.trim() || complaint.descriptionBn,
+        titleEn: cleanTitleEn || undefined,
+        titleBn: canonicalTitle,
+        descriptionEn: cleanDescEn || undefined,
+        descriptionBn: canonicalDescription,
         categoryId: editCategoryId,
-        categoryEn: selectedCategory?.labelEn || complaint.categoryEn,
-        categoryBn: selectedCategory?.labelBn || complaint.categoryBn,
-        subcategoryId: selectedSub ? selectedSub.value : editSubcategoryId,
-        subcategoryEn: selectedSub ? selectedSub.labelEn : complaint.subcategoryEn,
-        subcategoryBn: selectedSub ? selectedSub.labelBn : complaint.subcategoryBn,
+        categoryEn: selectedCategory.labelEn,
+        categoryBn: selectedCategory.labelBn,
+        subcategoryId: selectedSubcategory.value,
+        subcategoryEn: selectedSubcategory.labelEn,
+        subcategoryBn: selectedSubcategory.labelBn,
         urgency: editUrgency,
         location: {
           ...complaint.location,
@@ -193,19 +252,15 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
 
       const result = await complaintApi.editComplaint(complaint.id, updates, editNotes);
       showToast(isBn ? result.messageBn : result.messageEn, 'success');
-      if (onComplaintUpdated) {
-        onComplaintUpdated(result.complaint, result.timeline, result.timelineError || null);
-      }
+      onComplaintUpdated?.(result.complaint, result.timeline, result.timelineError || null);
       closeModal();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to update complaint';
-      setActionError(msg);
+      setActionError(err instanceof Error ? err.message : 'Failed to update complaint');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // 2. Handle Reject
   const handleReject = async () => {
     if (!actionNotes.trim()) {
       setActionError(
@@ -215,6 +270,7 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
       );
       return;
     }
+
     setIsSubmitting(true);
     setActionError(null);
     try {
@@ -227,22 +283,21 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
       if (onComplaintUpdated) {
         const preservedComplaint = {
           ...result.complaint,
-          media: (result.complaint.media && result.complaint.media.length > 0)
-            ? result.complaint.media
-            : complaint.media,
+          media:
+            result.complaint.media && result.complaint.media.length > 0
+              ? result.complaint.media
+              : complaint.media,
         };
         onComplaintUpdated(preservedComplaint, result.timeline, result.timelineError || null);
       }
       closeModal();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to reject complaint';
-      setActionError(msg);
+      setActionError(err instanceof Error ? err.message : 'Failed to reject complaint');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // 3. Handle Publish
   const handlePublish = async () => {
     setIsSubmitting(true);
     setActionError(null);
@@ -252,22 +307,21 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
       if (onComplaintUpdated) {
         const preservedComplaint = {
           ...result.complaint,
-          media: (result.complaint.media && result.complaint.media.length > 0)
-            ? result.complaint.media
-            : complaint.media,
+          media:
+            result.complaint.media && result.complaint.media.length > 0
+              ? result.complaint.media
+              : complaint.media,
         };
         onComplaintUpdated(preservedComplaint, result.timeline, result.timelineError || null);
       }
       closeModal();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to publish complaint';
-      setActionError(msg);
+      setActionError(err instanceof Error ? err.message : 'Failed to publish complaint');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // 3. Handle Unpublish
   const handleUnpublish = async () => {
     setIsSubmitting(true);
     setActionError(null);
@@ -277,22 +331,21 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
       if (onComplaintUpdated) {
         const preservedComplaint = {
           ...result.complaint,
-          media: (result.complaint.media && result.complaint.media.length > 0)
-            ? result.complaint.media
-            : complaint.media,
+          media:
+            result.complaint.media && result.complaint.media.length > 0
+              ? result.complaint.media
+              : complaint.media,
         };
         onComplaintUpdated(preservedComplaint, result.timeline, result.timelineError || null);
       }
       closeModal();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to unpublish complaint';
-      setActionError(msg);
+      setActionError(err instanceof Error ? err.message : 'Failed to unpublish complaint');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Icon resolver for action buttons
   const renderActionIcon = (iconName: ComplaintActionConfig['iconName']) => {
     switch (iconName) {
       case 'Edit':
@@ -308,18 +361,25 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
     }
   };
 
+  const openAction = (actionId: ComplaintActionId) => {
+    setActionError(null);
+    if (actionId === 'edit') initEditForm(complaint);
+    setActiveModal(actionId);
+  };
+
   return (
     <>
       <Card variant="default" className={cn('overflow-hidden', className)}>
         <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <ShieldAlert className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-            <span>{isBn ? 'প্রশাসনিক ট্রায়াজ ও অ্যাকশন কন্ট্রোল' : 'Administrative Triage & Actions'}</span>
+            <span>
+              {isBn ? 'প্রশাসনিক ট্রায়াজ ও অ্যাকশন কন্ট্রোল' : 'Administrative Triage & Actions'}
+            </span>
           </CardTitle>
         </CardHeader>
 
         <CardContent className="pt-4 space-y-4">
-          {/* Status Context Helper with Dynamic Guidance */}
           {statusGuidance && (
             <div className="p-3 rounded-lg bg-sky-50/70 dark:bg-sky-950/30 border border-sky-200/80 dark:border-sky-900/60 text-xs text-sky-900 dark:text-sky-200 flex items-start gap-2">
               <Info className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0 mt-0.5" />
@@ -327,14 +387,11 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
                 <span className="font-semibold">
                   {isBn ? 'বর্তমান স্ট্যাটাস নির্দেশিকা:' : 'Status Transition Guidance:'}
                 </span>
-                <p className="text-sky-800 dark:text-sky-300">
-                  {statusGuidance}
-                </p>
+                <p className="text-sky-800 dark:text-sky-300">{statusGuidance}</p>
               </div>
             </div>
           )}
 
-          {/* Feedback Toast/Banner */}
           {feedbackToast && (
             <div
               className={cn(
@@ -358,7 +415,6 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
             </div>
           )}
 
-          {/* Action Buttons Matrix */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
@@ -369,7 +425,6 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
               </span>
             </div>
 
-            {/* Dynamic Button Rendering Driven by Central Rule Function and Permissions */}
             {permittedActions.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {permittedActions.map((action) => (
@@ -377,16 +432,12 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
                     key={action.id}
                     variant={action.variant}
                     size="sm"
-                    onClick={() => {
-                      if (action.id === 'edit') {
-                        initEditForm(complaint);
-                      }
-                      setActiveModal(action.id);
-                    }}
+                    onClick={() => openAction(action.id)}
                     leftIcon={renderActionIcon(action.iconName)}
                     className={cn(
                       'justify-start h-9 text-xs',
-                      action.id === 'publish' && 'bg-sky-600 hover:bg-sky-700 text-white shadow-xs',
+                      action.id === 'publish' &&
+                        'bg-sky-600 hover:bg-sky-700 text-white shadow-xs',
                       permittedActions.length === 1 && 'col-span-full'
                     )}
                   >
@@ -414,9 +465,6 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
         </CardContent>
       </Card>
 
-      {/* Confirmation & Data-Entry Modals */}
-
-      {/* 0. Edit Complaint Modal */}
       <Modal
         isOpen={activeModal === 'edit'}
         onClose={closeModal}
@@ -438,6 +486,7 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
               isLoading={isSubmitting}
               onClick={handleSaveEdit}
               leftIcon={<Check className="w-3.5 h-3.5" />}
+              disabled={isSubmitting || taxonomyLoading}
             >
               <span>{isBn ? 'সংরক্ষণ করুন' : 'Save Changes'}</span>
             </Button>
@@ -451,7 +500,27 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
             </div>
           )}
 
-          {/* Titles */}
+          {taxonomyError && (
+            <div className="flex items-start justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <p>
+                  {isBn
+                    ? 'লাইভ ট্যাক্সোনমি লোড করা যায়নি। বর্তমান ক্যাটাগরি অপরিবর্তিত রেখে অন্যান্য তথ্য সম্পাদনা করা যাবে, অথবা আবার চেষ্টা করুন।'
+                    : 'Live taxonomy could not be loaded. You can keep the current classification and edit other fields, or retry.'}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void reloadTaxonomy()}
+                leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
+              >
+                <span>{isBn ? 'আবার চেষ্টা' : 'Retry'}</span>
+              </Button>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
               label={isBn ? 'শিরোনাম (বাংলা)' : 'Title (Bangla)'}
@@ -459,6 +528,8 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
               onChange={(e) => setEditTitleBn(e.target.value)}
               placeholder="অভিযোগের শিরোনাম বাংলায়..."
               disabled={isSubmitting}
+              maxLength={RAW_TITLE_MAX_LENGTH}
+              helperText={`${editTitleBn.length}/${RAW_TITLE_MAX_LENGTH}`}
             />
             <Input
               label={isBn ? 'শিরোনাম (ইংরেজি)' : 'Title (English)'}
@@ -466,40 +537,41 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
               onChange={(e) => setEditTitleEn(e.target.value)}
               placeholder="Title in English..."
               disabled={isSubmitting}
+              maxLength={RAW_TITLE_MAX_LENGTH}
+              helperText={`${editTitleEn.length}/${RAW_TITLE_MAX_LENGTH}`}
             />
           </div>
 
-          {/* Category & Subcategory */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Select
               label={isBn ? 'ক্যাটাগরি / বিভাগ' : 'Category'}
               value={editCategoryId}
               onChange={(e) => {
-                const newCat = e.target.value;
-                setEditCategoryId(newCat);
-                const availableSubs = SUBCATEGORIES[newCat] || [];
-                setEditSubcategoryId(availableSubs[0]?.value || '');
+                const newCategory = e.target.value;
+                setEditCategoryId(newCategory);
+                const nextSubcategories = getSubcategories(newCategory);
+                setEditSubcategoryId(nextSubcategories[0]?.value || '');
               }}
-              options={CATEGORIES.map((c) => ({
-                value: c.value,
-                label: isBn ? c.labelBn : c.labelEn,
+              options={categoryOptions.map((item) => ({
+                value: item.value,
+                label: isBn ? item.labelBn : item.labelEn,
               }))}
-              disabled={isSubmitting}
+              disabled={isSubmitting || taxonomyLoading || categoryOptions.length === 0}
+              helperText={taxonomyLoading ? (isBn ? 'লাইভ ক্যাটাগরি লোড হচ্ছে…' : 'Loading live categories…') : undefined}
             />
 
             <Select
               label={isBn ? 'সাবক্যাটাগরি' : 'Subcategory'}
               value={editSubcategoryId}
               onChange={(e) => setEditSubcategoryId(e.target.value)}
-              options={(SUBCATEGORIES[editCategoryId] || []).map((s) => ({
-                value: s.value,
-                label: isBn ? s.labelBn : s.labelEn,
+              options={subcategoryOptions.map((item) => ({
+                value: item.value,
+                label: isBn ? item.labelBn : item.labelEn,
               }))}
-              disabled={isSubmitting}
+              disabled={isSubmitting || taxonomyLoading || subcategoryOptions.length === 0}
             />
           </div>
 
-          {/* Urgency & Incident Location */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Select
               label={isBn ? 'জরুরিতা / প্রায়োরিটি' : 'Urgency Priority'}
@@ -523,7 +595,6 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
             />
           </div>
 
-          {/* Address & District */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
               label={isBn ? 'জেলা' : 'District'}
@@ -549,7 +620,6 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
             disabled={isSubmitting}
           />
 
-          {/* Descriptions */}
           <div className="space-y-3">
             <Textarea
               label={isBn ? 'বিস্তারিত বিবরণ (বাংলা)' : 'Description (Bangla)'}
@@ -569,9 +639,12 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
             />
           </div>
 
-          {/* Remarks */}
           <Textarea
-            label={isBn ? 'প্রশাসনিক নোট / মন্তব্যের সারাংশ (ঐচ্ছিক)' : 'Audit Note / Remarks (Optional)'}
+            label={
+              isBn
+                ? 'প্রশাসনিক নোট / মন্তব্যের সারাংশ (ঐচ্ছিক)'
+                : 'Audit Note / Remarks (Optional)'
+            }
             placeholder={
               isBn
                 ? 'সম্পাদনার কারণ বা প্রশাসনিক মন্তব্য লিখুন...'
@@ -585,7 +658,6 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
         </div>
       </Modal>
 
-      {/* 2. Reject Complaint Modal */}
       <Modal
         isOpen={activeModal === 'reject'}
         onClose={closeModal}
@@ -631,7 +703,9 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
               },
               {
                 value: 'out_of_jurisdiction',
-                label: isBn ? 'সিটি কর্পোরেশন / প্ল্যাটফর্মের আওতা বহির্ভূত' : 'Out of Jurisdiction',
+                label: isBn
+                  ? 'সিটি কর্পোরেশন / প্ল্যাটফর্মের আওতা বহির্ভূত'
+                  : 'Out of Jurisdiction',
               },
               {
                 value: 'insufficient_evidence',
@@ -639,7 +713,9 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
               },
               {
                 value: 'inappropriate_content',
-                label: isBn ? 'নীতিমালা পরিপন্থী বা অসংলগ্ন তথ্য' : 'Inappropriate / Policy Violation',
+                label: isBn
+                  ? 'নীতিমালা পরিপন্থী বা অসংলগ্ন তথ্য'
+                  : 'Inappropriate / Policy Violation',
               },
               {
                 value: 'other',
@@ -665,7 +741,6 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
         </div>
       </Modal>
 
-      {/* 3. Publish to Feed Modal */}
       <Modal
         isOpen={activeModal === 'publish'}
         onClose={closeModal}
@@ -713,7 +788,6 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
         </div>
       </Modal>
 
-      {/* 4. Unpublish Confirmation Modal */}
       <Modal
         isOpen={activeModal === 'unpublish'}
         onClose={closeModal}
@@ -760,7 +834,6 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
         </div>
       </Modal>
 
-      {/* Mobile Fixed Bottom Action Bar: Driven dynamically by permittedActions */}
       {permittedActions.length > 0 && (
         <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] shadow-lg flex items-center gap-2">
           {permittedActions.map((action) => (
@@ -768,12 +841,7 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
               key={action.id}
               variant={action.variant}
               size="md"
-              onClick={() => {
-                if (action.id === 'edit') {
-                  initEditForm(complaint);
-                }
-                setActiveModal(action.id);
-              }}
+              onClick={() => openAction(action.id)}
               leftIcon={renderActionIcon(action.iconName)}
               className={cn(
                 'flex-1 h-10 text-xs justify-center font-medium shadow-xs',
