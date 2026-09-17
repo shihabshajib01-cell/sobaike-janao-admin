@@ -8,6 +8,7 @@ import {
   DashboardCardsGrid,
   StatusOverview,
   CategoryOverview,
+  CategoryPopularitySummary,
   RecentComplaints,
 } from '@/components/dashboard';
 import {
@@ -25,23 +26,19 @@ export const DashboardPage: React.FC = () => {
   const { hasPermission } = useAuth();
   const canViewComplaints = hasPermission('complaints.view');
 
-  // State
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Data states
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [statusItems, setStatusItems] = useState<StatusSummaryItem[]>([]);
   const [categories, setCategories] = useState<CategorySummaryItem[]>([]);
   const [recentComplaints, setRecentComplaints] = useState<RecentComplaintItem[]>([]);
 
-  // Load dashboard data in parallel
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // 1. Fetch aggregate metrics (authorized by dashboard.view)
       const aggregateFetches: [
         Promise<DashboardStats>,
         Promise<StatusSummaryItem[]>,
@@ -52,7 +49,6 @@ export const DashboardPage: React.FC = () => {
         dashboardApi.getCategorySummary(),
       ];
 
-      // 2. Fetch recent complaint rows ONLY if current admin holds complaints.view permission
       if (canViewComplaints) {
         const [statsData, statusData, categoryData, recentData] =
           await Promise.all([
@@ -91,7 +87,6 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* 1. Page Header */}
       <PageHeader
         title={isBn ? 'ড্যাশবোর্ড' : 'Dashboard'}
         description={
@@ -112,7 +107,6 @@ export const DashboardPage: React.FC = () => {
         }
       />
 
-      {/* 2. Error State */}
       {error ? (
         <Card variant="default" className="border-red-200 dark:border-red-900/50 bg-red-50/40 dark:bg-red-950/20">
           <CardContent className="py-10 flex flex-col items-center justify-center text-center space-y-3">
@@ -142,12 +136,10 @@ export const DashboardPage: React.FC = () => {
         </Card>
       ) : (
         <>
-          {/* 3. Operational KPI Cards */}
           <section aria-label="Operational Key Metrics">
             <DashboardCardsGrid stats={stats} loading={loading} />
           </section>
 
-          {/* 4. Distribution Breakdown Grid */}
           <section
             aria-label="Distribution Breakdown"
             className="grid grid-cols-1 lg:grid-cols-2 gap-6"
@@ -156,7 +148,10 @@ export const DashboardPage: React.FC = () => {
             <CategoryOverview categories={categories} loading={loading} />
           </section>
 
-          {/* 5. Recent Complaints Table (Rendered strictly when authorized for complaints.view) */}
+          <section aria-label="Category Popularity">
+            <CategoryPopularitySummary />
+          </section>
+
           {canViewComplaints && (
             <section aria-label="Recent Citizen Reports">
               <RecentComplaints complaints={recentComplaints} loading={loading} />
