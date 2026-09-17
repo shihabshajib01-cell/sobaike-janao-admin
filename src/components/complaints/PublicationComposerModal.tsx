@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { MapPin, Share2, Eye, AlertTriangle } from 'lucide-react';
+import { MapPin, Save, Eye, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/Textarea';
 import { useLanguage } from '@/context/LanguageContext';
 import { Complaint, ComplaintPublicationDraft, ComplaintTimelineEvent } from '@/types/Complaint';
 import { complaintApi } from '@/services';
-import { publishComplaintPresentation } from '@/services/api/publicationApi';
+import { saveComplaintPublicationDraft } from '@/services/api/publicationApi';
 
 interface PublicationComposerModalProps {
   isOpen: boolean;
@@ -18,7 +18,7 @@ interface PublicationComposerModalProps {
     timeline: ComplaintTimelineEvent[],
     timelineError?: string | null
   ) => void;
-  onPublished?: (message: string) => void;
+  onSaved?: (message: string) => void;
 }
 
 function initialDraft(complaint: Complaint): ComplaintPublicationDraft {
@@ -36,7 +36,7 @@ export const PublicationComposerModal: React.FC<PublicationComposerModalProps> =
   complaint,
   onClose,
   onComplaintUpdated,
-  onPublished,
+  onSaved,
 }) => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
@@ -72,12 +72,12 @@ export const PublicationComposerModal: React.FC<PublicationComposerModalProps> =
     setDraft((current) => ({ ...current, [field]: value }));
   };
 
-  const handlePublish = async () => {
+  const handleSave = async () => {
     if (!draft.publicTitleBn.trim() && !draft.publicTitleEn.trim()) {
       setError(
         isBn
-          ? 'প্রকাশের আগে অন্তত একটি পাবলিক শিরোনাম দিন।'
-          : 'Add at least one public headline before publishing.'
+          ? 'সংরক্ষণের আগে অন্তত একটি পাবলিক শিরোনাম দিন।'
+          : 'Add at least one public headline before saving.'
       );
       return;
     }
@@ -85,14 +85,14 @@ export const PublicationComposerModal: React.FC<PublicationComposerModalProps> =
     setIsSubmitting(true);
     setError(null);
     try {
-      await publishComplaintPresentation(complaint.id, draft);
+      await saveComplaintPublicationDraft(complaint.id, draft);
       const refreshed = await complaintApi.getComplaintDetail(complaint.id, {
         loadEvidence: false,
         loadReporterLocation: false,
       });
 
       if (!refreshed) {
-        throw new Error(`Failed to reload complaint ${complaint.id} after publication.`);
+        throw new Error(`Failed to reload complaint ${complaint.id} after saving the publication draft.`);
       }
 
       const preservedComplaint: Complaint = {
@@ -108,14 +108,14 @@ export const PublicationComposerModal: React.FC<PublicationComposerModalProps> =
         refreshed.timeline,
         refreshed.timelineError || null
       );
-      onPublished?.(
+      onSaved?.(
         isBn
-          ? 'অভিযোগটি প্রস্তুত করা পাবলিক শিরোনাম ও সারাংশসহ প্রকাশিত হয়েছে।'
-          : 'Complaint published with the prepared public headline and summary.'
+          ? 'পাবলিক পোস্টের শিরোনাম ও সারাংশ সংরক্ষণ করা হয়েছে। এখন প্রকাশের আগে প্রিভিউটি চূড়ান্তভাবে যাচাই করুন।'
+          : 'Public headline and summary saved. Review the preview, then use Publish to Feed when ready.'
       );
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to publish complaint');
+      setError(err instanceof Error ? err.message : 'Failed to save public presentation draft');
     } finally {
       setIsSubmitting(false);
     }
@@ -125,7 +125,7 @@ export const PublicationComposerModal: React.FC<PublicationComposerModalProps> =
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isBn ? 'পাবলিক পোস্ট প্রস্তুত ও প্রকাশ' : 'Prepare & Publish Public Post'}
+      title={isBn ? 'পাবলিক পোস্ট প্রস্তুত করুন' : 'Prepare Public Post'}
       description={
         isBn
           ? `অভিযোগ ${complaint.id}-এর মূল নাগরিক তথ্য অপরিবর্তিত রেখে পাবলিক ফিডের উপস্থাপনাটি প্রস্তুত করুন।`
@@ -145,11 +145,11 @@ export const PublicationComposerModal: React.FC<PublicationComposerModalProps> =
               variant="primary"
               size="sm"
               isLoading={isSubmitting}
-              onClick={handlePublish}
-              leftIcon={<Share2 className="h-3.5 w-3.5" />}
+              onClick={handleSave}
+              leftIcon={<Save className="h-3.5 w-3.5" />}
               className="bg-sky-600 text-white hover:bg-sky-700"
             >
-              <span>{isBn ? 'পাবলিক ফিডে প্রকাশ করুন' : 'Publish Live'}</span>
+              <span>{isBn ? 'পাবলিক পোস্ট সংরক্ষণ করুন' : 'Save Public Post'}</span>
             </Button>
           </div>
         </div>
@@ -273,8 +273,8 @@ export const PublicationComposerModal: React.FC<PublicationComposerModalProps> =
 
           <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
             {isBn
-              ? 'প্রিভিউটি পাবলিক ফিডের একই তথ্য-ক্রম অনুসরণ করে: ক্যাটাগরি → শিরোনাম → সারাংশ → অবস্থান → অ্যাকশন।'
-              : 'The preview follows the live feed information hierarchy: category → headline → summary → location → actions.'}
+              ? 'এই প্রিভিউটি পাবলিক ফিডের তথ্য-ক্রম অনুসরণ করে। সংরক্ষণের পর নিচের “পাবলিক ফিডে প্রকাশ” অ্যাকশন ব্যবহার করে লাইভ করুন।'
+              : 'This preview follows the live feed information hierarchy. Save it here, then use the Publish to Feed action below to make it live.'}
           </p>
         </div>
       </div>
