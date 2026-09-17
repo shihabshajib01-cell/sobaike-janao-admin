@@ -10,5 +10,5 @@ export * from './ComplaintPartiesCard';
 export * from './ComplaintMediaViewer';
 export * from './ComplaintLocationCard';
 export * from './ComplaintTimeline';
-export * from './ComplaintActionArea';
+export { ComplaintActionArea } from './ComplaintActionAreaWithPublication';
 export * from './ComplaintVersionHistory';
