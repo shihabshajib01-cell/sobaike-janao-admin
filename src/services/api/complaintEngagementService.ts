@@ -25,12 +25,12 @@ const normalizeCounts = (value: unknown): ComplaintEngagementCounts => {
 };
 
 async function loadAllCounts(): Promise<Map<string, ComplaintEngagementCounts>> {
-  if (!isSupabaseConfigured() || !supabase) return new Map();
+  if (!isSupabaseConfigured || !supabase) return new Map();
   if (Date.now() < cacheExpiresAt && cachedCounts.size > 0) return cachedCounts;
   if (countsRequest) return countsRequest;
 
   countsRequest = (async () => {
-    const { data, error } = await supabase!.rpc('get_public_report_engagement_counts');
+    const { data, error } = await supabase.rpc('get_public_report_engagement_counts');
     if (error) {
       console.warn('[ComplaintEngagementService] Failed to load engagement counts:', error);
       return cachedCounts;
