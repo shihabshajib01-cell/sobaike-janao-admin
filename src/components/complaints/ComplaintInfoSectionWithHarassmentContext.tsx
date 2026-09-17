@@ -4,12 +4,14 @@ import {
   ComplaintInfoSectionProps,
 } from './ComplaintInfoSection';
 import { HarassmentContextCard } from './HarassmentContextCard';
+import { cn } from '@/utils';
 
-export const ComplaintInfoSectionWithHarassmentContext: React.FC<ComplaintInfoSectionProps> = (
-  props
-) => (
-  <div className="space-y-6">
-    <BaseComplaintInfoSection {...props} className={undefined} />
+export const ComplaintInfoSectionWithHarassmentContext: React.FC<ComplaintInfoSectionProps> = ({
+  className,
+  ...props
+}) => (
+  <div className={cn('space-y-6', className)}>
+    <BaseComplaintInfoSection {...props} />
     <HarassmentContextCard complaint={props.complaint} />
   </div>
 );
