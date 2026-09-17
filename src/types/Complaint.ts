@@ -192,6 +192,10 @@ export interface Complaint {
   affectedPersonAgeGroup?: HarassmentAgeGroup | null;
   allegedAbuserRelationship?: HarassmentAbuserRelationship | null;
   reportingFor?: HarassmentReportingFor | null;
+  // Additional citizen-submitted harassment context preserved by the Public -> SQL contract.
+  relationshipContext?: string | null;
+  intimateWhatHappened?: string | null;
+  intimatePlatform?: string | null;
   // Public Safety / Mob Justice specific citizen classification. Read-only in Admin.
   mobJusticeDetails?: MobJusticeDetails | null;
   // Utility Service Complaints specific attributes
