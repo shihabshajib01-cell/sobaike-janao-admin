@@ -15,8 +15,9 @@ import { TranslationDictionary } from '@/context/LanguageContext';
 
 export interface RouteItem {
   path: string;
-  labelKey: keyof TranslationDictionary['nav'];
+  labelKey?: keyof TranslationDictionary['nav'];
   defaultLabel: string;
+  defaultLabelBn?: string;
   icon: React.ComponentType<{ className?: string }>;
   requiredPermission?: string;
   badge?: string;
@@ -54,8 +55,8 @@ export const ADMIN_NAVIGATION_ITEMS: RouteItem[] = [
   },
   {
     path: '/banners',
-    labelKey: 'banners',
     defaultLabel: 'Banner Management',
+    defaultLabelBn: 'ব্যানার ব্যবস্থাপনা',
     icon: Images,
     requiredPermission: 'banners.manage',
   },
@@ -96,23 +97,15 @@ export const ADMIN_NAVIGATION_ITEMS: RouteItem[] = [
   },
 ];
 
-/**
- * Calculates the first authorized navigation route for an active admin
- */
 export const getFirstAccessibleRoute = (
   hasPermissionFn: (permission: string) => boolean,
   isBootstrapMode: boolean = false
 ): string => {
-  if (isBootstrapMode) {
-    return '/roles';
-  }
+  if (isBootstrapMode) return '/roles';
 
   for (const item of ADMIN_NAVIGATION_ITEMS) {
-    if (!item.requiredPermission || hasPermissionFn(item.requiredPermission)) {
-      return item.path;
-    }
+    if (!item.requiredPermission || hasPermissionFn(item.requiredPermission)) return item.path;
   }
 
-  // If no accessible route exists (e.g. 0 permissions assigned), return /dashboard to let PermissionGuard render AccessDenied
   return '/dashboard';
 };
