@@ -1,22 +1,19 @@
 import { supabase } from '@/lib/supabase';
 import { ComplaintPublicationDraft } from '@/types/Complaint';
 
-export interface PublishPresentationResult {
+export interface PublicationDraftResult {
   success: boolean;
   complaint_id?: string;
   status?: string;
-  previous_status?: string;
-  public_title_bn?: string;
-  public_title_en?: string;
   message?: string;
   error?: string;
 }
 
-export async function publishComplaintPresentation(
+export async function saveComplaintPublicationDraft(
   complaintId: string,
   draft: ComplaintPublicationDraft
-): Promise<PublishPresentationResult> {
-  const { data, error } = await supabase.rpc('admin_publish_complaint', {
+): Promise<PublicationDraftResult> {
+  const { data, error } = await supabase.rpc('admin_save_publication_draft', {
     p_complaint_id: complaintId,
     p_public_title_bn: draft.publicTitleBn.trim() || null,
     p_public_title_en: draft.publicTitleEn.trim() || null,
@@ -25,12 +22,14 @@ export async function publishComplaintPresentation(
   });
 
   if (error) {
-    throw new Error(error.message || 'Failed to publish complaint');
+    throw new Error(error.message || 'Failed to save public presentation draft');
   }
 
-  const result = (data || {}) as PublishPresentationResult;
+  const result = (data || {}) as PublicationDraftResult;
   if (result.success === false) {
-    throw new Error(result.message || result.error || 'Failed to publish complaint');
+    throw new Error(
+      result.message || result.error || 'Failed to save public presentation draft'
+    );
   }
 
   return result;
