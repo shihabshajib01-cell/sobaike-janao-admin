@@ -4,6 +4,7 @@ import {
   AlertCircle,
   MessageSquare,
   FolderTree,
+  Images,
   MapPin,
   MapPinned,
   ShieldCheck,
@@ -50,6 +51,13 @@ export const ADMIN_NAVIGATION_ITEMS: RouteItem[] = [
     defaultLabel: 'Categories',
     icon: FolderTree,
     requiredPermission: 'categories.view',
+  },
+  {
+    path: '/banners',
+    labelKey: 'banners',
+    defaultLabel: 'Banner Management',
+    icon: Images,
+    requiredPermission: 'banners.manage',
   },
   {
     path: '/map',
@@ -108,4 +116,3 @@ export const getFirstAccessibleRoute = (
   // If no accessible route exists (e.g. 0 permissions assigned), return /dashboard to let PermissionGuard render AccessDenied
   return '/dashboard';
 };
-
