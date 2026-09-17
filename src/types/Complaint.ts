@@ -54,6 +54,49 @@ export type HarassmentAbuserRelationship =
 
 export type HarassmentReportingFor = 'self' | 'someone_else';
 
+export type MobJusticeTrigger =
+  | 'suspected_theft_robbery'
+  | 'snatching_allegation'
+  | 'kidnapping_allegation'
+  | 'sexual_offence_allegation'
+  | 'religious_sentiment_allegation'
+  | 'personal_local_dispute'
+  | 'informal_punishment'
+  | 'other_accusation_dispute'
+  | 'unknown';
+
+export type MobJusticeSpread =
+  | 'direct_accusation'
+  | 'word_of_mouth'
+  | 'social_media'
+  | 'message_group_post'
+  | 'loudspeaker_announcement'
+  | 'local_arbitration_meeting'
+  | 'organized_gathering'
+  | 'unknown'
+  | 'other';
+
+export type MobJusticeOutcome =
+  | 'threatened_harassed'
+  | 'restrained_surrounded'
+  | 'physically_assaulted'
+  | 'seriously_injured'
+  | 'death_reported'
+  | 'property_damaged'
+  | 'rescued_intervention'
+  | 'ongoing'
+  | 'unknown';
+
+export type MobJusticeOngoingStatus = 'ongoing' | 'ended' | 'unknown';
+
+export interface MobJusticeDetails {
+  trigger: MobJusticeTrigger;
+  spread?: MobJusticeSpread | null;
+  outcome: MobJusticeOutcome;
+  targetedCount?: number | null;
+  ongoingStatus: MobJusticeOngoingStatus;
+}
+
 export interface ComplaintLocation {
   addressEn: string;
   addressBn: string;
@@ -149,6 +192,8 @@ export interface Complaint {
   affectedPersonAgeGroup?: HarassmentAgeGroup | null;
   allegedAbuserRelationship?: HarassmentAbuserRelationship | null;
   reportingFor?: HarassmentReportingFor | null;
+  // Public Safety / Mob Justice specific citizen classification. Read-only in Admin.
+  mobJusticeDetails?: MobJusticeDetails | null;
   // Utility Service Complaints specific attributes
   recentBillMonth?: string | null;
   recentBillAmount?: number | null;
