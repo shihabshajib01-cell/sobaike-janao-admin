@@ -176,8 +176,8 @@ export interface Complaint {
   assignedDepartment?: string;
   upvotesCount: number;
   commentsCount: number;
-  viewCount: number;
-  shareCount: number;
+  viewCount?: number;
+  shareCount?: number;
   hasSupportingInfo?: boolean;
   evidenceTypes?: string[];
   evidenceDescription?: string;
