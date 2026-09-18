@@ -56,10 +56,25 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
   const [isFormBuilderOpen, setIsFormBuilderOpen] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
+  const [formPublishedThisSession, setFormPublishedThisSession] = useState(false);
 
   if (!target) return null;
 
   const isSegment = target.type === 'segment';
+  const subcategoryFormReady =
+    isSegment ||
+    target.data.configStatus === 'ready' ||
+    target.data.configStatus === 'published' ||
+    formPublishedThisSession;
+  const subcategoryParentReady =
+    isSegment ||
+    Boolean(
+      target.parentSegment &&
+        target.parentSegment.configStatus === 'published' &&
+        target.parentSegment.status === 'active'
+    );
+  const subcategoryReadyToPublish =
+    isSegment || (subcategoryFormReady && subcategoryParentReady);
 
   const handleOpenEdit = () => {
     setSaveError(null);
@@ -85,6 +100,13 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleFormBuilderPublished = () => {
+    setFormPublishedThisSession(true);
+    setIsFormBuilderOpen(false);
+    setPublishError(null);
+    onUpdated?.();
   };
 
   const handlePublish = async () => {
@@ -147,6 +169,7 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
                 size="lg"
                 onClick={handlePublish}
                 isLoading={isPublishing}
+                disabled={!subcategoryReadyToPublish}
                 leftIcon={<Send />}
               >
                 {isBn ? 'Publish' : 'Publish'}
@@ -341,10 +364,51 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
         {publishError && (
           <div
             role="alert"
-            className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300"
+            className="rounded-lg border border-red-200 bg-red-50 p-3 type-helper text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300"
           >
             {publishError}
           </div>
+        )}
+
+        {!isSegment && target.data.configStatus !== 'published' && (
+          <section className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40">
+            <h4 className="type-secondary font-semibold text-slate-900 dark:text-slate-100">
+              {isBn ? 'Publish প্রস্তুতি' : 'Publish readiness'}
+            </h4>
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center gap-2 type-helper">
+                {subcategoryParentReady ? (
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                ) : (
+                  <XCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                )}
+                <span className="text-slate-700 dark:text-slate-300">
+                  {isBn
+                    ? 'মূল ক্যাটাগরি Published ও Active'
+                    : 'Parent category is Published and Active'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 type-helper">
+                {subcategoryFormReady ? (
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                ) : (
+                  <XCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                )}
+                <span className="text-slate-700 dark:text-slate-300">
+                  {isBn
+                    ? 'Reporting form Published'
+                    : 'Reporting form is Published'}
+                </span>
+              </div>
+            </div>
+            {!subcategoryReadyToPublish && (
+              <p className="mt-3 type-helper text-amber-700 dark:text-amber-300">
+                {isBn
+                  ? 'উপরের প্রয়োজনীয় ধাপ সম্পন্ন হলে Publish বাটন সক্রিয় হবে।'
+                  : 'Complete the missing prerequisite above to enable Publish.'}
+              </p>
+            )}
+          </section>
         )}
 
         {!isSegment && target.data.configStatus !== 'published' && (
@@ -395,7 +459,7 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
         subcategoryId={target.data.id}
         subcategoryName={isBn ? target.data.nameBn : target.data.nameEn}
         onClose={() => setIsFormBuilderOpen(false)}
-        onPublished={onUpdated}
+        onPublished={handleFormBuilderPublished}
       />
     )}
     </>

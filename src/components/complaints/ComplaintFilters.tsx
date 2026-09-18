@@ -39,6 +39,10 @@ export const ComplaintFilters: React.FC<ComplaintFiltersProps> = ({
   const [availableSegments, setAvailableSegments] = useState<{ id: string; name_en: string; name_bn: string }[]>(
     propCategories || []
   );
+  const [availableSubcategories, setAvailableSubcategories] = useState<
+    { id: string; segment_id: string; name_en: string; name_bn: string }[]
+  >([]);
+  const [loadingSubcategories, setLoadingSubcategories] = useState(false);
   const [availableDistricts, setAvailableDistricts] = useState<string[]>(
     propLocations || []
   );
@@ -57,6 +61,36 @@ export const ComplaintFilters: React.FC<ComplaintFiltersProps> = ({
         .catch((err) => console.warn('Failed to load taxonomy segments for filter:', err));
     }
   }, [propCategories]);
+
+  useEffect(() => {
+    let active = true;
+
+    if (filters.category === 'all') {
+      setAvailableSubcategories([]);
+      setLoadingSubcategories(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    setLoadingSubcategories(true);
+    complaintApi
+      .getSubcategories(filters.category)
+      .then((subcategories) => {
+        if (active) setAvailableSubcategories(subcategories);
+      })
+      .catch((err) => {
+        console.warn('Failed to load taxonomy subcategories for filter:', err);
+        if (active) setAvailableSubcategories([]);
+      })
+      .finally(() => {
+        if (active) setLoadingSubcategories(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [filters.category]);
 
   useEffect(() => {
     if (propLocations && propLocations.length > 0) {
@@ -81,6 +115,16 @@ export const ComplaintFilters: React.FC<ComplaintFiltersProps> = ({
     })),
   ];
 
+  const subcategoryOptions = [
+    { value: 'all', label: isBn ? 'সকল সাব-ক্যাটাগরি' : 'All Subcategories' },
+    ...availableSubcategories.map((subcategory) => ({
+      value: subcategory.id,
+      label: isBn
+        ? subcategory.name_bn || subcategory.name_en
+        : subcategory.name_en || subcategory.name_bn,
+    })),
+  ];
+
   const locationOptions = [
     { value: 'all', label: isBn ? 'সকল এলাকা' : 'All Locations' },
     ...availableDistricts.map((loc) => ({
@@ -99,6 +143,8 @@ export const ComplaintFilters: React.FC<ComplaintFiltersProps> = ({
   // Helper to get readable label for active filter badges
   const getCategoryLabel = (val: string) =>
     categoryOptions.find((o) => o.value === val)?.label || val;
+  const getSubcategoryLabel = (val: string) =>
+    subcategoryOptions.find((o) => o.value === val)?.label || val;
   const getLocationLabel = (val: string) =>
     locationOptions.find((o) => o.value === val)?.label || val;
   const getDateLabel = (val: string) =>
@@ -107,13 +153,33 @@ export const ComplaintFilters: React.FC<ComplaintFiltersProps> = ({
   return (
     <div className="space-y-3">
       {/* Filters Form Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 items-end">
         {/* Category Select */}
         <Select
           label={isBn ? 'বিভাগ নির্বাচন' : 'Category'}
           value={filters.category}
           onChange={(e) => onFilterChange('category', e.target.value)}
           options={categoryOptions}
+        />
+
+        {/* Subcategory Select */}
+        <Select
+          label={isBn ? 'সাব-ক্যাটাগরি' : 'Subcategory'}
+          value={filters.subcategory}
+          onChange={(e) => onFilterChange('subcategory', e.target.value)}
+          options={subcategoryOptions}
+          disabled={filters.category === 'all' || loadingSubcategories}
+          helperText={
+            filters.category === 'all'
+              ? isBn
+                ? 'আগে একটি ক্যাটাগরি নির্বাচন করুন।'
+                : 'Select a category first.'
+              : loadingSubcategories
+                ? isBn
+                  ? 'সাব-ক্যাটাগরি লোড হচ্ছে…'
+                  : 'Loading subcategories…'
+                : undefined
+          }
         />
 
         {/* Location Select */}
@@ -220,6 +286,16 @@ export const ComplaintFilters: React.FC<ComplaintFiltersProps> = ({
             </FilterChip>
           )}
 
+
+          {filters.subcategory !== 'all' && (
+            <FilterChip
+              tone="info"
+              onRemove={() => onFilterChange('subcategory', 'all')}
+              removeLabel="Remove subcategory filter"
+            >
+              {getSubcategoryLabel(filters.subcategory)}
+            </FilterChip>
+          )}
 
           {isHarassmentFilter && filters.affectedPersonAgeGroup !== 'all' && (
             <FilterChip

@@ -119,11 +119,17 @@ export const ComplaintsPage: React.FC = () => {
   const handleFilterChange = (key: keyof ComplaintFilterState, value: string) => {
     setFilters((prev) => {
       const next = { ...prev, [key]: value };
-      if (key === 'category' && value !== 'harassment') {
-        next.affectedPersonAgeGroup = 'all';
-        next.allegedAbuserRelationship = 'all';
-        next.reportingFor = 'all';
+
+      if (key === 'category') {
+        next.subcategory = 'all';
+
+        if (value !== 'harassment') {
+          next.affectedPersonAgeGroup = 'all';
+          next.allegedAbuserRelationship = 'all';
+          next.reportingFor = 'all';
+        }
       }
+
       return next;
     });
   };

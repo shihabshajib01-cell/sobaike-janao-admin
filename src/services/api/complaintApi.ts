@@ -21,7 +21,9 @@ import {
   supabaseComplaintService,
   getTaxonomySegments,
   getDistinctLocations,
+  getTaxonomy,
   SupabaseSegment,
+  SupabaseSubcategory,
 } from './supabaseComplaintService';
 import { getComplaintIncidentLocation } from './complaintIncidentLocationApi';
 import { getComplaintMobJusticeDetails } from './mobJusticeDetailsApi';
@@ -59,25 +61,37 @@ async function enrichComplaintDetail(complaint: Complaint): Promise<Complaint> {
   ].includes(complaint.categoryId);
 
   const partiesPromise: Promise<ComplaintParty[]> = shouldLoadParties
-    ? supabase
-        .rpc('admin_get_complaint_parties', { p_complaint_id: complaint.id })
-        .then(({ data, error }) => {
-          if (error) throw new Error(error.message || 'Failed to load complaint parties.');
-          if (!Array.isArray(data)) return [];
-          return data.map((party: any) => ({
-            id: String(party.id || ''),
-            complaintId: String(party.complaint_id || complaint.id),
-            name: party.name ? String(party.name) : null,
-            partyType: String(party.party_type || 'unknown'),
-            roleOrDesignation: party.role_or_designation ? String(party.role_or_designation) : null,
-            organization: party.organization ? String(party.organization) : null,
-            phoneOrContact: party.phone_or_contact ? String(party.phone_or_contact) : null,
-            publicProfileHandle: party.public_profile_handle ? String(party.public_profile_handle) : null,
-            address: party.address ? String(party.address) : null,
-            identifyingDescription: party.identifying_description ? String(party.identifying_description) : null,
-            createdAt: party.created_at ? String(party.created_at) : null,
-          }));
-        })
+    ? (async () => {
+        const { data, error } = await supabase.rpc('admin_get_complaint_parties', {
+          p_complaint_id: complaint.id,
+        });
+        if (error) {
+          throw new Error(error.message || 'Failed to load complaint parties.');
+        }
+        if (!Array.isArray(data)) return [];
+
+        return data.map((party: any) => ({
+          id: String(party.id || ''),
+          complaintId: String(party.complaint_id || complaint.id),
+          name: party.name ? String(party.name) : null,
+          partyType: String(party.party_type || 'unknown'),
+          roleOrDesignation: party.role_or_designation
+            ? String(party.role_or_designation)
+            : null,
+          organization: party.organization ? String(party.organization) : null,
+          phoneOrContact: party.phone_or_contact
+            ? String(party.phone_or_contact)
+            : null,
+          publicProfileHandle: party.public_profile_handle
+            ? String(party.public_profile_handle)
+            : null,
+          address: party.address ? String(party.address) : null,
+          identifyingDescription: party.identifying_description
+            ? String(party.identifying_description)
+            : null,
+          createdAt: party.created_at ? String(party.created_at) : null,
+        })) as ComplaintParty[];
+      })()
     : Promise.resolve([]);
 
   const [canonicalLocation, mobJusticeDetails, harassmentContext, parties] = await Promise.all([
@@ -120,7 +134,23 @@ export class ComplaintApi {
    */
   async getSegments(): Promise<SupabaseSegment[]> {
     assertSupabaseConfigured();
-    return await getTaxonomySegments();
+    return await getTaxonomySegments(true);
+  }
+
+  /**
+   * Get active taxonomy subcategories. When a category is provided, return
+   * only complaint types belonging to that category.
+   */
+  async getSubcategories(segmentId?: string): Promise<SupabaseSubcategory[]> {
+    assertSupabaseConfigured();
+    const { subcategories } = await getTaxonomy(true);
+    return subcategories.filter(
+      (subcategory) =>
+        subcategory.active !== false &&
+        (!segmentId ||
+          segmentId === 'all' ||
+          subcategory.segment_id === segmentId)
+    );
   }
 
   /**
