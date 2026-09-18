@@ -176,6 +176,66 @@ export interface ComplaintSource {
   updatedAt?: string | null;
 }
 
+export type ReportDuplicateStatus = 'clear' | 'review' | 'match' | 'exact';
+
+export interface ReportDuplicateSourceSummary {
+  publisherName?: string | null;
+  sourceTitle?: string | null;
+  canonicalUrl?: string | null;
+  sourcePublishedDate?: string | null;
+}
+
+export interface ReportDuplicateCandidate {
+  complaintId: string;
+  status: string;
+  titleBn?: string | null;
+  titleEn?: string | null;
+  segmentId?: string | null;
+  subcategoryId?: string | null;
+  incidentDate?: string | null;
+  district?: string | null;
+  upazilaOrThana?: string | null;
+  area?: string | null;
+  score: number;
+  titleSimilarity: number;
+  matchLevel: 'match' | 'review';
+  reasons: string[];
+  sources: ReportDuplicateSourceSummary[];
+}
+
+export interface ReportExactSourceDuplicate {
+  complaintId: string;
+  status?: string | null;
+  titleBn?: string | null;
+  titleEn?: string | null;
+  publisherName?: string | null;
+  sourceTitle?: string | null;
+  canonicalUrl?: string | null;
+}
+
+export interface ReportDuplicateCheckResult {
+  applicable: boolean;
+  status: ReportDuplicateStatus;
+  requiresReview: boolean;
+  candidateCount: number;
+  matchCount: number;
+  reviewCount: number;
+  exactSourceDuplicates: ReportExactSourceDuplicate[];
+  candidates: ReportDuplicateCandidate[];
+}
+
+export interface SourceDuplicateCheckResult {
+  duplicate: boolean;
+  normalizedUrl: string;
+  complaintId?: string;
+  complaintStatus?: string;
+  titleBn?: string | null;
+  titleEn?: string | null;
+  publisherName?: string | null;
+  sourceTitle?: string | null;
+  canonicalUrl?: string | null;
+}
+
 export interface ComplaintMedia {
   id: string;
   type: 'image' | 'video' | 'document';
@@ -239,6 +299,8 @@ export interface Complaint {
   parties?: ComplaintParty[];
   status: ComplaintLifecycleStatus;
   urgency: ComplaintUrgency;
+  /** Origin of the record. Sourced reports use stricter source and duplicate publication gates. */
+  originType?: 'citizen' | 'sourced_report' | string;
   citizenName?: string;
   citizenPhone?: string;
   isAnonymous?: boolean;
