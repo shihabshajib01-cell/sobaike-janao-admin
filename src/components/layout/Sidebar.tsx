@@ -89,7 +89,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span className="font-bold text-sm text-slate-900 dark:text-slate-100 tracking-tight leading-tight">
                   Sobai Ke Janao
                 </span>
-                <span className="text-[10px] uppercase font-semibold text-sky-600 dark:text-sky-400 tracking-wider">
+                <span className="type-technical uppercase font-semibold text-sky-600 dark:text-sky-400 tracking-wider">
                   Admin Panel
                 </span>
               </div>
@@ -110,7 +110,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Navigation Items List */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
           {!isCollapsed && (
-            <div className="px-3 pb-2 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+            <div className="px-3 pb-2 type-meta font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
               {language === 'bn' ? 'কার্যক্রম' : 'Operations'}
             </div>
           )}
@@ -119,10 +119,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             !isCollapsed ? (
               <div className="px-3 py-4 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800 text-center">
                 <ShieldAlert className="w-5 h-5 text-amber-500 mx-auto mb-1.5" />
-                <p className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                <p className="type-meta font-medium text-slate-600 dark:text-slate-400">
                   {language === 'bn' ? 'কোনো মডিউলে প্রবেশাধিকার নেই' : 'No Accessible Modules'}
                 </p>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+                <p className="type-meta text-slate-400 dark:text-slate-500 mt-1">
                   {language === 'bn' ? 'অনুমতির জন্য প্রশাসকের সাথে যোগাযোগ করুন' : 'Contact system admin for role assignment'}
                 </p>
               </div>
@@ -142,7 +142,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   to={item.path}
                   className={({ isActive }) =>
                     cn(
-                      'group flex items-center justify-between px-3 py-2.5 rounded-md text-xs font-medium transition-all duration-150 select-none relative',
+                      'group flex items-center justify-between px-3 py-2.5 rounded-md type-meta font-medium transition-all duration-150 select-none relative',
                       isActive
                         ? 'bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 font-semibold shadow-xs'
                         : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100',
@@ -187,12 +187,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Sidebar Footer */}
         <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
           {!isCollapsed ? (
-            <div className="flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500 px-2">
+            <div className="flex items-center justify-between type-meta text-slate-400 dark:text-slate-500 px-2">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span>{t.header.operational}</span>
               </div>
-              <span className="font-mono text-[10px]">v1.2.0</span>
+              <span className="font-mono type-technical">v1.2.0</span>
             </div>
           ) : (
             <div className="flex justify-center">

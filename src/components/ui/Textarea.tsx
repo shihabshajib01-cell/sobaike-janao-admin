@@ -33,13 +33,13 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           {label && (
             <label
               htmlFor={textareaId}
-              className="text-xs font-medium text-slate-700 dark:text-slate-300 select-none"
+              className="type-label font-medium text-slate-700 dark:text-slate-300 select-none"
             >
               {label}
             </label>
           )}
           {maxCharCount !== undefined && (
-            <span className="text-[11px] text-slate-400 dark:text-slate-500">
+            <span className="type-technical text-slate-400 dark:text-slate-500">
               {charCount !== undefined ? charCount : 0}/{maxCharCount}
             </span>
           )}
@@ -50,7 +50,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           rows={rows}
           disabled={disabled}
           className={cn(
-            'w-full rounded-md border text-base sm:text-sm p-3 transition-colors duration-150 font-normal resize-y',
+            'w-full rounded-md border type-form-value p-3 transition-colors duration-150 font-normal resize-y',
             'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500',
             'focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500',
             'disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 dark:disabled:text-slate-500 disabled:cursor-not-allowed',
@@ -62,9 +62,9 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           {...props}
         />
         {error ? (
-          <p className="text-xs font-medium text-red-600 dark:text-red-400">{error}</p>
+          <p className="type-helper font-medium text-red-600 dark:text-red-400">{error}</p>
         ) : helperText ? (
-          <p className="text-xs text-slate-500 dark:text-slate-400">{helperText}</p>
+          <p className="type-helper text-slate-500 dark:text-slate-400">{helperText}</p>
         ) : null}
       </div>
     );

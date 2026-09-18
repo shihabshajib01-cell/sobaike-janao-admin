@@ -39,7 +39,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         {label && (
           <label
             htmlFor={selectId}
-            className="text-xs font-medium text-slate-700 dark:text-slate-300 select-none"
+            className="type-label font-medium text-slate-700 dark:text-slate-300 select-none"
           >
             {label}
           </label>
@@ -50,7 +50,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             ref={ref}
             disabled={disabled}
             className={cn(
-              'w-full h-9 rounded-md border text-base sm:text-sm appearance-none transition-colors duration-150 font-normal pl-3 pr-8',
+              'w-full h-9 rounded-md border type-form-value appearance-none transition-colors duration-150 font-normal pl-3 pr-8',
               'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100',
               'focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500',
               'disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 dark:disabled:text-slate-500 disabled:cursor-not-allowed',
@@ -80,9 +80,9 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         </div>
 
         {error ? (
-          <p className="text-xs font-medium text-red-600 dark:text-red-400">{error}</p>
+          <p className="type-helper font-medium text-red-600 dark:text-red-400">{error}</p>
         ) : helperText ? (
-          <p className="text-xs text-slate-500 dark:text-slate-400">{helperText}</p>
+          <p className="type-helper text-slate-500 dark:text-slate-400">{helperText}</p>
         ) : null}
       </div>
     );

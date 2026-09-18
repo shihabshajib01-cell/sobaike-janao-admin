@@ -77,12 +77,12 @@ export const Modal: React.FC<ModalProps> = ({
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800/80">
           <div>
             {title && (
-              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+              <h3 className="type-card-title text-slate-900 dark:text-slate-100">
                 {title}
               </h3>
             )}
             {description && (
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{description}</p>
+              <p className="type-secondary text-slate-500 dark:text-slate-400 mt-0.5">{description}</p>
             )}
           </div>
           <button
@@ -96,7 +96,7 @@ export const Modal: React.FC<ModalProps> = ({
         </div>
 
         {/* Body */}
-        <div className="p-6 text-sm text-slate-700 dark:text-slate-300 max-h-[calc(85vh-130px)] overflow-y-auto">
+        <div className="p-6 type-body text-slate-700 dark:text-slate-300 max-h-[calc(85vh-130px)] overflow-y-auto">
           {children}
         </div>
 

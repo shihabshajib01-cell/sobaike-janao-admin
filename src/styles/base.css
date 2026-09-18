@@ -1,6 +1,32 @@
 /* Sobai Ke Janao Styles Foundation */
 :root {
   color-scheme: light;
+
+  --font-ui: "Noto Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  /* Unified responsive typography contract */
+  --type-display-size: 28px;
+  --type-display-line: 36px;
+  --type-page-title-size: 22px;
+  --type-page-title-line: 30px;
+  --type-section-title-size: 18px;
+  --type-section-title-line: 28px;
+  --type-card-title-size: 17px;
+  --type-card-title-line: 26px;
+  --type-body-size: 16px;
+  --type-body-line: 26px;
+  --type-action-size: 16px;
+  --type-action-line: 20px;
+  --type-action-sm-size: 14px;
+  --type-action-sm-line: 20px;
+  --type-small-size: 14px;
+  --type-small-line: 22px;
+  --type-technical-size: 12px;
+  --type-technical-line: 18px;
+  --type-badge-sm-size: 12px;
+  --type-badge-sm-line: 18px;
+  --type-badge-md-size: 14px;
+  --type-badge-md-line: 20px;
   --bg-default: #f8fafc;
   --bg-subtle: #f1f5f9;
   --surface-default: #ffffff;
@@ -17,6 +43,34 @@
   --status-warning: #d97706;
   --status-error: #dc2626;
   --status-info: #0284c7;
+}
+
+html[lang="bn"] {
+  --font-ui: "Noto Sans Bengali", "Noto Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+html[lang="en"] {
+  --font-ui: "Noto Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --type-display-size: 30px;
+    --type-display-line: 40px;
+    --type-page-title-size: 24px;
+    --type-page-title-line: 32px;
+    --type-section-title-size: 20px;
+    --type-section-title-line: 30px;
+    --type-card-title-size: 18px;
+    --type-card-title-line: 28px;
+  }
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --type-display-size: 32px;
+    --type-display-line: 42px;
+  }
 }
 
 .dark {
@@ -39,12 +93,49 @@
   --status-info: #38bdf8;
 }
 
+html,
+body,
+button,
+input,
+select,
+textarea,
+label,
+a,
+small {
+  font-family: var(--font-ui);
+}
+
 body {
   background-color: var(--bg-default);
   color: var(--text-primary);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  font-weight: 400;
+  text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Semantic typography utilities */
+.type-display { font-size: var(--type-display-size) !important; line-height: var(--type-display-line) !important; font-weight: 700; }
+.type-page-title { font-size: var(--type-page-title-size) !important; line-height: var(--type-page-title-line) !important; font-weight: 700; letter-spacing: -0.02em; }
+.type-section-title { font-size: var(--type-section-title-size) !important; line-height: var(--type-section-title-line) !important; font-weight: 600; letter-spacing: -0.01em; }
+.type-card-title { font-size: var(--type-card-title-size) !important; line-height: var(--type-card-title-line) !important; font-weight: 600; letter-spacing: -0.01em; }
+.type-body, .type-form-value { font-size: var(--type-body-size) !important; line-height: var(--type-body-line) !important; }
+.type-action { font-size: var(--type-action-size) !important; line-height: var(--type-action-line) !important; }
+.type-action-sm { font-size: var(--type-action-sm-size) !important; line-height: var(--type-action-sm-line) !important; }
+.type-secondary, .type-table, .type-label, .type-helper, .type-meta { font-size: var(--type-small-size) !important; line-height: var(--type-small-line) !important; }
+.type-technical { font-size: var(--type-technical-size) !important; line-height: var(--type-technical-line) !important; }
+.type-badge-sm { font-size: var(--type-badge-sm-size) !important; line-height: var(--type-badge-sm-line) !important; }
+.type-badge-md { font-size: var(--type-badge-md-size) !important; line-height: var(--type-badge-md-line) !important; }
+.text-\[10px\], .text-\[11px\] { font-size: var(--type-technical-size) !important; line-height: var(--type-technical-line) !important; }
+.text-\[13px\] { font-size: var(--type-small-size) !important; line-height: var(--type-small-line) !important; }
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+select,
+textarea {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
 }
 
 /* Base scrollbar styling */
