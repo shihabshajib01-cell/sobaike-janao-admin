@@ -119,7 +119,7 @@ export const ResponseTable: React.FC<ResponseTableProps> = ({
                   #{item.complaintId}
                 </TableCell>
                 <TableCell>{getTypeBadge(item.responseType)}</TableCell>
-                <TableCell className="min-w-0">
+                <TableCell className="max-w-md">
                   <p className="truncate text-slate-800 dark:text-slate-200 text-xs font-normal" title={item.content}>
                     {item.content || (
                       <span className="text-slate-400 italic">
