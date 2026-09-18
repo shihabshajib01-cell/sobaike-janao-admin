@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { useLanguage } from '@/context/LanguageContext';
@@ -57,7 +58,7 @@ export const ComplaintStatusTabs: React.FC<ComplaintStatusTabsProps> = ({
         const label = isBn ? tab.labelBn : tab.labelEn;
 
         return (
-          <button
+          <ButtonBase
             key={tab.status}
             role="tab"
             aria-selected={isActive}
@@ -82,7 +83,7 @@ export const ComplaintStatusTabs: React.FC<ComplaintStatusTabsProps> = ({
             >
               {formatNumber(tab.count)}
             </Badge>
-          </button>
+          </ButtonBase>
         );
       })}
       </div>
