@@ -65,12 +65,12 @@ export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(
         {(label || description) && (
           <div className="flex flex-col text-left cursor-pointer" onClick={handleClick}>
             {label && (
-              <span className="text-xs font-medium text-slate-800 dark:text-slate-200 leading-normal">
+              <span className="type-label font-medium text-slate-800 dark:text-slate-200">
                 {label}
               </span>
             )}
             {description && (
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal">
+              <span className="type-helper text-slate-500 dark:text-slate-400">
                 {description}
               </span>
             )}
