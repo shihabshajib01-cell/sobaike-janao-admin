@@ -171,7 +171,6 @@ export const RoleTable: React.FC<RoleTableProps> = ({ roles }) => {
                       e.stopPropagation();
                       handleViewDetail(role.id);
                     }}
-                    className="h-7 px-2.5 text-xs text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400"
                     aria-label={`${t.roles.viewDetails}: ${displayName}`}
                   >
                     <Eye className="w-3.5 h-3.5 mr-1" />
