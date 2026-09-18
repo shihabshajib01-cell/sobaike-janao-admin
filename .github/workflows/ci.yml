@@ -38,6 +38,9 @@ jobs:
       - name: Dependency security audit
         run: npm run audit:dependencies
 
+      - name: Admin hardening audit
+        run: npm run audit:hardening
+
       - name: Lint
         run: npm run lint
 
