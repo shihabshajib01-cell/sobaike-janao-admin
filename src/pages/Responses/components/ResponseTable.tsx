@@ -2,8 +2,21 @@ import React from 'react';
 import { ResponseItem, ResponseStatus, ResponseType } from '@/types/Response';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/Table';
+import {
+  ResponsiveDataView,
+  ResponsiveDataTableView,
+  ResponsiveDataCardView,
+} from '@/components/ui/ResponsiveDataView';
 import { useLanguage } from '@/context/LanguageContext';
-import { Eye } from 'lucide-react';
+import { Calendar, ChevronRight, Eye, FileText } from 'lucide-react';
 
 export interface ResponseTableProps {
   responses: ResponseItem[];
@@ -22,35 +35,15 @@ export const ResponseTable: React.FC<ResponseTableProps> = ({
   const getStatusBadge = (status: ResponseStatus) => {
     switch (status) {
       case 'pending_review':
-        return (
-          <Badge status="warning">
-            {isBn ? 'পর্যালোচনা অপেক্ষমাণ' : 'Pending Review'}
-          </Badge>
-        );
+        return <Badge status="warning">{isBn ? 'পর্যালোচনা অপেক্ষমাণ' : 'Pending Review'}</Badge>;
       case 'published':
-        return (
-          <Badge status="success">
-            {isBn ? 'প্রকাশিত' : 'Published'}
-          </Badge>
-        );
+        return <Badge status="success">{isBn ? 'প্রকাশিত' : 'Published'}</Badge>;
       case 'rejected':
-        return (
-          <Badge status="error">
-            {isBn ? 'প্রত্যাখ্যাত' : 'Rejected'}
-          </Badge>
-        );
+        return <Badge status="error">{isBn ? 'প্রত্যাখ্যাত' : 'Rejected'}</Badge>;
       case 'unpublished':
-        return (
-          <Badge status="default">
-            {isBn ? 'অপ্রকাশিত' : 'Unpublished'}
-          </Badge>
-        );
+        return <Badge status="default">{isBn ? 'অপ্রকাশিত' : 'Unpublished'}</Badge>;
       default:
-        return (
-          <Badge status="default">
-            {status}
-          </Badge>
-        );
+        return <Badge status="default">{status}</Badge>;
     }
   };
 
@@ -62,6 +55,7 @@ export const ResponseTable: React.FC<ResponseTableProps> = ({
         </span>
       );
     }
+
     if (type === 'subject_response') {
       return (
         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200/60 dark:border-purple-800/40 whitespace-nowrap">
@@ -69,6 +63,7 @@ export const ResponseTable: React.FC<ResponseTableProps> = ({
         </span>
       );
     }
+
     return <span>{type}</span>;
   };
 
@@ -86,37 +81,24 @@ export const ResponseTable: React.FC<ResponseTableProps> = ({
   };
 
   return (
-    <div className="w-full overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
-      <div className="w-full overflow-x-auto">
-        <table className="w-full text-left text-sm border-collapse min-w-[760px]">
-          <thead className="bg-slate-50 dark:bg-slate-800/80 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
-            <tr>
-              <th scope="col" className="py-3 px-4 w-28">
-                {isBn ? 'রেসপন্স আইডি' : 'Response ID'}
-              </th>
-              <th scope="col" className="py-3 px-4 w-28">
-                {isBn ? 'রিপোর্ট আইডি' : 'Report ID'}
-              </th>
-              <th scope="col" className="py-3 px-4 w-44">
-                {isBn ? 'ধরন' : 'Type'}
-              </th>
-              <th scope="col" className="py-3 px-4">
-                {isBn ? 'প্রতিক্রিয়া' : 'Response'}
-              </th>
-              <th scope="col" className="py-3 px-4 w-36">
-                {isBn ? 'স্ট্যাটাস' : 'Status'}
-              </th>
-              <th scope="col" className="py-3 px-4 w-32">
-                {isBn ? 'জমা দেওয়া হয়েছে' : 'Submitted'}
-              </th>
-              <th scope="col" className="py-3 px-4 text-right w-24">
-                {isBn ? 'পদক্ষেপ' : 'Action'}
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+    <ResponsiveDataView>
+      <ResponsiveDataTableView>
+        <Table className="text-sm">
+          <TableHeader>
+            <TableRow>
+              <TableHead>{isBn ? 'রেসপন্স আইডি' : 'Response ID'}</TableHead>
+              <TableHead>{isBn ? 'রিপোর্ট আইডি' : 'Report ID'}</TableHead>
+              <TableHead>{isBn ? 'ধরন' : 'Type'}</TableHead>
+              <TableHead>{isBn ? 'প্রতিক্রিয়া' : 'Response'}</TableHead>
+              <TableHead>{isBn ? 'স্ট্যাটাস' : 'Status'}</TableHead>
+              <TableHead>{isBn ? 'জমা দেওয়া হয়েছে' : 'Submitted'}</TableHead>
+              <TableHead className="text-right">{isBn ? 'পদক্ষেপ' : 'Action'}</TableHead>
+            </TableRow>
+          </TableHeader>
+
+          <TableBody>
             {responses.map((item) => (
-              <tr
+              <TableRow
                 key={item.id}
                 onClick={() => onViewDetails(item)}
                 onKeyDown={(e) => {
@@ -128,23 +110,16 @@ export const ResponseTable: React.FC<ResponseTableProps> = ({
                 }}
                 tabIndex={0}
                 aria-label={`${isBn ? 'রেসপন্স দেখুন' : 'View response'} #${item.id}`}
-                className="cursor-pointer hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500"
+                className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500"
               >
-                {/* Response ID */}
-                <td className="py-3.5 px-4 font-mono text-xs font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                <TableCell className="font-mono text-xs font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap">
                   #{item.id}
-                </td>
-
-                {/* Report ID */}
-                <td className="py-3.5 px-4 font-mono text-xs text-sky-600 dark:text-sky-400 font-medium whitespace-nowrap">
+                </TableCell>
+                <TableCell className="font-mono text-xs text-sky-600 dark:text-sky-400 font-medium whitespace-nowrap">
                   #{item.complaintId}
-                </td>
-
-                {/* Type */}
-                <td className="py-3.5 px-4">{getTypeBadge(item.responseType)}</td>
-
-                {/* Response preview */}
-                <td className="py-3.5 px-4 max-w-xs md:max-w-md">
+                </TableCell>
+                <TableCell>{getTypeBadge(item.responseType)}</TableCell>
+                <TableCell className="min-w-0">
                   <p className="truncate text-slate-800 dark:text-slate-200 text-xs font-normal" title={item.content}>
                     {item.content || (
                       <span className="text-slate-400 italic">
@@ -152,18 +127,12 @@ export const ResponseTable: React.FC<ResponseTableProps> = ({
                       </span>
                     )}
                   </p>
-                </td>
-
-                {/* Status */}
-                <td className="py-3.5 px-4">{getStatusBadge(item.status)}</td>
-
-                {/* Submitted */}
-                <td className="py-3.5 px-4 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                </TableCell>
+                <TableCell>{getStatusBadge(item.status)}</TableCell>
+                <TableCell className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
                   {formatDate(item.createdAt)}
-                </td>
-
-                {/* Action */}
-                <td className="py-3.5 px-4 text-right">
+                </TableCell>
+                <TableCell className="text-right">
                   <Button
                     type="button"
                     variant="ghost"
@@ -179,13 +148,54 @@ export const ResponseTable: React.FC<ResponseTableProps> = ({
                     <Eye className="w-3.5 h-3.5 mr-1" />
                     <span>{isBn ? 'দেখুন' : 'View'}</span>
                   </Button>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+          </TableBody>
+        </Table>
+      </ResponsiveDataTableView>
+
+      <ResponsiveDataCardView>
+        <div className="space-y-3">
+          {responses.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onViewDetails(item)}
+              disabled={isLoading}
+              className="w-full text-left p-4 space-y-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-sky-300 dark:hover:border-sky-700 active:scale-[0.99] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 disabled:opacity-60"
+              aria-label={`${isBn ? 'রেসপন্স দেখুন' : 'View response'} #${item.id}`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-mono font-bold text-sky-700 dark:text-sky-400 text-xs">
+                  #{item.id}
+                </span>
+                {getStatusBadge(item.status)}
+              </div>
+
+              <div className="space-y-2">
+                <div>{getTypeBadge(item.responseType)}</div>
+                <div className="flex items-start gap-2">
+                  <FileText className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100 line-clamp-2 leading-snug">
+                    {item.content || (isBn ? 'কোনো বক্তব্য নেই' : 'No content')}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
+                <span className="font-mono truncate">#{item.complaintId}</span>
+                <span className="flex items-center gap-1 shrink-0">
+                  <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                  {formatDate(item.createdAt)}
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </ResponsiveDataCardView>
+    </ResponsiveDataView>
   );
 };
 
