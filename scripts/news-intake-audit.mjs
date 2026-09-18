@@ -9,6 +9,7 @@ const requireText = (source, needle, label) => {
 const foundation = read('supabase/migrations/20260918161717_news_intake_foundation.sql');
 const actions = read('supabase/migrations/20260918161752_news_intake_actions.sql');
 const taxonomy = read('supabase/migrations/20260918162008_news_intake_taxonomy_contract.sql');
+const registryIndex = read('supabase/migrations/20260918163153_news_intake_registry_index.sql');
 const edge = read('supabase/functions/news-intake-fetch/index.ts');
 const page = read('src/pages/NewsIntake/NewsIntakePage.tsx');
 const api = read('src/services/api/newsIntakeApi.ts');
@@ -36,6 +37,8 @@ for (const [needle, label] of [
 ]) {
   requireText(actions, needle, label);
 }
+
+requireText(registryIndex, 'idx_news_source_domains_created_by', 'News Intake registry FK index');
 
 for (const needle of [
   'admin_get_news_intake_taxonomy',
