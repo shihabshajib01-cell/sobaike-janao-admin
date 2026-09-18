@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React, { useState, useEffect, useCallback } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -433,7 +434,7 @@ export const ComplaintsPage: React.FC = () => {
                 {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((p) => {
                   const isCurrent = p === pagination.currentPage;
                   return (
-                    <button
+                    <ButtonBase
                       key={p}
                       onClick={() => handlePageChange(p)}
                       disabled={loading}
@@ -444,7 +445,7 @@ export const ComplaintsPage: React.FC = () => {
                       }`}
                     >
                       {formatNumber(p)}
-                    </button>
+                    </ButtonBase>
                   );
                 })}
               </div>
