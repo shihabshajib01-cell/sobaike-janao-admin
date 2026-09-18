@@ -187,21 +187,6 @@ export class CategoryApi {
       throw new Error('Sort order must be an integer.');
     }
 
-    if (input.itemType === 'subcategory' && input.parentSegmentId?.trim()) {
-      const current = await this.getSubcategories();
-      const existing = current.find((item) => item.id === id);
-      if (existing && existing.segmentId !== input.parentSegmentId.trim()) {
-        const { error: moveError } = await supabase.rpc('admin_move_subcategory', {
-          p_subcategory_id: id,
-          p_target_segment_id: input.parentSegmentId.trim(),
-          p_sort_order: input.order,
-        });
-        if (moveError) {
-          throw new Error(`Failed to move subcategory: ${moveError.message}`);
-        }
-      }
-    }
-
     const configPayload =
       input.itemType === 'segment'
         ? {
@@ -226,23 +211,18 @@ export class CategoryApi {
             sortOrder: input.order,
           };
 
-    const { error: configError } = await supabase.rpc('admin_update_taxonomy_configuration', {
+    const { error } = await supabase.rpc('admin_update_taxonomy_full', {
       p_item_type: input.itemType,
       p_item_id: id,
-      p_payload: configPayload,
-    });
-
-    if (configError) {
-      throw new Error(`Failed to update taxonomy configuration: ${configError.message}`);
-    }
-
-    const { error } = await supabase.rpc('admin_update_taxonomy_item', {
-      p_item_type: input.itemType,
-      p_item_id: id,
+      p_parent_segment_id:
+        input.itemType === 'subcategory'
+          ? input.parentSegmentId?.trim() || null
+          : null,
       p_name_en: nameEn,
       p_name_bn: nameBn,
       p_active: input.status === 'active',
       p_sort_order: input.order,
+      p_payload: configPayload,
     });
 
     if (error) {
