@@ -105,7 +105,7 @@ export const RecentComplaints: React.FC<RecentComplaintsProps> = ({
             <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               {isBn ? 'এখনও কোনো প্রতিবেদন নেই' : 'No Reports Yet'}
             </p>
-            <p className="text-[11px] text-slate-400 dark:text-slate-500">
+            <p className="type-meta text-slate-400 dark:text-slate-500">
               {isBn
                 ? 'প্রতিবেদন জমা পড়লে এখানে দেখা যাবে।'
                 : 'Reports will appear here after they are submitted.'}
@@ -150,7 +150,7 @@ export const RecentComplaints: React.FC<RecentComplaintsProps> = ({
                       >
                         <TableCell className="max-w-xs">
                           <div className="flex flex-col">
-                            <span className="font-mono text-[11px] font-semibold text-sky-600 dark:text-sky-400">
+                            <span className="font-mono type-meta font-semibold text-sky-600 dark:text-sky-400">
                               #{c.id.slice(0, 8)}
                             </span>
                             <span className="font-medium text-slate-900 dark:text-slate-100 truncate mt-0.5">
@@ -160,7 +160,7 @@ export const RecentComplaints: React.FC<RecentComplaintsProps> = ({
                         </TableCell>
 
                         <TableCell className="text-slate-600 dark:text-slate-300">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-xs text-[11px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-xs type-meta bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 whitespace-nowrap">
                             {isBn ? c.categoryBn : c.categoryEn}
                           </span>
                         </TableCell>
@@ -175,7 +175,7 @@ export const RecentComplaints: React.FC<RecentComplaintsProps> = ({
                         </TableCell>
 
                         <TableCell className="text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                          <div className="flex items-center gap-1 text-[11px]">
+                          <div className="flex items-center gap-1 type-meta">
                             <Calendar className="w-3 h-3 text-slate-400" />
                             <span>{c.date}</span>
                           </div>
@@ -195,7 +195,7 @@ export const RecentComplaints: React.FC<RecentComplaintsProps> = ({
                               e.stopPropagation();
                               navigate(`/complaints/${c.id}`);
                             }}
-                            className="h-7 px-2 text-[11px] text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
+                            className="h-7 px-2 type-meta text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
                           >
                             {isBn ? 'পর্যালোচনা' : 'Review'}
                           </Button>
@@ -225,7 +225,7 @@ export const RecentComplaints: React.FC<RecentComplaintsProps> = ({
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <span className="font-mono text-[11px] font-semibold text-sky-600 dark:text-sky-400">
+                          <span className="font-mono type-meta font-semibold text-sky-600 dark:text-sky-400">
                             #{c.id.slice(0, 8)}
                           </span>
                           <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100 line-clamp-2">
