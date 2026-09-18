@@ -254,7 +254,7 @@ export const NotificationDropdown: React.FC = () => {
                 onClick={handleMarkAll}
                 disabled={isMarkingAll}
                 isLoading={isMarkingAll}
-                leftIcon={<CheckCheck className="w-3.5 h-3.5" />}
+                leftIcon={<CheckCheck />}
                 title={t.notifications.markAllRead}
               >
                 {t.notifications.markAllRead}
@@ -432,7 +432,7 @@ export const NotificationDropdown: React.FC = () => {
                         onClick={() => void handleItemClick(item)}
                         disabled={markingItemIds.has(item.id)}
                         isLoading={markingItemIds.has(item.id)}
-                        leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+                        leftIcon={<RotateCcw />}
                       >
                         {t.notifications.retry}
                       </Button>
@@ -452,7 +452,7 @@ export const NotificationDropdown: React.FC = () => {
               size="md"
               fullWidth
               onClick={handleViewAll}
-              rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+              rightIcon={<ArrowRight />}
             >
               {t.notifications.viewAll}
             </Button>
