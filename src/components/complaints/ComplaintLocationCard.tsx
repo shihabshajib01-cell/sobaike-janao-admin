@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { Tag } from '@/components/ui/Tag';
 import { Button } from '@/components/ui/Button';
 import { useLanguage } from '@/context/LanguageContext';
 import { ComplaintLocation, ReporterDeviceLocation } from '@/types/Complaint';
@@ -386,10 +387,9 @@ export const ComplaintLocationCard: React.FC<ComplaintLocationCardProps> = ({
                   <Smartphone className="w-3.5 h-3.5" />
                   <span>{isBn ? 'রিপোর্টারের ডিভাইস অবস্থান' : 'Reporter Device Location'}</span>
                 </h4>
-                <Badge variant="subtle" size="sm" className="bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800">
-                  <Lock className="w-2.5 h-2.5 mr-1" />
-                  <span>{isBn ? 'গোপনীয়' : 'Private'}</span>
-                </Badge>
+                <Tag tone="warning" icon={<Lock />}>
+                  {isBn ? 'গোপনীয়' : 'Private'}
+                </Tag>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                 {isBn
