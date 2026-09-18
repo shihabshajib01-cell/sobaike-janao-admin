@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Shield, Lock, Mail, AlertCircle, ArrowRight, CheckCircle2, Moon, Sun } from 'lucide-react';
@@ -126,17 +127,17 @@ export const LoginPage: React.FC = () => {
 
         <div className="flex items-center gap-2">
           {/* Language Switcher */}
-          <button
+          <ButtonBase
             type="button"
             onClick={() => setLanguage(language === 'en' ? 'bn' : 'en')}
             className="px-2.5 py-1 text-xs font-semibold rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
             title="Switch Language"
           >
             {language === 'en' ? 'বাংলা' : 'English'}
-          </button>
+          </ButtonBase>
 
           {/* Theme Toggle */}
-          <button
+          <ButtonBase
             type="button"
             onClick={toggleTheme}
             className="p-1.5 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
@@ -144,7 +145,7 @@ export const LoginPage: React.FC = () => {
             aria-label="Toggle theme"
           >
             {resolvedTheme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </button>
+          </ButtonBase>
         </div>
       </header>
 
