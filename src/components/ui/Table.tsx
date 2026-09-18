@@ -7,7 +7,7 @@ import { EmptyState } from '@/components/common/EmptyState';
 export const Table = forwardRef<HTMLTableElement, HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
     <div className="relative w-full max-w-full min-w-0 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
-      <table ref={ref} className={cn('w-full min-w-0 table-auto caption-bottom text-xs text-left', className)} {...props} />
+      <table ref={ref} className={cn('w-full min-w-0 table-auto caption-bottom type-table text-left', className)} {...props} />
     </div>
   )
 );
@@ -68,7 +68,7 @@ export const TableHead = forwardRef<HTMLTableCellElement, TableHeadProps>(
       ref={ref}
       onClick={sortable ? onSort : undefined}
       className={cn(
-        'h-9 px-3.5 text-left align-middle font-semibold text-slate-600 dark:text-slate-400 text-[11px] uppercase tracking-wider select-none',
+        'h-9 px-3.5 text-left align-middle font-semibold text-slate-600 dark:text-slate-400 type-table uppercase tracking-wider select-none',
         sortable && 'cursor-pointer hover:text-slate-900 dark:hover:text-slate-100 transition-colors',
         className
       )}
@@ -106,7 +106,7 @@ TableCell.displayName = 'TableCell';
 
 export const TableCaption = forwardRef<HTMLTableCaptionElement, HTMLAttributes<HTMLTableCaptionElement>>(
   ({ className, ...props }, ref) => (
-    <caption ref={ref} className={cn('mt-3 text-xs text-slate-400 dark:text-slate-500', className)} {...props} />
+    <caption ref={ref} className={cn('mt-3 type-meta text-slate-400 dark:text-slate-500', className)} {...props} />
   )
 );
 TableCaption.displayName = 'TableCaption';
@@ -169,7 +169,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
   return (
     <div
       className={cn(
-        'flex flex-col sm:flex-row items-center justify-between gap-3 px-3.5 py-3 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 bg-slate-50/50 dark:bg-slate-900/50 rounded-b-md',
+        'flex flex-col sm:flex-row items-center justify-between gap-3 px-3.5 py-3 border-t border-slate-200 dark:border-slate-800 type-table text-slate-500 dark:text-slate-400 bg-slate-50/50 dark:bg-slate-900/50 rounded-b-md',
         className
       )}
     >
@@ -185,7 +185,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
             <select
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className="h-7 px-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs"
+              className="h-7 px-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 type-table"
             >
               <option value={10}>10</option>
               <option value={25}>25</option>
@@ -200,7 +200,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
         <button
           onClick={() => onPageChange && onPageChange(currentPage - 1)}
           disabled={currentPage <= 1}
-          className="inline-flex items-center justify-center h-7 px-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-xs transition-colors"
+          className="inline-flex items-center justify-center h-7 px-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed type-table transition-colors"
           aria-label="Previous page"
         >
           <ChevronLeft className="w-3.5 h-3.5" />
