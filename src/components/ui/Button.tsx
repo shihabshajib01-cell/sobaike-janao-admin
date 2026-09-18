@@ -47,9 +47,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     };
 
     const sizeStyles: Record<ButtonSize, string> = {
-      sm: 'type-label h-8 px-3 gap-1.5 min-h-[32px]',
-      md: 'type-body h-9 px-4 py-2 gap-2 min-h-[36px]',
-      lg: 'type-body h-11 px-5 py-2.5 gap-2.5 min-h-[44px]',
+      sm: 'type-action-sm h-8 px-3 gap-1.5 min-h-[32px]',
+      md: 'type-action h-9 px-4 py-2 gap-2 min-h-[36px]',
+      lg: 'type-action h-11 px-5 py-2.5 gap-2.5 min-h-[44px]',
     };
 
     return (
