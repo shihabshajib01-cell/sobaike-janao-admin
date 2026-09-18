@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React from 'react';
 import { Check, Shield, Lock, FileCheck } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
@@ -69,7 +70,7 @@ export const RoleStepper: React.FC<RoleStepperProps> = ({
                 index < steps.length - 1 && 'relative'
               )}
             >
-              <button
+              <ButtonBase
                 type="button"
                 disabled={!isClickable && !isCurrent}
                 onClick={() => {
@@ -134,7 +135,7 @@ export const RoleStepper: React.FC<RoleStepperProps> = ({
                     {item.title}
                   </h2>
                 </div>
-              </button>
+              </ButtonBase>
 
               {/* Separator on desktop */}
               {index < steps.length - 1 && (
