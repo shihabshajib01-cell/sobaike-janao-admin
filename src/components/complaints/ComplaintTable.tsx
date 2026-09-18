@@ -197,7 +197,6 @@ export const ComplaintTable: React.FC<ComplaintTableProps> = ({
                       e.stopPropagation();
                       handleView(c.id);
                     }}
-                    className="h-7 px-2.5 text-xs text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400"
                     aria-label={`${isBn ? 'অভিযোগ দেখুন' : 'View complaint'} ${c.id}`}
                   >
                     <Eye className="w-3.5 h-3.5 mr-1" />
