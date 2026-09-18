@@ -68,8 +68,17 @@ export const RoleTable: React.FC<RoleTableProps> = ({ roles }) => {
             return (
               <TableRow
                 key={role.id}
-                className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group cursor-pointer"
+                className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500"
                 onClick={() => handleViewDetail(role.id)}
+                onKeyDown={(e) => {
+                  if (e.target !== e.currentTarget) return;
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleViewDetail(role.id);
+                  }
+                }}
+                tabIndex={0}
+                aria-label={`${t.roles.viewDetails}: ${displayName}`}
               >
                 {/* 1. Role Name & Description */}
                 <TableCell className="font-medium">
