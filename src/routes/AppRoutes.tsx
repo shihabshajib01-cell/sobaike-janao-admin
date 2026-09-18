@@ -178,6 +178,14 @@ const routes = createRoutesFromElements(
         }
       />
       <Route
+        path="/news-intake"
+        element={
+          <PermissionGuard requiredPermission="complaints.publish">
+            <NewsIntakePage />
+          </PermissionGuard>
+        }
+      />
+      <Route
         path="/responses"
         element={
           <PermissionGuard requiredPermission="responses.view">
