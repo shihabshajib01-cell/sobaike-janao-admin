@@ -2,6 +2,7 @@ import React from 'react';
 import {
   LayoutDashboard,
   AlertCircle,
+  Newspaper,
   MessageSquare,
   FolderTree,
   Images,
@@ -38,6 +39,13 @@ export const ADMIN_NAVIGATION_ITEMS: RouteItem[] = [
     defaultLabel: 'Complaints',
     icon: AlertCircle,
     requiredPermission: 'complaints.view',
+  },
+  {
+    path: '/news-intake',
+    defaultLabel: 'News Intake',
+    defaultLabelBn: 'নিউজ ইনটেক',
+    icon: Newspaper,
+    requiredPermission: 'complaints.publish',
   },
   {
     path: '/responses',
