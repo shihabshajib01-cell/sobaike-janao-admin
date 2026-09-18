@@ -277,7 +277,7 @@ export const MapFilters: React.FC<MapFiltersProps> = ({
           </span>
 
           {!hasActiveFilters ? (
-            <span className="text-slate-400 italic text-[11px]">
+            <span className="text-slate-400 italic type-meta">
               {isBn
                 ? 'কোনো ফিল্টার প্রয়োগ করা হয়নি (সকল পয়েন্ট দৃশ্যমান)'
                 : 'Showing all mapped points'}
