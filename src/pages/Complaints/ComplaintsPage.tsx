@@ -3,6 +3,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { DownloadMenu } from '@/components/ui/DownloadMenu';
 import { Card, CardContent } from '@/components/ui/Card';
+import { ResponsiveDataView, ResponsiveDataTableView, ResponsiveDataCardView } from '@/components/ui/ResponsiveDataView';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -393,27 +394,27 @@ export const ComplaintsPage: React.FC = () => {
             )}
           </div>
 
-          {/* Desktop Table View */}
-          <div className="hidden md:block">
-            <ComplaintTable
-              complaints={complaints}
-              loading={loading}
-              hasActiveFilters={hasActiveFilters}
-              onResetFilters={handleResetFilters}
-              onRetry={() => fetchComplaints(pagination.currentPage)}
-            />
-          </div>
+          <ResponsiveDataView>
+            <ResponsiveDataTableView>
+              <ComplaintTable
+                complaints={complaints}
+                loading={loading}
+                hasActiveFilters={hasActiveFilters}
+                onResetFilters={handleResetFilters}
+                onRetry={() => fetchComplaints(pagination.currentPage)}
+              />
+            </ResponsiveDataTableView>
 
-          {/* Mobile Card List View */}
-          <div className="md:hidden">
-            <MobileComplaintCardList
-              complaints={complaints}
-              loading={loading}
-              hasActiveFilters={hasActiveFilters}
-              onResetFilters={handleResetFilters}
-              onRetry={() => fetchComplaints(pagination.currentPage)}
-            />
-          </div>
+            <ResponsiveDataCardView>
+              <MobileComplaintCardList
+                complaints={complaints}
+                loading={loading}
+                hasActiveFilters={hasActiveFilters}
+                onResetFilters={handleResetFilters}
+                onRetry={() => fetchComplaints(pagination.currentPage)}
+              />
+            </ResponsiveDataCardView>
+          </ResponsiveDataView>
 
           {/* 5. Pagination Footer */}
           {pagination.totalPages > 1 && (
