@@ -114,3 +114,30 @@ jobs:
 
           echo "Anonymous notification RPC denial check passed"
 
+
+      - name: Verify duplicate-protection RPCs reject anonymous access
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_KEY"
+
+          check_denied() {
+            rpc_name="$1"
+            payload="$2"
+            output="/tmp/${rpc_name}.json"
+
+            http_code=$(curl -sS               -o "$output"               -w "%{http_code}"               -X POST "$SUPABASE_URL/rest/v1/rpc/$rpc_name"               -H "apikey: $SUPABASE_KEY"               -H "Authorization: Bearer $SUPABASE_KEY"               -H "Content-Type: application/json"               -d "$payload")
+
+            if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+              echo "ERROR: $rpc_name accepted anonymous access"
+              cat "$output"
+              exit 1
+            fi
+          }
+
+          check_denied "admin_check_source_duplicate"             '{"p_canonical_url":"https://example.invalid/anonymous-duplicate-smoke"}'
+          check_denied "admin_check_report_duplicate"             '{"p_complaint_id":"__anonymous_duplicate_smoke__"}'
+          check_denied "admin_confirm_reports_are_distinct"             '{"p_complaint_id":"__anonymous_duplicate_smoke_a__","p_candidate_complaint_id":"__anonymous_duplicate_smoke_b__","p_review_note":"anonymous access must be denied"}'
+
+          echo "Anonymous duplicate-protection RPC denial checks passed"
