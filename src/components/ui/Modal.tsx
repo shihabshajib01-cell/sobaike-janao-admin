@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/utils';
@@ -85,14 +86,14 @@ export const Modal: React.FC<ModalProps> = ({
               <p className="type-secondary text-slate-500 dark:text-slate-400 mt-0.5">{description}</p>
             )}
           </div>
-          <button
+          <ButtonBase
             type="button"
             onClick={onClose}
             className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             aria-label="Close modal"
           >
             <X className="w-4 h-4" />
-          </button>
+          </ButtonBase>
         </div>
 
         {/* Body */}
