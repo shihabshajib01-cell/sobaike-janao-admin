@@ -7,6 +7,12 @@ import {
 import { useLanguage } from '@/context/LanguageContext';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/Table';
+import {
+  ResponsiveDataView,
+  ResponsiveDataTableView,
+  ResponsiveDataCardView,
+} from '@/components/ui/ResponsiveDataView';
 import {
   Folder,
   Tag,
@@ -15,6 +21,7 @@ import {
   Eye,
   ArrowUpDown,
   Layers,
+  ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/utils';
 
@@ -46,7 +53,6 @@ export const TaxonomyTree: React.FC<TaxonomyTreeProps> = ({
             id={`taxonomy-segment-card-${segment.id}`}
             className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs transition-shadow duration-150 hover:shadow-md"
           >
-            {/* Segment Header Bar */}
             <div className="p-4 sm:p-5 bg-slate-50/80 dark:bg-slate-800/50 border-b border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
               <div className="flex items-start gap-3.5 min-w-0">
                 <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
@@ -103,7 +109,6 @@ export const TaxonomyTree: React.FC<TaxonomyTreeProps> = ({
                 </div>
               </div>
 
-              {/* Segment Actions & Count */}
               <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-200/60 dark:border-slate-800">
                 <Badge status="default" variant="subtle" size="sm" className="text-xs font-semibold">
                   <Layers className="w-3 h-3 mr-1 text-slate-400" />
@@ -122,107 +127,178 @@ export const TaxonomyTree: React.FC<TaxonomyTreeProps> = ({
               </div>
             </div>
 
-            {/* Subcategories Container */}
             <div className="p-3 sm:p-4">
               {hasSubcategories ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-slate-100 dark:border-slate-800/80 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
-                        <th className="py-2.5 px-3 font-semibold">
-                          {isBn ? 'সাব-ক্যাটাগরি' : 'Subcategory'}
-                        </th>
-                        <th className="py-2.5 px-3 font-semibold">
-                          {isBn ? 'শনাক্তকারী (ID)' : 'Identifier (ID)'}
-                        </th>
-                        <th className="py-2.5 px-3 font-semibold">
-                          {isBn ? 'স্ট্যাটাস' : 'Status'}
-                        </th>
-                        <th className="py-2.5 px-3 font-semibold text-center">
-                          {isBn ? 'ক্রম' : 'Order'}
-                        </th>
-                        <th className="py-2.5 px-3 font-semibold text-right">
-                          {isBn ? 'অ্যাকশন' : 'Action'}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                      {subcategories.map((sub) => (
-                        <tr
-                          key={sub.id}
-                          className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
-                        >
-                          <td className="py-3 px-3">
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 shrink-0">
-                                <Tag className="w-3.5 h-3.5" />
-                              </div>
-                              <div className="min-w-0">
-                                <div className="font-semibold text-slate-900 dark:text-slate-100 truncate">
-                                  {isBn ? sub.nameBn : sub.nameEn}
+                <ResponsiveDataView>
+                  <ResponsiveDataTableView>
+                    <Table bare className="text-xs">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{isBn ? 'সাব-ক্যাটাগরি' : 'Subcategory'}</TableHead>
+                          <TableHead>{isBn ? 'শনাক্তকারী (ID)' : 'Identifier (ID)'}</TableHead>
+                          <TableHead>{isBn ? 'স্ট্যাটাস' : 'Status'}</TableHead>
+                          <TableHead className="text-center">{isBn ? 'ক্রম' : 'Order'}</TableHead>
+                          <TableHead className="text-right">{isBn ? 'অ্যাকশন' : 'Action'}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {subcategories.map((sub) => (
+                          <TableRow
+                            key={sub.id}
+                            onClick={() => onInspectSubcategory(sub, segment)}
+                            onKeyDown={(e) => {
+                              if (e.target !== e.currentTarget) return;
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                onInspectSubcategory(sub, segment);
+                              }
+                            }}
+                            tabIndex={0}
+                            aria-label={`${isBn ? 'সাব-ক্যাটাগরি দেখুন' : 'View subcategory'} ${isBn ? sub.nameBn : sub.nameEn}`}
+                            className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500"
+                          >
+                            <TableCell>
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 shrink-0">
+                                  <Tag className="w-3.5 h-3.5" />
                                 </div>
-                                <div className="text-[11px] text-slate-400 truncate">
-                                  {isBn ? sub.nameEn : sub.nameBn}
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-slate-900 dark:text-slate-100 truncate">
+                                    {isBn ? sub.nameBn : sub.nameEn}
+                                  </p>
+                                  <p className="text-[11px] text-slate-400 truncate">
+                                    {isBn ? sub.nameEn : sub.nameBn}
+                                  </p>
                                 </div>
                               </div>
-                            </div>
-                          </td>
-                          <td className="py-3 px-3">
-                            <span className="font-mono text-xs text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
-                              {sub.id}
-                            </span>
-                          </td>
-                          <td className="py-3 px-3">
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <Badge
-                                status={sub.status === 'active' ? 'success' : 'default'}
-                                variant="subtle"
-                                size="sm"
-                                className="text-[10px]"
-                              >
-                                {sub.status === 'active' ? (
-                                  <span className="flex items-center gap-1">
-                                    <CheckCircle2 className="w-3 h-3" />
-                                    {isBn ? 'সক্রিয়' : 'Active'}
-                                  </span>
-                                ) : (
-                                  <span className="flex items-center gap-1">
-                                    <XCircle className="w-3 h-3" />
-                                    {isBn ? 'নিষ্ক্রিয়' : 'Inactive'}
-                                  </span>
-                                )}
-                              </Badge>
-                              {sub.configStatus !== 'published' && (
+                            </TableCell>
+
+                            <TableCell>
+                              <span className="font-mono text-xs text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md whitespace-nowrap">
+                                {sub.id}
+                              </span>
+                            </TableCell>
+
+                            <TableCell>
+                              <div className="flex flex-wrap items-center gap-1.5">
                                 <Badge
-                                  status="warning"
+                                  status={sub.status === 'active' ? 'success' : 'default'}
                                   variant="subtle"
                                   size="sm"
-                                  className="text-[10px] capitalize"
+                                  className="text-[10px]"
                                 >
+                                  {sub.status === 'active' ? (
+                                    <span className="flex items-center gap-1">
+                                      <CheckCircle2 className="w-3 h-3" />
+                                      {isBn ? 'সক্রিয়' : 'Active'}
+                                    </span>
+                                  ) : (
+                                    <span className="flex items-center gap-1">
+                                      <XCircle className="w-3 h-3" />
+                                      {isBn ? 'নিষ্ক্রিয়' : 'Inactive'}
+                                    </span>
+                                  )}
+                                </Badge>
+                                {sub.configStatus !== 'published' && (
+                                  <Badge
+                                    status="warning"
+                                    variant="subtle"
+                                    size="sm"
+                                    className="text-[10px] capitalize"
+                                  >
+                                    {sub.configStatus}
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+
+                            <TableCell className="text-center font-mono text-slate-400 text-xs whitespace-nowrap">
+                              #{sub.order}
+                            </TableCell>
+
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onInspectSubcategory(sub, segment);
+                                }}
+                                leftIcon={<Eye className="w-3 h-3" />}
+                                className="h-7 px-2 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
+                              >
+                                {isBn ? 'বিবরণ' : 'Details'}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </ResponsiveDataTableView>
+
+                  <ResponsiveDataCardView>
+                    <div className="space-y-3">
+                      {subcategories.map((sub) => (
+                        <div
+                          key={sub.id}
+                          onClick={() => onInspectSubcategory(sub, segment)}
+                          onKeyDown={(e) => {
+                            if (e.target !== e.currentTarget) return;
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              onInspectSubcategory(sub, segment);
+                            }
+                          }}
+                          tabIndex={0}
+                          role="button"
+                          aria-label={`${isBn ? 'সাব-ক্যাটাগরি দেখুন' : 'View subcategory'} ${isBn ? sub.nameBn : sub.nameEn}`}
+                          className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-3 cursor-pointer hover:border-sky-300 dark:hover:border-sky-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start gap-2.5 min-w-0">
+                              <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 shrink-0">
+                                <Tag className="w-4 h-4" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                                  {isBn ? sub.nameBn : sub.nameEn}
+                                </p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                                  {isBn ? sub.nameEn : sub.nameBn}
+                                </p>
+                              </div>
+                            </div>
+
+                            <Badge
+                              status={sub.status === 'active' ? 'success' : 'default'}
+                              variant="subtle"
+                              size="sm"
+                              className="shrink-0"
+                            >
+                              {sub.status === 'active' ? (isBn ? 'সক্রিয়' : 'Active') : (isBn ? 'নিষ্ক্রিয়' : 'Inactive')}
+                            </Badge>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="font-mono text-slate-500 dark:text-slate-400 truncate">{sub.id}</span>
+                              {sub.configStatus !== 'published' && (
+                                <Badge status="warning" variant="subtle" size="sm" className="text-[10px] capitalize">
                                   {sub.configStatus}
                                 </Badge>
                               )}
                             </div>
-                          </td>
-                          <td className="py-3 px-3 text-center font-mono text-slate-400 text-xs">
-                            #{sub.order}
-                          </td>
-                          <td className="py-3 px-3 text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => onInspectSubcategory(sub, segment)}
-                              leftIcon={<Eye className="w-3 h-3" />}
-                              className="h-7 px-2 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
-                            >
-                              {isBn ? 'বিবরণ' : 'Details'}
-                            </Button>
-                          </td>
-                        </tr>
+                            <span className="inline-flex items-center gap-1 text-slate-400 shrink-0">
+                              <ArrowUpDown className="w-3 h-3" />
+                              #{sub.order}
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </span>
+                          </div>
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
+                    </div>
+                  </ResponsiveDataCardView>
+                </ResponsiveDataView>
               ) : (
                 <div className="py-6 text-center text-xs text-slate-400 italic">
                   {isBn ? 'কোনো সাব-ক্যাটাগরি নেই।' : 'No subcategories.'}
