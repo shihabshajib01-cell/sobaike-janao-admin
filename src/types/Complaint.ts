@@ -184,6 +184,20 @@ export interface ComplaintMedia {
   caption?: string;
 }
 
+export interface ComplaintParty {
+  id: string;
+  complaintId: string;
+  name?: string | null;
+  partyType: 'individual' | 'business' | 'group' | 'organization' | 'unknown' | string;
+  roleOrDesignation?: string | null;
+  organization?: string | null;
+  phoneOrContact?: string | null;
+  publicProfileHandle?: string | null;
+  address?: string | null;
+  identifyingDescription?: string | null;
+  createdAt?: string | null;
+}
+
 export interface ComplaintVersion {
   versionNumber: number;
   titleEn: string;
@@ -198,6 +212,7 @@ export interface ComplaintVersion {
   subcategoryBn?: string;
   location: ComplaintLocation;
   media: ComplaintMedia[];
+  parties?: ComplaintParty[];
   urgency: ComplaintUrgency;
   editedAt: string; // ISO date string
   editedBy: {
