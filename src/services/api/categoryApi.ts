@@ -166,7 +166,9 @@ export class CategoryApi {
   }
 
   /**
-   * Update an existing segment or subcategory. IDs and hierarchy are immutable.
+   * Update an existing segment or subcategory. IDs remain immutable.
+   * Subcategory re-parenting is handled through the protected move RPC and
+   * automatically deactivates the item until it is republished.
    */
   async updateTaxonomyItem(input: TaxonomyUpdateInput): Promise<void> {
     if (!isSupabaseConfigured) {
@@ -185,6 +187,55 @@ export class CategoryApi {
       throw new Error('Sort order must be an integer.');
     }
 
+    if (input.itemType === 'subcategory' && input.parentSegmentId?.trim()) {
+      const current = await this.getSubcategories();
+      const existing = current.find((item) => item.id === id);
+      if (existing && existing.segmentId !== input.parentSegmentId.trim()) {
+        const { error: moveError } = await supabase.rpc('admin_move_subcategory', {
+          p_subcategory_id: id,
+          p_target_segment_id: input.parentSegmentId.trim(),
+          p_sort_order: input.order,
+        });
+        if (moveError) {
+          throw new Error(`Failed to move subcategory: ${moveError.message}`);
+        }
+      }
+    }
+
+    const configPayload =
+      input.itemType === 'segment'
+        ? {
+            nameEn,
+            nameBn,
+            shortNameEn: input.shortNameEn?.trim() || nameEn,
+            shortNameBn: input.shortNameBn?.trim() || nameBn,
+            descriptionEn: input.descriptionEn ?? '',
+            descriptionBn: input.descriptionBn ?? '',
+            slug: input.slug?.trim() || id.replace(/_/g, '-'),
+            iconKey: input.iconKey?.trim() || 'shield',
+            themeKey: input.themeKey?.trim() || 'sky',
+            sortOrder: input.order,
+          }
+        : {
+            nameEn,
+            nameBn,
+            descriptionEn: input.descriptionEn ?? '',
+            descriptionBn: input.descriptionBn ?? '',
+            categoryGroup: input.categoryGroup ?? null,
+            isSensitive: Boolean(input.isSensitive),
+            sortOrder: input.order,
+          };
+
+    const { error: configError } = await supabase.rpc('admin_update_taxonomy_configuration', {
+      p_item_type: input.itemType,
+      p_item_id: id,
+      p_payload: configPayload,
+    });
+
+    if (configError) {
+      throw new Error(`Failed to update taxonomy configuration: ${configError.message}`);
+    }
+
     const { error } = await supabase.rpc('admin_update_taxonomy_item', {
       p_item_type: input.itemType,
       p_item_id: id,
@@ -196,6 +247,41 @@ export class CategoryApi {
 
     if (error) {
       throw new Error(`Failed to update taxonomy: ${error.message}`);
+    }
+  }
+
+  async publishTaxonomyItem(itemType: 'segment' | 'subcategory', id: string): Promise<void> {
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase taxonomy service is not configured in this environment.');
+    }
+
+    const { error } = await supabase.rpc('admin_publish_taxonomy_item', {
+      p_item_type: itemType,
+      p_item_id: id,
+    });
+
+    if (error) {
+      throw new Error(`Failed to publish taxonomy item: ${error.message}`);
+    }
+  }
+
+  async moveSubcategory(
+    subcategoryId: string,
+    targetSegmentId: string,
+    sortOrder?: number
+  ): Promise<void> {
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase taxonomy service is not configured in this environment.');
+    }
+
+    const { error } = await supabase.rpc('admin_move_subcategory', {
+      p_subcategory_id: subcategoryId,
+      p_target_segment_id: targetSegmentId,
+      p_sort_order: sortOrder ?? null,
+    });
+
+    if (error) {
+      throw new Error(`Failed to move subcategory: ${error.message}`);
     }
   }
 
