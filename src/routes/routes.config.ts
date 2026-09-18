@@ -114,7 +114,8 @@ export const getFirstAccessibleRoute = (
     }
   }
 
-  // If no accessible route exists (e.g. 0 permissions assigned), return /dashboard to let PermissionGuard render AccessDenied
-  return '/dashboard';
+  // Notifications remains available to every active admin and is safe even when
+  // a role intentionally has zero navigation permissions.
+  return '/notifications';
 };
 
