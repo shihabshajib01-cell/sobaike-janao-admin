@@ -161,27 +161,27 @@ export const CategoryCreateModal: React.FC<CategoryCreateModalProps> = ({
       size="md"
       closeOnBackdrop={!isSaving}
       footer={
-        <div className="flex w-full flex-col-reverse gap-2.5 sm:flex-row sm:justify-end">
+        <>
           <Button
             type="button"
             variant="secondary"
+            size="lg"
             onClick={onClose}
             disabled={isSaving}
-            className="min-h-[44px] w-full sm:w-auto"
           >
             {isBn ? 'বাতিল' : 'Cancel'}
           </Button>
           <Button
             type="button"
             variant="primary"
+            size="lg"
             onClick={handleSave}
             isLoading={isSaving}
             disabled={isSaving || (isSubcategory && availableParents.length === 0)}
-            className="min-h-[44px] w-full sm:w-auto"
           >
             {isBn ? 'Draft তৈরি করুন' : 'Create Draft'}
           </Button>
-        </div>
+        </>
       }
     >
       <div className="space-y-4">
