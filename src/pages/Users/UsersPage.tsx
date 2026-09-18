@@ -229,7 +229,6 @@ export const UsersPage: React.FC = () => {
               size="sm"
               onClick={loadUsers}
               disabled={loading}
-              className="h-9"
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               {t.common.refresh}
@@ -241,7 +240,6 @@ export const UsersPage: React.FC = () => {
                 variant="primary"
                 size="sm"
                 onClick={() => navigate('/users/create')}
-                className="h-9"
               >
                 <UserPlus className="w-4 h-4 mr-2" />
                 {t.users.createUser}
@@ -386,7 +384,7 @@ export const UsersPage: React.FC = () => {
                 size="sm"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1 || loading}
-                leftIcon={<ChevronLeft className="w-4 h-4" />}
+                leftIcon={<ChevronLeft />}
                 aria-label={t.users.previous}
               >
                 <span>{t.users.previous}</span>
@@ -446,7 +444,7 @@ export const UsersPage: React.FC = () => {
                 size="sm"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages || loading}
-                rightIcon={<ChevronRight className="w-4 h-4" />}
+                rightIcon={<ChevronRight />}
                 aria-label={t.users.next}
               >
                 <span>{t.users.next}</span>
