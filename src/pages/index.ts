@@ -2,6 +2,7 @@ export * from './Login/LoginPage';
 export * from './Dashboard/DashboardPage';
 export * from './Complaints/ComplaintsPage';
 export * from './Complaints/ComplaintDetailPage';
+export * from './NewsIntake/NewsIntakePage';
 export * from './Responses/ResponsesPage';
 export * from './Categories/CategoriesPage';
 export * from './Banners/BannersPage';
