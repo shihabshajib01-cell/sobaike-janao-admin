@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React, { useState, useEffect, useCallback } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -452,7 +453,7 @@ export const ResponsesPage: React.FC = () => {
             )}
             <span className="font-medium">{moderationFeedback.message}</span>
           </div>
-          <button
+          <ButtonBase
             type="button"
             onClick={() => setModerationFeedback(null)}
             className={`p-1 rounded-md transition-colors ${
@@ -463,7 +464,7 @@ export const ResponsesPage: React.FC = () => {
             aria-label={isBn ? 'বার্তা বন্ধ করুন' : 'Dismiss message'}
           >
             <X className="w-4 h-4" />
-          </button>
+          </ButtonBase>
         </div>
       )}
 
@@ -598,7 +599,7 @@ export const ResponsesPage: React.FC = () => {
                 {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((p) => {
                   const isCurrent = p === pagination.page;
                   return (
-                    <button
+                    <ButtonBase
                       key={p}
                       type="button"
                       onClick={() => handlePageChange(p)}
@@ -610,7 +611,7 @@ export const ResponsesPage: React.FC = () => {
                       }`}
                     >
                       {formatNumber(p)}
-                    </button>
+                    </ButtonBase>
                   );
                 })}
               </div>
