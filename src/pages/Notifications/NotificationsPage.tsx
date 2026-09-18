@@ -17,6 +17,7 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { FeedbackNotice } from '@/components/ui/FeedbackNotice';
 import { useNotifications } from '@/context/NotificationContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
@@ -372,41 +373,25 @@ export const NotificationsPage: React.FC = () => {
 
       {/* Feedback Messages */}
       {actionSuccess && (
-        <div
-          role="status"
-          className="mb-4 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-sm flex items-center justify-between animate-in fade-in"
+        <FeedbackNotice
+          tone="success"
+          onDismiss={() => setActionSuccess(null)}
+          dismissLabel={t.common.close}
+          className="mb-4"
         >
-          <div className="flex items-center gap-2">
-            <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span>{actionSuccess}</span>
-          </div>
-          <ButtonBase
-            type="button"
-            onClick={() => setActionSuccess(null)}
-            className="text-sm hover:underline text-emerald-700 dark:text-emerald-300 ml-4 font-medium"
-          >
-            ×
-          </ButtonBase>
-        </div>
+          {actionSuccess}
+        </FeedbackNotice>
       )}
 
       {actionError && (
-        <div
-          role="alert"
-          className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 text-sm flex items-center justify-between animate-in fade-in"
+        <FeedbackNotice
+          tone="error"
+          onDismiss={() => setActionError(null)}
+          dismissLabel={t.common.close}
+          className="mb-4"
         >
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
-            <span>{actionError}</span>
-          </div>
-          <ButtonBase
-            type="button"
-            onClick={() => setActionError(null)}
-            className="text-sm hover:underline text-red-700 dark:text-red-300 ml-4 font-medium"
-          >
-            ×
-          </ButtonBase>
-        </div>
+          {actionError}
+        </FeedbackNotice>
       )}
 
       {/* Filter Tabs Bar */}
@@ -430,16 +415,13 @@ export const NotificationsPage: React.FC = () => {
               >
                 <span>{filter.label}</span>
                 {filter.key === 'unread' && unreadCount > 0 && (
-                  <span
-                    className={cn(
-                      'ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-semibold',
-                      isActive
-                        ? 'bg-white text-slate-900 dark:bg-slate-900 dark:text-white'
-                        : 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300'
-                    )}
+                  <Badge
+                    status={isActive ? 'default' : 'info'}
+                    size="sm"
+                    className="ml-1.5"
                   >
                     {formatNumber(unreadCount, language)}
-                  </span>
+                  </Badge>
                 )}
               </ButtonBase>
             );
