@@ -34,3 +34,6 @@ export { default as notificationApi } from './notificationApi';
 export * from './auditLogApi';
 export { auditLogApi } from './auditLogApi';
 
+
+export * from './reportingFormApi';
+export { default as reportingFormApi } from './reportingFormApi';

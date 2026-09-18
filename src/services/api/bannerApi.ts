@@ -1,13 +1,6 @@
 import { supabase } from '@/lib/supabase';
 
-export type BannerCategoryKey =
-  | 'harassment'
-  | 'extortion'
-  | 'public_safety'
-  | 'road_transport'
-  | 'load_shedding'
-  | 'illegal_occupation'
-  | 'rickshaw';
+export type BannerCategoryKey = string;
 
 export interface BannerContent {
   titleBn: string;

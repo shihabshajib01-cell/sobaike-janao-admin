@@ -12,6 +12,7 @@ import {
   ComplaintLifecycleStatus,
   ComplaintTimelineEvent,
   ReporterDeviceLocation,
+  ComplaintConfiguredFields,
 } from '@/types/Complaint';
 import { complaintApi } from '@/services/api';
 import { getComplaintParties, ComplaintParty } from '@/services/api/complaintPartiesApi';
@@ -24,6 +25,7 @@ import {
   ComplaintActionArea,
   ComplaintVersionHistory,
   ComplaintPartiesCard,
+  ConfiguredComplaintFieldsCard,
 } from '@/components/complaints';
 import { MobJusticeDetailsCard } from '@/components/complaints/MobJusticeDetailsCard';
 import {
@@ -57,6 +59,8 @@ export const ComplaintDetailPage: React.FC = () => {
   const [reporterLocationDenied, setReporterLocationDenied] = useState<boolean>(false);
   const [parties, setParties] = useState<ComplaintParty[]>([]);
   const [partiesLoading, setPartiesLoading] = useState<boolean>(false);
+  const [configuredFields, setConfiguredFields] = useState<ComplaintConfiguredFields | undefined>();
+  const [configuredFieldsError, setConfiguredFieldsError] = useState<string | null>(null);
   const [partiesError, setPartiesError] = useState<string | null>(null);
 
   const fetchComplaintData = useCallback(async () => {
@@ -68,6 +72,7 @@ export const ComplaintDetailPage: React.FC = () => {
     setEvidenceError(null);
     setReporterLocationError(null);
     setReporterLocationDenied(false);
+    setConfiguredFieldsError(null);
     try {
       const detailRes = await complaintApi.getComplaintDetail(id, {
         loadEvidence: canViewEvidence,
@@ -84,6 +89,8 @@ export const ComplaintDetailPage: React.FC = () => {
         setReporterLocation(detailRes.reporterLocation || detailRes.complaint.reporterDeviceLocation || null);
         setReporterLocationError(detailRes.reporterLocationError || null);
         setReporterLocationDenied(Boolean(detailRes.reporterLocationPermissionDenied));
+        setConfiguredFields(detailRes.configuredFields);
+        setConfiguredFieldsError(detailRes.configuredFieldsError || null);
       }
     } catch (err) {
       console.error('Failed to fetch complaint detail:', err);
@@ -103,6 +110,18 @@ export const ComplaintDetailPage: React.FC = () => {
       setPartiesError(err?.message || 'Failed to load mentioned-party information.');
     } finally {
       setPartiesLoading(false);
+    }
+  }, [id]);
+
+  const handleRetryConfiguredFields = useCallback(async () => {
+    if (!id) return;
+    setConfiguredFieldsError(null);
+    try {
+      setConfiguredFields(await complaintApi.getComplaintConfiguredFields(id));
+    } catch (err: any) {
+      setConfiguredFieldsError(
+        err?.message || 'Failed to load configured complaint fields.'
+      );
     }
   }, [id]);
 
@@ -180,6 +199,8 @@ export const ComplaintDetailPage: React.FC = () => {
     setReporterLocationDenied(false);
     setParties([]);
     setPartiesError(null);
+    setConfiguredFields(undefined);
+    setConfiguredFieldsError(null);
     setNotFound(false);
     setLoadError(false);
   }, [id]);
@@ -410,6 +431,12 @@ export const ComplaintDetailPage: React.FC = () => {
         <div className="lg:col-span-7 xl:col-span-8 space-y-6">
           {/* Complaint Description & Reporter Info */}
           <ComplaintInfoSection complaint={complaint} />
+
+          <ConfiguredComplaintFieldsCard
+            data={configuredFields}
+            error={configuredFieldsError}
+            onRetry={handleRetryConfiguredFields}
+          />
 
           {/* Mob Justice classification details - only for the new Public Safety type */}
           {isMobJusticeComplaint && (

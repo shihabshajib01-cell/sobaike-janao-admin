@@ -439,6 +439,7 @@ export const CategoriesPage: React.FC = () => {
         isOpen={isDrawerOpen}
         onClose={handleCloseDrawer}
         target={drawerTarget}
+        segments={allSegments}
         onUpdated={() => loadTaxonomyData(true)}
       />
 

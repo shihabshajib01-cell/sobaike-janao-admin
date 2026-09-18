@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/Button';
 import { Divider } from '@/components/ui/Divider';
 import { categoryApi } from '@/services/api/categoryApi';
 import { CategoryEditModal } from './CategoryEditModal';
+import { FormBuilderModal } from './FormBuilderModal';
 import {
   Folder,
   Tag,
@@ -22,6 +23,8 @@ import {
   ArrowUpDown,
   Layers,
   Pencil,
+  Send,
+  Wrench,
 } from 'lucide-react';
 
 export type DetailDrawerTarget =
@@ -32,6 +35,7 @@ export interface CategoryDetailDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   target: DetailDrawerTarget | null;
+  segments?: TaxonomySegment[];
   onUpdated?: () => void;
 }
 
@@ -39,6 +43,7 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
   isOpen,
   onClose,
   target,
+  segments = [],
   onUpdated,
 }) => {
   const { language } = useLanguage();
@@ -48,6 +53,9 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [isFormBuilderOpen, setIsFormBuilderOpen] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
 
   if (!target) return null;
 
@@ -79,6 +87,21 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
     }
   };
 
+  const handlePublish = async () => {
+    if (!target) return;
+    setIsPublishing(true);
+    setPublishError(null);
+    try {
+      await categoryApi.publishTaxonomyItem(target.type, target.data.id);
+      onUpdated?.();
+      onClose();
+    } catch (error: any) {
+      setPublishError(error?.message || 'Failed to publish taxonomy item.');
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   return (
     <>
     <Drawer
@@ -105,15 +128,40 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
       size="md"
       footer={
         canManage ? (
-          <Button
-            type="button"
-            variant="primary"
-            onClick={handleOpenEdit}
-            leftIcon={<Pencil className="w-3.5 h-3.5" />}
-            className="w-full sm:w-auto min-h-[44px]"
-          >
-            {isBn ? 'সম্পাদনা করুন' : 'Edit'}
-          </Button>
+          <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-end">
+            {!isSegment && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setIsFormBuilderOpen(true)}
+                leftIcon={<Wrench className="w-3.5 h-3.5" />}
+                className="w-full sm:w-auto min-h-[44px]"
+              >
+                {isBn ? 'Form Builder' : 'Form Builder'}
+              </Button>
+            )}
+            {target.data.configStatus !== 'published' && (
+              <Button
+                type="button"
+                variant="success"
+                onClick={handlePublish}
+                isLoading={isPublishing}
+                leftIcon={<Send className="w-3.5 h-3.5" />}
+                className="w-full sm:w-auto min-h-[44px]"
+              >
+                {isBn ? 'Publish' : 'Publish'}
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="primary"
+              onClick={handleOpenEdit}
+              leftIcon={<Pencil className="w-3.5 h-3.5" />}
+              className="w-full sm:w-auto min-h-[44px]"
+            >
+              {isBn ? 'সম্পাদনা করুন' : 'Edit'}
+            </Button>
+          </div>
         ) : undefined
       }
     >
@@ -290,6 +338,31 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
           </div>
         )}
 
+        {publishError && (
+          <div
+            role="alert"
+            className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300"
+          >
+            {publishError}
+          </div>
+        )}
+
+        {!isSegment && target.data.configStatus !== 'published' && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+            {isBn
+              ? 'Publish করার আগে Form Builder থেকে একটি form version Publish করুন।'
+              : 'Publish a form version from Form Builder before making this subcategory live.'}
+          </div>
+        )}
+
+        {isSegment && target.data.configStatus !== 'published' && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+            {isBn
+              ? 'ক্যাটাগরি Publish করার আগে Banner Management থেকে banner image ও bilingual content সম্পূর্ণ করুন।'
+              : 'Complete the banner image and bilingual banner content in Banner Management before publishing this category.'}
+          </div>
+        )}
+
         <Divider />
 
         {/* Read-Only Notice */}
@@ -309,11 +382,22 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
       isOpen={isEditOpen}
       itemType={target.type}
       item={target.data}
+      segments={segments}
       isSaving={isSaving}
       error={saveError}
       onClose={handleCloseEdit}
       onSave={handleSave}
     />
+
+    {!isSegment && (
+      <FormBuilderModal
+        isOpen={isFormBuilderOpen}
+        subcategoryId={target.data.id}
+        subcategoryName={isBn ? target.data.nameBn : target.data.nameEn}
+        onClose={() => setIsFormBuilderOpen(false)}
+        onPublished={onUpdated}
+      />
+    )}
     </>
   );
 };

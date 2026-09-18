@@ -12,6 +12,7 @@ import {
   ComplaintStatusTabCount,
   ComplaintTimelineEvent,
   ReporterDeviceLocation,
+  ComplaintConfiguredFields,
   WorkflowActionResult,
 } from '@/types/Complaint';
 import {
@@ -23,7 +24,7 @@ import {
 import { getComplaintIncidentLocation } from './complaintIncidentLocationApi';
 import { getComplaintMobJusticeDetails } from './mobJusticeDetailsApi';
 import { getComplaintHarassmentContext } from './harassmentContextApi';
-import { isSupabaseConfigured } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
 export interface ComplaintDetailData {
   complaint: Complaint;
@@ -33,6 +34,8 @@ export interface ComplaintDetailData {
   reporterLocation?: ReporterDeviceLocation | null;
   reporterLocationError?: string | null;
   reporterLocationPermissionDenied?: boolean;
+  configuredFields?: ComplaintConfiguredFields;
+  configuredFieldsError?: string | null;
 }
 
 function assertSupabaseConfigured(): void {
@@ -136,9 +139,71 @@ export class ComplaintApi {
     const detail = await supabaseComplaintService.getComplaintDetail(id, options);
     if (!detail) return null;
 
+    let configuredFields: ComplaintConfiguredFields | undefined;
+    let configuredFieldsError: string | null = null;
+
+    try {
+      configuredFields = await this.getComplaintConfiguredFields(id);
+    } catch (error: any) {
+      configuredFieldsError =
+        error?.message || 'Failed to load configured complaint fields.';
+    }
+
     return {
       ...detail,
       complaint: await enrichComplaintDetail(detail.complaint),
+      configuredFields,
+      configuredFieldsError,
+    };
+  }
+
+  async getComplaintConfiguredFields(id: string): Promise<ComplaintConfiguredFields> {
+    assertSupabaseConfigured();
+
+    const { data, error } = await supabase.rpc(
+      'admin_get_complaint_configured_fields',
+      { p_complaint_id: id }
+    );
+
+    if (error) {
+      throw new Error(error.message || 'Failed to load configured complaint fields.');
+    }
+
+    const raw = (data || {}) as any;
+    const fields = Array.isArray(raw.fields)
+      ? raw.fields
+          .map((field: any) => ({
+            fieldKey: String(field.fieldKey || ''),
+            labelEn: String(field.labelEn || field.fieldKey || ''),
+            labelBn: String(field.labelBn || field.labelEn || field.fieldKey || ''),
+            fieldType: String(field.fieldType || 'text'),
+            storageMode: String(field.storageMode || ''),
+            storageKey: String(field.storageKey || field.fieldKey || ''),
+            sortOrder: Number(field.sortOrder || 0),
+            options: Array.isArray(field.options)
+              ? field.options.map((option: any) => ({
+                  value: String(option?.value || ''),
+                  labelEn: String(option?.labelEn || option?.value || ''),
+                  labelBn: String(option?.labelBn || option?.labelEn || option?.value || ''),
+                }))
+              : [],
+            config:
+              field.config && typeof field.config === 'object'
+                ? field.config
+                : {},
+            value: field.value,
+          }))
+          .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
+      : [];
+
+    return {
+      formSchemaVersion:
+        raw.formSchemaVersion === null || raw.formSchemaVersion === undefined
+          ? null
+          : Number(raw.formSchemaVersion),
+      answers:
+        raw.answers && typeof raw.answers === 'object' ? raw.answers : {},
+      fields,
     };
   }
 

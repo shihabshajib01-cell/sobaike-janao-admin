@@ -6,3 +6,5 @@ export * from './CategoryEditModal';
 export * from './CategoryEmptyState';
 
 export * from './CategoryCreateModal';
+
+export * from './FormBuilderModal';

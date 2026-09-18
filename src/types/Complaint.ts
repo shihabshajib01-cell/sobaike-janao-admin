@@ -214,6 +214,31 @@ export interface Complaint {
   updatedAt: string; // ISO date string
 }
 
+export interface ComplaintConfiguredFieldOption {
+  value: string;
+  labelEn: string;
+  labelBn: string;
+}
+
+export interface ComplaintConfiguredField {
+  fieldKey: string;
+  labelEn: string;
+  labelBn: string;
+  fieldType: string;
+  storageMode: string;
+  storageKey: string;
+  sortOrder: number;
+  options: ComplaintConfiguredFieldOption[];
+  config: Record<string, unknown>;
+  value: unknown;
+}
+
+export interface ComplaintConfiguredFields {
+  formSchemaVersion?: number | null;
+  answers: Record<string, unknown>;
+  fields: ComplaintConfiguredField[];
+}
+
 export interface ComplaintStatusTabCount {
   status: ComplaintLifecycleStatus | 'all';
   labelEn: string;
