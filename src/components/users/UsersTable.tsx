@@ -120,7 +120,7 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                           <UserIcon className="w-4 h-4" />
                         )}
                       </div>
-                      <div className="min-w-0">
+                      <div className="min-w-0 max-w-sm">
                         <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm truncate">
                           {user.display_name || (
                             <span className="italic text-slate-400">
