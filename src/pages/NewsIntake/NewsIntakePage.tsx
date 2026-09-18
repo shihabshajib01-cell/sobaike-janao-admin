@@ -10,6 +10,7 @@ import {
   Send,
 } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { NewsAutomationPanel } from './NewsAutomationPanel';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -461,6 +462,8 @@ export const NewsIntakePage: React.FC = () => {
             : 'Verify an approved news source, detect the same incident, merge supporting sources when appropriate, and safely publish sourced reports.'
         }
       />
+
+      <NewsAutomationPanel />
 
       <FeedbackNotice tone="info" title={isBn ? 'নিরাপদ প্রকাশ নীতি' : 'Safe publishing policy'}>
         <p>
