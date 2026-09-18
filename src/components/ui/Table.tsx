@@ -6,8 +6,8 @@ import { EmptyState } from '@/components/common/EmptyState';
 
 export const Table = forwardRef<HTMLTableElement, HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-auto rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-      <table ref={ref} className={cn('w-full caption-bottom text-xs text-left', className)} {...props} />
+    <div className="relative w-full max-w-full min-w-0 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+      <table ref={ref} className={cn('w-full min-w-0 table-auto caption-bottom text-xs text-left', className)} {...props} />
     </div>
   )
 );
