@@ -144,10 +144,15 @@ const VALID_STATUSES: ComplaintLifecycleStatus[] = [
 /**
  * Fetch and cache taxonomy segments & subcategories
  */
-export async function getTaxonomy(): Promise<{
+export async function getTaxonomy(force = false): Promise<{
   segments: SupabaseSegment[];
   subcategories: SupabaseSubcategory[];
 }> {
+  if (force) {
+    cachedSegments = null;
+    cachedSubcategories = null;
+  }
+
   if (cachedSegments && cachedSubcategories) {
     return { segments: cachedSegments, subcategories: cachedSubcategories };
   }
@@ -194,8 +199,8 @@ export async function getTaxonomy(): Promise<{
 /**
  * Get category options for filtering
  */
-export async function getTaxonomySegments(): Promise<SupabaseSegment[]> {
-  const { segments } = await getTaxonomy();
+export async function getTaxonomySegments(force = false): Promise<SupabaseSegment[]> {
+  const { segments } = await getTaxonomy(force);
   return segments.filter((s) => s.active !== false);
 }
 
