@@ -47,7 +47,7 @@ export const ComplaintPartiesCard: React.FC<ComplaintPartiesCardProps> = ({
                 </p>
                 <p className="text-xs text-rose-700 dark:text-rose-300">{error}</p>
                 {onRetry && (
-                  <Button variant="secondary" size="sm" onClick={onRetry} leftIcon={<RefreshCw className="w-3.5 h-3.5" />}>
+                  <Button variant="secondary" size="sm" onClick={onRetry} leftIcon={<RefreshCw />}>
                     <span>{isBn ? 'আবার চেষ্টা করুন' : 'Retry'}</span>
                   </Button>
                 )}
