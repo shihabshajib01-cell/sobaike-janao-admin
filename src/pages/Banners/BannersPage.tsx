@@ -1,7 +1,7 @@
 import React, { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Image as ImageIcon, Pencil, RefreshCw, Upload } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
-import { Button, Input, Modal, PageHeader, Textarea } from '@/components/ui';
+import { Button, Input, Modal, PageHeader, Switch, Textarea } from '@/components/ui';
 import {
   BannerContent,
   ManagedBanner,
@@ -323,6 +323,47 @@ export const BannersPage: React.FC = () => {
                   onChange={onImageChange}
                 />
               </label>
+            </section>
+
+            <section className="space-y-4 border-t border-slate-200 pt-5 dark:border-slate-800">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  {isBn ? 'হোম ক্যারোসেল' : 'Home Carousel'}
+                </h2>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  {isBn
+                    ? 'হোম পেজে এই ব্যানার দেখানো হবে কি না এবং ব্যানারের ক্রম নিয়ন্ত্রণ করুন। ক্যাটাগরি পেজের ব্যানার অপরিবর্তিত থাকবে।'
+                    : 'Control whether this banner appears on Home and where it appears in the carousel. The category-page banner remains available.'}
+                </p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_9rem] sm:items-start">
+                <Switch
+                  checked={form.showOnHome}
+                  onChange={(checked) => updateField('showOnHome', checked)}
+                  label={isBn ? 'হোমে দেখান' : 'Show on Home'}
+                  description={
+                    isBn
+                      ? 'বন্ধ করলে হোম ক্যারোসেল থেকে ব্যানারটি লুকানো থাকবে।'
+                      : 'Turn off to hide this banner from the Home carousel.'
+                  }
+                />
+                <Input
+                  type="number"
+                  min={1}
+                  max={99}
+                  step={1}
+                  label={isBn ? 'ক্রম' : 'Order'}
+                  value={form.sortOrder}
+                  disabled={!form.showOnHome}
+                  onChange={(e) =>
+                    updateField(
+                      'sortOrder',
+                      Math.max(1, Math.min(99, Math.trunc(Number(e.target.value) || 1)))
+                    )
+                  }
+                  helperText={isBn ? '১–৯৯' : '1–99'}
+                />
+              </div>
             </section>
 
             <section className="space-y-4">
