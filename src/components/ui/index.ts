@@ -12,6 +12,8 @@ export * from './Checkbox';
 export * from './Radio';
 export * from './Switch';
 export * from './Badge';
+export * from './Tag';
+export * from './FeedbackNotice';
 export * from './Card';
 export * from './Divider';
 export * from './Tooltip';
