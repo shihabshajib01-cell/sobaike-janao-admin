@@ -103,7 +103,6 @@ export const UserDetailPage: React.FC = () => {
           variant="ghost"
           size="sm"
           onClick={() => navigate('/users')}
-          className="h-9"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           {t.users.backToUsers}
@@ -136,7 +135,7 @@ export const UserDetailPage: React.FC = () => {
             variant="ghost"
             size="sm"
             onClick={() => navigate('/users')}
-            className="h-9 w-9 p-0"
+            className="w-9"
             aria-label={t.common.back}
           >
             <ArrowLeft className="w-5 h-5" />
@@ -184,7 +183,6 @@ export const UserDetailPage: React.FC = () => {
                 variant="secondary"
                 size="sm"
                 onClick={() => navigate(`/users/${user.user_id}/edit`)}
-                className="h-9"
               >
                 <Edit2 className="w-4 h-4 mr-2" />
                 {t.users.editUser}
@@ -196,7 +194,6 @@ export const UserDetailPage: React.FC = () => {
                   variant="danger"
                   size="sm"
                   onClick={() => setIsDeleteModalOpen(true)}
-                  className="h-9"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
                   {t.users.deleteUser}
