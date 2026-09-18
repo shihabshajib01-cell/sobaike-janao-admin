@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
@@ -217,7 +218,7 @@ export const RecentComplaints: React.FC<RecentComplaintsProps> = ({
                   };
 
                   return (
-                    <button
+                    <ButtonBase
                       key={c.id}
                       type="button"
                       onClick={() => navigate(`/complaints/${c.id}`)}
@@ -254,7 +255,7 @@ export const RecentComplaints: React.FC<RecentComplaintsProps> = ({
                           <ChevronRight className="w-3.5 h-3.5" />
                         </span>
                       </div>
-                    </button>
+                    </ButtonBase>
                   );
                 })}
               </div>
