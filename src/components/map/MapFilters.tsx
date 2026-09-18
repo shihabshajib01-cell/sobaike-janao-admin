@@ -9,11 +9,11 @@ import { useLanguage } from '@/context/LanguageContext';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
+import { FilterChip } from '@/components/ui/FilterChip';
 import { Badge } from '@/components/ui/Badge';
 import {
   RotateCcw,
   SlidersHorizontal,
-  X,
   MapPin,
   Folder,
   CheckCircle2,
@@ -285,134 +285,109 @@ export const MapFilters: React.FC<MapFiltersProps> = ({
           ) : (
             <>
               {filters.searchQuery && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs">
-                  <span>"{filters.searchQuery}"</span>
-                  <button
-                    type="button"
-                    onClick={() => onChange({ ...filters, searchQuery: '' })}
-                    className="hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
-                    aria-label="Remove search filter"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
+                <FilterChip
+                  onRemove={() => onChange({ ...filters, searchQuery: '' })}
+                  removeLabel="Remove search filter"
+                >
+                  "{filters.searchQuery}"
+                </FilterChip>
               )}
 
               {filters.segment && filters.segment !== 'all' && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs">
-                  <Folder className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                  <span>
-                    {selectedSegmentObj
-                      ? isBn
-                        ? selectedSegmentObj.nameBn
-                        : selectedSegmentObj.nameEn
-                      : filters.segment}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onChange({
-              ...filters,
-              segment: 'all',
-              subcategory: 'all',
-              affectedPersonAgeGroup: 'all',
-              allegedAbuserRelationship: 'all',
-              reportingFor: 'all',
-            })
-                    }
-                    className="hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
-                    aria-label="Remove segment filter"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
+                <FilterChip
+                  icon={<Folder />}
+                  onRemove={() =>
+                    onChange({
+                      ...filters,
+                      segment: 'all',
+                      subcategory: 'all',
+                      affectedPersonAgeGroup: 'all',
+                      allegedAbuserRelationship: 'all',
+                      reportingFor: 'all',
+                    })
+                  }
+                  removeLabel="Remove segment filter"
+                >
+                  {selectedSegmentObj
+                    ? isBn
+                      ? selectedSegmentObj.nameBn
+                      : selectedSegmentObj.nameEn
+                    : filters.segment}
+                </FilterChip>
               )}
 
               {filters.subcategory && filters.subcategory !== 'all' && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs">
-                  <span>
-                    {selectedSubcategoryObj
-                      ? isBn
-                        ? selectedSubcategoryObj.nameBn
-                        : selectedSubcategoryObj.nameEn
-                      : filters.subcategory}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => onChange({ ...filters, subcategory: 'all' })}
-                    className="hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
-                    aria-label="Remove subcategory filter"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
+                <FilterChip
+                  onRemove={() => onChange({ ...filters, subcategory: 'all' })}
+                  removeLabel="Remove subcategory filter"
+                >
+                  {selectedSubcategoryObj
+                    ? isBn
+                      ? selectedSubcategoryObj.nameBn
+                      : selectedSubcategoryObj.nameEn
+                    : filters.subcategory}
+                </FilterChip>
               )}
 
 
               {isHarassmentFilter && filters.affectedPersonAgeGroup !== 'all' && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs">
-                  <span>{getHarassmentAgeGroupLabel(filters.affectedPersonAgeGroup, isBn ? 'bn' : 'en')}</span>
-                  <button type="button" onClick={() => onChange({ ...filters, affectedPersonAgeGroup: 'all' })} className="hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer" aria-label="Remove map age group filter"><X className="w-3 h-3" /></button>
-                </span>
+                <FilterChip
+                  onRemove={() => onChange({ ...filters, affectedPersonAgeGroup: 'all' })}
+                  removeLabel="Remove map age group filter"
+                >
+                  {getHarassmentAgeGroupLabel(filters.affectedPersonAgeGroup, isBn ? 'bn' : 'en')}
+                </FilterChip>
               )}
 
               {isHarassmentFilter && filters.allegedAbuserRelationship !== 'all' && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs">
-                  <span>{getHarassmentRelationshipLabel(filters.allegedAbuserRelationship, isBn ? 'bn' : 'en')}</span>
-                  <button type="button" onClick={() => onChange({ ...filters, allegedAbuserRelationship: 'all' })} className="hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer" aria-label="Remove map relationship filter"><X className="w-3 h-3" /></button>
-                </span>
+                <FilterChip
+                  onRemove={() => onChange({ ...filters, allegedAbuserRelationship: 'all' })}
+                  removeLabel="Remove map relationship filter"
+                >
+                  {getHarassmentRelationshipLabel(filters.allegedAbuserRelationship, isBn ? 'bn' : 'en')}
+                </FilterChip>
               )}
 
               {isHarassmentFilter && filters.reportingFor !== 'all' && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs">
-                  <span>{getHarassmentReportingForLabel(filters.reportingFor, isBn ? 'bn' : 'en')}</span>
-                  <button type="button" onClick={() => onChange({ ...filters, reportingFor: 'all' })} className="hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer" aria-label="Remove map reporting-for filter"><X className="w-3 h-3" /></button>
-                </span>
+                <FilterChip
+                  onRemove={() => onChange({ ...filters, reportingFor: 'all' })}
+                  removeLabel="Remove map reporting-for filter"
+                >
+                  {getHarassmentReportingForLabel(filters.reportingFor, isBn ? 'bn' : 'en')}
+                </FilterChip>
               )}
 
               {filters.status && filters.status !== 'all' && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs">
-                  <CheckCircle2 className="w-3 h-3 text-sky-600 dark:text-sky-400" />
-                  <span>{getStatusLabel(filters.status)}</span>
-                  <button
-                    type="button"
-                    onClick={() => onChange({ ...filters, status: 'all' })}
-                    className="hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
-                    aria-label="Remove status filter"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
+                <FilterChip
+                  tone="info"
+                  icon={<CheckCircle2 />}
+                  onRemove={() => onChange({ ...filters, status: 'all' })}
+                  removeLabel="Remove status filter"
+                >
+                  {getStatusLabel(filters.status)}
+                </FilterChip>
               )}
 
               {filters.district && filters.district !== 'all' && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs">
-                  <MapPin className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-                  <span>{filters.district}</span>
-                  <button
-                    type="button"
-                    onClick={() => onChange({ ...filters, district: 'all' })}
-                    className="hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
-                    aria-label="Remove district filter"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
+                <FilterChip
+                  tone="warning"
+                  icon={<MapPin />}
+                  onRemove={() => onChange({ ...filters, district: 'all' })}
+                  removeLabel="Remove district filter"
+                >
+                  {filters.district}
+                </FilterChip>
               )}
 
               {filters.dateRange && filters.dateRange !== 'all' && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs">
-                  <Calendar className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
-                  <span>{getDateRangeLabel(filters.dateRange)}</span>
-                  <button
-                    type="button"
-                    onClick={() => onChange({ ...filters, dateRange: 'all' })}
-                    className="hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
-                    aria-label="Remove date range filter"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
+                <FilterChip
+                  tone="success"
+                  icon={<Calendar />}
+                  onRemove={() => onChange({ ...filters, dateRange: 'all' })}
+                  removeLabel="Remove date range filter"
+                >
+                  {getDateRangeLabel(filters.dateRange)}
+                </FilterChip>
               )}
             </>
           )}
@@ -444,8 +419,7 @@ export const MapFilters: React.FC<MapFiltersProps> = ({
               variant="ghost"
               size="sm"
               onClick={onReset}
-              leftIcon={<RotateCcw className="w-3 h-3" />}
-              className="h-7 px-2 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
+              leftIcon={<RotateCcw />}
             >
               {isBn ? 'রিসেট' : 'Reset'}
             </Button>
