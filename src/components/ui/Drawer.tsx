@@ -1,4 +1,4 @@
-import { ButtonBase } from '@/components/ui/Button';
+import { ActionGroup, IconButton } from './Button';
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/utils';
@@ -101,14 +101,13 @@ export const Drawer: React.FC<DrawerProps> = ({
                 <p className="type-secondary text-slate-500 dark:text-slate-400 mt-0.5">{description}</p>
               )}
             </div>
-            <ButtonBase
-              type="button"
+            <IconButton
+              variant="ghost"
+              size="sm"
               onClick={onClose}
-              className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               aria-label="Close drawer"
-            >
-              <X className="w-4 h-4" />
-            </ButtonBase>
+              icon={<X />}
+            />
           </div>
 
           {/* Body */}
@@ -118,9 +117,9 @@ export const Drawer: React.FC<DrawerProps> = ({
 
           {/* Footer Actions */}
           {footer && (
-            <div className="flex items-center justify-end gap-3 px-4 sm:px-6 py-3 sm:py-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-slate-200 dark:border-slate-800 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-xs shrink-0">
+            <ActionGroup className="px-4 sm:px-6 py-3 sm:py-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-slate-200 dark:border-slate-800 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-xs shrink-0">
               {footer}
-            </div>
+            </ActionGroup>
           )}
         </div>
       </div>
