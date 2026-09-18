@@ -1,4 +1,4 @@
-import { ButtonBase } from '@/components/ui/Button';
+import { ButtonBase, IconButton } from '@/components/ui/Button';
 import React, { useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -144,34 +144,31 @@ const MapCustomControls: React.FC<{
 
   return (
     <div className="absolute top-3 right-3 z-[1000] flex items-center gap-1.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 rounded-lg p-1 shadow-md">
-      <ButtonBase
-        type="button"
+      <IconButton
+        variant="ghost"
+        size="sm"
         onClick={handleZoomIn}
-        className="p-1.5 rounded text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
         title={isBn ? 'জুম ইন' : 'Zoom In (+)'}
         aria-label={isBn ? 'জুম ইন' : 'Zoom In'}
-      >
-        <ZoomIn className="w-4 h-4" />
-      </ButtonBase>
-      <ButtonBase
-        type="button"
+        icon={<ZoomIn />}
+      />
+      <IconButton
+        variant="ghost"
+        size="sm"
         onClick={handleZoomOut}
-        className="p-1.5 rounded text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
         title={isBn ? 'জুম আউট' : 'Zoom Out (-)'}
         aria-label={isBn ? 'জুম আউট' : 'Zoom Out'}
-      >
-        <ZoomOut className="w-4 h-4" />
-      </ButtonBase>
+        icon={<ZoomOut />}
+      />
       <div className="w-px h-3.5 bg-slate-200 dark:bg-slate-700 mx-0.5" />
-      <ButtonBase
-        type="button"
+      <IconButton
+        variant="ghost"
+        size="sm"
         onClick={handleResetView}
-        className="p-1.5 rounded text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
         title={isBn ? 'ভিউ রিসেট' : 'Reset View'}
         aria-label={isBn ? 'ভিউ রিসেট' : 'Reset View'}
-      >
-        <Compass className="w-4 h-4" />
-      </ButtonBase>
+        icon={<Compass />}
+      />
     </div>
   );
 };
