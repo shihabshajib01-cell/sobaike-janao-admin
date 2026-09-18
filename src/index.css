@@ -1,5 +1,34 @@
 @import "tailwindcss";
 @import "./styles/base.css";
 
-@custom-variant dark (&:where(.dark, .dark *));
+@theme inline {
+  /*
+   * Admin typography compatibility map.
+   * Existing Tailwind text utilities now resolve through the semantic type scale
+   * instead of Tailwind's default compact scale.
+   */
+  --font-sans: var(--font-ui);
 
+  --text-xs: var(--type-small-size);
+  --text-xs--line-height: var(--type-small-line);
+
+  --text-sm: var(--type-body-size);
+  --text-sm--line-height: var(--type-body-line);
+
+  --text-base: var(--type-body-size);
+  --text-base--line-height: var(--type-body-line);
+
+  --text-lg: var(--type-card-title-size);
+  --text-lg--line-height: var(--type-card-title-line);
+
+  --text-xl: var(--type-section-title-size);
+  --text-xl--line-height: var(--type-section-title-line);
+
+  --text-2xl: var(--type-page-title-size);
+  --text-2xl--line-height: var(--type-page-title-line);
+
+  --text-3xl: var(--type-display-size);
+  --text-3xl--line-height: var(--type-display-line);
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
