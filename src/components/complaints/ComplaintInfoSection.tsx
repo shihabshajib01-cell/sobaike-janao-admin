@@ -2,6 +2,7 @@ import { ButtonBase } from '@/components/ui/Button';
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { Tag } from '@/components/ui/Tag';
 import { useLanguage } from '@/context/LanguageContext';
 import { Complaint } from '@/types/Complaint';
 import {
@@ -162,18 +163,24 @@ export const ComplaintInfoSection: React.FC<ComplaintInfoSectionProps> = ({
 
           {/* If only Bengali version exists */}
           {hasOnlyBn && (
-            <Badge variant="subtle" size="sm" className="text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 font-normal">
-              <Globe2 className="w-3 h-3 mr-1" />
+            <Tag
+              tone="success"
+              size="sm"
+              icon={<Globe2 />}
+            >
               {isBn ? 'মূল ভাষা: বাংলা' : 'Submission Language: Bengali'}
-            </Badge>
+            </Tag>
           )}
 
           {/* If only English version exists */}
           {hasOnlyEn && (
-            <Badge variant="subtle" size="sm" className="text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 border-sky-200 dark:border-sky-800 font-normal">
-              <Globe2 className="w-3 h-3 mr-1" />
+            <Tag
+              tone="info"
+              size="sm"
+              icon={<Globe2 />}
+            >
               {isBn ? 'মূল ভাষা: ইংরেজি' : 'Submission Language: English'}
-            </Badge>
+            </Tag>
           )}
         </CardHeader>
 
