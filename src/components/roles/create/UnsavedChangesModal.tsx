@@ -38,7 +38,7 @@ export const UnsavedChangesModal: React.FC<UnsavedChangesModalProps> = ({
             variant="danger"
             size="sm"
             onClick={onConfirmDiscard}
-            leftIcon={<X className="w-4 h-4" />}
+            leftIcon={<X />}
           >
             <span>{t.roles.discardAndLeave}</span>
           </Button>
