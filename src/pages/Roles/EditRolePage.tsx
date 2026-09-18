@@ -292,7 +292,7 @@ export const EditRolePage: React.FC = () => {
             variant="ghost"
             size="sm"
             onClick={() => navigate('/roles')}
-            leftIcon={<ArrowLeft className="w-4 h-4" />}
+            leftIcon={<ArrowLeft />}
           >
             <span>{t.roles.backToRoles}</span>
           </Button>
@@ -312,7 +312,7 @@ export const EditRolePage: React.FC = () => {
             variant="ghost"
             size="sm"
             onClick={() => navigate('/roles')}
-            leftIcon={<ArrowLeft className="w-4 h-4" />}
+            leftIcon={<ArrowLeft />}
           >
             <span>{t.roles.backToRoles}</span>
           </Button>
@@ -386,7 +386,7 @@ export const EditRolePage: React.FC = () => {
                 variant="secondary"
                 size="sm"
                 onClick={() => loadData()}
-                leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+                leftIcon={<RotateCcw />}
               >
                 <span>{t.roles.retry}</span>
               </Button>
@@ -417,8 +417,8 @@ export const EditRolePage: React.FC = () => {
             variant="ghost"
             size="sm"
             onClick={handleBackOrCancel}
-            leftIcon={<ArrowLeft className="w-4 h-4" />}
-            className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 -ml-2"
+            leftIcon={<ArrowLeft />}
+            className="-ml-2"
           >
             <span>{t.roles.backToDetail}</span>
           </Button>
@@ -446,7 +446,7 @@ export const EditRolePage: React.FC = () => {
                 onClick={() => handleSubmit()}
                 disabled={isSubmitting || !isDirty || (!role.is_system && !nameEn.trim())}
                 isLoading={isSubmitting}
-                leftIcon={<Save className="w-3.5 h-3.5" />}
+                leftIcon={<Save />}
               >
                 <span>{isSubmitting ? t.roles.savingChanges : t.roles.saveChanges}</span>
               </Button>
@@ -809,7 +809,7 @@ export const EditRolePage: React.FC = () => {
             onClick={() => handleSubmit()}
             disabled={isSubmitting || !isDirty || (!role.is_system && !nameEn.trim())}
             isLoading={isSubmitting}
-            leftIcon={<Save className="w-3.5 h-3.5" />}
+            leftIcon={<Save />}
           >
             <span>{isSubmitting ? t.roles.savingChanges : t.roles.saveChanges}</span>
           </Button>
