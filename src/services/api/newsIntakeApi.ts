@@ -1,0 +1,131 @@
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import {
+  NewsIntakeCreateResult,
+  NewsIntakeMergeResult,
+  NewsIntakePayload,
+  NewsIntakePreview,
+  NewsIntakeTaxonomy,
+  NewsSourceMetadata,
+} from '@/types/NewsIntake';
+
+const assertConfigured = () => {
+  if (!isSupabaseConfigured) {
+    throw new Error('Supabase News Intake service is not configured.');
+  }
+};
+
+export class NewsIntakeApi {
+  async fetchSourceMetadata(url: string): Promise<NewsSourceMetadata> {
+    assertConfigured();
+
+    const cleanUrl = url.trim();
+    if (!cleanUrl) throw new Error('Source URL is required.');
+
+    const { data, error } = await supabase.functions.invoke('news-intake-fetch', {
+      body: { url: cleanUrl },
+    });
+
+    if (error) {
+      throw new Error(error.message || 'Failed to fetch article metadata.');
+    }
+
+    if (!data || data.error) {
+      throw new Error(data?.error || 'Failed to fetch article metadata.');
+    }
+
+    return {
+      sourceType: (data.sourceType || 'news') as NewsSourceMetadata['sourceType'],
+      publisherName: String(data.publisherName || ''),
+      sourceTitle: String(data.sourceTitle || ''),
+      canonicalUrl: String(data.canonicalUrl || cleanUrl),
+      sourcePublishedDate: data.sourcePublishedDate
+        ? String(data.sourcePublishedDate)
+        : '',
+      descriptionPreview: data.descriptionPreview
+        ? String(data.descriptionPreview)
+        : undefined,
+      hostname: String(data.hostname || ''),
+      approved: Boolean(data.approved),
+    };
+  }
+
+  async getTaxonomy(): Promise<NewsIntakeTaxonomy> {
+    assertConfigured();
+
+    const { data, error } = await supabase.rpc('admin_get_news_intake_taxonomy');
+    if (error) {
+      throw new Error(error.message || 'Failed to load News Intake taxonomy.');
+    }
+
+    const raw = (data || {}) as any;
+    return {
+      segments: Array.isArray(raw.segments)
+        ? raw.segments.map((item: any) => ({
+            id: String(item.id || ''),
+            nameEn: String(item.nameEn || item.id || ''),
+            nameBn: String(item.nameBn || item.nameEn || item.id || ''),
+            order: Number(item.order || 0),
+          }))
+        : [],
+      subcategories: Array.isArray(raw.subcategories)
+        ? raw.subcategories.map((item: any) => ({
+            id: String(item.id || ''),
+            segmentId: String(item.segmentId || ''),
+            nameEn: String(item.nameEn || item.id || ''),
+            nameBn: String(item.nameBn || item.nameEn || item.id || ''),
+            order: Number(item.order || 0),
+            isSensitive: Boolean(item.isSensitive),
+          }))
+        : [],
+    };
+  }
+
+  async preview(payload: NewsIntakePayload): Promise<NewsIntakePreview> {
+    assertConfigured();
+
+    const { data, error } = await supabase.rpc('admin_preview_sourced_report_intake', {
+      p_payload: payload,
+    });
+
+    if (error) {
+      throw new Error(error.message || 'Failed to check source and incident duplication.');
+    }
+
+    return data as NewsIntakePreview;
+  }
+
+  async createDraft(payload: NewsIntakePayload): Promise<NewsIntakeCreateResult> {
+    assertConfigured();
+
+    const { data, error } = await supabase.rpc('admin_create_sourced_report_from_intake', {
+      p_payload: payload,
+    });
+
+    if (error) {
+      throw new Error(error.message || 'Failed to create sourced-report draft.');
+    }
+
+    return data as NewsIntakeCreateResult;
+  }
+
+  async mergeSource(
+    complaintId: string,
+    source: NewsIntakePayload['source']
+  ): Promise<NewsIntakeMergeResult> {
+    assertConfigured();
+
+    const { data, error } = await supabase.rpc('admin_merge_intake_source', {
+      p_complaint_id: complaintId,
+      p_source: source,
+    });
+
+    if (error) {
+      throw new Error(error.message || 'Failed to merge source into existing report.');
+    }
+
+    return data as NewsIntakeMergeResult;
+  }
+}
+
+export const newsIntakeApi = new NewsIntakeApi();
+export default newsIntakeApi;
