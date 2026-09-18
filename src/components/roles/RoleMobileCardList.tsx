@@ -128,8 +128,7 @@ export const RoleMobileCardList: React.FC<RoleMobileCardListProps> = ({ roles })
                     e.stopPropagation();
                     handleViewDetail(role.id);
                   }}
-                  className="h-6 px-2 text-xs font-medium text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950/40"
-                  rightIcon={<ChevronRight className="w-3 h-3" />}
+                  rightIcon={<ChevronRight />}
                   aria-label={`${t.roles.viewDetails}: ${displayName}`}
                 >
                   <span>{t.roles.viewDetails}</span>
