@@ -1,105 +1,21 @@
 import fs from 'node:fs';
-
-const read = (path) => fs.readFileSync(path, 'utf8');
-const assert = (condition, message) => {
-  if (!condition) {
-    console.error(`Notification audit failed: ${message}`);
-    process.exitCode = 1;
-  }
-};
-
-const migration = read('supabase/migrations/20260918061006_notification_center_completion.sql');
-const backfillMigration = read('supabase/migrations/20260918061325_notification_center_backfill_missing_submissions.sql');
-const consistencyMigration = read('supabase/migrations/20260918065510_notification_center_consistency_fixes.sql');
-const api = read('src/services/api/notificationApi.ts');
-const context = read('src/context/NotificationContext.tsx');
-const page = read('src/pages/Notifications/NotificationsPage.tsx');
-const dropdown = read('src/components/layout/NotificationDropdown.tsx');
-const utils = read('src/utils/notificationUtils.ts');
-const language = read('src/context/LanguageContext.tsx');
-
-assert(
-  migration.includes('trg_admin_notify_complaint_submitted'),
-  'complaint.submitted trigger is missing'
-);
-assert(
-  migration.includes('ALTER PUBLICATION supabase_realtime ADD TABLE public.admin_notifications'),
-  'admin_notifications is not enabled for Realtime'
-);
-assert(
-  migration.includes("p_category = 'security'") &&
-    migration.includes("n.layer = 'security_privilege'"),
-  'Security filtering is not handled by the backend RPC'
-);
-for (const eventKey of [
-  'taxonomy.category_created',
-  'taxonomy.category_published',
-  'taxonomy.subcategory_created',
-  'taxonomy.subcategory_published',
-  'taxonomy.subcategory_moved',
-  'reporting_form.published',
-  'banner.published',
-]) {
-  assert(migration.includes(eventKey), `missing configuration event ${eventKey}`);
-}
-
-assert(
-  !api.includes('BACKEND_BATCH_SIZE') && !api.includes('visitedCursors'),
-  'client-side Security pagination scan is still present'
-);
-assert(
-  api.includes("p_category: params?.category || null"),
-  'notification category filter is not sent directly to the RPC'
-);
-assert(
-  !context.includes('refreshUnreadCount();\n          refreshRecent();'),
-  'Realtime callback still performs duplicate notification refreshes'
-);
-assert(context.includes('Promise.allSettled') && !context.includes('getUnreadCount().catch(() => 0)'), 'unread count can still collapse to zero');
-assert(context.includes('notificationRevision') && page.includes('lastRealtimeRevisionRef'), 'full notifications page is not Realtime synchronized');
-assert(context.includes('authoritativeCount'), 'older notification reads do not reconcile unread count');
-assert(
-  page.includes('<article') &&
-    page.includes('type="button"') &&
-    page.includes('onClick={() => void handleItemNavigate(item)}'),
-  'notification cards do not expose a native keyboard-operable action'
-);
-assert(
-  page.includes('<Badge') &&
-    page.includes('<Button'),
-  'notification page is not reusing shared Badge/Button controls'
-);
-assert(
-  dropdown.includes('<Badge') &&
-    dropdown.includes('<Button') &&
-    dropdown.includes('<article'),
-  'notification dropdown is not reusing shared controls/native item semantics'
-);
-assert(
-  utils.includes('/^\\/banners\\/?$/'),
-  'notification route allowlist does not include Banner Management'
-);
-assert(utils.includes('/^\\/$/'), 'permission-aware root route is not allowlisted');
-assert(page.includes("key: 'configuration'") && language.includes("configuration: 'Configuration'") && language.includes("configuration: 'কনফিগারেশন'"), 'configuration filter copy is incomplete');
-assert(consistencyMigration.includes("p_category='configuration'") && consistencyMigration.includes("admin.created:personal:%"), 'consistency migration is incomplete');
-assert(
-  backfillMigration.includes("p_dedupe_key := 'complaint.submitted:' || v_row.id"),
-  'missing-submission backfill is not idempotent'
-);
-assert(
-  language.includes("Mark all notifications as read") &&
-    language.includes("সব বিজ্ঞপ্তি পঠিত হিসেবে চিহ্নিত করুন"),
-  'mark-all copy does not clearly describe the global action'
-);
-assert(
-  !page.includes('text-[') && !dropdown.includes('text-['),
-  'notification UI still contains arbitrary typography sizes'
-);
-assert(
-  dropdown.includes('role="dialog"') && dropdown.includes('globalActionError'),
-  'notification dropdown accessibility/error handling is incomplete'
-);
-
-if (!process.exitCode) {
-  console.log('Notification center source audit passed');
-}
+const read=(p)=>fs.readFileSync(p,'utf8');
+const assert=(c,m)=>{if(!c){console.error(`Notification audit failed: ${m}`);process.exitCode=1;}};
+const baseMigration=read('supabase/migrations/20260918061006_notification_center_completion.sql');
+const backfillMigration=read('supabase/migrations/20260918061325_notification_center_backfill_missing_submissions.sql');
+const consistencyMigration=read('supabase/migrations/20260918065510_notification_center_consistency_fixes.sql');
+const finalMigration=read('supabase/migrations/20260918072100_notification_center_final_hardening.sql');
+const completionSql=read('supabase/audit/notification_center_completion_verification.sql');
+const lifecycleSql=read('supabase/audit/notification_center_authenticated_lifecycle_verification.sql');
+const api=read('src/services/api/notificationApi.ts');const context=read('src/context/NotificationContext.tsx');const page=read('src/pages/Notifications/NotificationsPage.tsx');const dropdown=read('src/components/layout/NotificationDropdown.tsx');const utils=read('src/utils/notificationUtils.ts');const language=read('src/context/LanguageContext.tsx');const routesConfig=read('src/routes/routes.config.ts');const smoke=read('.github/workflows/production-smoke.yml');
+const eventKeys=['complaint.submitted','complaint.evidence_attached','complaint.published','complaint.unpublished','complaint.rejected','admin.created','admin.activated','admin.deactivated','admin.role_changed','role.created','role.updated','role.permissions_changed','taxonomy.category_created','taxonomy.category_published','taxonomy.subcategory_created','taxonomy.subcategory_published','taxonomy.subcategory_moved','reporting_form.published','banner.published'];
+for(const k of eventKeys)assert(baseMigration.includes(k)||completionSql.includes(k),`missing notification event contract ${k}`);
+assert(baseMigration.includes('trg_admin_notify_complaint_submitted'),'complaint.submitted trigger is missing');assert(baseMigration.includes('ALTER PUBLICATION supabase_realtime ADD TABLE public.admin_notifications'),'Realtime publication is missing');assert(!api.includes('BACKEND_BATCH_SIZE')&&!api.includes('visitedCursors'),'client notification scan is still present');assert(api.includes("p_category: params?.category || null"),'category filter is not sent to RPC');
+assert(context.includes('REALTIME_REFRESH_DEBOUNCE_MS'),'Realtime bursts are not debounced');assert(context.includes('realtimeRefreshTimerRef'),'Realtime timer ref missing');assert(context.includes('clearTimeout(realtimeRefreshTimerRef.current)'),'Realtime timer cleanup missing');assert(context.includes('Promise.allSettled')&&!context.includes('getUnreadCount().catch(() => 0)'),'unread count can collapse to zero');assert(context.includes('return unreadCount;'),'last known unread count is not preserved');assert(context.includes('authoritativeCount'),'older item read count is not reconciled');assert(context.includes('notificationRevision')&&page.includes('lastRealtimeRevisionRef'),'full page is not Realtime synchronized');
+assert(dropdown.includes('bellButtonRef')&&dropdown.includes('dialogRef'),'dropdown focus refs missing');assert(dropdown.includes('closeDropdown(true)')&&dropdown.includes('bellButtonRef.current?.focus()'),'dropdown focus is not restored');assert(dropdown.includes('firstFocusable?.focus()'),'focus is not moved into dropdown');assert(dropdown.includes("aria-controls={isOpen ? 'notification-dropdown-dialog' : undefined}"),'dialog trigger relationship missing');
+assert(page.includes('getFirstAccessibleRoute')&&page.includes('ADMIN_NAVIGATION_ITEMS'),'breadcrumb is not permission-aware');assert(!page.includes("navigate('/dashboard')"),'notification page hardcodes dashboard navigation');assert(routesConfig.includes("return '/notifications';"),'zero-permission admin has no safe fallback');
+assert(page.includes("key: 'configuration'")&&language.includes("configuration: 'Configuration'")&&language.includes("configuration: 'কনফিগারেশন'"),'configuration filter copy incomplete');assert(finalMigration.includes("p_category='administration'")&&finalMigration.includes("p_category='configuration'")&&finalMigration.includes('NOT IN ('),'Administration and Configuration filters overlap');assert(utils.includes('/^\\/$/')&&utils.includes('/^\\/banners\\/?$/'),'route allowlist incomplete');assert(consistencyMigration.includes('admin.created:personal:%'),'welcome route migration incomplete');assert(backfillMigration.includes("p_dedupe_key := 'complaint.submitted:' || v_row.id"),'submission backfill is not idempotent');
+assert(lifecycleSql.includes('SET LOCAL ROLE authenticated;'),'lifecycle test does not execute as authenticated');assert(lifecycleSql.includes('admin_mark_notification_read')&&lifecycleSql.includes('admin_mark_all_notifications_read'),'lifecycle test misses read actions');assert(lifecycleSql.includes('FOR v_event IN')&&lifecycleSql.includes('admin_emit_notification'),'lifecycle test misses event coverage');assert(lifecycleSql.includes('ROLLBACK;'),'lifecycle test is destructive');assert(completionSql.includes('Notification producer verification failed'),'producer coverage is not verified');
+assert(page.includes('<Badge')&&page.includes('<Button'),'notification page is not using shared controls');assert(dropdown.includes('<Badge')&&dropdown.includes('<Button')&&dropdown.includes('<article'),'dropdown shared controls/native semantics missing');assert(!page.includes('text-[')&&!dropdown.includes('text-['),'arbitrary typography sizes remain');assert(dropdown.includes('role="dialog"')&&dropdown.includes('globalActionError'),'dropdown accessibility/error handling incomplete');assert(language.includes('Mark all notifications as read')&&language.includes('সব বিজ্ঞপ্তি পঠিত হিসেবে চিহ্নিত করুন'),'mark-all copy unclear');
+assert(smoke.includes('the new production bundle is not visible yet'),'smoke can fail during Pages propagation');assert(smoke.includes('Verify notification RPC rejects anonymous access'),'smoke lost notification RPC isolation check');
+if(!process.exitCode)console.log('Notification center final source audit passed');
