@@ -143,7 +143,7 @@ export const ResponseDetailDrawer: React.FC<ResponseDetailDrawerProps> = ({
             variant="secondary"
             onClick={onClose}
             disabled={isModerating}
-            className="w-full sm:w-auto px-5 min-h-[44px]"
+            className="w-full sm:w-auto"
           >
             {isBn ? 'বন্ধ করুন' : 'Close'}
           </Button>
@@ -157,7 +157,7 @@ export const ResponseDetailDrawer: React.FC<ResponseDetailDrawerProps> = ({
                   variant="danger"
                   onClick={onReject}
                   disabled={isModerating}
-                  className="w-full sm:w-auto px-5 min-h-[44px]"
+                  className="w-full sm:w-auto"
                 >
                   {isBn ? 'প্রত্যাখ্যান করুন' : 'Reject'}
                 </Button>
@@ -168,7 +168,7 @@ export const ResponseDetailDrawer: React.FC<ResponseDetailDrawerProps> = ({
                   variant="primary"
                   onClick={onPublish}
                   disabled={isModerating}
-                  className="w-full sm:w-auto px-5 min-h-[44px]"
+                  className="w-full sm:w-auto"
                 >
                   {isBn ? 'প্রকাশ করুন' : 'Publish'}
                 </Button>
@@ -183,7 +183,7 @@ export const ResponseDetailDrawer: React.FC<ResponseDetailDrawerProps> = ({
               variant="danger"
               onClick={onUnpublish}
               disabled={isModerating}
-              className="w-full sm:w-auto px-5 min-h-[44px]"
+              className="w-full sm:w-auto"
             >
               {isBn ? 'অপ্রকাশিত করুন' : 'Unpublish'}
             </Button>
@@ -196,7 +196,7 @@ export const ResponseDetailDrawer: React.FC<ResponseDetailDrawerProps> = ({
               variant="primary"
               onClick={onResubmit}
               disabled={isModerating}
-              className="w-full sm:w-auto px-5 min-h-[44px]"
+              className="w-full sm:w-auto"
             >
               {isBn ? 'পুনরায় পর্যালোচনায় পাঠান' : 'Resubmit'}
             </Button>
