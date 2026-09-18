@@ -169,12 +169,16 @@ for (const needle of [
   'showAllResults',
   'selectedRunId',
   'newsIntakeApi.setAutoUpdate',
+  'dashboard.automation.enabled',
+  'dashboard.automation.nextAutoDueAt',
+  'selectedRun.triggerType',
 ]) {
   requireText(automationPanel, needle, 'News Automation panel');
 }
 
 requireText(api, "supabase.functions.invoke('news-intake-scan'", 'News Automation API');
 requireText(api, "supabase.rpc(\n      'admin_get_news_intake_automation_dashboard'", 'News Automation dashboard API');
+requireText(api, "'admin_set_news_intake_auto_update'", 'News Automation schedule control API');
 
 if (/articleBody|fullArticle|bodyText|innerText/.test(edge)) {
   errors.push('secure metadata fetcher: article body must not be returned to the Admin client.');
@@ -225,6 +229,8 @@ for (const name of [
   'admin_get_news_intake_scan_sources',
   'admin_begin_news_intake_run',
   'admin_get_news_intake_automation_dashboard',
+  'admin_set_news_intake_auto_update',
+  'service_begin_news_intake_run',
   'admin_record_news_intake_item',
   'admin_finish_news_intake_run',
   'news-intake-fetch',
