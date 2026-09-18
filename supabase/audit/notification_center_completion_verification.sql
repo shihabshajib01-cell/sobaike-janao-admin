@@ -6,6 +6,7 @@ DECLARE
   v_missing integer;
   v_def text;
   v_compact text;
+  v_user_update_def text;
 BEGIN
   WITH expected(event_key) AS (
     VALUES
@@ -64,6 +65,20 @@ BEGIN
   IF EXISTS (SELECT 1 FROM public.admin_notifications GROUP BY recipient_user_id,dedupe_key HAVING dedupe_key IS NOT NULL AND count(*)>1) THEN RAISE EXCEPTION 'Duplicate notification dedupe groups exist'; END IF;
   IF EXISTS (SELECT 1 FROM public.admin_notifications WHERE route IS NOT NULL AND route !~ '^/(|dashboard|complaints(/[^/]+)?|responses|categories|banners|map|location-activity|roles(/[^/]+(/edit)?)?|users(/[^/]+(/edit)?)?|notifications|activity-log)/?$') THEN RAISE EXCEPTION 'Unsafe or unknown notification route exists'; END IF;
   IF EXISTS (SELECT 1 FROM public.admin_notifications WHERE event_key='admin.created' AND audience_mode='personal' AND route='/dashboard') THEN RAISE EXCEPTION 'Stale personal welcome notification still targets /dashboard'; END IF;
+  IF EXISTS (SELECT 1 FROM public.admin_notifications WHERE event_key IN ('admin.activated','admin.role_changed') AND audience_mode='personal' AND route='/dashboard') THEN RAISE EXCEPTION 'Personal admin account notification still targets /dashboard'; END IF;
+
+  SELECT pg_get_functiondef(p.oid) INTO v_user_update_def
+  FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+  WHERE n.nspname='public' AND p.proname='admin_update_user'
+    AND pg_get_function_identity_arguments(p.oid)='p_user_id uuid, p_display_name text, p_role_id text, p_active boolean'
+  LIMIT 1;
+  IF v_user_update_def IS NULL
+     OR position('admin.activated:personal:' in v_user_update_def)=0
+     OR position('admin.role_changed:personal:' in v_user_update_def)=0
+     OR position('p_route := ''/dashboard''' in v_user_update_def)>0
+  THEN
+    RAISE EXCEPTION 'Personal admin producer route contract is not permission-safe';
+  END IF;
 
   RAISE NOTICE 'Notification center final completion verification passed.';
 END;
