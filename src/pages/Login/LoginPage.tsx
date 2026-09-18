@@ -246,7 +246,7 @@ export const LoginPage: React.FC = () => {
                 fullWidth
                 isLoading={isLoading}
                 disabled={isLoading || loginSuccess}
-                rightIcon={!isLoading && <ArrowRight className="w-4 h-4" />}
+                rightIcon={!isLoading && <ArrowRight />}
                 className="mt-2"
               >
                 {isLoading
