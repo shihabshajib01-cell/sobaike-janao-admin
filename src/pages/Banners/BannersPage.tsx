@@ -275,7 +275,7 @@ export const BannersPage: React.FC = () => {
                       </p>
                     </div>
                     <span
-                      className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-medium ${
+                      className={`shrink-0 rounded-full px-2 py-1 type-meta font-medium ${
                         draftChanged
                           ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300'
                           : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
@@ -296,7 +296,7 @@ export const BannersPage: React.FC = () => {
                   </p>
 
                   <div className="flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    <p className="type-meta text-slate-500 dark:text-slate-400">
                       {isBn ? 'ভার্সন' : 'Version'} {banner.version}
                     </p>
                     <Button
