@@ -260,7 +260,7 @@ export const LoginPage: React.FC = () => {
 
             {/* Helper Footer */}
             <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800 text-center">
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+              <p className="type-meta text-slate-500 dark:text-slate-400 leading-relaxed">
                 {language === 'bn'
                   ? 'অননুমোদিত প্রবেশ নিষিদ্ধ। সমস্ত ক্রিয়াকলাপ নিরীক্ষা লগভুক্ত হয়।'
                   : 'Authorized personnel only. All administrative sessions and events are strictly logged.'}
