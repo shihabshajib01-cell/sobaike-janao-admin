@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -379,13 +380,13 @@ export const NotificationsPage: React.FC = () => {
             <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span>{actionSuccess}</span>
           </div>
-          <button
+          <ButtonBase
             type="button"
             onClick={() => setActionSuccess(null)}
             className="text-sm hover:underline text-emerald-700 dark:text-emerald-300 ml-4 font-medium"
           >
             ×
-          </button>
+          </ButtonBase>
         </div>
       )}
 
@@ -398,13 +399,13 @@ export const NotificationsPage: React.FC = () => {
             <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
             <span>{actionError}</span>
           </div>
-          <button
+          <ButtonBase
             type="button"
             onClick={() => setActionError(null)}
             className="text-sm hover:underline text-red-700 dark:text-red-300 ml-4 font-medium"
           >
             ×
-          </button>
+          </ButtonBase>
         </div>
       )}
 
@@ -414,7 +415,7 @@ export const NotificationsPage: React.FC = () => {
           {filters.map((filter) => {
             const isActive = activeFilter === filter.key;
             return (
-              <button
+              <ButtonBase
                 key={filter.key}
                 type="button"
                 id={`notification-filter-tab-${filter.key}`}
@@ -440,7 +441,7 @@ export const NotificationsPage: React.FC = () => {
                     {formatNumber(unreadCount, language)}
                   </span>
                 )}
-              </button>
+              </ButtonBase>
             );
           })}
         </div>
@@ -587,7 +588,7 @@ export const NotificationsPage: React.FC = () => {
                       : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
                   )}
                 >
-                  <button
+                  <ButtonBase
                     type="button"
                     onClick={() => void handleItemNavigate(item)}
                     className="group w-full p-4 sm:p-5 text-left rounded-t-lg transition-colors hover:bg-slate-50/70 dark:hover:bg-slate-800/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500"
@@ -657,7 +658,7 @@ export const NotificationsPage: React.FC = () => {
                         )}
                       </div>
                     </div>
-                  </button>
+                  </ButtonBase>
 
                   <div className="mx-4 sm:mx-5 py-3 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
