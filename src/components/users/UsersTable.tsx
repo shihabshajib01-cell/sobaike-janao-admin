@@ -91,7 +91,17 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                 <tr
                   key={user.user_id}
                   id={`user-row-${user.user_id}`}
-                  className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+                  onClick={() => onView(user.user_id)}
+                  onKeyDown={(e) => {
+                    if (e.target !== e.currentTarget) return;
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onView(user.user_id);
+                    }
+                  }}
+                  tabIndex={0}
+                  aria-label={`${t.users.viewUser}: ${user.display_name || user.email}`}
+                  className="cursor-pointer hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500"
                 >
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
@@ -168,7 +178,10 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                         id={`btn-view-user-${user.user_id}`}
                         variant="ghost"
                         size="sm"
-                        onClick={() => onView(user.user_id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onView(user.user_id);
+                        }}
                         className="h-8 px-2.5 text-xs text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400"
                         title={t.users.viewUser}
                       >
@@ -199,7 +212,10 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                               id={`btn-edit-user-${user.user_id}`}
                               variant="secondary"
                               size="sm"
-                              onClick={() => onEdit(user.user_id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit(user.user_id);
+                              }}
                               className="h-8 px-2.5 text-xs"
                               title={t.users.editUser}
                             >
@@ -212,7 +228,10 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                                 id={`btn-delete-user-${user.user_id}`}
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => onDelete(user)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onDelete(user);
+                                }}
                                 className="h-8 px-2.5 text-xs text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40"
                                 title={t.users.deleteUser}
                               >
