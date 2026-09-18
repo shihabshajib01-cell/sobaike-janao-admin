@@ -32,8 +32,9 @@ jobs:
           from pathlib import Path
           html = Path('/tmp/admin-index.html').read_text(errors='replace')
           valid_root = 'id="root"' in html or "id='root'" in html
-          bundled = '/src/main.tsx' not in html
-          raise SystemExit(0 if valid_root and bundled else 1)
+          source_free = '/src/main.tsx' not in html and '/src/entry.js' not in html and 'src/main.tsx' not in html and 'src/entry.js' not in html
+          has_bundle = 'assets/' in html and '.js' in html
+          raise SystemExit(0 if valid_root and source_free and has_bundle else 1)
           PY
               then
                 ok=1
@@ -46,7 +47,18 @@ jobs:
             sleep 10
           done
           test "$ok" = "1"
-          echo "Admin site smoke check passed"
+
+          asset_path=$(grep -o 'assets/index-[^" ]*\.js' /tmp/admin-index.html | head -1)
+          test -n "$asset_path"
+          asset_code=$(curl -L -sS -o /tmp/admin-main.js -w "%{http_code}" "$SITE_URL$asset_path" || true)
+          test "$asset_code" = "200"
+
+          if grep -Eq 'src/(main\.tsx|entry\.js)' /tmp/admin-index.html; then
+            echo "ERROR: live Admin index references source entry files"
+            exit 1
+          fi
+
+          echo "Admin site smoke check passed with live bundle asset"
 
       - name: Verify private Admin RPC rejects anonymous access
         shell: bash
