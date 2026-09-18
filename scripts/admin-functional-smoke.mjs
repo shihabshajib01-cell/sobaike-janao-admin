@@ -3,6 +3,78 @@ import { chromium } from 'playwright';
 const LOCAL_URL = (process.env.LOCAL_SITE_URL || 'http://127.0.0.1:3000/').replace(/\/?$/, '/');
 const LIVE_URL = (process.env.LIVE_SITE_URL || 'https://shihabshajib01-cell.github.io/sobaike-janao-admin/').replace(/\/?$/, '/');
 const E2E_SUPABASE_ORIGIN = 'https://admin-e2e.invalid';
+const E2E_SOURCED_REPORT_ID = 'E2E-SOURCED-001';
+const E2E_EXISTING_REPORT_ID = 'E2E-EXISTING-001';
+
+const e2eSourcedComplaint = {
+  id: E2E_SOURCED_REPORT_ID,
+  segment_id: 'load_shedding',
+  subcategory_id: 'load-shedding-e2e',
+  title: 'ঢাকার একই এলাকায় বিদ্যুৎ বিভ্রাটের পরীক্ষামূলক রিপোর্ট',
+  title_en: 'E2E sourced report for duplicate review',
+  description: 'ডুপ্লিকেট রিভিউ ব্রাউজার পরীক্ষার জন্য বিচ্ছিন্ন ডাটা।',
+  description_en: 'Isolated browser fixture for sourced-report duplicate review.',
+  incident_date: '2026-09-18',
+  incident_time: '10:00',
+  status: 'submitted',
+  priority: 'medium',
+  origin_type: 'sourced_report',
+  privacy_choice: 'anonymous',
+  publication_preferences: {},
+  district: 'Dhaka',
+  upazila_or_thana: 'Tejgaon',
+  area: 'E2E Area',
+  created_at: '2026-09-18T10:00:00Z',
+  updated_at: '2026-09-18T10:00:00Z',
+};
+
+const duplicateMatchFixture = {
+  applicable: true,
+  status: 'match',
+  requiresReview: true,
+  candidateCount: 1,
+  matchCount: 1,
+  reviewCount: 0,
+  exactSourceDuplicates: [],
+  candidates: [
+    {
+      complaintId: E2E_EXISTING_REPORT_ID,
+      status: 'published',
+      titleBn: 'একই ঘটনার বিদ্যমান রিপোর্ট',
+      titleEn: 'Existing report for the same incident',
+      segmentId: 'load_shedding',
+      subcategoryId: 'load-shedding-e2e',
+      incidentDate: '2026-09-18',
+      district: 'Dhaka',
+      upazilaOrThana: 'Tejgaon',
+      area: 'E2E Area',
+      score: 91,
+      titleSimilarity: 0.72,
+      matchLevel: 'match',
+      reasons: ['same_subcategory', 'same_incident_date', 'same_district', 'same_upazila_or_thana'],
+      sources: [
+        {
+          publisherName: 'E2E News',
+          sourceTitle: 'Existing source fixture',
+          canonicalUrl: 'https://example.invalid/e2e-existing-source',
+          sourcePublishedDate: '2026-09-18',
+        },
+      ],
+    },
+  ],
+};
+
+const duplicateClearFixture = {
+  applicable: true,
+  status: 'clear',
+  requiresReview: false,
+  candidateCount: 0,
+  matchCount: 0,
+  reviewCount: 0,
+  exactSourceDuplicates: [],
+  candidates: [],
+};
+
 const failures = [];
 const results = [];
 
@@ -75,7 +147,36 @@ async function installSupabaseFixtures(page) {
 
     let body = [];
 
-    if (path.includes('/rest/v1/rpc/admin_get_dashboard_aggregates')) {
+    if (path.includes('/rest/v1/rpc/admin_check_report_duplicate')) {
+      body = duplicateMatchFixture;
+    } else if (path.includes('/rest/v1/rpc/admin_confirm_reports_are_distinct')) {
+      body = duplicateClearFixture;
+    } else if (path.includes('/rest/v1/rpc/admin_check_source_duplicate')) {
+      body = { duplicate: false, normalizedUrl: 'https://example.invalid/new-source' };
+    } else if (path.includes('/rest/v1/rpc/admin_get_complaint_sources')) {
+      body = [
+        {
+          id: 'e2e-source-1',
+          sourceType: 'news',
+          publisherName: 'E2E News',
+          sourceTitle: 'E2E source fixture',
+          canonicalUrl: 'https://example.invalid/e2e-current-source',
+          sourcePublishedDate: '2026-09-18',
+          verificationStatus: 'verified',
+          isFinalDetailPage: true,
+          sourceVersion: 1,
+          verifiedAt: '2026-09-18T10:00:00Z',
+          createdAt: '2026-09-18T10:00:00Z',
+          updatedAt: '2026-09-18T10:00:00Z',
+        },
+      ];
+    } else if (path.includes('/rest/v1/rpc/admin_get_complaint_configured_fields')) {
+      body = { formSchemaVersion: null, answers: {}, fields: [] };
+    } else if (path.includes('/rest/v1/rpc/admin_get_complaint_evidence')) {
+      body = [];
+    } else if (path.includes('/rest/v1/rpc/admin_get_complaint_reporter_location')) {
+      body = null;
+    } else if (path.includes('/rest/v1/rpc/admin_get_dashboard_aggregates')) {
       body = {
         stats: {
           totalComplaints: 0,
@@ -115,13 +216,18 @@ async function installSupabaseFixtures(page) {
     } else if (path.includes('/rest/v1/segments')) {
       body = [
         { id: 'public_safety', name_en: 'Public Safety', name_bn: 'জননিরাপত্তা', active: true, sort_order: 1 },
+        { id: 'load_shedding', name_en: 'Utility Issues', name_bn: 'ইউটিলিটি সমস্যা', active: true, sort_order: 2 },
       ];
     } else if (path.includes('/rest/v1/subcategories')) {
       body = [
         { id: 'theft', segment_id: 'public_safety', name_en: 'Theft', name_bn: 'চুরি', active: true, sort_order: 1 },
+        { id: 'load-shedding-e2e', segment_id: 'load_shedding', name_en: 'Load Shedding', name_bn: 'লোডশেডিং', active: true, sort_order: 1 },
       ];
-    } else if (path.includes('/rest/v1/complaints')) {
+    } else if (path.includes('/rest/v1/complaint_updates')) {
       body = [];
+    } else if (path.includes('/rest/v1/complaints')) {
+      const requestedId = url.searchParams.get('id') || '';
+      body = requestedId.includes(E2E_SOURCED_REPORT_ID) ? e2eSourcedComplaint : [];
     } else if (path.includes('/rest/v1/rpc/')) {
       body = [];
     } else if (path.includes('/auth/v1/')) {
@@ -260,6 +366,56 @@ await check('Admin mobile sidebar opens, closes and preserves touch navigation s
   if (!page.url().includes('#/complaints')) throw new Error('mobile navigation did not reach complaints');
   if (await page.getByText('Something went wrong', { exact: true }).isVisible().catch(() => false)) {
     throw new Error('mobile complaints route hit the ErrorBoundary');
+  }
+
+  await context.close();
+});
+
+await check('Sourced report publish is blocked until duplicate review is resolved', async () => {
+  const context = await browser.newContext({ viewport: { width: 1365, height: 900 } });
+  const page = await context.newPage();
+  attachPageGuards(page, 'local-duplicate-gate');
+  await installSupabaseFixtures(page);
+
+  await page.goto(hashUrl(LOCAL_URL, '/complaints/' + E2E_SOURCED_REPORT_ID), {
+    waitUntil: 'domcontentloaded',
+    timeout: 30000,
+  });
+
+  await expectVisible(
+    page.getByRole('heading', { name: new RegExp(E2E_SOURCED_REPORT_ID), level: 1 }),
+    'sourced report detail page did not load'
+  );
+
+  await page.getByRole('button', { name: 'Publish to Feed', exact: true }).first().click();
+
+  await expectVisible(
+    page.getByText('A likely duplicate incident already exists', { exact: true }),
+    'duplicate match warning did not appear'
+  );
+  await expectVisible(
+    page.getByText('Existing report for the same incident', { exact: true }),
+    'duplicate candidate was not rendered'
+  );
+
+  const publishLive = page.getByRole('button', { name: 'Publish Live', exact: true });
+  if (!(await publishLive.isDisabled())) {
+    throw new Error('Publish Live remained enabled while a duplicate candidate was unresolved');
+  }
+
+  await page.getByRole('button', { name: 'Confirm Separate Incident', exact: true }).click();
+  await page.getByLabel('Review Note *').fill(
+    'Different transformer and separate outage confirmed by the source details.'
+  );
+  await page.getByRole('button', { name: 'Confirm as Separate', exact: true }).click();
+
+  await expectVisible(
+    page.getByText('No duplicate incident found', { exact: true }),
+    'duplicate review did not clear after audited separate-incident confirmation'
+  );
+
+  if (await publishLive.isDisabled()) {
+    throw new Error('Publish Live did not become available after duplicate review cleared');
   }
 
   await context.close();
