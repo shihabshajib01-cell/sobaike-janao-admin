@@ -123,7 +123,7 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
                   variant="secondary"
                   size="sm"
                   onClick={onRetry}
-                  leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+                  leftIcon={<RotateCcw />}
                 >
                   <span>{isBn ? 'পুনরায় চেষ্টা করুন' : 'Retry'}</span>
                 </Button>
@@ -189,7 +189,7 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
                       <p className="text-sm font-semibold">{isBn ? 'ভিডিও প্রমাণ ফাইল' : 'Video Footage Attachment'}</p>
                       <p className="text-xs text-slate-400 mt-0.5">{currentItem.caption || currentItem.url}</p>
                     </div>
-                    <Button variant="secondary" size="sm" leftIcon={<ExternalLink className="w-3.5 h-3.5" />}>
+                    <Button variant="secondary" size="sm" leftIcon={<ExternalLink />}>
                       <span>{isBn ? 'প্লেয়ারে চালান' : 'Open in Media Player'}</span>
                     </Button>
                   </div>
@@ -202,7 +202,7 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
                       <p className="text-sm font-semibold">{isBn ? 'পিডিএফ / ডকুমেন্ট ফাইল' : 'Official Document PDF'}</p>
                       <p className="text-xs text-slate-400 mt-0.5">{currentItem?.caption || currentItem?.url}</p>
                     </div>
-                    <Button variant="secondary" size="sm" leftIcon={<Download className="w-3.5 h-3.5" />}>
+                    <Button variant="secondary" size="sm" leftIcon={<Download />}>
                       <span>{isBn ? 'ডকুমেন্ট দেখুন' : 'View Document'}</span>
                     </Button>
                   </div>
@@ -299,7 +299,7 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
                   variant="secondary"
                   size="sm"
                   onClick={() => window.open(currentItem.url, '_blank')}
-                  leftIcon={<ExternalLink className="w-3.5 h-3.5" />}
+                  leftIcon={<ExternalLink />}
                 >
                   <span>{isBn ? 'নতুন ট্যাবে খুলুন' : 'Open in New Tab'}</span>
                 </Button>
