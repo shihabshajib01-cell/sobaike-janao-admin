@@ -30,6 +30,11 @@ import {
 
 const PAGE_SIZE = 15;
 
+const getNotificationCategoryParam = (filter: NotificationFilterType): string | null =>
+  ['complaint', 'administration', 'configuration', 'role', 'security'].includes(filter)
+    ? filter
+    : null;
+
 export const NotificationsPage: React.FC = () => {
   const { t, language } = useLanguage();
   const isBn = language === 'bn';
@@ -37,6 +42,7 @@ export const NotificationsPage: React.FC = () => {
 
   const {
     unreadCount,
+    notificationRevision,
     markAsRead,
     markAllAsRead,
     refreshRecent,
@@ -71,13 +77,7 @@ export const NotificationsPage: React.FC = () => {
 
       try {
         const unreadOnly = filter === 'unread';
-        const categoryParam =
-          filter === 'complaint' ||
-          filter === 'administration' ||
-          filter === 'role' ||
-          filter === 'security'
-            ? filter
-            : null;
+        const categoryParam = getNotificationCategoryParam(filter);
 
         const results = await notificationApi.listNotifications({
           limit: PAGE_SIZE,
@@ -113,6 +113,13 @@ export const NotificationsPage: React.FC = () => {
     loadNotifications(activeFilter);
   }, [activeFilter, loadNotifications]);
 
+  const lastRealtimeRevisionRef = useRef<number>(notificationRevision);
+  useEffect(() => {
+    if (notificationRevision === lastRealtimeRevisionRef.current) return;
+    lastRealtimeRevisionRef.current = notificationRevision;
+    void loadNotifications(activeFilter);
+  }, [notificationRevision, activeFilter, loadNotifications]);
+
   // Load more with keyset pagination
   const handleLoadMore = async () => {
     if (isLoadingMore || !hasMore || notifications.length === 0) return;
@@ -123,13 +130,7 @@ export const NotificationsPage: React.FC = () => {
 
     try {
       const unreadOnly = activeFilter === 'unread';
-      const categoryParam =
-        activeFilter === 'complaint' ||
-        activeFilter === 'administration' ||
-        activeFilter === 'role' ||
-        activeFilter === 'security'
-          ? activeFilter
-          : null;
+      const categoryParam = getNotificationCategoryParam(activeFilter);
 
       const nextBatch = await notificationApi.listNotifications({
         limit: PAGE_SIZE,
@@ -306,6 +307,7 @@ export const NotificationsPage: React.FC = () => {
     { key: 'unread', label: t.notifications.unread },
     { key: 'complaint', label: t.notifications.complaints },
     { key: 'administration', label: t.notifications.administration },
+    { key: 'configuration', label: t.notifications.configuration },
     { key: 'role', label: t.notifications.roles },
     { key: 'security', label: t.notifications.security },
   ];
