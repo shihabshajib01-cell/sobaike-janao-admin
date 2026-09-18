@@ -51,6 +51,9 @@ jobs:
       - name: Tag and feedback audit
         run: npm run audit:tags-feedback
 
+      - name: Sourced report duplicate audit
+        run: npm run audit:duplicate-reports
+
       - name: Dependency security audit
         run: npm run audit:dependencies
 
