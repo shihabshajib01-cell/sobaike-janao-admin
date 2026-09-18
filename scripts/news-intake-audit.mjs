@@ -95,6 +95,10 @@ requireText(collisionErrorContract, "errcode='P0001'", 'News Intake collision er
 requireText(collisionErrorContract, 'DUPLICATE_REVIEW_REQUIRED', 'News Intake collision error contract');
 requireText(explicitDenyPolicies, 'news_intake_runs_authenticated_deny', 'News Intake run-table deny policy');
 requireText(explicitDenyPolicies, 'news_intake_run_items_authenticated_deny', 'News Intake item-table deny policy');
+requireText(schemaRequirementGuard, 'sourced_report_missing_required_fields_internal', 'News Intake schema requirement validator');
+requireText(schemaRequirementGuard, 'trg_guard_sourced_report_schema_requirements', 'News Intake schema requirement trigger');
+requireText(schemaRequirementGuard, 'schemaValidation', 'News Intake schema-aware preview');
+requireText(samakalMode, "scan_enabled=false", 'Samakal safe source mode');
 
 for (const needle of [
   'admin_get_news_intake_taxonomy',
