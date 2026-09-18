@@ -114,7 +114,7 @@ export const AccessDenied: React.FC<AccessDeniedProps> = ({
                 size="md"
                 onClick={() => refreshPermissions()}
                 isLoading={permissionsLoading}
-                leftIcon={<RefreshCw className="w-4 h-4" />}
+                leftIcon={<RefreshCw />}
               >
                 <span>{isBn ? 'পুনরায় চেষ্টা' : 'Retry Verification'}</span>
               </Button>
@@ -125,7 +125,7 @@ export const AccessDenied: React.FC<AccessDeniedProps> = ({
                 variant="primary"
                 size="md"
                 onClick={() => navigate(fallbackPath)}
-                leftIcon={<ArrowLeft className="w-4 h-4" />}
+                leftIcon={<ArrowLeft />}
               >
                 <span>{t.access.backToDashboard}</span>
               </Button>
@@ -135,7 +135,7 @@ export const AccessDenied: React.FC<AccessDeniedProps> = ({
               variant={hasZeroPermissions ? 'primary' : 'secondary'}
               size="md"
               onClick={handleSignOut}
-              leftIcon={<LogOut className="w-4 h-4" />}
+              leftIcon={<LogOut />}
             >
               <span>{t.header.signOut}</span>
             </Button>
