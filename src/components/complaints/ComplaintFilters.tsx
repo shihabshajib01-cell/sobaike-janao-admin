@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
+import { FilterChip } from '@/components/ui/FilterChip';
 import { useLanguage } from '@/context/LanguageContext';
 import { ComplaintFilterState } from '@/types/Complaint';
 import { complaintApi } from '@/services/api';
-import { RotateCcw, X, Filter } from 'lucide-react';
+import { RotateCcw, Filter } from 'lucide-react';
 import {
   HARASSMENT_AGE_GROUP_OPTIONS,
   HARASSMENT_ABUSER_RELATIONSHIP_OPTIONS,
@@ -183,8 +183,8 @@ export const ComplaintFilters: React.FC<ComplaintFiltersProps> = ({
               variant="ghost"
               size="sm"
               onClick={onResetFilters}
-              leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
-              className="h-9 w-full text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+              leftIcon={<RotateCcw />}
+              fullWidth
             >
               <span>{isBn ? 'ফিল্টার রিসেট' : 'Reset Filters'}</span>
             </Button>
@@ -201,87 +201,74 @@ export const ComplaintFilters: React.FC<ComplaintFiltersProps> = ({
           </span>
 
           {filters.searchQuery && (
-            <Badge status="info" size="sm" className="inline-flex items-center gap-1">
-              <span>{isBn ? 'অনুসন্ধান' : 'Search'}: "{filters.searchQuery}"</span>
-              <button
-                type="button"
-                onClick={() => onFilterChange('searchQuery', '')}
-                className="hover:opacity-75 cursor-pointer"
-                aria-label="Remove search filter"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </Badge>
+            <FilterChip
+              tone="info"
+              onRemove={() => onFilterChange('searchQuery', '')}
+              removeLabel="Remove search filter"
+            >
+              {isBn ? 'অনুসন্ধান' : 'Search'}: "{filters.searchQuery}"
+            </FilterChip>
           )}
 
           {filters.category !== 'all' && (
-            <Badge status="info" size="sm" className="inline-flex items-center gap-1">
-              <span>{getCategoryLabel(filters.category)}</span>
-              <button
-                type="button"
-                onClick={() => onFilterChange('category', 'all')}
-                className="hover:opacity-75 cursor-pointer"
-                aria-label="Remove category filter"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </Badge>
+            <FilterChip
+              tone="info"
+              onRemove={() => onFilterChange('category', 'all')}
+              removeLabel="Remove category filter"
+            >
+              {getCategoryLabel(filters.category)}
+            </FilterChip>
           )}
 
 
           {isHarassmentFilter && filters.affectedPersonAgeGroup !== 'all' && (
-            <Badge status="info" size="sm" className="inline-flex items-center gap-1">
-              <span>{getHarassmentAgeGroupLabel(filters.affectedPersonAgeGroup, isBn ? 'bn' : 'en')}</span>
-              <button type="button" onClick={() => onFilterChange('affectedPersonAgeGroup', 'all')} className="hover:opacity-75 cursor-pointer" aria-label="Remove age group filter">
-                <X className="w-3 h-3" />
-              </button>
-            </Badge>
+            <FilterChip
+              tone="info"
+              onRemove={() => onFilterChange('affectedPersonAgeGroup', 'all')}
+              removeLabel="Remove age group filter"
+            >
+              {getHarassmentAgeGroupLabel(filters.affectedPersonAgeGroup, isBn ? 'bn' : 'en')}
+            </FilterChip>
           )}
 
           {isHarassmentFilter && filters.allegedAbuserRelationship !== 'all' && (
-            <Badge status="info" size="sm" className="inline-flex items-center gap-1">
-              <span>{getHarassmentRelationshipLabel(filters.allegedAbuserRelationship, isBn ? 'bn' : 'en')}</span>
-              <button type="button" onClick={() => onFilterChange('allegedAbuserRelationship', 'all')} className="hover:opacity-75 cursor-pointer" aria-label="Remove relationship filter">
-                <X className="w-3 h-3" />
-              </button>
-            </Badge>
+            <FilterChip
+              tone="info"
+              onRemove={() => onFilterChange('allegedAbuserRelationship', 'all')}
+              removeLabel="Remove relationship filter"
+            >
+              {getHarassmentRelationshipLabel(filters.allegedAbuserRelationship, isBn ? 'bn' : 'en')}
+            </FilterChip>
           )}
 
           {isHarassmentFilter && filters.reportingFor !== 'all' && (
-            <Badge status="info" size="sm" className="inline-flex items-center gap-1">
-              <span>{getHarassmentReportingForLabel(filters.reportingFor, isBn ? 'bn' : 'en')}</span>
-              <button type="button" onClick={() => onFilterChange('reportingFor', 'all')} className="hover:opacity-75 cursor-pointer" aria-label="Remove reporting-for filter">
-                <X className="w-3 h-3" />
-              </button>
-            </Badge>
+            <FilterChip
+              tone="info"
+              onRemove={() => onFilterChange('reportingFor', 'all')}
+              removeLabel="Remove reporting-for filter"
+            >
+              {getHarassmentReportingForLabel(filters.reportingFor, isBn ? 'bn' : 'en')}
+            </FilterChip>
           )}
 
           {filters.location !== 'all' && (
-            <Badge status="warning" size="sm" className="inline-flex items-center gap-1">
-              <span>{getLocationLabel(filters.location)}</span>
-              <button
-                type="button"
-                onClick={() => onFilterChange('location', 'all')}
-                className="hover:opacity-75 cursor-pointer"
-                aria-label="Remove location filter"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </Badge>
+            <FilterChip
+              tone="warning"
+              onRemove={() => onFilterChange('location', 'all')}
+              removeLabel="Remove location filter"
+            >
+              {getLocationLabel(filters.location)}
+            </FilterChip>
           )}
 
           {filters.dateRange !== 'all' && (
-            <Badge status="approved" size="sm" className="inline-flex items-center gap-1">
-              <span>{getDateLabel(filters.dateRange)}</span>
-              <button
-                type="button"
-                onClick={() => onFilterChange('dateRange', 'all')}
-                className="hover:opacity-75 cursor-pointer"
-                aria-label="Remove date range filter"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </Badge>
+            <FilterChip
+              tone="success"
+              onRemove={() => onFilterChange('dateRange', 'all')}
+              removeLabel="Remove date range filter"
+            >
+              {getDateLabel(filters.dateRange)}
+            </FilterChip>
           )}
         </div>
       )}
