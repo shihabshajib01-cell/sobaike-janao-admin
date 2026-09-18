@@ -25,7 +25,7 @@ export const NotFoundPage: React.FC = () => {
       <Button
         variant="primary"
         size="md"
-        leftIcon={<Home className="w-4 h-4" />}
+        leftIcon={<Home />}
         onClick={() => navigate('/dashboard')}
       >
         {isBn ? 'ড্যাশবোর্ডে ফিরে যান' : 'Return to Dashboard'}
