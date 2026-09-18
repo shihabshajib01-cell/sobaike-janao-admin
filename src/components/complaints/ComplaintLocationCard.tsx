@@ -233,13 +233,13 @@ export const ComplaintLocationCard: React.FC<ComplaintLocationCardProps> = ({
                 <MapPin className="w-3.5 h-3.5" />
                 <span>{isBn ? 'ঘটনাস্থল' : 'Incident Location'}</span>
               </h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="type-meta text-slate-500 dark:text-slate-400">
                 {isBn
                   ? 'যেখানে ঘটনাটি ঘটেছে বলে অভিযোগে উল্লেখ করা হয়েছে।'
                   : 'Location reported for where the incident occurred.'}
               </p>
             </div>
-            <span className="text-[11px] font-medium text-slate-400">
+            <span className="type-meta font-medium text-slate-400">
               {isBn ? 'নাগরিক দ্বারা নির্দেশিত' : 'Citizen Reported'}
             </span>
           </div>
@@ -247,7 +247,7 @@ export const ComplaintLocationCard: React.FC<ComplaintLocationCardProps> = ({
           {/* Address Lines */}
           <div className="space-y-3">
             <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800 space-y-1">
-              <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+              <span className="type-meta font-medium text-slate-400 uppercase tracking-wider">
                 {isBn ? 'দাখিলকৃত ঠিকানা' : 'Submitted Address'}
               </span>
               <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
@@ -257,7 +257,7 @@ export const ComplaintLocationCard: React.FC<ComplaintLocationCardProps> = ({
 
             {location.addressEn && location.addressBn && location.addressBn !== location.addressEn && (
               <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800 space-y-1">
-                <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                <span className="type-meta font-medium text-slate-400 uppercase tracking-wider">
                   {isBn ? 'ইংরেজি ঠিকানা' : 'English Civic Address'}
                 </span>
                 <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
@@ -315,7 +315,7 @@ export const ComplaintLocationCard: React.FC<ComplaintLocationCardProps> = ({
                         <p className="font-medium mt-0.5">
                           {location.addressBn || location.addressEn || 'Incident Point'}
                         </p>
-                        <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+                        <p className="type-meta font-mono text-slate-500 dark:text-slate-400 mt-0.5">
                           {incidentLat.toFixed(5)}, {incidentLng.toFixed(5)}
                         </p>
                       </div>
@@ -331,7 +331,7 @@ export const ComplaintLocationCard: React.FC<ComplaintLocationCardProps> = ({
                     <Compass className="w-4 h-4 text-rose-400" />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[10px] text-slate-400 block uppercase tracking-wider font-semibold">
+                    <span className="type-meta text-slate-400 block uppercase tracking-wider font-semibold">
                       {isBn ? 'ঘটনাস্থল জিপিএস স্থানাঙ্ক (GPS)' : 'Incident GPS Coordinates'}
                     </span>
                     <span className="font-mono text-xs text-slate-200 font-semibold truncate block">
@@ -392,13 +392,13 @@ export const ComplaintLocationCard: React.FC<ComplaintLocationCardProps> = ({
                   <span>{isBn ? 'গোপনীয়' : 'Private'}</span>
                 </Badge>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="type-meta text-slate-500 dark:text-slate-400 mt-0.5">
                 {isBn
                   ? 'অভিযোগ জমা দেওয়ার সময় রিপোর্টারের ডিভাইস থেকে ধারণ করা GPS অবস্থান। এটি ঘটনাস্থল নয়।'
                   : 'Device GPS captured when this complaint was submitted. This is not the reported incident location.'}
               </p>
             </div>
-            <span className="text-[11px] font-medium text-slate-400">
+            <span className="type-meta font-medium text-slate-400">
               {isBn ? 'ডিভাইস টেলিমেট্রি' : 'Device Telemetry'}
             </span>
           </div>
@@ -501,12 +501,12 @@ export const ComplaintLocationCard: React.FC<ComplaintLocationCardProps> = ({
                           <p className="font-semibold text-indigo-600 dark:text-indigo-400">
                             {isBn ? 'রিপোর্টারের ডিভাইস অবস্থান (গোপনীয়)' : 'Reporter Device Location (Private)'}
                           </p>
-                          <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+                          <p className="type-meta font-mono text-slate-500 dark:text-slate-400 mt-0.5">
                             {deviceLat.toFixed(5)}, {deviceLng.toFixed(5)}
                           </p>
                           {reporterDeviceLocation?.accuracyMeters !== null &&
                             reporterDeviceLocation?.accuracyMeters !== undefined && (
-                              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                              <p className="type-meta text-slate-500 dark:text-slate-400 mt-0.5">
                                 {isBn ? 'নির্ভুলতা:' : 'Accuracy:'} ±{Math.round(reporterDeviceLocation.accuracyMeters)}m
                               </p>
                             )}
@@ -523,7 +523,7 @@ export const ComplaintLocationCard: React.FC<ComplaintLocationCardProps> = ({
                       <Compass className="w-4 h-4 text-indigo-400" />
                     </div>
                     <div className="min-w-0">
-                      <span className="text-[10px] text-slate-400 block uppercase tracking-wider font-semibold">
+                      <span className="type-meta text-slate-400 block uppercase tracking-wider font-semibold">
                         {isBn ? 'ডিভাইস জিপিএস স্থানাঙ্ক (GPS)' : 'Device GPS Coordinates'}
                       </span>
                       <span className="font-mono text-xs text-slate-200 font-semibold truncate block">
@@ -559,7 +559,7 @@ export const ComplaintLocationCard: React.FC<ComplaintLocationCardProps> = ({
                       <Crosshair className="w-3.5 h-3.5" />
                     </div>
                     <div className="min-w-0">
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block">
+                      <span className="type-meta text-slate-500 dark:text-slate-400 block">
                         {isBn ? 'জিপিএস নির্ভুলতা' : 'GPS Accuracy'}
                       </span>
                       <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate block">
@@ -576,7 +576,7 @@ export const ComplaintLocationCard: React.FC<ComplaintLocationCardProps> = ({
                       <Clock className="w-3.5 h-3.5" />
                     </div>
                     <div className="min-w-0">
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block">
+                      <span className="type-meta text-slate-500 dark:text-slate-400 block">
                         {isBn ? 'ধারণের সময়' : 'Captured At'}
                       </span>
                       <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate block">
