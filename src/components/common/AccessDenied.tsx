@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ShieldAlert, ArrowLeft, Lock, RefreshCw, AlertCircle, LogOut } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
+import { Tag } from '@/components/ui/Tag';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 
@@ -91,9 +91,9 @@ export const AccessDenied: React.FC<AccessDeniedProps> = ({
                   <Lock className="w-3.5 h-3.5 text-slate-400" />
                   <span>{t.access.requiredPermission}</span>
                 </span>
-                <Badge variant="subtle" size="sm" className="font-mono text-[11px]">
+                <Tag tone="neutral" mono>
                   {requiredPermission}
-                </Badge>
+                </Tag>
               </div>
             )}
 
