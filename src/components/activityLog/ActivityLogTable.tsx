@@ -175,7 +175,6 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
                         e.stopPropagation();
                         onViewDetails(log);
                       }}
-                      className="h-8 px-2.5 text-xs text-sky-600 dark:text-sky-400 hover:text-sky-700 hover:bg-sky-50 dark:hover:bg-sky-950/40"
                     >
                       <Eye className="w-3.5 h-3.5 mr-1" />
                       {language === 'bn' ? 'বিস্তারিত' : 'Details'}
@@ -261,7 +260,7 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
                     e.stopPropagation();
                     onViewDetails(log);
                   }}
-                  className="w-full h-9 text-xs flex items-center justify-center gap-1.5 min-h-[44px]"
+                  className="w-full flex items-center justify-center"
                 >
                   <Eye className="w-4 h-4" />
                   <span>{language === 'bn' ? 'বিস্তারিত অডিট রেকর্ড দেখুন' : 'View Audit Details'}</span>
