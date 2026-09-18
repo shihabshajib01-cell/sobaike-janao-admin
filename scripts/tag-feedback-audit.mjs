@@ -137,7 +137,28 @@ for (const filePath of sourceFiles) {
     }
   }
 
-  for (const componentName of ['Badge', 'Tag', 'MetaTag', 'FeedbackNotice']) {
+  const auditedComponents = [];
+
+  if (source.includes("from '@/components/ui/Badge'")) {
+    auditedComponents.push('Badge');
+  }
+
+  const tagImportMatch = source.match(
+    /import\s*\{([^}]+)\}\s*from\s*['"]@\/components\/ui\/Tag['"]/
+  );
+  if (tagImportMatch) {
+    if (/\bTag\s+as\s+MetaTag\b/.test(tagImportMatch[1])) {
+      auditedComponents.push('MetaTag');
+    } else if (/\bTag\b/.test(tagImportMatch[1])) {
+      auditedComponents.push('Tag');
+    }
+  }
+
+  if (source.includes("from '@/components/ui/FeedbackNotice'")) {
+    auditedComponents.push('FeedbackNotice');
+  }
+
+  for (const componentName of auditedComponents) {
     for (const tag of findOpeningTags(source, componentName)) {
       const badTokens = getClassBodies(tag)
         .flatMap((body) => body.split(/\s+/))
