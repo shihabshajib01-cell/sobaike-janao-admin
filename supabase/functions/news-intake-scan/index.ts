@@ -44,6 +44,21 @@ const detectLanguage = (value) => {
   return 'unknown';
 };
 
+const MAX_ARTICLE_AGE_DAYS = 7;
+const isUnsupportedArticleType = (url, title) => {
+  let path = '';
+  try { path = new URL(url).pathname.toLowerCase(); } catch {}
+  const text = normalizeText(title);
+  return /(\/opinion(?:\/|$)|\/editorial(?:\/|$)|\/analysis(?:\/|$)|\/feature(?:\/|$)|\/lifestyle(?:\/|$)|\/sports?(?:\/|$)|\/entertainment(?:\/|$)|\/photo(?:\/|$)|\/video(?:\/|$))/i.test(path)
+    || /(সম্পাদকীয়|মতামত|বিশ্লেষণ|কলাম|opinion|editorial|analysis)/iu.test(text);
+};
+const articleAgeDays = (publishedDate) => {
+  if (!publishedDate) return null;
+  const published = new Date(`${publishedDate}T00:00:00Z`);
+  if (Number.isNaN(published.getTime())) return null;
+  return Math.floor((Date.now() - published.getTime()) / 86400000);
+};
+
 const ARTICLE_RULES = [
   ['harassment','rape-sexual-violence',0.93,[/ধর্ষণ/u,/ধর্ষণের চেষ্টা/u,/\brape\b/i,/attempted rape/i]],
   ['harassment','sexual-harassment',0.90,[/যৌন হয়রানি/u,/যৌন হয়রানি/u,/ইভ টিজিং/u,/শ্লীলতাহানি/u,/sexual harassment/i,/eve[- ]?teasing/i]],
@@ -54,11 +69,11 @@ const ARTICLE_RULES = [
   ['load_shedding','gas-shortage',0.88,[/গ্যাস সংকট/u,/গ্যাসের চাপ.{0,20}কম/u,/gas shortage/i,/low gas pressure/i]],
   ['load_shedding','excess-electricity-bill',0.90,[/অতিরিক্ত বিদ্যুৎ বিল/u,/ভুতুড়ে বিল/u,/ভুতুড়ে বিল/u,/excess electricity bill/i,/inflated electricity bill/i]],
   ['extortion','bribe-demanded-service',0.92,[/ঘুষ/u,/\bbribe\b/i,/bribery/i]],
-  ['public_safety','mob-justice',0.94,[/গণপিটুনি/u,/মব সহিংসতা/u,/mob violence/i,/lynch/i,/beaten by a mob/i]],
+  ['public_safety','mob-justice',0.94,[/গণপিটুনি/u,/মব সহিংসতা/u,/(চুরি|ছিনতাই|ডাকাতি|ছেলেধরা).{0,60}(অভিযোগ|সন্দেহ).{0,100}(পিটিয়ে|পিটুনি).{0,60}(হত্যা|নিহত)/u,/mob violence/i,/lynch/i,/beaten by a mob/i]],
   ['public_safety','snatching',0.91,[/ছিনতাই/u,/snatching/i,/\bmugging\b/i]],
   ['public_safety','robbery',0.90,[/ডাকাতি/u,/dacoity/i,/\brobbery\b/i]],
   ['public_safety','theft',0.88,[/চুরি/u,/\btheft\b/i,/\bstolen\b/i]],
-  ['road_transport','road-accident',0.91,[/সড়ক দুর্ঘটনা/u,/সড়ক দুর্ঘটনা/u,/road accident/i,/road crash/i,/সড়কে.{0,40}(নিহত|আহত)/u]],
+  ['road_transport','road-accident',0.91,[/সড়ক দুর্ঘটনা/u,/সড়ক দুর্ঘটনা/u,/সংঘর্ষে.{0,100}(নিহত|আহত)/u,/(ধাক্কায়|ধাক্কায়|চাপায়|চাপায়|চাপা পড়ে|চাপা পড়ে).{0,100}(নিহত|আহত)/u,/(বাস|ট্রাক|পিকআপ|মোটরসাইকেল|অটোরিকশা|গাড়ি|গাড়ি|মাইক্রোবাস).{0,70}(সংঘর্ষ|ধাক্কা|চাপা).{0,120}(নিহত|আহত)/u,/road accident/i,/road crash/i,/(collision|crash|hit by|run over).{0,100}(killed|dead|injured)/i,/সড়কে.{0,40}(নিহত|আহত)/u]],
   ['road_transport','road-block',0.89,[/সড়ক অবরোধ/u,/সড়ক অবরোধ/u,/road blockade/i,/road blocked/i]],
   ['road_transport','road-repair-delay',0.88,[/রাস্তা মেরামত.{0,40}(বিলম্ব|দেরি|বন্ধ)/u,/road repair.{0,40}(delay|stalled|unfinished)/i]],
   ['illegal_occupation','road-public-space-encroachment',0.90,[/(ফুটপাত|ফুটওভার ব্রিজ|রাস্তা).{0,25}দখল/u,/(footpath|road|public space).{0,35}encroach/i]],
@@ -158,6 +173,11 @@ const runAutomatedScan = async (supabase) => {
   try { const {data:sourceData,error:sourceError}=await supabase.rpc('admin_get_news_intake_scan_sources'); if(sourceError) throw new Error(sourceError.message); const sources=(Array.isArray(sourceData)?sourceData:[]).slice(0,MAX_SOURCES); const discovered=[];
     await mapLimit(sources,4,async(source)=>{ try { const fetched=await safeScanFetch(String(source.homepageUrl),checkDomain); const links=extractArticleLinks(fetched.html,fetched.finalUrl).slice(0,MAX_ARTICLES_PER_SOURCE); if(!links.length){processingErrors+=1;await record({sourceHostname:source.hostname,publisherName:source.publisherName,canonicalUrl:source.homepageUrl,contentLanguage:source.languageHint||'unknown',action:'error',duplicateStatus:'unavailable',reason:'No article links were discoverable from the source homepage.'});return;} for(const url of links){if(discovered.length>=MAX_TOTAL_ARTICLES) break; discovered.push({source,url});} } catch(error){processingErrors+=1;await record({sourceHostname:String(source.hostname||'unknown'),publisherName:String(source.publisherName||'Unknown source'),canonicalUrl:String(source.homepageUrl||'https://invalid.example/'),contentLanguage:String(source.languageHint||'unknown'),action:'error',duplicateStatus:'unavailable',reason:clip(error instanceof Error?error.message:'Source scan failed.',1400)}).catch(()=>{});} });
     await mapLimit(discovered.slice(0,MAX_TOTAL_ARTICLES),3,async(candidate)=>{ const source=candidate.source; const originalUrl=candidate.url; try { const fetched=await safeScanFetch(originalUrl,checkDomain); const article=extractArticle(fetched.html,fetched.finalUrl,source.publisherName); if(!article.title||article.title.length<8){processingErrors+=1;await record({sourceHostname:source.hostname,publisherName:source.publisherName,canonicalUrl:originalUrl,contentLanguage:source.languageHint||'unknown',action:'error',duplicateStatus:'unavailable',reason:'Article title could not be extracted.'});return;} const canonicalCheck=await checkDomain(article.canonicalUrl); if(!canonicalCheck?.approved) article.canonicalUrl=fetched.finalUrl; article.publisherName=article.publisherName||canonicalCheck?.publisherName||source.publisherName; const fullText=`${article.title} ${article.excerpt} ${article.body}`; const detected=detectLanguage(fullText); const language=detected==='unknown'?(source.languageHint||'unknown'):detected; const classification=classifyArticle(fullText);
+      if(isUnsupportedArticleType(article.canonicalUrl,article.title)){await record({sourceHostname:source.hostname,publisherName:article.publisherName,canonicalUrl:article.canonicalUrl,sourceTitle:article.title,sourcePublishedDate:article.sourcePublishedDate||'',contentLanguage:language,action:'discovered',duplicateStatus:'unavailable',reason:'Non-incident opinion/editorial/analysis content was excluded from automatic report creation.'});return;}
+      const ageDays=articleAgeDays(article.sourcePublishedDate);
+      if(ageDays===null){await record({sourceHostname:source.hostname,publisherName:article.publisherName,canonicalUrl:article.canonicalUrl,sourceTitle:article.title,sourcePublishedDate:'',contentLanguage:language,segmentId:classification?.segmentId||null,subcategoryId:classification?.subcategoryId||null,confidence:classification?.confidence||null,action:'needs_review',duplicateStatus:'unavailable',reason:'Source publication date could not be verified, so automatic creation was blocked.'});return;}
+      if(ageDays>MAX_ARTICLE_AGE_DAYS){await record({sourceHostname:source.hostname,publisherName:article.publisherName,canonicalUrl:article.canonicalUrl,sourceTitle:article.title,sourcePublishedDate:article.sourcePublishedDate||'',contentLanguage:language,segmentId:classification?.segmentId||null,subcategoryId:classification?.subcategoryId||null,confidence:classification?.confidence||null,action:'discovered',duplicateStatus:'unavailable',reason:'Outside the 7-day automated intake window.'});return;}
+      if(ageDays < -1){await record({sourceHostname:source.hostname,publisherName:article.publisherName,canonicalUrl:article.canonicalUrl,sourceTitle:article.title,sourcePublishedDate:article.sourcePublishedDate||'',contentLanguage:language,segmentId:classification?.segmentId||null,subcategoryId:classification?.subcategoryId||null,confidence:classification?.confidence||null,action:'needs_review',duplicateStatus:'unavailable',reason:'Source publication date is unexpectedly in the future.'});return;}
       if(!classification){await record({sourceHostname:source.hostname,publisherName:article.publisherName,canonicalUrl:article.canonicalUrl,sourceTitle:article.title,sourcePublishedDate:article.sourcePublishedDate||'',contentLanguage:language,action:'discovered',duplicateStatus:'unavailable',reason:'No supported report category matched with enough confidence.'});return;}
       const location=findLocation(`${article.title} ${article.excerpt} ${article.body.slice(0,3000)}`); const incidentDate=inferIncidentDate(`${article.title} ${article.body.slice(0,6000)}`,article.sourcePublishedDate); if(!location||!incidentDate||!(article.excerpt||article.body)){const missing=[!location?'location':'',!incidentDate?'incident date':'',!(article.excerpt||article.body)?'incident context':''].filter(Boolean).join(', ');await record({sourceHostname:source.hostname,publisherName:article.publisherName,canonicalUrl:article.canonicalUrl,sourceTitle:article.title,sourcePublishedDate:article.sourcePublishedDate||'',contentLanguage:language,segmentId:classification.segmentId,subcategoryId:classification.subcategoryId,confidence:classification.confidence,action:'needs_review',duplicateStatus:'unavailable',reason:`Category detected, but ${missing} could not be established safely from the source.`});return;}
       if(classification.subcategoryId==='bribe-demanded-service'){await record({sourceHostname:source.hostname,publisherName:article.publisherName,canonicalUrl:article.canonicalUrl,sourceTitle:article.title,sourcePublishedDate:article.sourcePublishedDate||'',contentLanguage:language,segmentId:classification.segmentId,subcategoryId:classification.subcategoryId,confidence:classification.confidence,action:'needs_review',duplicateStatus:'unavailable',reason:'Bribery category detected, but department and service fields require source-specific human verification.'});return;}
