@@ -42,7 +42,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="text-xs font-medium text-slate-700 dark:text-slate-300 select-none flex items-center justify-between"
+            className="type-label font-medium text-slate-700 dark:text-slate-300 select-none flex items-center justify-between"
           >
             <span>{label}</span>
           </label>
@@ -62,7 +62,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             value={value}
             disabled={disabled}
             className={cn(
-              'w-full h-9 rounded-md border text-base sm:text-sm transition-colors duration-150 font-normal',
+              'w-full h-9 rounded-md border type-form-value transition-colors duration-150 font-normal',
               'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500',
               'focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500',
               'disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 dark:disabled:text-slate-500 disabled:cursor-not-allowed',
@@ -104,9 +104,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 
         {/* Error or Helper message */}
         {error ? (
-          <p className="text-xs font-medium text-red-600 dark:text-red-400">{error}</p>
+          <p className="type-helper font-medium text-red-600 dark:text-red-400">{error}</p>
         ) : helperText ? (
-          <p className="text-xs text-slate-500 dark:text-slate-400">{helperText}</p>
+          <p className="type-helper text-slate-500 dark:text-slate-400">{helperText}</p>
         ) : null}
       </div>
     );
