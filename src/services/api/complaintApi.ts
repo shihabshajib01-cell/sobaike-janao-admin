@@ -15,6 +15,10 @@ import {
   ComplaintConfiguredFields,
   ComplaintSource,
   ComplaintParty,
+  ReportDuplicateCheckResult,
+  ReportDuplicateCandidate,
+  ReportExactSourceDuplicate,
+  SourceDuplicateCheckResult,
   WorkflowActionResult,
 } from '@/types/Complaint';
 import {
@@ -255,6 +259,175 @@ export class ComplaintApi {
       createdAt: source.createdAt ? String(source.createdAt) : null,
       updatedAt: source.updatedAt ? String(source.updatedAt) : null,
     }));
+  }
+
+  async checkSourceDuplicate(canonicalUrl: string): Promise<SourceDuplicateCheckResult> {
+    assertSupabaseConfigured();
+
+    const { data, error } = await supabase.rpc('admin_check_source_duplicate', {
+      p_canonical_url: canonicalUrl,
+    });
+
+    if (error) {
+      throw new Error(error.message || 'Failed to check source duplication.');
+    }
+
+    const raw = (data || {}) as any;
+    return {
+      duplicate: Boolean(raw.duplicate),
+      normalizedUrl: String(raw.normalizedUrl || canonicalUrl.trim()),
+      complaintId: raw.complaintId ? String(raw.complaintId) : undefined,
+      complaintStatus: raw.complaintStatus ? String(raw.complaintStatus) : undefined,
+      titleBn: raw.titleBn ? String(raw.titleBn) : null,
+      titleEn: raw.titleEn ? String(raw.titleEn) : null,
+      publisherName: raw.publisherName ? String(raw.publisherName) : null,
+      sourceTitle: raw.sourceTitle ? String(raw.sourceTitle) : null,
+      canonicalUrl: raw.canonicalUrl ? String(raw.canonicalUrl) : null,
+    };
+  }
+
+  async checkReportDuplicate(complaintId: string): Promise<ReportDuplicateCheckResult> {
+    assertSupabaseConfigured();
+
+    const { data, error } = await supabase.rpc('admin_check_report_duplicate', {
+      p_complaint_id: complaintId,
+    });
+
+    if (error) {
+      throw new Error(error.message || 'Failed to check report duplication.');
+    }
+
+    const raw = (data || {}) as any;
+    const candidates: ReportDuplicateCandidate[] = Array.isArray(raw.candidates)
+      ? raw.candidates.map((candidate: any) => ({
+          complaintId: String(candidate.complaintId || ''),
+          status: String(candidate.status || ''),
+          titleBn: candidate.titleBn ? String(candidate.titleBn) : null,
+          titleEn: candidate.titleEn ? String(candidate.titleEn) : null,
+          segmentId: candidate.segmentId ? String(candidate.segmentId) : null,
+          subcategoryId: candidate.subcategoryId ? String(candidate.subcategoryId) : null,
+          incidentDate: candidate.incidentDate ? String(candidate.incidentDate) : null,
+          district: candidate.district ? String(candidate.district) : null,
+          upazilaOrThana: candidate.upazilaOrThana ? String(candidate.upazilaOrThana) : null,
+          area: candidate.area ? String(candidate.area) : null,
+          score: Number(candidate.score || 0),
+          titleSimilarity: Number(candidate.titleSimilarity || 0),
+          matchLevel: candidate.matchLevel === 'match' ? 'match' : 'review',
+          reasons: Array.isArray(candidate.reasons)
+            ? candidate.reasons.map((reason: unknown) => String(reason))
+            : [],
+          sources: Array.isArray(candidate.sources)
+            ? candidate.sources.map((source: any) => ({
+                publisherName: source.publisherName ? String(source.publisherName) : null,
+                sourceTitle: source.sourceTitle ? String(source.sourceTitle) : null,
+                canonicalUrl: source.canonicalUrl ? String(source.canonicalUrl) : null,
+                sourcePublishedDate: source.sourcePublishedDate
+                  ? String(source.sourcePublishedDate)
+                  : null,
+              }))
+            : [],
+        }))
+      : [];
+
+    const exactSourceDuplicates: ReportExactSourceDuplicate[] = Array.isArray(
+      raw.exactSourceDuplicates
+    )
+      ? raw.exactSourceDuplicates.map((source: any) => ({
+          complaintId: String(source.complaintId || ''),
+          status: source.status ? String(source.status) : null,
+          titleBn: source.titleBn ? String(source.titleBn) : null,
+          titleEn: source.titleEn ? String(source.titleEn) : null,
+          publisherName: source.publisherName ? String(source.publisherName) : null,
+          sourceTitle: source.sourceTitle ? String(source.sourceTitle) : null,
+          canonicalUrl: source.canonicalUrl ? String(source.canonicalUrl) : null,
+        }))
+      : [];
+
+    const rawStatus = String(raw.status || 'clear');
+    const status: ReportDuplicateCheckResult['status'] =
+      rawStatus === 'exact' || rawStatus === 'match' || rawStatus === 'review'
+        ? rawStatus
+        : 'clear';
+
+    return {
+      applicable: Boolean(raw.applicable),
+      status,
+      requiresReview: Boolean(raw.requiresReview),
+      candidateCount: Number(raw.candidateCount || 0),
+      matchCount: Number(raw.matchCount || 0),
+      reviewCount: Number(raw.reviewCount || 0),
+      exactSourceDuplicates,
+      candidates,
+    };
+  }
+
+  async confirmReportsAreDistinct(
+    complaintId: string,
+    candidateComplaintId: string,
+    reviewNote: string
+  ): Promise<ReportDuplicateCheckResult> {
+    assertSupabaseConfigured();
+
+    const { data, error } = await supabase.rpc('admin_confirm_reports_are_distinct', {
+      p_complaint_id: complaintId,
+      p_candidate_complaint_id: candidateComplaintId,
+      p_review_note: reviewNote,
+    });
+
+    if (error) {
+      throw new Error(error.message || 'Failed to confirm separate incidents.');
+    }
+
+    const raw = (data || {}) as any;
+    const candidates: ReportDuplicateCandidate[] = Array.isArray(raw.candidates)
+      ? raw.candidates.map((candidate: any) => ({
+          complaintId: String(candidate.complaintId || ''),
+          status: String(candidate.status || ''),
+          titleBn: candidate.titleBn ? String(candidate.titleBn) : null,
+          titleEn: candidate.titleEn ? String(candidate.titleEn) : null,
+          segmentId: candidate.segmentId ? String(candidate.segmentId) : null,
+          subcategoryId: candidate.subcategoryId ? String(candidate.subcategoryId) : null,
+          incidentDate: candidate.incidentDate ? String(candidate.incidentDate) : null,
+          district: candidate.district ? String(candidate.district) : null,
+          upazilaOrThana: candidate.upazilaOrThana ? String(candidate.upazilaOrThana) : null,
+          area: candidate.area ? String(candidate.area) : null,
+          score: Number(candidate.score || 0),
+          titleSimilarity: Number(candidate.titleSimilarity || 0),
+          matchLevel: candidate.matchLevel === 'match' ? 'match' : 'review',
+          reasons: Array.isArray(candidate.reasons)
+            ? candidate.reasons.map((reason: unknown) => String(reason))
+            : [],
+          sources: Array.isArray(candidate.sources)
+            ? candidate.sources.map((source: any) => ({
+                publisherName: source.publisherName ? String(source.publisherName) : null,
+                sourceTitle: source.sourceTitle ? String(source.sourceTitle) : null,
+                canonicalUrl: source.canonicalUrl ? String(source.canonicalUrl) : null,
+                sourcePublishedDate: source.sourcePublishedDate
+                  ? String(source.sourcePublishedDate)
+                  : null,
+              }))
+            : [],
+        }))
+      : [];
+
+    const rawStatus = String(raw.status || 'clear');
+    const status: ReportDuplicateCheckResult['status'] =
+      rawStatus === 'exact' || rawStatus === 'match' || rawStatus === 'review'
+        ? rawStatus
+        : 'clear';
+
+    return {
+      applicable: Boolean(raw.applicable),
+      status,
+      requiresReview: Boolean(raw.requiresReview),
+      candidateCount: Number(raw.candidateCount || 0),
+      matchCount: Number(raw.matchCount || 0),
+      reviewCount: Number(raw.reviewCount || 0),
+      exactSourceDuplicates: Array.isArray(raw.exactSourceDuplicates)
+        ? raw.exactSourceDuplicates
+        : [],
+      candidates,
+    };
   }
 
   async getComplaintConfiguredFields(id: string): Promise<ComplaintConfiguredFields> {
