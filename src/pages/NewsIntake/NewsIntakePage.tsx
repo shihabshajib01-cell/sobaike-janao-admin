@@ -375,11 +375,28 @@ export const NewsIntakePage: React.FC = () => {
     }
 
     if (!preview.canCreateDraft) {
-      setError(
-        isBn
-          ? 'একই উৎস ইতিমধ্যে সিস্টেমে আছে—নতুন রিপোর্ট তৈরি করা যাবে না।'
-          : 'This exact source already exists, so a new report cannot be created.'
-      );
+      const missingFields = preview.schemaValidation?.missingFields || [];
+      if (missingFields.length > 0) {
+        const labels = missingFields
+          .map((field) =>
+            isBn
+              ? field.labelBn || field.labelEn || field.fieldKey
+              : field.labelEn || field.labelBn || field.fieldKey
+          )
+          .filter(Boolean)
+          .join(', ');
+        setError(
+          isBn
+            ? `বর্তমান রিপোর্ট ফর্মের আবশ্যক তথ্য অনুপস্থিত: ${labels}।`
+            : `Required information for the current report form is missing: ${labels}.`
+        );
+      } else {
+        setError(
+          isBn
+            ? 'একই উৎস ইতিমধ্যে সিস্টেমে আছে—নতুন রিপোর্ট তৈরি করা যাবে না।'
+            : 'This exact source already exists, so a new report cannot be created.'
+        );
+      }
       return;
     }
 
