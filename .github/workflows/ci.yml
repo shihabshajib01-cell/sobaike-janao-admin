@@ -20,6 +20,14 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Lockfile repair snapshot
+        run: |
+          npm install --package-lock-only --ignore-scripts
+          echo "LOCKFILE_B64_BEGIN"
+          base64 -w 0 package-lock.json
+          echo
+          echo "LOCKFILE_B64_END"
+
       - name: Install
         run: npm ci
 
