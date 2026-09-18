@@ -188,7 +188,6 @@ export const ActivityLogPage: React.FC = () => {
               size="sm"
               onClick={loadLogs}
               disabled={loading}
-              className="h-9"
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               {t.common.refresh}
@@ -217,7 +216,7 @@ export const ActivityLogPage: React.FC = () => {
             variant="secondary"
             size="sm"
             onClick={loadLogs}
-            className="shrink-0 h-8 text-xs"
+            className="shrink-0"
           >
             {language === 'bn' ? 'পুনরায় চেষ্টা করুন' : 'Retry'}
           </Button>
@@ -292,7 +291,6 @@ export const ActivityLogPage: React.FC = () => {
                 size="sm"
                 onClick={() => setPage((p) => Math.max(p - 1, 1))}
                 disabled={page === 1 || loading}
-                className="h-8 px-2"
                 aria-label="Previous page"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -328,7 +326,6 @@ export const ActivityLogPage: React.FC = () => {
                 size="sm"
                 onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
                 disabled={page === totalPages || loading}
-                className="h-8 px-2"
                 aria-label="Next page"
               >
                 <ChevronRight className="w-4 h-4" />
