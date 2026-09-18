@@ -85,7 +85,7 @@ export const RoleTable: React.FC<RoleTableProps> = ({ roles }) => {
                     <div className="mt-0.5 p-1.5 rounded-md bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 shrink-0">
                       <Shield className="w-4 h-4" />
                     </div>
-                    <div className="min-w-0 space-y-0.5">
+                    <div className="min-w-0 max-w-sm space-y-0.5">
                       <div className="flex items-center gap-2 flex-wrap">
                         <button
                           type="button"
