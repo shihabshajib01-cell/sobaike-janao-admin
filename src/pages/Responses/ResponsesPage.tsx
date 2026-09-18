@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
+import { FeedbackNotice } from '@/components/ui/FeedbackNotice';
 import { TablePageSizeSelect } from '@/components/ui/TablePageSizeSelect';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
