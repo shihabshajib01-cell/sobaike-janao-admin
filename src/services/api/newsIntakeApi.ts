@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import {
+  NewsIntakeAutomationConfig,
   NewsIntakeAutomationDashboard,
   NewsIntakeAutomationScanResult,
   NewsIntakeCreateResult,
@@ -65,6 +66,37 @@ export class NewsIntakeApi {
     return {
       sources: Array.isArray(raw.sources) ? raw.sources : [],
       runs: Array.isArray(raw.runs) ? raw.runs : [],
+      automation:
+        raw.automation && typeof raw.automation === 'object'
+          ? raw.automation
+          : {
+              enabled: false,
+              intervalHours: 36,
+              lastAutoDispatchedAt: null,
+              nextAutoDueAt: null,
+              running: false,
+            },
+    };
+  }
+
+  async setAutoUpdate(enabled: boolean): Promise<NewsIntakeAutomationConfig> {
+    assertConfigured();
+
+    const { data, error } = await supabase.rpc(
+      'admin_set_news_intake_auto_update',
+      { p_enabled: enabled }
+    );
+    if (error) {
+      throw new Error(error.message || 'Failed to update News Automation schedule.');
+    }
+
+    const raw = (data || {}) as Partial<NewsIntakeAutomationConfig>;
+    return {
+      enabled: Boolean(raw.enabled),
+      intervalHours: 36,
+      lastAutoDispatchedAt: raw.lastAutoDispatchedAt || null,
+      nextAutoDueAt: raw.nextAutoDueAt || null,
+      running: false,
     };
   }
 
