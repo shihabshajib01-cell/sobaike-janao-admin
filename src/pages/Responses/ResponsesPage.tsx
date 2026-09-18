@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
+import { TablePageSizeSelect } from '@/components/ui/TablePageSizeSelect';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -114,7 +115,7 @@ export const ResponsesPage: React.FC = () => {
           dateRange: filters.dateRange,
         };
 
-        const res = await responseApi.getResponses(queryFilters, pageToFetch, 20);
+        const res = await responseApi.getResponses(queryFilters, pageToFetch, pagination.limit);
 
         setResponses(res.responses);
         setPagination({
@@ -132,7 +133,7 @@ export const ResponsesPage: React.FC = () => {
         setLoading(false);
       }
     },
-    [debouncedSearch, filters.status, filters.responseType, filters.dateRange]
+    [debouncedSearch, filters.status, filters.responseType, filters.dateRange, pagination.limit]
   );
 
   // Re-fetch when debounced search or filters change (reset to page 1)
@@ -144,6 +145,14 @@ export const ResponsesPage: React.FC = () => {
     if (newPage >= 1 && newPage <= pagination.totalPages && !loading) {
       fetchResponses(newPage);
     }
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPagination((prev) => ({
+      ...prev,
+      page: 1,
+      limit: newPageSize,
+    }));
   };
 
   const handleSelectStatus = (newStatus: ResponseStatusFilter) => {
@@ -361,12 +370,12 @@ export const ResponsesPage: React.FC = () => {
         dateRange: filters.dateRange,
       };
 
-      const res = await responseApi.getResponses(queryFilters, pagination.page, 20);
+      const res = await responseApi.getResponses(queryFilters, pagination.page, pagination.limit);
 
       // Pagination recovery: if current page is now beyond totalPages, re-fetch last valid page
       if (res.totalPages > 0 && pagination.page > res.totalPages) {
         const recoveredPage = res.totalPages;
-        const recoveredRes = await responseApi.getResponses(queryFilters, recoveredPage, 20);
+        const recoveredRes = await responseApi.getResponses(queryFilters, recoveredPage, pagination.limit);
         setResponses(recoveredRes.responses);
         setPagination({
           page: recoveredRes.page,
@@ -558,19 +567,27 @@ export const ResponsesPage: React.FC = () => {
       ) : (
         /* Table & Pagination */
         <div className="space-y-4">
-          <div className="flex items-center justify-between px-1 text-xs text-slate-500 dark:text-slate-400">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-slate-500 dark:text-slate-400">
             <span>
               {isBn
                 ? `মোট ${formatNumber(pagination.total)} টি প্রতিক্রিয়া পাওয়া গেছে`
                 : `Showing ${responses.length} of ${pagination.total} total responses`}
             </span>
-            {pagination.totalPages > 1 && (
-              <span>
-                {isBn
-                  ? `পৃষ্ঠা ${formatNumber(pagination.page)} / ${formatNumber(pagination.totalPages)}`
-                  : `Page ${pagination.page} of ${pagination.totalPages}`}
-              </span>
-            )}
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <TablePageSizeSelect
+                id="responses-page-size"
+                value={pagination.limit}
+                onChange={handlePageSizeChange}
+                disabled={loading || isModerating}
+              />
+              {pagination.totalPages > 1 && (
+                <span>
+                  {isBn
+                    ? `পৃষ্ঠা ${formatNumber(pagination.page)} / ${formatNumber(pagination.totalPages)}`
+                    : `Page ${pagination.page} of ${pagination.totalPages}`}
+                </span>
+              )}
+            </div>
           </div>
 
           <ResponseTable
