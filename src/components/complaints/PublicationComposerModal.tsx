@@ -146,8 +146,7 @@ export const PublicationComposerModal: React.FC<PublicationComposerModalProps> =
               size="sm"
               isLoading={isSubmitting}
               onClick={handleSave}
-              leftIcon={<Save className="h-3.5 w-3.5" />}
-              className="bg-sky-600 text-white hover:bg-sky-700"
+              leftIcon={<Save />}
             >
               <span>{isBn ? 'পাবলিক পোস্ট সংরক্ষণ করুন' : 'Save Public Post'}</span>
             </Button>
