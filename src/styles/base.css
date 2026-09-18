@@ -104,3 +104,49 @@ body {
   filter: brightness(0.88) invert(0.92) hue-rotate(180deg) saturate(0.85);
 }
 
+
+
+/* Unified responsive admin data view.
+ * Uses the component's available width, not the device viewport.
+ */
+.responsive-data-view {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  container-type: inline-size;
+  container-name: admin-data-view;
+}
+
+.responsive-data-view__table {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.responsive-data-view__cards {
+  display: none;
+  width: 100%;
+  min-width: 0;
+}
+
+@container admin-data-view (max-width: 56rem) {
+  .responsive-data-view__table {
+    display: none;
+  }
+
+  .responsive-data-view__cards {
+    display: block;
+  }
+}
+
+@supports not (container-type: inline-size) {
+  @media (max-width: 1023px) {
+    .responsive-data-view__table {
+      display: none;
+    }
+
+    .responsive-data-view__cards {
+      display: block;
+    }
+  }
+}
