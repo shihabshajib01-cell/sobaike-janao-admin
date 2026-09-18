@@ -41,8 +41,11 @@ jobs:
 
       - name: Install Playwright runtime
         run: |
-          npm install --no-save playwright@1.55.0
+          npm install --no-save playwright@1.63.0
           npx playwright install --with-deps chromium
+
+      - name: Audit E2E runtime dependencies
+        run: npm audit --audit-level=low
 
       - name: Start isolated Admin E2E server
         run: |
