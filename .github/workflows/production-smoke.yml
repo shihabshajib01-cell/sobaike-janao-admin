@@ -168,6 +168,11 @@ jobs:
           check_denied "admin_create_sourced_report_from_intake"             '{"p_payload":{"source":{"canonicalUrl":"https://www.thedailystar.net/__anonymous_news_intake_smoke__"},"report":{}}}'
           check_denied "admin_merge_intake_source"             '{"p_complaint_id":"__anonymous_news_intake_smoke__","p_source":{"canonicalUrl":"https://www.thedailystar.net/__anonymous_news_intake_smoke__"}}'
           check_denied "admin_get_news_intake_taxonomy" '{}'
+          check_denied "admin_get_news_intake_scan_sources" '{}'
+          check_denied "admin_begin_news_intake_run" '{}'
+          check_denied "admin_get_news_intake_automation_dashboard" '{}'
+          check_denied "admin_record_news_intake_item" '{"p_run_id":"00000000-0000-0000-0000-000000000000","p_item":{}}'
+          check_denied "admin_finish_news_intake_run" '{"p_run_id":"00000000-0000-0000-0000-000000000000","p_status":"failed","p_error":"anonymous smoke"}'
 
           echo "Anonymous News Intake RPC denial checks passed"
 
@@ -187,3 +192,21 @@ jobs:
           fi
 
           echo "Anonymous News Intake Edge Function denial check passed"
+
+
+      - name: Verify News Intake scanner rejects anonymous access
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_KEY"
+
+          http_code=$(curl -sS             -o /tmp/news-intake-scan-anon.json             -w "%{http_code}"             -X POST "$SUPABASE_URL/functions/v1/news-intake-scan"             -H "apikey: $SUPABASE_KEY"             -H "Content-Type: application/json"             -d '{}')
+
+          if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+            echo "ERROR: news-intake-scan accepted anonymous access"
+            cat /tmp/news-intake-scan-anon.json
+            exit 1
+          fi
+
+          echo "Anonymous News Intake scanner denial check passed"
