@@ -85,6 +85,16 @@ export const TaxonomyTree: React.FC<TaxonomyTreeProps> = ({
                         </span>
                       )}
                     </Badge>
+                    {segment.configStatus !== 'published' && (
+                      <Badge
+                        status="warning"
+                        variant="subtle"
+                        size="sm"
+                        className="text-[10px] capitalize"
+                      >
+                        {segment.configStatus}
+                      </Badge>
+                    )}
                     <span className="inline-flex items-center gap-1 text-[11px] text-slate-400 font-mono">
                       <ArrowUpDown className="w-3 h-3" />
                       #{segment.order}
@@ -163,24 +173,36 @@ export const TaxonomyTree: React.FC<TaxonomyTreeProps> = ({
                             </span>
                           </td>
                           <td className="py-3 px-3">
-                            <Badge
-                              status={sub.status === 'active' ? 'success' : 'default'}
-                              variant="subtle"
-                              size="sm"
-                              className="text-[10px]"
-                            >
-                              {sub.status === 'active' ? (
-                                <span className="flex items-center gap-1">
-                                  <CheckCircle2 className="w-3 h-3" />
-                                  {isBn ? 'সক্রিয়' : 'Active'}
-                                </span>
-                              ) : (
-                                <span className="flex items-center gap-1">
-                                  <XCircle className="w-3 h-3" />
-                                  {isBn ? 'নিষ্ক্রিয়' : 'Inactive'}
-                                </span>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <Badge
+                                status={sub.status === 'active' ? 'success' : 'default'}
+                                variant="subtle"
+                                size="sm"
+                                className="text-[10px]"
+                              >
+                                {sub.status === 'active' ? (
+                                  <span className="flex items-center gap-1">
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    {isBn ? 'সক্রিয়' : 'Active'}
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-1">
+                                    <XCircle className="w-3 h-3" />
+                                    {isBn ? 'নিষ্ক্রিয়' : 'Inactive'}
+                                  </span>
+                                )}
+                              </Badge>
+                              {sub.configStatus !== 'published' && (
+                                <Badge
+                                  status="warning"
+                                  variant="subtle"
+                                  size="sm"
+                                  className="text-[10px] capitalize"
+                                >
+                                  {sub.configStatus}
+                                </Badge>
                               )}
-                            </Badge>
+                            </div>
                           </td>
                           <td className="py-3 px-3 text-center font-mono text-slate-400 text-xs">
                             #{sub.order}
