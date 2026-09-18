@@ -405,7 +405,7 @@ export const UserDetailPage: React.FC = () => {
                     {roleName}
                   </span>
                   {user.role.is_system && (
-                    <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300">
+                    <span className="px-2 py-0.5 rounded type-meta font-semibold bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300">
                       {t.users.systemRoleBadge}
                     </span>
                   )}
