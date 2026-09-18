@@ -234,6 +234,44 @@ export const ComplaintInfoSection: React.FC<ComplaintInfoSectionProps> = ({
       {/* Utility Outage / Event Details Card (if incident date/time or outage info is present) */}
       <UtilityOutageDetailsCard complaint={complaint} />
 
+      {complaint.categoryId === 'extortion' &&
+        (complaint.incidentDate || complaint.incidentTime || complaint.frequency) && (
+          <Card variant="default">
+            <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Layers className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                <span>{isBn ? 'ঘটনার সময়কাল' : 'Extortion Incident Timeline'}</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {complaint.incidentDate && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{isBn ? 'ঘটনার তারিখ' : 'Incident Date'}</p>
+                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{complaint.incidentDate}</p>
+                  </div>
+                )}
+                {complaint.incidentTime && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{isBn ? 'সময়' : 'Time'}</p>
+                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{complaint.incidentTime}</p>
+                  </div>
+                )}
+                {complaint.frequency && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{isBn ? 'পুনরাবৃত্তি' : 'Frequency'}</p>
+                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                      {complaint.frequency === 'repeated'
+                        ? isBn ? 'নিয়মিত / একাধিকবার' : 'Repeated / ongoing'
+                        : isBn ? 'এককালীন' : 'One-time'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
       {isBriberyReport && hasBriberyDetails && (
         <Card variant="default">
           <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-3">
