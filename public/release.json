@@ -1,11 +1,12 @@
 {
   "application": "sobaike-janao-admin",
-  "version": "1.1.0",
-  "release": "source-verification-v2",
+  "version": "1.2.0",
+  "release": "sexual-harassment-form-v2",
   "releasedAt": "2026-09-18",
   "features": [
-    "source provenance inspection",
-    "verified final-detail source status",
-    "source version visibility"
+    "sexual harassment type and incident-context visibility",
+    "granular age and relationship classifications",
+    "optional institution or organization visibility",
+    "public-sql-admin field parity"
   ]
 }
