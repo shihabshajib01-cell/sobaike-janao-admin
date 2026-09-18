@@ -180,8 +180,8 @@ export const MobileLocationActivityCardList: React.FC<MobileLocationActivityCard
                     e.stopPropagation();
                     onSelectSession(session);
                   }}
-                  leftIcon={<Eye className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />}
-                  className="text-xs h-7 px-2.5 shrink-0"
+                  leftIcon={<Eye />}
+                  className="shrink-0"
                 >
                   <span>{isBn ? 'বিস্তারিত দেখুন' : 'View Details'}</span>
                 </Button>
