@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React from 'react';
 import { TaxonomyFilterState, TaxonomySegment } from '@/types/Category';
 import { useLanguage } from '@/context/LanguageContext';
@@ -129,14 +130,14 @@ export const CategoryFilters: React.FC<CategoryFiltersProps> = ({
               {filters.search && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs">
                   <span>"{filters.search}"</span>
-                  <button
+                  <ButtonBase
                     type="button"
                     onClick={() => onChange({ ...filters, search: '' })}
                     className="hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
                     aria-label="Remove search filter"
                   >
                     <X className="w-3 h-3" />
-                  </button>
+                  </ButtonBase>
                 </span>
               )}
 
@@ -150,14 +151,14 @@ export const CategoryFilters: React.FC<CategoryFiltersProps> = ({
                         : selectedSegmentObj.nameEn
                       : filters.segmentId}
                   </span>
-                  <button
+                  <ButtonBase
                     type="button"
                     onClick={() => onChange({ ...filters, segmentId: 'all' })}
                     className="hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
                     aria-label="Remove segment filter"
                   >
                     <X className="w-3 h-3" />
-                  </button>
+                  </ButtonBase>
                 </span>
               )}
 
@@ -173,14 +174,14 @@ export const CategoryFilters: React.FC<CategoryFiltersProps> = ({
                       ? 'নিষ্ক্রিয়'
                       : 'Inactive'}
                   </span>
-                  <button
+                  <ButtonBase
                     type="button"
                     onClick={() => onChange({ ...filters, status: 'all' })}
                     className="hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
                     aria-label="Remove status filter"
                   >
                     <X className="w-3 h-3" />
-                  </button>
+                  </ButtonBase>
                 </span>
               )}
             </>
