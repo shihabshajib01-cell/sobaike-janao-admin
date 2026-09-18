@@ -440,8 +440,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
                 variant="primary"
                 size="sm"
                 onClick={() => navigate(`/complaints/${selectedComplaint.id}`)}
-                rightIcon={<ExternalLink className="w-3.5 h-3.5" />}
-                className="h-7 text-xs px-3"
+                rightIcon={<ExternalLink />}
               >
                 {isBn ? 'অভিযোগ খুলুন' : 'Open Complaint'}
               </Button>
