@@ -1,0 +1,68 @@
+name: Admin Functional Smoke
+
+on:
+  workflow_run:
+    workflows: ["Deploy to GitHub Pages"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-smoke:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      LIVE_SITE_URL: https://shihabshajib01-cell.github.io/sobaike-janao-admin/
+      LOCAL_SITE_URL: http://127.0.0.1:3000/
+      VITE_ADMIN_E2E_MODE: true
+      VITE_SUPABASE_URL: https://admin-e2e.invalid
+      VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_admin_e2e_fixture
+
+    steps:
+      - name: Checkout exact deployed commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install project dependencies
+        run: npm ci
+
+      - name: Dependency security audit
+        run: npm run audit:dependencies
+
+      - name: Install Playwright runtime
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Start isolated Admin E2E server
+        run: |
+          npm run dev > /tmp/admin-e2e-vite.log 2>&1 &
+          echo $! > /tmp/admin-e2e-vite.pid
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:3000/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/admin-e2e-vite.log
+          exit 1
+
+      - name: Run Admin browser regression smoke
+        run: node scripts/admin-functional-smoke.mjs
+
+      - name: Stop isolated Admin E2E server
+        if: always()
+        run: |
+          if [ -f /tmp/admin-e2e-vite.pid ]; then
+            kill "$(cat /tmp/admin-e2e-vite.pid)" || true
+          fi
