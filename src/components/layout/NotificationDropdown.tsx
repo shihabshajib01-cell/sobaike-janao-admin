@@ -27,6 +27,7 @@ export const NotificationDropdown: React.FC = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [isMarkingAll, setIsMarkingAll] = useState<boolean>(false);
+  const [globalActionError, setGlobalActionError] = useState<string | null>(null);
   const [itemErrorIds, setItemErrorIds] = useState<Set<string>>(new Set());
   const [markingItemIds, setMarkingItemIds] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -59,7 +60,8 @@ export const NotificationDropdown: React.FC = () => {
   useEffect(() => {
     if (isOpen) {
       setItemErrorIds(new Set());
-      refreshRecent();
+      setGlobalActionError(null);
+      void refreshRecent();
     }
   }, [isOpen, refreshRecent]);
 
@@ -134,10 +136,12 @@ export const NotificationDropdown: React.FC = () => {
     e.stopPropagation();
     if (isMarkingAll || unreadCount === 0) return;
     setIsMarkingAll(true);
+    setGlobalActionError(null);
     try {
       await markAllAsRead();
     } catch (err) {
       console.error('Failed to mark all as read:', err);
+      setGlobalActionError(t.notifications.errorMarkRead);
     } finally {
       setIsMarkingAll(false);
     }
@@ -180,12 +184,12 @@ export const NotificationDropdown: React.FC = () => {
         aria-expanded={isOpen}
         aria-haspopup="dialog"
       >
-        <Bell className="w-4 h-4" />
+        <Bell className="w-5 h-5" />
 
         {/* Unread Badge: Rendered only when unreadCount > 0 */}
         {unreadCount > 0 && (
           <span
-            className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-sky-600 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-slate-900 shadow-xs leading-none"
+            className="absolute -top-0.5 -right-0.5 min-w-5 h-5 px-1 rounded-full bg-sky-600 text-white text-sm font-semibold flex items-center justify-center ring-2 ring-white dark:ring-slate-900 shadow-xs leading-none"
             aria-hidden="true"
           >
             {badgeText}
@@ -196,18 +200,19 @@ export const NotificationDropdown: React.FC = () => {
       {/* Notifications Popover Menu */}
       {isOpen && (
         <div
-          role="region"
+          role="dialog"
+          aria-modal="false"
           aria-label={t.notifications.title}
           className="absolute right-0 mt-2 w-80 sm:w-96 max-w-[calc(100vw-1.5rem)] rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl py-0 z-50 animate-in fade-in zoom-in-95 text-left overflow-hidden"
         >
           {/* Popover Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+              <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                 {t.notifications.title}
               </span>
               {unreadCount > 0 && (
-                <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-900/40">
+                <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-900/40">
                   {badgeText} {t.notifications.unread}
                 </span>
               )}
@@ -219,7 +224,7 @@ export const NotificationDropdown: React.FC = () => {
                 id="notification-dropdown-mark-all-btn"
                 onClick={handleMarkAll}
                 disabled={isMarkingAll}
-                className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 hover:text-sky-600 dark:text-slate-400 dark:hover:text-sky-400 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-500 rounded px-1.5 py-0.5"
+                className="inline-flex items-center gap-1 text-sm font-medium text-slate-500 hover:text-sky-600 dark:text-slate-400 dark:hover:text-sky-400 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-500 rounded px-1.5 py-0.5"
                 title={t.notifications.markAllRead}
               >
                 <CheckCheck className="w-3.5 h-3.5" />
@@ -227,6 +232,23 @@ export const NotificationDropdown: React.FC = () => {
               </button>
             )}
           </div>
+
+          {globalActionError && (
+            <div
+              role="alert"
+              className="flex items-center justify-between gap-3 border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300"
+            >
+              <span>{globalActionError}</span>
+              <button
+                type="button"
+                onClick={(event) => void handleMarkAll(event)}
+                disabled={isMarkingAll || unreadCount === 0}
+                className="shrink-0 rounded-md px-2 py-1 font-medium hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:hover:bg-red-900/50"
+              >
+                {t.notifications.retry}
+              </button>
+            </div>
+          )}
 
           {/* Popover Notification List */}
           <div className="divide-y divide-slate-100 dark:divide-slate-800/80 max-h-[360px] overflow-y-auto overscroll-contain">
@@ -249,13 +271,13 @@ export const NotificationDropdown: React.FC = () => {
             {/* Error State */}
             {!isLoadingRecent && recentError && recentNotifications.length === 0 && (
               <div className="p-5 text-center">
-                <p className="text-xs text-red-600 dark:text-red-400 mb-2">
+                <p className="text-sm text-red-600 dark:text-red-400 mb-2">
                   {t.notifications.errorLoading}
                 </p>
                 <button
                   type="button"
                   onClick={() => refreshRecent()}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-sky-600 dark:text-sky-400 hover:underline"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-sky-600 dark:text-sky-400 hover:underline"
                 >
                   <RotateCcw className="w-3 h-3" />
                   <span>{t.notifications.retry}</span>
@@ -267,10 +289,10 @@ export const NotificationDropdown: React.FC = () => {
             {!isLoadingRecent && !recentError && recentNotifications.length === 0 && (
               <div className="p-6 text-center text-slate-400 dark:text-slate-500">
                 <Bell className="w-7 h-7 mx-auto mb-2 text-slate-300 dark:text-slate-600" />
-                <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   {t.notifications.allCaughtUp}
                 </p>
-                <p className="text-[11px] mt-0.5 text-slate-400 dark:text-slate-500">
+                <p className="text-sm mt-1 text-slate-400 dark:text-slate-500">
                   {t.notifications.noNotifications}
                 </p>
               </div>
@@ -325,19 +347,19 @@ export const NotificationDropdown: React.FC = () => {
                     <div className="flex items-baseline justify-between gap-1 mb-0.5">
                       <p
                         className={cn(
-                          'text-xs text-slate-900 dark:text-slate-100 truncate break-words',
+                          'text-sm text-slate-900 dark:text-slate-100 truncate break-words',
                           isUnread ? 'font-semibold text-slate-900 dark:text-white' : 'font-medium'
                         )}
                       >
                         {title}
                       </p>
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500 whitespace-nowrap shrink-0 ml-1 font-normal">
+                      <span className="text-xs text-slate-500 dark:text-slate-500 whitespace-nowrap shrink-0 ml-1 font-normal">
                         {relativeTime}
                       </span>
                     </div>
 
                     {body && (
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed break-words">
+                      <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed break-words">
                         {body}
                       </p>
                     )}
@@ -350,7 +372,7 @@ export const NotificationDropdown: React.FC = () => {
                         onClick={(e) => e.stopPropagation()}
                         onKeyDown={(e) => e.stopPropagation()}
                       >
-                        <div className="flex items-center gap-1.5 text-[11px] text-rose-700 dark:text-rose-300 font-medium min-w-0">
+                        <div className="flex items-center gap-1.5 text-xs text-rose-700 dark:text-rose-300 font-medium min-w-0">
                           <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600 dark:text-rose-400" />
                           <span className="truncate">{t.notifications.errorMarkRead}</span>
                         </div>
@@ -362,7 +384,7 @@ export const NotificationDropdown: React.FC = () => {
                             handleItemClick(item);
                           }}
                           disabled={markingItemIds.has(item.id)}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold text-rose-700 dark:text-rose-200 bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-800 rounded hover:bg-rose-50 dark:hover:bg-slate-800 transition-colors shrink-0 disabled:opacity-50"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold text-rose-700 dark:text-rose-200 bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-800 rounded hover:bg-rose-50 dark:hover:bg-slate-800 transition-colors shrink-0 disabled:opacity-50"
                         >
                           <RotateCcw className={cn('w-2.5 h-2.5', markingItemIds.has(item.id) && 'animate-spin')} />
                           <span>{t.notifications.retry}</span>
@@ -374,7 +396,7 @@ export const NotificationDropdown: React.FC = () => {
                     <div className="flex items-center gap-2 mt-1.5">
                       <span
                         className={cn(
-                          'text-[9px] px-1.5 py-0.2 rounded font-medium',
+                          'text-xs px-2 py-0.5 rounded-md font-medium',
                           meta.isSecurity
                             ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
                             : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
@@ -384,7 +406,7 @@ export const NotificationDropdown: React.FC = () => {
                       </span>
 
                       {hasRoute && (
-                        <span className="text-[10px] text-sky-600 dark:text-sky-400 font-medium opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 ml-auto">
+                        <span className="text-xs text-sky-600 dark:text-sky-400 font-medium opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 ml-auto">
                           {t.notifications.viewAction}
                           <ArrowRight className="w-2.5 h-2.5" />
                         </span>
@@ -410,7 +432,7 @@ export const NotificationDropdown: React.FC = () => {
               type="button"
               id="notification-view-all-link"
               onClick={handleViewAll}
-              className="w-full py-1.5 px-3 rounded-md text-xs font-medium text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-slate-800/80 transition-colors flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-500"
+              className="w-full py-1.5 px-3 rounded-md text-sm font-medium text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-slate-800/80 transition-colors flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-500"
             >
               <span>{t.notifications.viewAll}</span>
               <ArrowRight className="w-3.5 h-3.5" />
