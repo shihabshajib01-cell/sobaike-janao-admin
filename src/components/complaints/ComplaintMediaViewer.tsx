@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
@@ -168,7 +169,7 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
                         referrerPolicy="no-referrer"
                       />
                       {/* Zoom Overlay Trigger */}
-                      <button
+                      <ButtonBase
                         type="button"
                         onClick={() => setIsLightboxOpen(true)}
                         className="absolute bottom-3 right-3 p-2 bg-slate-900/80 hover:bg-slate-900 text-white rounded-md backdrop-blur-xs text-xs flex items-center gap-1.5 shadow-md opacity-90 group-hover:opacity-100 transition-opacity"
@@ -176,7 +177,7 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
                       >
                         <Maximize2 className="w-3.5 h-3.5" />
                         <span>{isBn ? 'বড় করে দেখুন' : 'Full Screen'}</span>
-                      </button>
+                      </ButtonBase>
                     </div>
                   )
                 ) : currentItem?.type === 'video' ? (
@@ -210,22 +211,22 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
                 {/* Left/Right controls if multiple items */}
                 {media.length > 1 && (
                   <>
-                    <button
+                    <ButtonBase
                       type="button"
                       onClick={handlePrev}
                       className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/60 hover:bg-black/90 text-white transition-colors"
                       aria-label="Previous item"
                     >
                       <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <button
+                    </ButtonBase>
+                    <ButtonBase
                       type="button"
                       onClick={handleNext}
                       className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/60 hover:bg-black/90 text-white transition-colors"
                       aria-label="Next item"
                     >
                       <ChevronRight className="w-4 h-4" />
-                    </button>
+                    </ButtonBase>
                   </>
                 )}
               </div>
@@ -243,7 +244,7 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
                   {media.map((item, idx) => {
                     const isActive = idx === activeMediaIndex;
                     return (
-                      <button
+                      <ButtonBase
                         key={item.id || idx}
                         type="button"
                         onClick={() => setActiveMediaIndex(idx)}
@@ -270,7 +271,7 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
                             <FileText className="w-5 h-5" />
                           </div>
                         )}
-                      </button>
+                      </ButtonBase>
                     );
                   })}
                 </div>
