@@ -18,6 +18,8 @@ export interface NotificationContextType {
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
+const REALTIME_REFRESH_DEBOUNCE_MS = 200;
+
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isAdmin } = useAuth();
   const [unreadCount, setUnreadCount] = useState<number>(0);
@@ -27,11 +29,16 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [notificationRevision, setNotificationRevision] = useState<number>(0);
 
   const isMountedRef = useRef<boolean>(true);
+  const realtimeRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+      if (realtimeRefreshTimerRef.current) {
+        clearTimeout(realtimeRefreshTimerRef.current);
+        realtimeRefreshTimerRef.current = null;
+      }
     };
   }, []);
 
@@ -53,10 +60,10 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       return count;
     } catch (err) {
       console.warn('Silent non-fatal error fetching notification unread count:', err);
-      // Keep existing unread count or fallback to 0 safely without crashing
-      return 0;
+      // Preserve and return the last known count. A transport error is not "0 unread".
+      return unreadCount;
     }
-  }, [isAdmin]);
+  }, [isAdmin, unreadCount]);
 
   /**
    * Refreshes the recent 8 notifications (for Header bell dropdown) and updates unread count.
@@ -215,10 +222,19 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           filter: `recipient_user_id=eq.${user.id}`,
         },
         () => {
-          if (isMountedRef.current) {
-            setNotificationRevision((revision) => revision + 1);
+          // Row-level UPDATE bursts (for example, mark-all-read) are coalesced into
+          // one authoritative refresh instead of one refresh per notification row.
+          if (realtimeRefreshTimerRef.current) {
+            clearTimeout(realtimeRefreshTimerRef.current);
           }
-          void refreshRecent();
+
+          realtimeRefreshTimerRef.current = setTimeout(() => {
+            realtimeRefreshTimerRef.current = null;
+            if (!isMountedRef.current) return;
+
+            setNotificationRevision((revision) => revision + 1);
+            void refreshRecent();
+          }, REALTIME_REFRESH_DEBOUNCE_MS);
         }
       )
       .subscribe((status) => {
@@ -228,7 +244,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       });
 
     return () => {
-      supabase.removeChannel(channel);
+      if (realtimeRefreshTimerRef.current) {
+        clearTimeout(realtimeRefreshTimerRef.current);
+        realtimeRefreshTimerRef.current = null;
+      }
+      void supabase.removeChannel(channel);
     };
   }, [isAdmin, user?.id, refreshRecent]);
 
