@@ -1,4 +1,4 @@
-import { ButtonBase } from '@/components/ui/Button';
+import { ButtonBase, IconButton } from '@/components/ui/Button';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Check, ArrowRight, RotateCcw, CheckCheck, AlertCircle } from 'lucide-react';
@@ -195,32 +195,31 @@ export const NotificationDropdown: React.FC = () => {
   return (
     <div className="relative" ref={containerRef}>
       {/* Bell Trigger Button */}
-      <ButtonBase
-        type="button"
+      <IconButton
         id="header-notification-bell-btn"
         ref={bellButtonRef}
+        variant="ghost"
+        size="md"
         onClick={handleToggle}
-        className={cn(
-          'relative p-2 rounded-md text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500',
-          isOpen && 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100'
-        )}
+        className={cn('relative', isOpen && 'outline outline-1 outline-slate-200 dark:outline-slate-700')}
         aria-label={accessibleLabel}
         aria-expanded={isOpen}
         aria-haspopup="dialog"
         aria-controls={isOpen ? 'notification-dropdown-dialog' : undefined}
-      >
-        <Bell className="w-5 h-5" />
-
-        {/* Unread Badge: Rendered only when unreadCount > 0 */}
-        {unreadCount > 0 && (
-          <span
-            className="absolute -top-0.5 -right-0.5 min-w-5 h-5 px-1 rounded-full bg-sky-600 text-white text-sm font-semibold flex items-center justify-center ring-2 ring-white dark:ring-slate-900 shadow-xs leading-none"
-            aria-hidden="true"
-          >
-            {badgeText}
-          </span>
-        )}
-      </ButtonBase>
+        icon={
+          <>
+            <Bell />
+            {unreadCount > 0 && (
+              <span
+                className="absolute -top-0.5 -right-0.5 min-w-5 h-5 px-1 rounded-full bg-sky-600 text-white text-sm font-semibold flex items-center justify-center ring-2 ring-white dark:ring-slate-900 shadow-xs leading-none"
+                aria-hidden="true"
+              >
+                {badgeText}
+              </span>
+            )}
+          </>
+        }
+      />
 
       {/* Notifications Popover Menu */}
       {isOpen && (
