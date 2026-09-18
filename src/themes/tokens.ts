@@ -256,7 +256,7 @@ export const baseTokens: ThemeTokens = {
       },
       button: {
         fontSize: '1rem', // 16px
-        lineHeight: '1.5rem', // 24px
+        lineHeight: '1.25rem', // 20px
         fontWeight: '500',
         letterSpacing: '0.01em',
       },
