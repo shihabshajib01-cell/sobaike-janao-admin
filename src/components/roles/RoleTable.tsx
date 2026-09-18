@@ -53,12 +53,12 @@ export const RoleTable: React.FC<RoleTableProps> = ({ roles }) => {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[280px]">{t.roles.roleName}</TableHead>
-            <TableHead className="w-[110px]">{t.roles.status}</TableHead>
-            <TableHead className="w-[150px]">{t.roles.permissions}</TableHead>
-            <TableHead className="w-[160px]">{t.roles.assignedUsers}</TableHead>
-            <TableHead className="w-[140px]">{t.roles.created}</TableHead>
-            <TableHead className="w-[90px] text-right">{t.common.actions}</TableHead>
+            <TableHead className="">{t.roles.roleName}</TableHead>
+            <TableHead className="">{t.roles.status}</TableHead>
+            <TableHead className="">{t.roles.permissions}</TableHead>
+            <TableHead className="">{t.roles.assignedUsers}</TableHead>
+            <TableHead className="">{t.roles.created}</TableHead>
+            <TableHead className="text-right">{t.common.actions}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
