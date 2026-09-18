@@ -34,7 +34,7 @@ export const ComplaintEmptyState: React.FC<ComplaintEmptyStateProps> = ({
               variant="primary"
               size="sm"
               onClick={onRetry}
-              leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+              leftIcon={<RotateCcw />}
             >
               <span>{isBn ? 'পুনরায় চেষ্টা করুন' : 'Retry Request'}</span>
             </Button>
@@ -60,7 +60,7 @@ export const ComplaintEmptyState: React.FC<ComplaintEmptyStateProps> = ({
               variant="secondary"
               size="sm"
               onClick={onResetFilters}
-              leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+              leftIcon={<RotateCcw />}
             >
               <span>{isBn ? 'সকল ফিল্টার মুছুন' : 'Clear All Filters'}</span>
             </Button>
