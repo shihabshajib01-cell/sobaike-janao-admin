@@ -45,6 +45,9 @@ jobs:
       - name: Button system audit
         run: npm run audit:buttons
 
+      - name: Dependency security audit
+        run: npm run audit:dependencies
+
       - name: Type check
         run: npm run lint
 
