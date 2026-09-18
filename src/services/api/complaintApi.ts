@@ -20,7 +20,9 @@ import {
   supabaseComplaintService,
   getTaxonomySegments,
   getDistinctLocations,
+  getTaxonomy,
   SupabaseSegment,
+  SupabaseSubcategory,
 } from './supabaseComplaintService';
 import { getComplaintIncidentLocation } from './complaintIncidentLocationApi';
 import { getComplaintMobJusticeDetails } from './mobJusticeDetailsApi';
@@ -89,6 +91,20 @@ export class ComplaintApi {
   async getSegments(): Promise<SupabaseSegment[]> {
     assertSupabaseConfigured();
     return await getTaxonomySegments();
+  }
+
+  /**
+   * Get active taxonomy subcategories. When a category is provided, return
+   * only complaint types that belong to that category.
+   */
+  async getSubcategories(segmentId?: string): Promise<SupabaseSubcategory[]> {
+    assertSupabaseConfigured();
+    const { subcategories } = await getTaxonomy();
+    return subcategories.filter(
+      (subcategory) =>
+        subcategory.active !== false &&
+        (!segmentId || segmentId === 'all' || subcategory.segment_id === segmentId)
+    );
   }
 
   /**
