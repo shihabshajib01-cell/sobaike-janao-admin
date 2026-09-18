@@ -121,7 +121,7 @@ export const ResponseFilters: React.FC<ResponseFiltersProps> = ({
               variant="ghost"
               size="sm"
               onClick={onResetFilters}
-              className="text-xs text-rose-600 hover:text-rose-700 dark:text-rose-400 ml-1"
+              className="ml-1"
             >
               {isBn ? 'মুছুন' : 'Clear'}
             </Button>
