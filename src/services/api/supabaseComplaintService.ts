@@ -78,6 +78,7 @@ export interface SupabaseComplaintRow {
   frequency: string | null;
   status: string | null;
   priority: string | null;
+  origin_type?: string | null;
   privacy_choice: string | null;
   reporter_name: string | null;
   reporter_contact: string | null;
@@ -402,6 +403,7 @@ export function mapSupabaseRowToComplaint(
     media: [],
     status,
     urgency,
+    originType: row.origin_type || 'citizen',
     citizenName,
     citizenPhone,
     isAnonymous,
