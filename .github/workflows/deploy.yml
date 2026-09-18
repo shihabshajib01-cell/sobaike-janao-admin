@@ -48,6 +48,9 @@ jobs:
       - name: Table page-size audit
         run: npm run audit:table-page-size
 
+      - name: Tag and feedback audit
+        run: npm run audit:tags-feedback
+
       - name: Dependency security audit
         run: npm run audit:dependencies
 
