@@ -8,7 +8,7 @@ const assert = (condition, message) => {
   }
 };
 
-const migration = read('supabase/migrations/20260918130000_notification_center_completion.sql');
+const migration = read('supabase/migrations/20260918061006_notification_center_completion.sql');
 const api = read('src/services/api/notificationApi.ts');
 const context = read('src/context/NotificationContext.tsx');
 const page = read('src/pages/Notifications/NotificationsPage.tsx');
