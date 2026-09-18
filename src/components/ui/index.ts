@@ -3,6 +3,8 @@
  */
 
 export * from './Button';
+export * from './SegmentedControl';
+export * from './FilterChip';
 export * from './Input';
 export * from './Select';
 export * from './Textarea';
