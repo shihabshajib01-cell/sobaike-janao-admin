@@ -3,6 +3,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
 import { Badge, BadgeStatus } from '@/components/ui/Badge';
+import { Tag } from '@/components/ui/Tag';
 import { Button } from '@/components/ui/Button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/Table';
 import {
@@ -160,9 +161,9 @@ export const RecentComplaints: React.FC<RecentComplaintsProps> = ({
                         </TableCell>
 
                         <TableCell className="text-slate-600 dark:text-slate-300">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-xs text-[11px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                          <Tag tone="neutral">
                             {isBn ? c.categoryBn : c.categoryEn}
-                          </span>
+                          </Tag>
                         </TableCell>
 
                         <TableCell className="text-slate-500 dark:text-slate-400">
@@ -237,9 +238,9 @@ export const RecentComplaints: React.FC<RecentComplaintsProps> = ({
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                        <Tag tone="neutral">
                           {isBn ? c.categoryBn : c.categoryEn}
-                        </span>
+                        </Tag>
                       </div>
 
                       <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
