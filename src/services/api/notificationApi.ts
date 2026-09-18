@@ -58,7 +58,27 @@ export const notificationApi = {
     }
 
     const results = (Array.isArray(data) ? (data as AdminNotification[]) : []) as NotificationListResult;
-    results.hasMore = results.length === limit;
+
+    if (params?.detect_has_more === false || results.length < limit || results.length === 0) {
+      results.hasMore = results.length === limit;
+      return results;
+    }
+
+    const last = results[results.length - 1];
+    const { data: lookaheadData, error: lookaheadError } = await supabase.rpc('admin_list_notifications', {
+      p_limit: 1,
+      p_before_created_at: last.created_at,
+      p_before_id: last.id,
+      p_unread_only: params?.unread_only ?? false,
+      p_category: params?.category || null,
+    });
+
+    if (lookaheadError) {
+      console.error('admin_list_notifications lookahead failed:', lookaheadError);
+      throw new NotificationApiError(lookaheadError.message, lookaheadError.code, lookaheadError.details);
+    }
+
+    results.hasMore = Array.isArray(lookaheadData) && lookaheadData.length > 0;
     return results;
   },
 
