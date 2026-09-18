@@ -112,7 +112,7 @@ export const ResponseModerationModal: React.FC<ResponseModerationModalProps> = (
             variant="secondary"
             onClick={onClose}
             disabled={isSubmitting}
-            className="w-full sm:w-auto min-h-[44px]"
+            className="w-full sm:w-auto"
           >
             {isBn ? 'বাতিল' : 'Cancel'}
           </Button>
@@ -122,7 +122,7 @@ export const ResponseModerationModal: React.FC<ResponseModerationModalProps> = (
             onClick={onConfirm}
             isLoading={isSubmitting}
             disabled={isSubmitting}
-            className="w-full sm:w-auto min-h-[44px]"
+            className="w-full sm:w-auto"
           >
             {config.confirmText}
           </Button>
