@@ -203,7 +203,7 @@ export const MobileComplaintCardList: React.FC<MobileComplaintCardListProps> = (
                 variant="primary"
                 size="sm"
                 onClick={() => handleNavigateToFullDetail(selectedComplaint.id)}
-                rightIcon={<ExternalLink className="ml-1" />}
+                rightIcon={<ExternalLink />}
               >
                 <span>{isBn ? 'সম্পূর্ণ বিবরণ ও অ্যাকশন' : 'Full Detail & Actions'}</span>
               </Button>
