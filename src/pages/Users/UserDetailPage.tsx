@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Button } from '@/components/ui/Button';
+import { Button, IconButton } from '@/components/ui/Button';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { adminUserApi } from '@/services/api/adminUserApi';
@@ -130,16 +130,14 @@ export const UserDetailPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Button
+          <IconButton
             id="btn-back-to-users"
             variant="ghost"
             size="sm"
             onClick={() => navigate('/users')}
-            className="w-9"
             aria-label={t.common.back}
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
+            icon={<ArrowLeft />}
+          />
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
