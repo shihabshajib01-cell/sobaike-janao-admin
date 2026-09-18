@@ -9,6 +9,7 @@ export interface NotificationContextType {
   recentNotifications: AdminNotification[];
   isLoadingRecent: boolean;
   recentError: string | null;
+  notificationRevision: number;
   refreshUnreadCount: () => Promise<number>;
   refreshRecent: () => Promise<void>;
   markAsRead: (notificationId: string) => Promise<boolean>;
@@ -23,6 +24,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [recentNotifications, setRecentNotifications] = useState<AdminNotification[]>([]);
   const [isLoadingRecent, setIsLoadingRecent] = useState<boolean>(false);
   const [recentError, setRecentError] = useState<string | null>(null);
+  const [notificationRevision, setNotificationRevision] = useState<number>(0);
 
   const isMountedRef = useRef<boolean>(true);
 
@@ -74,14 +76,25 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
 
     try {
-      const [list, count] = await Promise.all([
+      const [listResult, countResult] = await Promise.allSettled([
         notificationApi.listNotifications({ limit: 8 }),
-        notificationApi.getUnreadCount().catch(() => 0),
+        notificationApi.getUnreadCount(),
       ]);
 
-      if (isMountedRef.current) {
-        setRecentNotifications(list);
+      if (!isMountedRef.current) return;
+
+      if (listResult.status === 'fulfilled') {
+        setRecentNotifications(listResult.value);
+      } else {
+        console.error('Failed to refresh recent notifications:', listResult.reason);
+        setRecentError(listResult.reason instanceof Error ? listResult.reason.message : 'Failed to load notifications');
+      }
+
+      if (countResult.status === 'fulfilled') {
+        const count = countResult.value;
         setUnreadCount(Number.isFinite(count) ? Math.max(0, count) : 0);
+      } else {
+        console.warn('Failed to refresh notification unread count:', countResult.reason);
       }
     } catch (err: unknown) {
       console.error('Failed to refresh recent notifications:', err);
@@ -126,6 +139,19 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setUnreadCount(previousUnreadCount);
         return false;
       }
+      if (!wasUnread && isMountedRef.current) {
+        setUnreadCount((count) => Math.max(0, count - 1));
+      }
+
+      try {
+        const authoritativeCount = await notificationApi.getUnreadCount();
+        if (isMountedRef.current && Number.isFinite(authoritativeCount)) {
+          setUnreadCount(Math.max(0, authoritativeCount));
+        }
+      } catch (countError) {
+        console.warn('Failed to reconcile notification unread count:', countError);
+      }
+
       return true;
     } catch (err) {
       console.error('Error marking notification as read:', err);
@@ -189,7 +215,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           filter: `recipient_user_id=eq.${user.id}`,
         },
         () => {
-          // One refresh updates both the recent list and unread count.
+          if (isMountedRef.current) {
+            setNotificationRevision((revision) => revision + 1);
+          }
           void refreshRecent();
         }
       )
@@ -211,6 +239,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         recentNotifications,
         isLoadingRecent,
         recentError,
+        notificationRevision,
         refreshUnreadCount,
         refreshRecent,
         markAsRead,
