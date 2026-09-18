@@ -64,24 +64,22 @@ export const ComplaintTable: React.FC<ComplaintTableProps> = ({
   // Loading Skeleton for Desktop Table
   if (loading) {
     return (
-      <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-        <Table>
+      <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="">{isBn ? 'আইডি' : 'Complaint ID'}</TableHead>
+              <TableHead>{isBn ? 'আইডি' : 'Complaint ID'}</TableHead>
               <TableHead>{isBn ? 'বিভাগ' : 'Category'}</TableHead>
               <TableHead>{isBn ? 'উপ-বিভাগ' : 'Subcategory'}</TableHead>
               <TableHead>{isBn ? 'অবস্থান' : 'Location'}</TableHead>
-              <TableHead className="">{isBn ? 'জমার তারিখ' : 'Submitted Date'}</TableHead>
-              <TableHead className="">{isBn ? 'স্ট্যাটাস' : 'Status'}</TableHead>
+              <TableHead>{isBn ? 'জমার তারিখ' : 'Submitted Date'}</TableHead>
+              <TableHead>{isBn ? 'স্ট্যাটাস' : 'Status'}</TableHead>
               <TableHead className="text-right">{isBn ? 'অ্যাকশন' : 'Action'}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             <TableLoadingRow colSpan={7} message={isBn ? 'অভিযোগ তালিকা লোড হচ্ছে...' : 'Loading complaints...'} />
           </TableBody>
-        </Table>
-      </div>
+      </Table>
     );
   }
 
@@ -99,8 +97,7 @@ export const ComplaintTable: React.FC<ComplaintTableProps> = ({
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-      <Table>
+    <Table>
         <TableHeader>
           <TableRow>
             <TableHead className="font-semibold">{isBn ? 'অভিযোগ আইডি' : 'Complaint ID'}</TableHead>
@@ -169,7 +166,7 @@ export const ComplaintTable: React.FC<ComplaintTableProps> = ({
                 <TableCell>
                   <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300 text-xs">
                     <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <div className="truncate max-">
+                    <div className="truncate max-w-[160px]">
                       <span className="font-medium">{c.location.ward}</span>
                       <span className="text-[11px] text-slate-400 block truncate">{location}</span>
                     </div>
@@ -211,8 +208,7 @@ export const ComplaintTable: React.FC<ComplaintTableProps> = ({
             );
           })}
         </TableBody>
-      </Table>
-    </div>
+    </Table>
   );
 };
 
