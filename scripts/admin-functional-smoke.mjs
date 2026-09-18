@@ -190,7 +190,10 @@ await check('Admin header language, theme and notification keyboard flow', async
   await installSupabaseFixtures(page);
 
   await page.goto(hashUrl(LOCAL_URL, '/dashboard'), { waitUntil: 'domcontentloaded', timeout: 30000 });
-  await expectVisible(page.getByRole('heading', { name: 'Dashboard', exact: true }), 'Dashboard title missing');
+  await expectVisible(
+    page.getByRole('heading', { name: 'Dashboard', exact: true, level: 1 }),
+    'Dashboard page title missing'
+  );
 
   await page.getByRole('button', { name: 'Toggle color theme' }).click();
   await page.waitForTimeout(150);
