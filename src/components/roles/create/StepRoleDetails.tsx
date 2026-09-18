@@ -192,7 +192,7 @@ export const StepRoleDetails: React.FC<StepRoleDetailsProps> = ({
           variant="secondary"
           size="md"
           onClick={onCancel}
-          leftIcon={<X className="w-4 h-4" />}
+          leftIcon={<X />}
         >
           <span>{t.roles.cancel}</span>
         </Button>
@@ -203,7 +203,7 @@ export const StepRoleDetails: React.FC<StepRoleDetailsProps> = ({
           variant="primary"
           size="md"
           disabled={trimmedNameEn.length === 0 || technicalSlug.length === 0}
-          rightIcon={<ArrowRight className="w-4 h-4" />}
+          rightIcon={<ArrowRight />}
         >
           <span>{t.roles.next}</span>
         </Button>
