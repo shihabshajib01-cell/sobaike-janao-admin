@@ -13,6 +13,7 @@ import {
   ComplaintTimelineEvent,
   ReporterDeviceLocation,
   ComplaintConfiguredFields,
+  ComplaintSource,
   WorkflowActionResult,
 } from '@/types/Complaint';
 import {
@@ -155,6 +156,43 @@ export class ComplaintApi {
       configuredFields,
       configuredFieldsError,
     };
+  }
+
+  async getComplaintSources(id: string): Promise<ComplaintSource[]> {
+    assertSupabaseConfigured();
+
+    const { data, error } = await supabase.rpc(
+      'admin_get_complaint_sources',
+      { p_complaint_id: id }
+    );
+
+    if (error) {
+      throw new Error(error.message || 'Failed to load complaint sources.');
+    }
+
+    if (!Array.isArray(data)) return [];
+
+    return data.map((source: any) => ({
+      id: String(source.id || ''),
+      sourceType: String(source.sourceType || 'other') as ComplaintSource['sourceType'],
+      publisherName: String(source.publisherName || ''),
+      sourceTitle: source.sourceTitle ? String(source.sourceTitle) : null,
+      canonicalUrl: String(source.canonicalUrl || ''),
+      sourcePublishedDate: source.sourcePublishedDate
+        ? String(source.sourcePublishedDate)
+        : null,
+      verificationStatus: String(
+        source.verificationStatus || 'unverified'
+      ) as ComplaintSource['verificationStatus'],
+      isFinalDetailPage: Boolean(source.isFinalDetailPage),
+      sourceVersion: Number(source.sourceVersion || 1),
+      verificationNote: source.verificationNote
+        ? String(source.verificationNote)
+        : null,
+      verifiedAt: source.verifiedAt ? String(source.verifiedAt) : null,
+      createdAt: source.createdAt ? String(source.createdAt) : null,
+      updatedAt: source.updatedAt ? String(source.updatedAt) : null,
+    }));
   }
 
   async getComplaintConfiguredFields(id: string): Promise<ComplaintConfiguredFields> {
