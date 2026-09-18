@@ -7,7 +7,7 @@ import { EmptyState } from '@/components/common/EmptyState';
 export const Table = forwardRef<HTMLTableElement, HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
     <div className="relative w-full max-w-full min-w-0 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
-      <table ref={ref} className={cn('w-full min-w-0 table-auto caption-bottom text-xs text-left', className)} {...props} />
+      <table ref={ref} className={cn('w-max min-w-full table-auto caption-bottom text-xs text-left', className)} {...props} />
     </div>
   )
 );
@@ -68,7 +68,7 @@ export const TableHead = forwardRef<HTMLTableCellElement, TableHeadProps>(
       ref={ref}
       onClick={sortable ? onSort : undefined}
       className={cn(
-        'h-9 px-3.5 text-left align-middle font-semibold text-slate-600 dark:text-slate-400 text-[11px] uppercase tracking-wider select-none',
+        'h-9 px-3.5 text-left align-middle font-semibold text-slate-600 dark:text-slate-400 text-[11px] uppercase tracking-wider whitespace-nowrap select-none',
         sortable && 'cursor-pointer hover:text-slate-900 dark:hover:text-slate-100 transition-colors',
         className
       )}
