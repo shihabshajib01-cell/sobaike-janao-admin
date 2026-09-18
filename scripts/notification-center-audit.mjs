@@ -10,6 +10,7 @@ const assert = (condition, message) => {
 
 const migration = read('supabase/migrations/20260918061006_notification_center_completion.sql');
 const backfillMigration = read('supabase/migrations/20260918061325_notification_center_backfill_missing_submissions.sql');
+const consistencyMigration = read('supabase/migrations/20260918065510_notification_center_consistency_fixes.sql');
 const api = read('src/services/api/notificationApi.ts');
 const context = read('src/context/NotificationContext.tsx');
 const page = read('src/pages/Notifications/NotificationsPage.tsx');
@@ -54,6 +55,9 @@ assert(
   !context.includes('refreshUnreadCount();\n          refreshRecent();'),
   'Realtime callback still performs duplicate notification refreshes'
 );
+assert(context.includes('Promise.allSettled') && !context.includes('getUnreadCount().catch(() => 0)'), 'unread count can still collapse to zero');
+assert(context.includes('notificationRevision') && page.includes('lastRealtimeRevisionRef'), 'full notifications page is not Realtime synchronized');
+assert(context.includes('authoritativeCount'), 'older notification reads do not reconcile unread count');
 assert(
   page.includes('<article') &&
     page.includes('type="button"') &&
@@ -75,6 +79,9 @@ assert(
   utils.includes('/^\\/banners\\/?$/'),
   'notification route allowlist does not include Banner Management'
 );
+assert(utils.includes('/^\\/$/'), 'permission-aware root route is not allowlisted');
+assert(page.includes("key: 'configuration'") && language.includes("configuration: 'Configuration'") && language.includes("configuration: 'কনফিগারেশন'"), 'configuration filter copy is incomplete');
+assert(consistencyMigration.includes("p_category='configuration'") && consistencyMigration.includes("admin.created:personal:%"), 'consistency migration is incomplete');
 assert(
   backfillMigration.includes("p_dedupe_key := 'complaint.submitted:' || v_row.id"),
   'missing-submission backfill is not idempotent'
