@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React, { useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -264,7 +265,7 @@ export const RolePermissionEditor: React.FC<RolePermissionEditorProps> = ({
                   </div>
 
                   {!isSystem && (
-                    <button
+                    <ButtonBase
                       type="button"
                       onClick={() => handleToggleModule(moduleKey)}
                       className="text-xs font-medium text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 focus-visible:outline-none focus-visible:underline"
@@ -272,7 +273,7 @@ export const RolePermissionEditor: React.FC<RolePermissionEditorProps> = ({
                       {allModuleSelected
                         ? t.roles.clearAll
                         : t.roles.selectAll}
-                    </button>
+                    </ButtonBase>
                   )}
                 </div>
 
