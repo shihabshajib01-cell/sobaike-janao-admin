@@ -3,6 +3,7 @@ import { AdminUserListItem } from '@/types/AdminUser';
 import { useLanguage } from '@/context/LanguageContext';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { Tag } from '@/components/ui/Tag';
 import { ResponsiveDataView, ResponsiveDataTableView, ResponsiveDataCardView } from '@/components/ui/ResponsiveDataView';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/Table';
 import {
@@ -137,14 +138,13 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
                     {user.is_super_admin ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 dark:bg-purple-950/80 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                        <Lock className="w-3 h-3 shrink-0" />
+                      <Tag tone="violet" icon={<Lock />} size="md">
                         {t.users.superAdmin}
-                      </span>
+                      </Tag>
                     ) : (
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                      <Tag tone="neutral" size="md">
                         {t.users.standardAdmin}
-                      </span>
+                      </Tag>
                     )}
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
@@ -160,15 +160,15 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
                     {user.active ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                      <Badge status="success" size="sm">
+                        <CheckCircle2 />
                         {t.users.active}
-                      </span>
+                      </Badge>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
-                        <XCircle className="w-3 h-3 text-rose-500" />
+                      <Badge status="error" size="sm">
+                        <XCircle />
                         {t.users.inactive}
-                      </span>
+                      </Badge>
                     )}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-xs text-slate-500 dark:text-slate-400">
@@ -317,14 +317,13 @@ export const UsersTable: React.FC<UsersTableProps> = ({
 
               <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-slate-300 pt-1">
                 {user.is_super_admin ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-950/80 text-purple-800 dark:text-purple-300">
-                    <Lock className="w-3 h-3" />
+                  <Tag tone="violet" icon={<Lock />}>
                     {t.users.superAdmin}
-                  </span>
+                  </Tag>
                 ) : (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                  <Tag tone="neutral">
                     {roleName}
-                  </span>
+                  </Tag>
                 )}
 
                 <span className="text-slate-400 text-xs">
