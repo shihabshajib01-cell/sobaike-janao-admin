@@ -137,13 +137,13 @@ export const ResponseDetailDrawer: React.FC<ResponseDetailDrawerProps> = ({
       title={isBn ? 'প্রতিক্রিয়ার বিস্তারিত' : 'Response Details'}
       description={`ID: #${response.id}`}
       footer={
-        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2.5 sm:gap-3 w-full">
+        <>
           <Button
             type="button"
             variant="secondary"
+            size="lg"
             onClick={onClose}
             disabled={isModerating}
-            className="w-full sm:w-auto"
           >
             {isBn ? 'বন্ধ করুন' : 'Close'}
           </Button>
@@ -155,9 +155,9 @@ export const ResponseDetailDrawer: React.FC<ResponseDetailDrawerProps> = ({
                 <Button
                   type="button"
                   variant="danger"
+                  size="lg"
                   onClick={onReject}
                   disabled={isModerating}
-                  className="w-full sm:w-auto"
                 >
                   {isBn ? 'প্রত্যাখ্যান করুন' : 'Reject'}
                 </Button>
@@ -166,9 +166,9 @@ export const ResponseDetailDrawer: React.FC<ResponseDetailDrawerProps> = ({
                 <Button
                   type="button"
                   variant="primary"
+                  size="lg"
                   onClick={onPublish}
                   disabled={isModerating}
-                  className="w-full sm:w-auto"
                 >
                   {isBn ? 'প্রকাশ করুন' : 'Publish'}
                 </Button>
@@ -181,9 +181,9 @@ export const ResponseDetailDrawer: React.FC<ResponseDetailDrawerProps> = ({
             <Button
               type="button"
               variant="danger"
+              size="lg"
               onClick={onUnpublish}
               disabled={isModerating}
-              className="w-full sm:w-auto"
             >
               {isBn ? 'অপ্রকাশিত করুন' : 'Unpublish'}
             </Button>
@@ -194,14 +194,14 @@ export const ResponseDetailDrawer: React.FC<ResponseDetailDrawerProps> = ({
             <Button
               type="button"
               variant="primary"
+              size="lg"
               onClick={onResubmit}
               disabled={isModerating}
-              className="w-full sm:w-auto"
             >
               {isBn ? 'পুনরায় পর্যালোচনায় পাঠান' : 'Resubmit'}
             </Button>
           )}
-        </div>
+        </>
       }
     >
       <div className="space-y-6 pb-2">
