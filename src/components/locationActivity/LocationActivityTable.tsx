@@ -99,14 +99,14 @@ export const LocationActivityTable: React.FC<LocationActivityTableProps> = ({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="">{isBn ? 'সর্বশেষ সক্রিয়' : 'Last Seen'}</TableHead>
-          <TableHead className="">{isBn ? 'অনুমতি' : 'Permission'}</TableHead>
-          <TableHead className="min-">{isBn ? 'লোকেশন' : 'Location'}</TableHead>
-          <TableHead className="">{isBn ? 'নির্ভুলতা' : 'Accuracy'}</TableHead>
-          <TableHead className="">{isBn ? 'ডিভাইস' : 'Device'}</TableHead>
-          <TableHead className="">{isBn ? 'ব্রাউজার' : 'Browser'}</TableHead>
-          <TableHead className="">{isBn ? 'ওএস' : 'OS'}</TableHead>
-          <TableHead className="">{isBn ? 'টাইমজোন' : 'Timezone'}</TableHead>
+          <TableHead>{isBn ? 'সর্বশেষ সক্রিয়' : 'Last Seen'}</TableHead>
+          <TableHead>{isBn ? 'অনুমতি' : 'Permission'}</TableHead>
+          <TableHead>{isBn ? 'লোকেশন' : 'Location'}</TableHead>
+          <TableHead>{isBn ? 'নির্ভুলতা' : 'Accuracy'}</TableHead>
+          <TableHead>{isBn ? 'ডিভাইস' : 'Device'}</TableHead>
+          <TableHead>{isBn ? 'ব্রাউজার' : 'Browser'}</TableHead>
+          <TableHead>{isBn ? 'ওএস' : 'OS'}</TableHead>
+          <TableHead>{isBn ? 'টাইমজোন' : 'Timezone'}</TableHead>
           <TableHead className="text-right">{isBn ? 'অ্যাকশন' : 'Action'}</TableHead>
         </TableRow>
       </TableHeader>
@@ -165,7 +165,7 @@ export const LocationActivityTable: React.FC<LocationActivityTableProps> = ({
                           <span>{isBn ? 'লোকেশন শনাক্ত করা হচ্ছে…' : 'Resolving location...'}</span>
                         </span>
                       ) : (
-                        <span className="font-semibold text-slate-900 dark:text-slate-100 truncate block max-" title={resolved?.fullAddress || resolved?.shortLabel}>
+                        <span className="font-semibold text-slate-900 dark:text-slate-100 truncate block max-w-[220px]" title={resolved?.fullAddress || resolved?.shortLabel}>
                           {resolved?.shortLabel || (isBn ? 'লোকেশন' : 'Location available')}
                         </span>
                       )}
