@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React, { useState } from 'react';
 import {
   MapPin,
@@ -274,7 +275,7 @@ export const LocationActivityDetailDrawer: React.FC<LocationActivityDetailDrawer
                 <span className="font-mono text-[11px] text-slate-900 dark:text-slate-100 break-all select-all">
                   {session.session_id}
                 </span>
-                <button
+                <ButtonBase
                   type="button"
                   onClick={() => handleCopy(session.session_id, 'session_id')}
                   className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded transition-colors shrink-0"
@@ -286,7 +287,7 @@ export const LocationActivityDetailDrawer: React.FC<LocationActivityDetailDrawer
                   ) : (
                     <Copy className="w-3.5 h-3.5" />
                   )}
-                </button>
+                </ButtonBase>
               </div>
             </div>
 
@@ -299,7 +300,7 @@ export const LocationActivityDetailDrawer: React.FC<LocationActivityDetailDrawer
                 <span className="font-mono text-[11px] text-slate-900 dark:text-slate-100 break-all select-all">
                   {session.visitor_id}
                 </span>
-                <button
+                <ButtonBase
                   type="button"
                   onClick={() => handleCopy(session.visitor_id, 'visitor_id')}
                   className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded transition-colors shrink-0"
@@ -311,7 +312,7 @@ export const LocationActivityDetailDrawer: React.FC<LocationActivityDetailDrawer
                   ) : (
                     <Copy className="w-3.5 h-3.5" />
                   )}
-                </button>
+                </ButtonBase>
               </div>
             </div>
 
@@ -456,7 +457,7 @@ export const LocationActivityDetailDrawer: React.FC<LocationActivityDetailDrawer
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">User Agent</span>
               {session.user_agent && (
-                <button
+                <ButtonBase
                   type="button"
                   onClick={() => handleCopy(session.user_agent || '', 'user_agent')}
                   className="flex items-center gap-1 text-[11px] text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300 font-medium"
@@ -472,7 +473,7 @@ export const LocationActivityDetailDrawer: React.FC<LocationActivityDetailDrawer
                       <span>{isBn ? 'কপি' : 'Copy'}</span>
                     </>
                   )}
-                </button>
+                </ButtonBase>
               )}
             </div>
             <div className="bg-white dark:bg-slate-800/80 p-3 rounded border border-slate-200 dark:border-slate-700/60 max-h-28 overflow-y-auto">
