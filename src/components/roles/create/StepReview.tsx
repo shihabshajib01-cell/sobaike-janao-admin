@@ -199,8 +199,7 @@ export const StepReview: React.FC<StepReviewProps> = ({
                 size="sm"
                 onClick={onEditDetails}
                 disabled={isSubmitting}
-                leftIcon={<Edit2 className="w-3.5 h-3.5" />}
-                className="h-7 text-xs px-2"
+                leftIcon={<Edit2 />}
               >
                 <span>{t.roles.edit}</span>
               </Button>
@@ -295,8 +294,7 @@ export const StepReview: React.FC<StepReviewProps> = ({
                 size="sm"
                 onClick={onEditPermissions}
                 disabled={isSubmitting}
-                leftIcon={<Edit2 className="w-3.5 h-3.5" />}
-                className="h-7 text-xs px-2"
+                leftIcon={<Edit2 />}
               >
                 <span>{t.roles.edit}</span>
               </Button>
@@ -374,7 +372,7 @@ export const StepReview: React.FC<StepReviewProps> = ({
           size="md"
           onClick={onBack}
           disabled={isSubmitting}
-          leftIcon={<ArrowLeft className="w-4 h-4" />}
+          leftIcon={<ArrowLeft />}
         >
           <span>{t.roles.back}</span>
         </Button>
@@ -387,7 +385,7 @@ export const StepReview: React.FC<StepReviewProps> = ({
             size="md"
             onClick={onCancel}
             disabled={isSubmitting}
-            leftIcon={<X className="w-4 h-4" />}
+            leftIcon={<X />}
           >
             <span>{t.roles.cancel}</span>
           </Button>
@@ -400,7 +398,7 @@ export const StepReview: React.FC<StepReviewProps> = ({
             onClick={onSubmit}
             isLoading={isSubmitting}
             disabled={isSubmitting || trimmedNameEn.length === 0 || technicalSlug.length === 0}
-            leftIcon={<Check className="w-4 h-4" />}
+            leftIcon={<Check />}
           >
             <span>{isSubmitting ? t.roles.submitting : t.roles.createRole}</span>
           </Button>
