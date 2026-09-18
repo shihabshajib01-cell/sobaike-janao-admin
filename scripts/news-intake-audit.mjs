@@ -64,7 +64,7 @@ if (/articleBody|fullArticle|bodyText|innerText/.test(edge)) {
 }
 
 for (const needle of [
-  "path="/news-intake"",
+  'path="/news-intake"',
   'requiredPermission="complaints.publish"',
 ]) {
   requireText(routes, needle, 'News Intake route');
