@@ -450,7 +450,7 @@ export const ResponseDetailDrawer: React.FC<ResponseDetailDrawerProps> = ({
                   <p className="text-sm font-medium text-slate-900 dark:text-slate-100 mt-1 break-all">
                     {response.contactInfo || (isBn ? 'যোগাযোগের তথ্য পাওয়া যায়নি' : 'Contact information unavailable')}
                   </p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  <p className="type-meta text-slate-500 dark:text-slate-400 mt-0.5">
                     {isBn
                       ? 'ব্যক্তিগত — শুধুমাত্র অনুমোদিত প্রশাসকের জন্য দৃশ্যমান'
                       : 'Private — visible to authorized administrators only'}
@@ -521,7 +521,7 @@ export const ResponseDetailDrawer: React.FC<ResponseDetailDrawerProps> = ({
                   <p className="text-sm font-medium text-slate-900 dark:text-slate-100 mt-1 break-all">
                     {response.contactEmailOrPhone || response.contactInfo}
                   </p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  <p className="type-meta text-slate-500 dark:text-slate-400 mt-0.5">
                     {isBn
                       ? 'ব্যক্তিগত — শুধুমাত্র অনুমোদিত প্রশাসকের জন্য দৃশ্যমান'
                       : 'Private — visible to authorized administrators only'}
