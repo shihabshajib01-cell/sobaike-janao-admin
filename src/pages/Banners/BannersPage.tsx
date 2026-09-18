@@ -13,6 +13,66 @@ const cloneContent = (value: BannerContent): BannerContent => ({ ...value });
 const hasDraftChanges = (banner: ManagedBanner) =>
   JSON.stringify(banner.draftContent) !== JSON.stringify(banner.publishedContent);
 
+const PUBLIC_BANNER_ASSET_PREFIX =
+  'https://shihabshajib01-cell.github.io/sobaike-janao/illustrations/services/';
+const IMMUTABLE_BANNER_ASSET_PREFIX =
+  'https://raw.githubusercontent.com/shihabshajib01-cell/sobaike-janao/a05ab893a4cf70034c63b4cdd8d12dd944056944/public/illustrations/services/';
+
+const getBannerImageFallback = (src: string): string | null => {
+  if (!src.startsWith(PUBLIC_BANNER_ASSET_PREFIX)) return null;
+  return `${IMMUTABLE_BANNER_ASSET_PREFIX}${src.slice(PUBLIC_BANNER_ASSET_PREFIX.length)}`;
+};
+
+interface BannerImageProps {
+  src: string | null | undefined;
+  className: string;
+  placeholderClassName?: string;
+  loading?: 'eager' | 'lazy';
+}
+
+const BannerImage: React.FC<BannerImageProps> = ({
+  src,
+  className,
+  placeholderClassName = 'flex h-full w-full items-center justify-center',
+  loading = 'lazy',
+}) => {
+  const [activeSrc, setActiveSrc] = useState(src || '');
+  const [failed, setFailed] = useState(!src);
+
+  useEffect(() => {
+    setActiveSrc(src || '');
+    setFailed(!src);
+  }, [src]);
+
+  if (failed || !activeSrc) {
+    return (
+      <div className={placeholderClassName} aria-hidden="true">
+        <ImageIcon className="h-10 w-10 text-slate-400" />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={activeSrc}
+      alt=""
+      aria-hidden="true"
+      className={className}
+      loading={loading}
+      decoding="async"
+      referrerPolicy="no-referrer"
+      onError={() => {
+        const fallback = getBannerImageFallback(activeSrc);
+        if (fallback && fallback !== activeSrc) {
+          setActiveSrc(fallback);
+          return;
+        }
+        setFailed(true);
+      }}
+    />
+  );
+};
+
 export const BannersPage: React.FC = () => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
@@ -199,11 +259,9 @@ export const BannersPage: React.FC = () => {
                 className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
               >
                 <div className="aspect-[16/7] overflow-hidden bg-slate-100 dark:bg-slate-800">
-                  <img
+                  <BannerImage
                     src={content.illustrationSrc}
-                    alt=""
                     className="h-full w-full object-cover"
-                    loading="lazy"
                   />
                 </div>
                 <div className="space-y-3 p-4">
@@ -305,13 +363,12 @@ export const BannersPage: React.FC = () => {
                 </p>
               </div>
               <div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-950">
-                {imagePreview ? (
-                  <img src={imagePreview} alt="" className="aspect-[16/7] w-full object-cover" />
-                ) : (
-                  <div className="flex aspect-[16/7] items-center justify-center">
-                    <ImageIcon className="h-10 w-10 text-slate-400" />
-                  </div>
-                )}
+                <BannerImage
+                  src={imagePreview}
+                  className="aspect-[16/7] w-full object-cover"
+                  placeholderClassName="flex aspect-[16/7] w-full items-center justify-center"
+                  loading="eager"
+                />
               </div>
               <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
                 <Upload className="h-4 w-4" />
@@ -393,7 +450,12 @@ export const BannersPage: React.FC = () => {
                 {isBn ? 'প্রিভিউ' : 'Preview'}
               </h2>
               <div className="mt-3 overflow-hidden rounded-lg border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950">
-                {imagePreview && <img src={imagePreview} alt="" className="aspect-[16/7] w-full object-cover" />}
+                <BannerImage
+                  src={imagePreview}
+                  className="aspect-[16/7] w-full object-cover"
+                  placeholderClassName="flex aspect-[16/7] w-full items-center justify-center"
+                  loading="eager"
+                />
                 <div className="space-y-2 p-4">
                   <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                     {isBn ? form.titleBn : form.titleEn}
