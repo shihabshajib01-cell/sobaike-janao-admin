@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, Lock, Plus, Save, Send, Trash2 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
-import { Button } from '@/components/ui/Button';
+import { Button, IconButton } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
@@ -335,33 +335,30 @@ export const FormBuilderModal: React.FC<FormBuilderModalProps> = ({
                       {locked && <Lock className="h-3.5 w-3.5 text-slate-400" aria-label="Protected field" />}
                     </div>
                     <div className="flex items-center gap-1">
-                      <Button
+                      <IconButton
                         variant="ghost"
                         size="sm"
                         onClick={() => move(index, -1)}
                         disabled={index === 0}
                         aria-label="Move field up"
-                      >
-                        <ArrowUp className="h-4 w-4" />
-                      </Button>
-                      <Button
+                        icon={<ArrowUp />}
+                      />
+                      <IconButton
                         variant="ghost"
                         size="sm"
                         onClick={() => move(index, 1)}
                         disabled={index === fields.length - 1}
                         aria-label="Move field down"
-                      >
-                        <ArrowDown className="h-4 w-4" />
-                      </Button>
+                        icon={<ArrowDown />}
+                      />
                       {!locked && (
-                        <Button
-                          variant="ghost"
+                        <IconButton
+                          variant="danger"
                           size="sm"
                           onClick={() => remove(index)}
                           aria-label="Remove field"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                          icon={<Trash2 />}
+                        />
                       )}
                     </div>
                   </div>
