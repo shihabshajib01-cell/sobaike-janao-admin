@@ -15,6 +15,7 @@ const automation = read('supabase/migrations/20260918172747_news_intake_automati
 const sourceCompatibility = read('supabase/migrations/20260918173239_news_intake_source_compatibility.sql');
 const automationIndexes = read('supabase/migrations/20260918173920_news_intake_automation_fk_indexes.sql');
 const automationReliability = read('supabase/migrations/20260918184016_news_intake_automation_reliability_hardening.sql');
+const collisionErrorContract = read('supabase/migrations/20260918184410_news_intake_collision_error_contract.sql');
 const automationCore = read('supabase/functions/_shared/newsIntakeAutomationCore.ts');
 const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
 const edge = read('supabase/functions/news-intake-fetch/index.ts');
@@ -87,6 +88,8 @@ for (const needle of [
 }
 requireText(behaviorAudit, 'classificationCases', 'News Intake behavior audit');
 requireText(behaviorAudit, 'English content must not be duplicated', 'News Intake source-language audit');
+requireText(collisionErrorContract, "errcode='P0001'", 'News Intake collision error contract');
+requireText(collisionErrorContract, 'DUPLICATE_REVIEW_REQUIRED', 'News Intake collision error contract');
 
 for (const needle of [
   'admin_get_news_intake_taxonomy',
