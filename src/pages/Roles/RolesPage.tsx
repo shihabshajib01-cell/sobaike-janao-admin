@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -169,14 +170,14 @@ export const RolesPage: React.FC = () => {
             <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span className="text-xs sm:text-sm font-medium">{successBanner}</span>
           </div>
-          <button
+          <ButtonBase
             type="button"
             onClick={() => setSuccessBanner(null)}
             className="p-1 rounded-md text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors"
             aria-label={t.roles.dismissMessage}
           >
             <X className="w-4 h-4" />
-          </button>
+          </ButtonBase>
         </div>
       )}
 
