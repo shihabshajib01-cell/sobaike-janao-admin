@@ -162,7 +162,7 @@ export const TaxonomyTree: React.FC<TaxonomyTreeProps> = ({
                                 <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 shrink-0">
                                   <Tag className="w-3.5 h-3.5" />
                                 </div>
-                                <div className="min-w-0">
+                                <div className="min-w-0 max-w-sm">
                                   <p className="font-semibold text-slate-900 dark:text-slate-100 truncate">
                                     {isBn ? sub.nameBn : sub.nameEn}
                                   </p>
