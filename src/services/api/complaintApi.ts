@@ -90,7 +90,7 @@ export class ComplaintApi {
    */
   async getSegments(): Promise<SupabaseSegment[]> {
     assertSupabaseConfigured();
-    return await getTaxonomySegments();
+    return await getTaxonomySegments(true);
   }
 
   /**
@@ -99,7 +99,7 @@ export class ComplaintApi {
    */
   async getSubcategories(segmentId?: string): Promise<SupabaseSubcategory[]> {
     assertSupabaseConfigured();
-    const { subcategories } = await getTaxonomy();
+    const { subcategories } = await getTaxonomy(true);
     return subcategories.filter(
       (subcategory) =>
         subcategory.active !== false &&
