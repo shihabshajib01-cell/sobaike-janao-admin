@@ -165,7 +165,7 @@ export const LocationActivityPage: React.FC = () => {
               variant="primary"
               size="sm"
               onClick={() => loadData(filters, page, true)}
-              leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />}
+              leftIcon={<RefreshCw className={`${refreshing ? 'animate-spin' : ''}`} />}
               disabled={refreshing || loading}
             >
               {isBn ? 'রিফ্রেশ' : 'Refresh'}
@@ -198,7 +198,7 @@ export const LocationActivityPage: React.FC = () => {
               variant="secondary"
               size="sm"
               onClick={() => loadData(filters, page, true)}
-              className="text-xs h-7 shrink-0"
+              className="shrink-0"
             >
               <span>{isBn ? 'পুনরায় চেষ্টা করুন' : 'Retry'}</span>
             </Button>
@@ -274,7 +274,7 @@ export const LocationActivityPage: React.FC = () => {
               size="sm"
               onClick={() => handlePageChange(page - 1)}
               disabled={page <= 1 || loading}
-              leftIcon={<ChevronLeft className="w-4 h-4" />}
+              leftIcon={<ChevronLeft />}
             >
               <span>{isBn ? 'পূর্ববর্তী' : 'Previous'}</span>
             </Button>
@@ -304,7 +304,7 @@ export const LocationActivityPage: React.FC = () => {
               size="sm"
               onClick={() => handlePageChange(page + 1)}
               disabled={page >= totalPages || loading}
-              rightIcon={<ChevronRight className="w-4 h-4" />}
+              rightIcon={<ChevronRight />}
             >
               <span>{isBn ? 'পরবর্তী' : 'Next'}</span>
             </Button>
