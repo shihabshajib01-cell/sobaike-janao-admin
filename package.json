@@ -19,7 +19,8 @@
     "audit:bundle": "node scripts/build-production.mjs",
     "audit:hardening": "node scripts/admin-hardening-audit.mjs",
     "audit:duplicate-reports": "node scripts/sourced-report-duplicate-audit.mjs",
-    "audit:news-intake": "node scripts/news-intake-audit.mjs"
+    "audit:news-intake": "node scripts/news-intake-audit.mjs",
+    "audit:news-intake-behavior": "tsx scripts/news-intake-behavior-audit.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
