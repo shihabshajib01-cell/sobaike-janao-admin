@@ -130,7 +130,7 @@ export const RoleDetailPage: React.FC = () => {
             variant="ghost"
             size="sm"
             onClick={() => navigate('/roles')}
-            leftIcon={<ArrowLeft className="w-4 h-4" />}
+            leftIcon={<ArrowLeft />}
           >
             <span>{t.roles.backToRoles}</span>
           </Button>
@@ -151,7 +151,7 @@ export const RoleDetailPage: React.FC = () => {
             variant="ghost"
             size="sm"
             onClick={() => navigate('/roles')}
-            leftIcon={<ArrowLeft className="w-4 h-4" />}
+            leftIcon={<ArrowLeft />}
           >
             <span>{t.roles.backToRoles}</span>
           </Button>
@@ -226,7 +226,7 @@ export const RoleDetailPage: React.FC = () => {
                 variant="secondary"
                 size="sm"
                 onClick={() => loadData()}
-                leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+                leftIcon={<RotateCcw />}
               >
                 <span>{t.roles.retry}</span>
               </Button>
@@ -258,8 +258,8 @@ export const RoleDetailPage: React.FC = () => {
             variant="ghost"
             size="sm"
             onClick={() => navigate('/roles')}
-            leftIcon={<ArrowLeft className="w-4 h-4" />}
-            className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 -ml-2"
+            leftIcon={<ArrowLeft />}
+            className="-ml-2"
           >
             <span>{t.roles.backToRoles}</span>
           </Button>
@@ -276,7 +276,7 @@ export const RoleDetailPage: React.FC = () => {
                 variant="primary"
                 size="sm"
                 onClick={() => navigate(`/roles/${role.id}/edit`)}
-                leftIcon={<Edit className="w-3.5 h-3.5" />}
+                leftIcon={<Edit />}
               >
                 <span>{t.roles.editRole}</span>
               </Button>
