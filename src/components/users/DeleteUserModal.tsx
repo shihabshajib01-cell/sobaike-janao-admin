@@ -169,7 +169,6 @@ export const DeleteUserModal: React.FC<DeleteUserModalProps> = ({
             size="sm"
             onClick={onClose}
             disabled={isDeleting}
-            className="h-9 px-4"
           >
             {t.common.cancel}
           </Button>
@@ -182,8 +181,7 @@ export const DeleteUserModal: React.FC<DeleteUserModalProps> = ({
             onClick={handleDelete}
             isLoading={isDeleting}
             disabled={isDeleting}
-            leftIcon={<Trash2 className="w-4 h-4" />}
-            className="h-9 px-4"
+            leftIcon={<Trash2 />}
           >
             {isDeleting ? t.users.deletingUser : t.users.deleteUser}
           </Button>
