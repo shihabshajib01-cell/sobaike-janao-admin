@@ -551,8 +551,8 @@ await check('News Intake clear source reaches one-click publication', async () =
     'source metadata was not populated'
   );
 
-  await page.getByLabel('Category *').selectOption('public_safety');
-  await page.getByLabel('Subcategory *').selectOption('theft');
+  await page.getByLabel('Category *', { exact: true }).selectOption('public_safety');
+  await page.getByLabel('Subcategory *', { exact: true }).selectOption('theft');
   await page.getByLabel('Report title (Bangla) *').fill(
     'নিউজ ইনটেক ব্রাউজার পরীক্ষার রিপোর্ট'
   );
