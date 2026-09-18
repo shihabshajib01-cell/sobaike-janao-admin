@@ -55,7 +55,7 @@ export const ButtonBase = forwardRef<HTMLButtonElement, ButtonBaseProps>(
       type={type}
       data-button-system="base"
       className={cn(
-        'disabled:cursor-not-allowed disabled:opacity-50',
+        'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 disabled:cursor-not-allowed disabled:opacity-50',
         className
       )}
       {...props}
