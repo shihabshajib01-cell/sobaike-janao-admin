@@ -40,7 +40,8 @@ export type HarassmentAgeGroup =
   | '18_29'
   | '30_59'
   | '60_plus'
-  | 'prefer_not_to_say';
+  | 'prefer_not_to_say'
+  | 'unknown_not_stated';
 
 export type HarassmentAbuserRelationship =
   | 'intimate_partner'
@@ -50,9 +51,41 @@ export type HarassmentAbuserRelationship =
   | 'coworker_classmate'
   | 'authority_caregiver_service_provider'
   | 'stranger'
-  | 'other_or_unknown';
+  | 'other_or_unknown'
+  | 'neighbor'
+  | 'teacher_tutor'
+  | 'supervisor_employer'
+  | 'service_health_worker'
+  | 'transport_worker'
+  | 'law_enforcement_authority'
+  | 'multiple_people'
+  | 'other'
+  | 'unknown_not_stated';
 
 export type HarassmentReportingFor = 'self' | 'someone_else';
+
+export type SexualHarassmentType =
+  | 'eve_teasing'
+  | 'unwanted_physical_contact'
+  | 'sexual_comments_gestures_proposition'
+  | 'workplace_harassment'
+  | 'abuse_of_power'
+  | 'stalking'
+  | 'online_digital_harassment'
+  | 'other'
+  | 'unknown_not_stated';
+
+export type SexualHarassmentContext =
+  | 'workplace'
+  | 'educational_institution'
+  | 'healthcare'
+  | 'public_transport'
+  | 'road_public_space'
+  | 'home_private_space'
+  | 'online_social_media'
+  | 'government_service'
+  | 'other'
+  | 'unknown_not_stated';
 
 export type MobJusticeTrigger =
   | 'suspected_theft_robbery'
@@ -208,6 +241,9 @@ export interface Complaint {
   affectedPersonAgeGroup?: HarassmentAgeGroup | null;
   allegedAbuserRelationship?: HarassmentAbuserRelationship | null;
   reportingFor?: HarassmentReportingFor | null;
+  sexualHarassmentType?: SexualHarassmentType | null;
+  sexualHarassmentContext?: SexualHarassmentContext | null;
+  sexualHarassmentInstitution?: string | null;
   // Additional citizen-submitted harassment context preserved by the Public -> SQL contract.
   relationshipContext?: string | null;
   intimateWhatHappened?: string | null;
