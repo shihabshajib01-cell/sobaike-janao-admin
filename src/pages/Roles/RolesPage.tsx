@@ -139,7 +139,7 @@ export const RolesPage: React.FC = () => {
               disabled={loading || refreshing}
               leftIcon={
                 <RefreshCw
-                  className={cn('w-3.5 h-3.5', refreshing && 'animate-spin')}
+                  className={cn('', refreshing && 'animate-spin')}
                 />
               }
               aria-label="Refresh role list"
@@ -152,7 +152,7 @@ export const RolesPage: React.FC = () => {
               variant="primary"
               size="sm"
               onClick={() => navigate('/roles/create')}
-              leftIcon={<Plus className="w-3.5 h-3.5" />}
+              leftIcon={<Plus />}
             >
               <span>{t.roles.createRole}</span>
             </Button>
@@ -241,12 +241,12 @@ export const RolesPage: React.FC = () => {
               variant="secondary"
               size="sm"
               onClick={() => loadRoles()}
-              leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+              leftIcon={<RotateCcw />}
               className={cn(
-                'mx-auto shadow-xs',
+                'mx-auto',
                 error.isPermissionDenied
-                  ? 'border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-100 hover:bg-amber-100/50 dark:hover:bg-amber-900/40'
-                  : 'border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-100 hover:bg-rose-100/50 dark:hover:bg-rose-900/40'
+                  ? ''
+                  : ''
               )}
             >
               <span>{t.roles.retry}</span>
