@@ -49,15 +49,14 @@ export const RoleTable: React.FC<RoleTableProps> = ({ roles }) => {
   };
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
-      <Table>
+    <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="">{t.roles.roleName}</TableHead>
-            <TableHead className="">{t.roles.status}</TableHead>
-            <TableHead className="">{t.roles.permissions}</TableHead>
-            <TableHead className="">{t.roles.assignedUsers}</TableHead>
-            <TableHead className="">{t.roles.created}</TableHead>
+            <TableHead>{t.roles.roleName}</TableHead>
+            <TableHead>{t.roles.status}</TableHead>
+            <TableHead>{t.roles.permissions}</TableHead>
+            <TableHead>{t.roles.assignedUsers}</TableHead>
+            <TableHead>{t.roles.created}</TableHead>
             <TableHead className="text-right">{t.common.actions}</TableHead>
           </TableRow>
         </TableHeader>
@@ -182,8 +181,7 @@ export const RoleTable: React.FC<RoleTableProps> = ({ roles }) => {
             );
           })}
         </TableBody>
-      </Table>
-    </div>
+    </Table>
   );
 };
 
