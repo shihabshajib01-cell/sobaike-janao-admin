@@ -128,7 +128,7 @@ export const ComplaintTimeline: React.FC<ComplaintTimelineProps> = ({
                 <p className="font-semibold text-rose-900 dark:text-rose-200">
                   {isBn ? 'টাইমলাইন তথ্য লোড করা যায়নি' : 'Couldn’t load timeline history'}
                 </p>
-                <p className="text-rose-700 dark:text-rose-300 text-[11px]">
+                <p className="text-rose-700 dark:text-rose-300 type-meta">
                   {isBn
                     ? 'সার্ভার থেকে টাইমলাইনের তথ্য সংগ্রহ করা যায়নি। পুনরায় চেষ্টা করুন।'
                     : 'Timeline history could not be retrieved. Please retry.'}
@@ -171,13 +171,13 @@ export const ComplaintTimeline: React.FC<ComplaintTimelineProps> = ({
                       <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
                         {isBn ? event.titleBn : event.titleEn}
                       </h4>
-                      <span className="text-[11px] text-slate-400 font-mono">
+                      <span className="type-meta text-slate-400 font-mono">
                         {formatTimestamp(event.timestamp)}
                       </span>
                     </div>
 
                     {/* Actor label */}
-                    <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                    <div className="flex items-center gap-1.5 type-meta text-slate-500 dark:text-slate-400">
                       <span className="font-semibold text-slate-700 dark:text-slate-300">
                         {event.actorName}
                       </span>
