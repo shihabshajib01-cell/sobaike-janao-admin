@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React, { useState, useEffect, useCallback } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -304,7 +305,7 @@ export const ActivityLogPage: React.FC = () => {
                       ...
                     </span>
                   ) : (
-                    <button
+                    <ButtonBase
                       key={`page-${p}`}
                       type="button"
                       onClick={() => setPage(p)}
@@ -316,7 +317,7 @@ export const ActivityLogPage: React.FC = () => {
                       }`}
                     >
                       {formatNumber(p)}
-                    </button>
+                    </ButtonBase>
                   )
                 )}
               </div>
