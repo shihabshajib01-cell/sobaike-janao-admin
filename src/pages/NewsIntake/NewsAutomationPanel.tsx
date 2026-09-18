@@ -26,11 +26,17 @@ import {
   NewsIntakeAutomationAction,
   NewsIntakeAutomationDashboard,
   NewsIntakeAutomationRun,
+  NewsIntakeTaxonomy,
 } from '@/types/NewsIntake';
 
 const EMPTY_DASHBOARD: NewsIntakeAutomationDashboard = {
   sources: [],
   runs: [],
+};
+
+const EMPTY_TAXONOMY: NewsIntakeTaxonomy = {
+  segments: [],
+  subcategories: [],
 };
 
 const actionTone = (action: NewsIntakeAutomationAction): TagTone => {
@@ -61,6 +67,8 @@ export const NewsAutomationPanel: React.FC = () => {
   const isBn = language === 'bn';
   const [dashboard, setDashboard] =
     useState<NewsIntakeAutomationDashboard>(EMPTY_DASHBOARD);
+  const [taxonomy, setTaxonomy] =
+    useState<NewsIntakeTaxonomy>(EMPTY_TAXONOMY);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +76,12 @@ export const NewsAutomationPanel: React.FC = () => {
   const loadDashboard = useCallback(async () => {
     setLoading(true);
     try {
-      setDashboard(await newsIntakeApi.getAutomationDashboard());
+      const [nextDashboard, nextTaxonomy] = await Promise.all([
+        newsIntakeApi.getAutomationDashboard(),
+        newsIntakeApi.getTaxonomy(),
+      ]);
+      setDashboard(nextDashboard);
+      setTaxonomy(nextTaxonomy);
     } catch (err: unknown) {
       setError(
         err instanceof Error
@@ -127,6 +140,28 @@ export const NewsAutomationPanel: React.FC = () => {
       error: ['Error', 'ত্রুটি'],
     };
     return isBn ? labels[action][1] : labels[action][0];
+  };
+
+  const categoryLabel = (
+    segmentId?: string | null,
+    subcategoryId?: string | null
+  ) => {
+    const segment = taxonomy.segments.find((item) => item.id === segmentId);
+    const subcategory = taxonomy.subcategories.find(
+      (item) => item.id === subcategoryId
+    );
+    const segmentName = segment
+      ? isBn
+        ? segment.nameBn
+        : segment.nameEn
+      : segmentId || '';
+    const subcategoryName = subcategory
+      ? isBn
+        ? subcategory.nameBn
+        : subcategory.nameEn
+      : subcategoryId || '';
+
+    return [segmentName, subcategoryName].filter(Boolean).join(' · ');
   };
 
   const metrics = latestRun
@@ -315,7 +350,9 @@ export const NewsAutomationPanel: React.FC = () => {
                             {actionLabel(item.action)}
                           </Tag>
                           {item.subcategoryId && (
-                            <Tag tone="neutral">{item.subcategoryId}</Tag>
+                            <Tag tone="neutral">
+                              {categoryLabel(item.segmentId, item.subcategoryId)}
+                            </Tag>
                           )}
                           {item.confidence !== null &&
                             item.confidence !== undefined && (
