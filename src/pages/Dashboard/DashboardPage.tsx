@@ -100,7 +100,7 @@ export const DashboardPage: React.FC = () => {
             size="sm"
             onClick={loadDashboardData}
             isLoading={loading}
-            leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />}
+            leftIcon={<RefreshCw className={`${loading ? 'animate-spin' : ''}`} />}
           >
             <span>{isBn ? 'রিফ্রেশ' : 'Refresh'}</span>
           </Button>
@@ -127,7 +127,7 @@ export const DashboardPage: React.FC = () => {
               variant="primary"
               size="sm"
               onClick={loadDashboardData}
-              leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
+              leftIcon={<RefreshCw />}
               className="mt-2"
             >
               <span>{isBn ? 'আবার চেষ্টা করুন' : 'Retry'}</span>
