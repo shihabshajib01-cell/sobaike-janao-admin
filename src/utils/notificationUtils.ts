@@ -50,6 +50,7 @@ export const isSafeNotificationRoute = (route: string | null | undefined): boole
   // - /users/:userId/edit
   // - /notifications
   const safePatterns = [
+    /^\/$/,
     /^\/dashboard\/?$/,
     /^\/complaints\/?$/,
     /^\/complaints\/[a-zA-Z0-9_-]+\/?$/,
