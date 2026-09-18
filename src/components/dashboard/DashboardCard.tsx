@@ -73,7 +73,7 @@ export const StatCard: React.FC<DashboardStatCardItemProps> = ({
         </div>
       </div>
 
-      <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 text-[11px] text-slate-400 dark:text-slate-500">
+      <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 type-meta text-slate-400 dark:text-slate-500">
         <span className="truncate block">
           {isBn ? subtextBn : subtextEn}
         </span>
