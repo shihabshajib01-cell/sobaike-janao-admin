@@ -2,6 +2,7 @@ import React from 'react';
 import { AuditLogItem } from '@/types/AuditLog';
 import { useLanguage } from '@/context/LanguageContext';
 import { Button } from '@/components/ui/Button';
+import { ResponsiveDataView, ResponsiveDataTableView, ResponsiveDataCardView } from '@/components/ui/ResponsiveDataView';
 import {
   getAuditActionMeta,
   formatTargetType,
@@ -51,12 +52,12 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
   }
 
   return (
-    <div
+    <ResponsiveDataView
       id="activity-log-table-container"
       className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs"
     >
       {/* Desktop Table View */}
-      <div className="hidden md:block overflow-x-auto">
+      <ResponsiveDataTableView className="overflow-x-auto">
         <table className="w-full text-left text-sm" id="activity-logs-table">
           <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
             <tr>
@@ -187,10 +188,10 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
             })}
           </tbody>
         </table>
-      </div>
+      </ResponsiveDataTableView>
 
-      {/* Mobile Card List View */}
-      <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800 p-3 space-y-3">
+      {/* Responsive Card List View */}
+      <ResponsiveDataCardView className="p-3 space-y-3 bg-slate-50/40 dark:bg-slate-950/20">
         {logs.map((log) => {
           const meta = getAuditActionMeta(log.action);
           const severity = getSeverityClasses(meta.severity);
@@ -202,7 +203,18 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
             <div
               key={log.id}
               id={`mobile-audit-card-${log.id}`}
-              className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 space-y-3"
+              onClick={() => onViewDetails(log)}
+              onKeyDown={(e) => {
+                if (e.target !== e.currentTarget) return;
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onViewDetails(log);
+                }
+              }}
+              tabIndex={0}
+              role="button"
+              aria-label={`${language === 'bn' ? 'অডিট বিস্তারিত দেখুন' : 'View audit details'} ${log.id}`}
+              className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3 cursor-pointer hover:border-sky-300 dark:hover:border-sky-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
             >
               <div className="flex items-start justify-between gap-2">
                 <span
@@ -247,7 +259,10 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
                   id={`btn-view-mobile-log-${log.id}`}
                   variant="secondary"
                   size="sm"
-                  onClick={() => onViewDetails(log)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onViewDetails(log);
+                  }}
                   className="w-full h-9 text-xs flex items-center justify-center gap-1.5 min-h-[44px]"
                 >
                   <Eye className="w-4 h-4" />
@@ -257,7 +272,7 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
             </div>
           );
         })}
-      </div>
-    </div>
+      </ResponsiveDataCardView>
+    </ResponsiveDataView>
   );
 };
