@@ -55,7 +55,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
       aria-label="Toggle color theme"
       icon={
         resolvedTheme === 'dark' ? (
-          <Sun className="text-amber-400" />
+          <Sun />
         ) : (
           <Moon />
         )
