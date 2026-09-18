@@ -38,7 +38,7 @@ export const Divider: React.FC<DividerProps> = ({
         {...props}
       >
         <div className="grow border-t border-slate-200 dark:border-slate-800" />
-        <span className="shrink-0 px-3 text-[11px] font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500">
+        <span className="shrink-0 px-3 type-meta font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500">
           {content}
         </span>
         <div className="grow border-t border-slate-200 dark:border-slate-800" />
