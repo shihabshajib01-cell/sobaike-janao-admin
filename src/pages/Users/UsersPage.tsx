@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
+import { FeedbackNotice } from '@/components/ui/FeedbackNotice';
 import { TablePageSizeSelect } from '@/components/ui/TablePageSizeSelect';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
@@ -257,23 +258,14 @@ export const UsersPage: React.FC = () => {
 
       {/* Success Notification Banner */}
       {successMessage && (
-        <div
+        <FeedbackNotice
           id="user-success-banner"
-          className="flex items-center justify-between p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 shadow-xs animate-in fade-in duration-200"
+          tone="success"
+          onDismiss={() => setSuccessMessage(null)}
+          dismissLabel={t.common.close}
         >
-          <div className="flex items-center gap-3">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <p className="text-sm font-medium">{successMessage}</p>
-          </div>
-          <ButtonBase
-            type="button"
-            onClick={() => setSuccessMessage(null)}
-            className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-100 p-1 rounded-md"
-            aria-label={t.common.close}
-          >
-            <X className="w-4 h-4" />
-          </ButtonBase>
-        </div>
+          {successMessage}
+        </FeedbackNotice>
       )}
 
       {/* Filters Bar */}
