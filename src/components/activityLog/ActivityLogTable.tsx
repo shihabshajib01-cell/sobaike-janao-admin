@@ -3,6 +3,7 @@ import { AuditLogItem } from '@/types/AuditLog';
 import { useLanguage } from '@/context/LanguageContext';
 import { Button } from '@/components/ui/Button';
 import { ResponsiveDataView, ResponsiveDataTableView, ResponsiveDataCardView } from '@/components/ui/ResponsiveDataView';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/Table';
 import {
   getAuditActionMeta,
   formatTargetType,
@@ -52,36 +53,33 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
   }
 
   return (
-    <ResponsiveDataView
-      id="activity-log-table-container"
-      className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs"
-    >
+    <ResponsiveDataView id="activity-log-table-container">
       {/* Desktop Table View */}
-      <ResponsiveDataTableView className="overflow-x-auto">
-        <table className="w-full text-left text-sm" id="activity-logs-table">
-          <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
-            <tr>
-              <th scope="col" className="px-5 py-3.5 whitespace-nowrap">
+      <ResponsiveDataTableView>
+        <Table className="text-sm" id="activity-logs-table">
+          <TableHeader>
+            <TableRow>
+              <TableHead scope="col" className="whitespace-nowrap">
                 {language === 'bn' ? 'সময়' : 'Timestamp'}
-              </th>
-              <th scope="col" className="px-5 py-3.5 whitespace-nowrap">
+              </TableHead>
+              <TableHead scope="col" className="whitespace-nowrap">
                 {language === 'bn' ? 'কার্যক্রম' : 'Action'}
-              </th>
-              <th scope="col" className="px-5 py-3.5 whitespace-nowrap">
+              </TableHead>
+              <TableHead scope="col" className="whitespace-nowrap">
                 {language === 'bn' ? 'কর্তৃপক্ষ (অ্যাক্টর)' : 'Actor'}
-              </th>
-              <th scope="col" className="px-5 py-3.5 whitespace-nowrap">
+              </TableHead>
+              <TableHead scope="col" className="whitespace-nowrap">
                 {language === 'bn' ? 'টার্গেট' : 'Target'}
-              </th>
-              <th scope="col" className="px-5 py-3.5">
+              </TableHead>
+              <TableHead scope="col">
                 {language === 'bn' ? 'বিবরণ সংক্ষেপ' : 'Summary'}
-              </th>
-              <th scope="col" className="px-5 py-3.5 text-right whitespace-nowrap">
+              </TableHead>
+              <TableHead scope="col" className="text-right whitespace-nowrap">
                 {language === 'bn' ? 'পদক্ষেপ' : 'Action'}
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {logs.map((log) => {
               const meta = getAuditActionMeta(log.action);
               const severity = getSeverityClasses(meta.severity);
@@ -92,7 +90,7 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
               const actorInfo = getActorDisplayInfo(log, language);
 
               return (
-                <tr
+                <TableRow
                   key={log.id}
                   id={`audit-row-${log.id}`}
                   onClick={() => onViewDetails(log)}
@@ -108,16 +106,16 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
                   className="cursor-pointer hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500"
                 >
                   {/* Timestamp */}
-                  <td className="px-5 py-3.5 whitespace-nowrap">
+                  <TableCell className="whitespace-nowrap">
                     <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
                       <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                       <span className="font-medium">{time.date}</span>
                       <span className="text-slate-400 dark:text-slate-500">{time.time}</span>
                     </div>
-                  </td>
+                  </TableCell>
 
                   {/* Action Badge */}
-                  <td className="px-5 py-3.5 whitespace-nowrap">
+                  <TableCell className="whitespace-nowrap">
                     <span
                       className={cn(
                         'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border shadow-2xs',
@@ -127,10 +125,10 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
                       <ActionIcon className="w-3.5 h-3.5 shrink-0" />
                       <span>{language === 'bn' ? meta.labelBn : meta.labelEn}</span>
                     </span>
-                  </td>
+                  </TableCell>
 
                   {/* Actor */}
-                  <td className="px-5 py-3.5 whitespace-nowrap">
+                  <TableCell className="whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 shrink-0">
                         <User className="w-3.5 h-3.5" />
@@ -146,10 +144,10 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
                         )}
                       </div>
                     </div>
-                  </td>
+                  </TableCell>
 
                   {/* Target */}
-                  <td className="px-5 py-3.5 whitespace-nowrap">
+                  <TableCell className="whitespace-nowrap">
                     <div className="flex items-center gap-1.5">
                       <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                         {formatTargetType(log.target_type, language)}
@@ -158,17 +156,17 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
                         {log.target_id || '—'}
                       </span>
                     </div>
-                  </td>
+                  </TableCell>
 
                   {/* Summary Snippet */}
-                  <td className="px-5 py-3.5 max-w-[240px]">
+                  <TableCell className="max-w-[240px]">
                     <p className="text-xs text-slate-600 dark:text-slate-400 truncate">
                       {summarySnippet || '—'}
                     </p>
-                  </td>
+                  </TableCell>
 
                   {/* Actions Column */}
-                  <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                  <TableCell className="text-right whitespace-nowrap">
                     <Button
                       id={`btn-view-log-${log.id}`}
                       variant="ghost"
@@ -182,12 +180,12 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
                       <Eye className="w-3.5 h-3.5 mr-1" />
                       {language === 'bn' ? 'বিস্তারিত' : 'Details'}
                     </Button>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </ResponsiveDataTableView>
 
       {/* Responsive Card List View */}
