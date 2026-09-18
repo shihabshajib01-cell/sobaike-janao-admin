@@ -11,7 +11,7 @@ import {
 import { AdminLayout } from '@/layouts';
 import { LoadingState, AccessDenied } from '@/components/common';
 import { useAuth } from '@/context/AuthContext';
-import { ADMIN_NAVIGATION_ITEMS, getFirstAccessibleRoute } from '@/routes/routes.config';
+import { getFirstAccessibleRoute } from '@/routes/routes.config';
 import {
   LoginPage,
   DashboardPage,
@@ -19,6 +19,7 @@ import {
   ComplaintDetailPage,
   ResponsesPage,
   CategoriesPage,
+  BannersPage,
   MapPage,
   LocationActivityPage,
   RolesPage,
@@ -189,6 +190,14 @@ const routes = createRoutesFromElements(
         element={
           <PermissionGuard requiredPermission="categories.view">
             <CategoriesPage />
+          </PermissionGuard>
+        }
+      />
+      <Route
+        path="/banners"
+        element={
+          <PermissionGuard requiredPermission="banners.manage">
+            <BannersPage />
           </PermissionGuard>
         }
       />

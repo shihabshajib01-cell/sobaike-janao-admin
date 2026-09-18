@@ -4,6 +4,7 @@ import {
   AlertCircle,
   MessageSquare,
   FolderTree,
+  Images,
   MapPin,
   MapPinned,
   ShieldCheck,
@@ -14,8 +15,9 @@ import { TranslationDictionary } from '@/context/LanguageContext';
 
 export interface RouteItem {
   path: string;
-  labelKey: keyof TranslationDictionary['nav'];
+  labelKey?: keyof TranslationDictionary['nav'];
   defaultLabel: string;
+  defaultLabelBn?: string;
   icon: React.ComponentType<{ className?: string }>;
   requiredPermission?: string;
   badge?: string;
@@ -50,6 +52,13 @@ export const ADMIN_NAVIGATION_ITEMS: RouteItem[] = [
     defaultLabel: 'Categories',
     icon: FolderTree,
     requiredPermission: 'categories.view',
+  },
+  {
+    path: '/banners',
+    defaultLabel: 'Banner Management',
+    defaultLabelBn: 'ব্যানার ব্যবস্থাপনা',
+    icon: Images,
+    requiredPermission: 'banners.manage',
   },
   {
     path: '/map',

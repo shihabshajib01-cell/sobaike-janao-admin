@@ -130,7 +130,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           ) : (
             accessibleNavItems.map((item) => {
               const Icon = item.icon;
-              const label = t.nav[item.labelKey] || item.defaultLabel;
+              const label = item.labelKey
+                ? t.nav[item.labelKey] || item.defaultLabel
+                : language === 'bn'
+                  ? item.defaultLabelBn || item.defaultLabel
+                  : item.defaultLabel;
 
               return (
                 <NavLink

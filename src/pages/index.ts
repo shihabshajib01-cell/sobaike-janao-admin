@@ -4,6 +4,7 @@ export * from './Complaints/ComplaintsPage';
 export * from './Complaints/ComplaintDetailPage';
 export * from './Responses/ResponsesPage';
 export * from './Categories/CategoriesPage';
+export * from './Banners/BannersPage';
 export * from './Map/MapPage';
 export * from './LocationActivity/LocationActivityPage';
 export * from './Roles/RolesPage';
