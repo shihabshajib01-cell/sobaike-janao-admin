@@ -134,8 +134,8 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
                 type="button"
                 variant="secondary"
                 onClick={() => setIsFormBuilderOpen(true)}
-                leftIcon={<Wrench className="w-3.5 h-3.5" />}
-                className="w-full sm:w-auto min-h-[44px]"
+                leftIcon={<Wrench />}
+                className="w-full sm:w-auto"
               >
                 {isBn ? 'Form Builder' : 'Form Builder'}
               </Button>
@@ -146,8 +146,8 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
                 variant="success"
                 onClick={handlePublish}
                 isLoading={isPublishing}
-                leftIcon={<Send className="w-3.5 h-3.5" />}
-                className="w-full sm:w-auto min-h-[44px]"
+                leftIcon={<Send />}
+                className="w-full sm:w-auto"
               >
                 {isBn ? 'Publish' : 'Publish'}
               </Button>
@@ -156,8 +156,8 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
               type="button"
               variant="primary"
               onClick={handleOpenEdit}
-              leftIcon={<Pencil className="w-3.5 h-3.5" />}
-              className="w-full sm:w-auto min-h-[44px]"
+              leftIcon={<Pencil />}
+              className="w-full sm:w-auto"
             >
               {isBn ? 'সম্পাদনা করুন' : 'Edit'}
             </Button>
