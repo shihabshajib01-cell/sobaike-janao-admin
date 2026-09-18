@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
+import { ResponsiveDataView, ResponsiveDataTableView, ResponsiveDataCardView } from '@/components/ui/ResponsiveDataView';
 import { useLanguage } from '@/context/LanguageContext';
 import { roleApi } from '@/services/api';
 import { RoleListItem, RoleApiError } from '@/types/Role';
@@ -267,15 +268,15 @@ export const RolesPage: React.FC = () => {
             <span>{getShowingCountText()}</span>
           </div>
 
-          {/* Desktop Table View */}
-          <div className="hidden md:block">
-            <RoleTable roles={roles} />
-          </div>
+          <ResponsiveDataView>
+            <ResponsiveDataTableView>
+              <RoleTable roles={roles} />
+            </ResponsiveDataTableView>
 
-          {/* Mobile Card List View */}
-          <div className="md:hidden">
-            <RoleMobileCardList roles={roles} />
-          </div>
+            <ResponsiveDataCardView>
+              <RoleMobileCardList roles={roles} />
+            </ResponsiveDataCardView>
+          </ResponsiveDataView>
         </div>
       )}
     </div>
