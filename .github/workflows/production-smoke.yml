@@ -28,22 +28,25 @@ jobs:
           for attempt in {1..12}; do
             code=$(curl -L -sS -o /tmp/admin-index.html -w "%{http_code}" "$SITE_URL" || true)
             if [ "$code" = "200" ]; then
-              ok=1
-              break
+              if python - <<'PY'
+          from pathlib import Path
+          html = Path('/tmp/admin-index.html').read_text(errors='replace')
+          valid_root = 'id="root"' in html or "id='root'" in html
+          bundled = '/src/main.tsx' not in html
+          raise SystemExit(0 if valid_root and bundled else 1)
+          PY
+              then
+                ok=1
+                break
+              fi
+              echo "Attempt $attempt reached the site but the new production bundle is not visible yet; retrying..."
+            else
+              echo "Attempt $attempt returned HTTP $code; retrying..."
             fi
-            echo "Attempt $attempt returned HTTP $code; retrying..."
             sleep 10
           done
           test "$ok" = "1"
-          python - <<'PY'
-          from pathlib import Path
-          html = Path('/tmp/admin-index.html').read_text(errors='replace')
-          if 'id="root"' not in html and "id='root'" not in html:
-              raise SystemExit('ERROR: production HTML is missing the React root element')
-          if '/src/main.tsx' in html:
-              raise SystemExit('ERROR: production page references source entry instead of bundled assets')
-          print('Admin site smoke check passed')
-          PY
+          echo "Admin site smoke check passed"
 
       - name: Verify private Admin RPC rejects anonymous access
         shell: bash
