@@ -77,7 +77,6 @@ export const ComplaintVersionHistory: React.FC<ComplaintVersionHistoryProps> = (
                     variant="ghost"
                     size="sm"
                     onClick={() => toggleExpand(ver.versionNumber)}
-                    className="h-6 px-2 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
                   >
                     <span>{isExpanded ? (isBn ? 'সংক্ষেপ' : 'Hide') : (isBn ? 'স্ন্যাপশট দেখুন' : 'View Snapshot')}</span>
                     {isExpanded ? <ChevronUp className="w-3.5 h-3.5 ml-1" /> : <ChevronDown className="w-3.5 h-3.5 ml-1" />}
