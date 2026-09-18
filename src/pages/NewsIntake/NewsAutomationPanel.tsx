@@ -8,6 +8,7 @@ import {
   Newspaper,
   RefreshCw,
   SearchCheck,
+  TimerReset,
   ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -32,6 +33,13 @@ import {
 const EMPTY_DASHBOARD: NewsIntakeAutomationDashboard = {
   sources: [],
   runs: [],
+  automation: {
+    enabled: false,
+    intervalHours: 36,
+    lastAutoDispatchedAt: null,
+    nextAutoDueAt: null,
+    running: false,
+  },
 };
 
 const EMPTY_TAXONOMY: NewsIntakeTaxonomy = {
@@ -71,6 +79,7 @@ export const NewsAutomationPanel: React.FC = () => {
     useState<NewsIntakeTaxonomy>(EMPTY_TAXONOMY);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
+  const [updatingSchedule, setUpdatingSchedule] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [showAllResults, setShowAllResults] = useState(false);
@@ -141,6 +150,13 @@ export const NewsAutomationPanel: React.FC = () => {
       const result = await newsIntakeApi.scanSources();
       await loadDashboard();
       setSelectedRunId(result.runId);
+      if (result.alreadyRunning) {
+        setError(
+          isBn
+            ? 'আরেকটি নিউজ স্ক্যান ইতিমধ্যে চলছে। একই সময়ে দ্বিতীয় স্ক্যান শুরু করা হয়নি।'
+            : 'Another News Intake scan is already running. A second overlapping scan was not started.'
+        );
+      }
     } catch (err: unknown) {
       setError(
         err instanceof Error
@@ -149,6 +165,23 @@ export const NewsAutomationPanel: React.FC = () => {
       );
     } finally {
       setScanning(false);
+    }
+  };
+
+  const handleAutoUpdate = async () => {
+    setUpdatingSchedule(true);
+    setError(null);
+    try {
+      await newsIntakeApi.setAutoUpdate(!dashboard.automation.enabled);
+      await loadDashboard();
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'News Automation schedule could not be updated.'
+      );
+    } finally {
+      setUpdatingSchedule(false);
     }
   };
 
@@ -251,13 +284,16 @@ export const NewsAutomationPanel: React.FC = () => {
             size="lg"
             onClick={handleScan}
             isLoading={scanning}
-            disabled={loading || scanning || automatedSources.length === 0}
+            disabled={
+              loading ||
+              scanning ||
+              dashboard.automation.running ||
+              automatedSources.length === 0
+            }
             leftIcon={<SearchCheck />}
             className="shrink-0"
           >
-            {isBn
-              ? 'সোর্স ও ডুপ্লিকেট যাচাই করুন'
-              : 'Check Sources & Duplicates'}
+            {isBn ? 'এখনই যাচাই করুন' : 'Check Now'}
           </Button>
         </div>
       </CardHeader>
@@ -272,6 +308,75 @@ export const NewsAutomationPanel: React.FC = () => {
             <p>{error}</p>
           </FeedbackNotice>
         )}
+
+        <section
+          className="rounded-lg border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-900/40"
+          aria-labelledby="news-auto-schedule-heading"
+        >
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0 space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3
+                  id="news-auto-schedule-heading"
+                  className="type-card-title text-slate-900 dark:text-slate-100"
+                >
+                  {isBn ? 'অটো আপডেট' : 'Auto Update'}
+                </h3>
+                <Tag tone={dashboard.automation.enabled ? 'success' : 'neutral'}>
+                  {dashboard.automation.enabled
+                    ? isBn
+                      ? 'চালু'
+                      : 'ON'
+                    : isBn
+                      ? 'বন্ধ'
+                      : 'OFF'}
+                </Tag>
+                <Tag tone="info">
+                  {isBn ? 'প্রতি ৩৬ ঘণ্টা' : 'Every 36 hours'}
+                </Tag>
+              </div>
+
+              <div className="grid gap-1 type-meta text-slate-500 dark:text-slate-400 sm:grid-cols-2 sm:gap-x-6">
+                <p>
+                  {isBn ? 'সর্বশেষ অটো রান: ' : 'Last automatic run: '}
+                  {formatDateTime(dashboard.automation.lastAutoDispatchedAt)}
+                </p>
+                <p>
+                  {isBn ? 'পরবর্তী নির্ধারিত রান: ' : 'Next scheduled run: '}
+                  {dashboard.automation.enabled
+                    ? formatDateTime(dashboard.automation.nextAutoDueAt)
+                    : isBn
+                      ? 'বন্ধ'
+                      : 'Disabled'}
+                </p>
+              </div>
+
+              <p className="type-meta text-slate-600 dark:text-slate-300">
+                {isBn
+                  ? 'ম্যানুয়াল “এখনই যাচাই করুন” অটো টাইমার রিসেট করে না। একই সময়ে একটি স্ক্যানই চলবে।'
+                  : 'Manual “Check Now” runs do not reset the automatic timer. Only one scan can run at a time.'}
+              </p>
+            </div>
+
+            <Button
+              size="sm"
+              variant={dashboard.automation.enabled ? 'secondary' : 'primary'}
+              onClick={handleAutoUpdate}
+              isLoading={updatingSchedule}
+              disabled={loading || updatingSchedule}
+              leftIcon={<TimerReset />}
+              className="shrink-0"
+            >
+              {dashboard.automation.enabled
+                ? isBn
+                  ? 'অটো আপডেট বন্ধ করুন'
+                  : 'Turn Auto Update Off'
+                : isBn
+                  ? 'অটো আপডেট চালু করুন'
+                  : 'Turn Auto Update On'}
+            </Button>
+          </div>
+        </section>
 
         <FeedbackNotice
           tone="info"
@@ -436,6 +541,15 @@ export const NewsAutomationPanel: React.FC = () => {
                 <div className="flex flex-wrap items-center gap-2">
                   <Tag tone={runTone(selectedRun.status)}>
                     {selectedRun.status}
+                  </Tag>
+                  <Tag tone={selectedRun.triggerType === 'automatic' ? 'info' : 'neutral'}>
+                    {selectedRun.triggerType === 'automatic'
+                      ? isBn
+                        ? 'অটোমেটিক'
+                        : 'Automatic'
+                      : isBn
+                        ? 'ম্যানুয়াল'
+                        : 'Manual'}
                   </Tag>
                   <p className="type-meta text-slate-500 dark:text-slate-400">
                     {formatDateTime(selectedRun.startedAt)}
