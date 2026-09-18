@@ -18,25 +18,28 @@ export default defineConfig(() => {
     build: {
       outDir: 'dist',
       assetsDir: 'assets',
-      sourcemap: true,
+      sourcemap: false,
       rollupOptions: {
         output: {
           manualChunks(id) {
-            if (id.includes('node_modules')) {
-              if (id.includes('react') || id.includes('react-dom')) {
-                return 'vendor-react';
-              }
-              if (id.includes('react-router') || id.includes('react-router-dom')) {
-                return 'vendor-router';
-              }
-              if (id.includes('lucide-react')) {
-                return 'vendor-icons';
-              }
-              if (id.includes('motion')) {
-                return 'vendor-motion';
-              }
-              return 'vendor';
+            if (!id.includes('node_modules')) return undefined;
+
+            if (id.includes('react-router') || id.includes('react-router-dom')) {
+              return 'vendor-router';
             }
+            if (
+              id.includes('/react/') ||
+              id.includes('/react-dom/') ||
+              id.includes('node_modules/react/') ||
+              id.includes('node_modules/react-dom/')
+            ) {
+              return 'vendor-react';
+            }
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
+            }
+
+            return undefined;
           },
         },
       },
