@@ -16,7 +16,7 @@ import {
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-news-intake-scheduler",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -370,11 +370,24 @@ const safeScanFetch = async (
   return {html,finalUrl:current.toString(),domain};
 };
 
-const runAutomatedScan = async (supabase: any) => {
-  const {data:beginData,error:beginError}=await supabase.rpc('admin_begin_news_intake_run');
+const runAutomatedScan = async (
+  supabase: any,
+  triggerType: 'manual' | 'automatic' = 'manual'
+) => {
+  const beginRpc = triggerType === 'automatic'
+    ? 'service_begin_news_intake_run'
+    : 'admin_begin_news_intake_run';
+  const {data:beginData,error:beginError}=await supabase.rpc(beginRpc);
   if(beginError) throw new Error(beginError.message);
   const runId=String(beginData?.runId||'');
   if(!runId) throw new Error('Could not start News Intake run.');
+  if(beginData?.alreadyRunning===true){
+    return {
+      ...beginData,
+      triggerType,
+      alreadyRunning:true,
+    };
+  }
 
   const record=async(item:any)=>{
     const {error}=await supabase.rpc('admin_record_news_intake_item',{
@@ -768,7 +781,11 @@ const runAutomatedScan = async (supabase: any) => {
       }
     );
     if(finishError) throw new Error(finishError.message);
-    return finishData;
+    return {
+      ...finishData,
+      triggerType,
+      alreadyRunning:false,
+    };
   } catch(error) {
     fatalMessage=error instanceof Error?error.message:'Automated News Intake failed.';
     await supabase.rpc('admin_finish_news_intake_run',{
@@ -780,23 +797,60 @@ const runAutomatedScan = async (supabase: any) => {
   }
 };
 
+const SCHEDULER_SECRET_SHA256 =
+  "1660831eb1b7f0a85d4e771880111a66d40cbd686fddc22657d055c446562476";
+
+const sha256Hex = async (value: string) => {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(value)
+  );
+  return Array.from(new Uint8Array(digest))
+    .map((byte)=>byte.toString(16).padStart(2,"0"))
+    .join("");
+};
+
 Deno.serve(async (req) => {
   if(req.method==="OPTIONS") return new Response("ok",{headers:corsHeaders});
   if(req.method!=="POST") return json({error:"Method not allowed."},405);
+
   try {
-    const authHeader=req.headers.get("Authorization")??"";
-    if(!authHeader.startsWith("Bearer ")) return json({error:"Authentication required."},401);
     const supabaseUrl=Deno.env.get("SUPABASE_URL")??"";
-    const publishableKey=req.headers.get("apikey")??Deno.env.get("SUPABASE_ANON_KEY")??"";
-    if(!supabaseUrl||!publishableKey) return json({error:"Function configuration error."},500);
-    const supabase=createClient(supabaseUrl,publishableKey,{
+    if(!supabaseUrl) return json({error:"Function configuration error."},500);
+
+    const schedulerSecret=req.headers.get("x-news-intake-scheduler")??"";
+    const scheduledRequest=
+      schedulerSecret.length>=32 &&
+      (await sha256Hex(schedulerSecret))===SCHEDULER_SECRET_SHA256;
+
+    if(scheduledRequest){
+      const serviceRoleKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")??"";
+      if(!serviceRoleKey) return json({error:"Scheduler configuration error."},500);
+      const serviceClient=createClient(supabaseUrl,serviceRoleKey,{
+        auth:{persistSession:false,autoRefreshToken:false},
+      });
+      const result=await runAutomatedScan(serviceClient,'automatic');
+      return json(result);
+    }
+
+    const authHeader=req.headers.get("Authorization")??"";
+    if(!authHeader.startsWith("Bearer ")) {
+      return json({error:"Authentication required."},401);
+    }
+
+    const publishableKey=
+      req.headers.get("apikey")??Deno.env.get("SUPABASE_ANON_KEY")??"";
+    if(!publishableKey) return json({error:"Function configuration error."},500);
+
+    const userClient=createClient(supabaseUrl,publishableKey,{
       global:{headers:{Authorization:authHeader}},
       auth:{persistSession:false,autoRefreshToken:false},
     });
     const token=authHeader.slice("Bearer ".length);
-    const {error:userError}=await supabase.auth.getUser(token);
+    const {error:userError}=await userClient.auth.getUser(token);
     if(userError) return json({error:"Invalid session."},401);
-    const result=await runAutomatedScan(supabase);
+
+    const result=await runAutomatedScan(userClient,'manual');
     return json(result);
   } catch(error) {
     const message=error instanceof Error?error.message:"Automated News Intake failed.";
