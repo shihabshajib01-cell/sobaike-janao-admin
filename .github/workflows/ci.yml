@@ -32,6 +32,9 @@ jobs:
       - name: Responsive table audit
         run: npm run audit:responsive-tables
 
+      - name: Typography system audit
+        run: npm run audit:typography
+
       - name: Lint
         run: npm run lint
 
