@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -260,14 +261,14 @@ export const UsersPage: React.FC = () => {
             <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <p className="text-sm font-medium">{successMessage}</p>
           </div>
-          <button
+          <ButtonBase
             type="button"
             onClick={() => setSuccessMessage(null)}
             className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-100 p-1 rounded-md"
             aria-label={t.common.close}
           >
             <X className="w-4 h-4" />
-          </button>
+          </ButtonBase>
         </div>
       )}
 
@@ -417,7 +418,7 @@ export const UsersPage: React.FC = () => {
 
                   const isCurrent = item === page;
                   return (
-                    <button
+                    <ButtonBase
                       key={item}
                       type="button"
                       onClick={() => setPage(item)}
@@ -435,7 +436,7 @@ export const UsersPage: React.FC = () => {
                       }`}
                     >
                       {formatNumber(item)}
-                    </button>
+                    </ButtonBase>
                   );
                 })}
               </div>
