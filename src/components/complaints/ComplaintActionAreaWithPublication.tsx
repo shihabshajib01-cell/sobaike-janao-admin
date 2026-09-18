@@ -41,7 +41,7 @@ export const ComplaintActionAreaWithPublication: React.FC<ComplaintActionAreaPro
               <span>{isBn ? 'পাবলিক পোস্ট প্রস্তুতি' : 'Public Post Preparation'}</span>
             </CardTitle>
             {hasPreparedDraft && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 type-meta font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
                 <Check className="h-3 w-3" />
                 {isBn ? 'প্রস্তুত' : 'Prepared'}
               </span>
