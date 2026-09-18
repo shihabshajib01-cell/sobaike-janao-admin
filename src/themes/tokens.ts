@@ -200,14 +200,14 @@ export const baseTokens: ThemeTokens = {
   },
   typography: {
     fontFamily: {
-      sans: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-      bengali: '"Hind Siliguri", "Noto Sans Bengali", "Kalpurush", system-ui, -apple-system, sans-serif',
+      sans: '"Noto Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      bengali: '"Noto Sans Bengali", "Noto Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       mono: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
     },
     scale: {
       display: {
-        fontSize: '1.875rem', // 30px
-        lineHeight: '2.25rem', // 36px
+        fontSize: '2rem', // 32px max display ceiling
+        lineHeight: '2.625rem', // 42px
         fontWeight: '700',
         letterSpacing: '-0.025em',
       },
@@ -218,25 +218,25 @@ export const baseTokens: ThemeTokens = {
         letterSpacing: '-0.02em',
       },
       sectionTitle: {
+        fontSize: '1.25rem', // 20px
+        lineHeight: '1.875rem', // 30px
+        fontWeight: '600',
+        letterSpacing: '-0.01em',
+      },
+      cardTitle: {
         fontSize: '1.125rem', // 18px
         lineHeight: '1.75rem', // 28px
         fontWeight: '600',
         letterSpacing: '-0.01em',
       },
-      cardTitle: {
-        fontSize: '1rem', // 16px
-        lineHeight: '1.5rem', // 24px
-        fontWeight: '600',
-        letterSpacing: '-0.01em',
-      },
       body: {
-        fontSize: '0.875rem', // 14px
-        lineHeight: '1.375rem', // 22px
+        fontSize: '1rem', // 16px
+        lineHeight: '1.625rem', // 26px
         fontWeight: '400',
       },
       bodyMedium: {
-        fontSize: '0.875rem', // 14px
-        lineHeight: '1.375rem', // 22px
+        fontSize: '1rem', // 16px
+        lineHeight: '1.625rem', // 26px
         fontWeight: '500',
       },
       caption: {
@@ -245,24 +245,24 @@ export const baseTokens: ThemeTokens = {
         fontWeight: '400',
       },
       small: {
-        fontSize: '0.75rem', // 12px
-        lineHeight: '1rem', // 16px
+        fontSize: '0.875rem', // 14px
+        lineHeight: '1.375rem', // 22px
         fontWeight: '500',
       },
       tableText: {
-        fontSize: '0.8125rem', // 13px
-        lineHeight: '1.25rem', // 20px
+        fontSize: '0.875rem', // 14px
+        lineHeight: '1.375rem', // 22px
         fontWeight: '400',
       },
       button: {
-        fontSize: '0.875rem', // 14px
-        lineHeight: '1.25rem', // 20px
+        fontSize: '1rem', // 16px
+        lineHeight: '1.5rem', // 24px
         fontWeight: '500',
         letterSpacing: '0.01em',
       },
       badge: {
-        fontSize: '0.6875rem', // 11px
-        lineHeight: '0.875rem', // 14px
+        fontSize: '0.75rem', // 12px
+        lineHeight: '1.125rem', // 18px
         fontWeight: '600',
         letterSpacing: '0.03em',
       },
