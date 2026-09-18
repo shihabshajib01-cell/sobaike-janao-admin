@@ -173,8 +173,7 @@ export const RolePermissionEditor: React.FC<RolePermissionEditorProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={handleSelectAllGlobal}
-                className="h-8 px-2.5 text-xs text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400"
-                leftIcon={<CheckSquare className="w-3.5 h-3.5" />}
+                leftIcon={<CheckSquare />}
               >
                 <span>{t.roles.selectAll}</span>
               </Button>
@@ -183,8 +182,7 @@ export const RolePermissionEditor: React.FC<RolePermissionEditorProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={handleClearAllGlobal}
-                className="h-8 px-2.5 text-xs text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400"
-                leftIcon={<Square className="w-3.5 h-3.5" />}
+                leftIcon={<Square />}
               >
                 <span>{t.roles.clearAll}</span>
               </Button>
