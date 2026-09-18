@@ -54,6 +54,9 @@ jobs:
       - name: Sourced report duplicate audit
         run: npm run audit:duplicate-reports
 
+      - name: News Intake audit
+        run: npm run audit:news-intake
+
       - name: Dependency security audit
         run: npm run audit:dependencies
 
