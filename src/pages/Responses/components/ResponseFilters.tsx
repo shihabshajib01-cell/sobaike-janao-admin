@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React from 'react';
 import { ResponseFilterState, ResponseTypeFilter } from '@/types/Response';
 import { useLanguage } from '@/context/LanguageContext';
@@ -48,14 +49,14 @@ export const ResponseFilters: React.FC<ResponseFiltersProps> = ({
             disabled={isLoading}
           />
           {filters.search && (
-            <button
+            <ButtonBase
               type="button"
               onClick={() => onFilterChange({ search: '' })}
               className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               aria-label={isBn ? 'অনুসন্ধান মুছুন' : 'Clear search'}
             >
               <X className="w-4 h-4" />
-            </button>
+            </ButtonBase>
           )}
         </div>
 
