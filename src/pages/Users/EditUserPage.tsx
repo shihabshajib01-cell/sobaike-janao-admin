@@ -140,7 +140,6 @@ export const EditUserPage: React.FC = () => {
           variant="ghost"
           size="sm"
           onClick={() => navigate('/users')}
-          className="h-9"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           {t.users.backToUsers}
@@ -170,7 +169,7 @@ export const EditUserPage: React.FC = () => {
           variant="ghost"
           size="sm"
           onClick={() => navigate(userId ? `/users/${userId}` : '/users')}
-          className="h-9 w-9 p-0"
+          className="w-9"
           aria-label={t.common.back}
         >
           <ArrowLeft className="w-5 h-5" />
@@ -202,7 +201,6 @@ export const EditUserPage: React.FC = () => {
                 variant="secondary"
                 size="sm"
                 onClick={() => navigate(`/users/${userId}`)}
-                className="h-8 text-xs bg-white dark:bg-slate-900 border-purple-200 dark:border-purple-800 text-purple-900 dark:text-purple-200"
               >
                 <ArrowLeft className="w-3.5 h-3.5 mr-1" />
                 {t.users.backToUsers}
@@ -229,7 +227,6 @@ export const EditUserPage: React.FC = () => {
                 variant="secondary"
                 size="sm"
                 onClick={() => navigate(`/users/${userId}`)}
-                className="h-8 text-xs bg-white dark:bg-slate-900 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200"
               >
                 <ArrowLeft className="w-3.5 h-3.5 mr-1" />
                 {t.users.backToUsers}
