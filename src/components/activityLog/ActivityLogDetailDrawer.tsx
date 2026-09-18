@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React, { useState } from 'react';
 import { Drawer } from '@/components/ui/Drawer';
 import { AuditLogItem } from '@/types/AuditLog';
@@ -309,7 +310,7 @@ export const ActivityLogDetailDrawer: React.FC<ActivityLogDetailDrawerProps> = (
 
         {/* Collapsible Technical Details Payload (Sanitized JSON) */}
         <div className="border-t border-slate-200 dark:border-slate-800 pt-4">
-          <button
+          <ButtonBase
             type="button"
             onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
             className="flex items-center justify-between w-full text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 py-1"
@@ -325,7 +326,7 @@ export const ActivityLogDetailDrawer: React.FC<ActivityLogDetailDrawerProps> = (
             ) : (
               <ChevronDown className="w-4 h-4" />
             )}
-          </button>
+          </ButtonBase>
 
           {showTechnicalDetails && (
             <div className="mt-2.5 p-3 rounded-lg bg-slate-900 text-slate-200 font-mono text-[11px] overflow-x-auto max-h-56 leading-relaxed">
