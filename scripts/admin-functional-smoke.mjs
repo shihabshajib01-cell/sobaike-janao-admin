@@ -5,6 +5,42 @@ const LIVE_URL = (process.env.LIVE_SITE_URL || 'https://shihabshajib01-cell.gith
 const E2E_SUPABASE_ORIGIN = 'https://admin-e2e.invalid';
 const E2E_SOURCED_REPORT_ID = 'E2E-SOURCED-001';
 const E2E_EXISTING_REPORT_ID = 'E2E-EXISTING-001';
+const E2E_NEWS_INTAKE_REPORT_ID = 'E2E-NEWS-001';
+
+const e2eNewsIntakeComplaint = {
+  id: E2E_NEWS_INTAKE_REPORT_ID,
+  segment_id: 'public_safety',
+  subcategory_id: 'theft',
+  title: 'নিউজ ইনটেক ব্রাউজার পরীক্ষার রিপোর্ট',
+  title_en: 'News Intake browser test report',
+  description: 'নিউজ ইনটেক এক-ক্লিক প্রকাশ পরীক্ষার জন্য বিচ্ছিন্ন ডাটা।',
+  description_en: 'Isolated fixture for News Intake one-click publication.',
+  incident_date: '2026-09-18',
+  incident_time: '12:00',
+  status: 'published',
+  priority: 'medium',
+  origin_type: 'sourced_report',
+  privacy_choice: 'anonymous',
+  publication_preferences: {},
+  division: 'Dhaka',
+  district: 'Dhaka',
+  upazila_or_thana: 'Tejgaon',
+  area: 'E2E Intake Area',
+  created_at: '2026-09-18T12:00:00Z',
+  updated_at: '2026-09-18T12:00:00Z',
+};
+
+const newsIntakeClearFixture = {
+  sourceDomain: {
+    approved: true,
+    hostname: 'www.thedailystar.net',
+    publisherName: 'The Daily Star',
+  },
+  duplicate: duplicateClearFixture,
+  canCreateDraft: true,
+  canPublishImmediately: true,
+};
+
 
 const e2eSourcedComplaint = {
   id: E2E_SOURCED_REPORT_ID,
@@ -147,7 +183,58 @@ async function installSupabaseFixtures(page) {
 
     let body = [];
 
-    if (path.includes('/rest/v1/rpc/admin_check_report_duplicate')) {
+    if (path.includes('/functions/v1/news-intake-fetch')) {
+      body = {
+        sourceType: 'news',
+        publisherName: 'The Daily Star',
+        sourceTitle: 'E2E approved source article',
+        canonicalUrl: 'https://www.thedailystar.net/e2e-news-intake',
+        sourcePublishedDate: '2026-09-18',
+        descriptionPreview: 'Approved-source metadata preview for the News Intake browser smoke.',
+        hostname: 'www.thedailystar.net',
+        approved: true,
+      };
+    } else if (path.includes('/rest/v1/rpc/admin_get_news_intake_taxonomy')) {
+      body = {
+        segments: [
+          { id: 'public_safety', nameEn: 'Public Safety', nameBn: 'জননিরাপত্তা', order: 1 },
+        ],
+        subcategories: [
+          {
+            id: 'theft',
+            segmentId: 'public_safety',
+            nameEn: 'Theft',
+            nameBn: 'চুরি',
+            order: 1,
+            isSensitive: false,
+          },
+        ],
+      };
+    } else if (path.includes('/rest/v1/rpc/admin_preview_sourced_report_intake')) {
+      body = newsIntakeClearFixture;
+    } else if (path.includes('/rest/v1/rpc/admin_create_sourced_report_from_intake')) {
+      body = {
+        success: true,
+        reportId: E2E_NEWS_INTAKE_REPORT_ID,
+        status: 'submitted',
+        duplicate: duplicateClearFixture,
+        canPublishImmediately: true,
+      };
+    } else if (path.includes('/rest/v1/rpc/admin_merge_intake_source')) {
+      body = {
+        success: true,
+        reportId: E2E_EXISTING_REPORT_ID,
+        sourceId: 'e2e-merged-source',
+        status: 'published',
+      };
+    } else if (path.includes('/rest/v1/rpc/admin_publish_complaint')) {
+      body = {
+        success: true,
+        complaint_id: E2E_NEWS_INTAKE_REPORT_ID,
+        status: 'published',
+        previous_status: 'submitted',
+      };
+    } else if (path.includes('/rest/v1/rpc/admin_check_report_duplicate')) {
       body = duplicateMatchFixture;
     } else if (path.includes('/rest/v1/rpc/admin_confirm_reports_are_distinct')) {
       body = duplicateClearFixture;
@@ -227,7 +314,11 @@ async function installSupabaseFixtures(page) {
       body = [];
     } else if (path.includes('/rest/v1/complaints')) {
       const requestedId = url.searchParams.get('id') || '';
-      body = requestedId.includes(E2E_SOURCED_REPORT_ID) ? e2eSourcedComplaint : [];
+      body = requestedId.includes(E2E_SOURCED_REPORT_ID)
+        ? e2eSourcedComplaint
+        : requestedId.includes(E2E_NEWS_INTAKE_REPORT_ID)
+          ? e2eNewsIntakeComplaint
+          : [];
     } else if (path.includes('/rest/v1/rpc/')) {
       body = [];
     } else if (path.includes('/auth/v1/')) {
@@ -286,6 +377,7 @@ await check('DEV-only E2E admin shell renders protected core routes without runt
   const routes = [
     '/dashboard',
     '/complaints',
+    '/news-intake',
     '/responses',
     '/categories',
     '/banners',
@@ -417,6 +509,75 @@ await check('Sourced report publish is blocked until duplicate review is resolve
   if (await publishLive.isDisabled()) {
     throw new Error('Publish Live did not become available after duplicate review cleared');
   }
+
+  await context.close();
+});
+
+await check('News Intake clear source reaches one-click publication', async () => {
+  const context = await browser.newContext({ viewport: { width: 1365, height: 1000 } });
+  const page = await context.newPage();
+  attachPageGuards(page, 'local-news-intake');
+  await installSupabaseFixtures(page);
+
+  await page.goto(hashUrl(LOCAL_URL, '/news-intake'), {
+    waitUntil: 'domcontentloaded',
+    timeout: 30000,
+  });
+
+  await expectVisible(
+    page.getByRole('heading', { name: 'News Intake', exact: true, level: 1 }),
+    'News Intake page title missing'
+  );
+
+  await page.locator('#news-intake-source-url').fill(
+    'https://www.thedailystar.net/e2e-news-intake'
+  );
+  await page.getByRole('button', { name: 'Fetch Metadata', exact: true }).click();
+  await expectVisible(
+    page.getByDisplayValue('E2E approved source article'),
+    'source metadata was not populated'
+  );
+
+  await page.getByLabel('Category *').selectOption('public_safety');
+  await page.getByLabel('Subcategory *').selectOption('theft');
+  await page.getByLabel('Report title (Bangla) *').fill(
+    'নিউজ ইনটেক ব্রাউজার পরীক্ষার রিপোর্ট'
+  );
+  await page.getByLabel('Incident context (Bangla) *').fill(
+    'বিশ্বস্ত সংবাদ উৎসভিত্তিক পরীক্ষামূলক ঘটনার প্রেক্ষাপট।'
+  );
+  await page.getByLabel('Incident date *').fill('2026-09-18');
+  await page.getByLabel('Division *').fill('Dhaka');
+  await page.getByLabel('District *').fill('Dhaka');
+
+  await page
+    .getByRole('button', { name: 'Check Source & Duplicates', exact: true })
+    .click();
+
+  await expectVisible(
+    page.getByText('Clear as a new incident', { exact: true }),
+    'clear duplicate preview did not render'
+  );
+
+  const createAndPublish = page.getByRole('button', {
+    name: 'Create & Publish',
+    exact: true,
+  });
+  await expectVisible(createAndPublish, 'Create & Publish action missing for clear intake');
+  await createAndPublish.click();
+
+  await page.waitForURL(
+    (url) => url.hash.includes('/complaints/' + E2E_NEWS_INTAKE_REPORT_ID),
+    { timeout: 15000 }
+  );
+
+  await expectVisible(
+    page.getByRole('heading', {
+      name: new RegExp(E2E_NEWS_INTAKE_REPORT_ID),
+      level: 1,
+    }),
+    'one-click publish did not land on the created report'
+  );
 
   await context.close();
 });
