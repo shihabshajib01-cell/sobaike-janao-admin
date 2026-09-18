@@ -354,13 +354,15 @@ export const UserDetailPage: React.FC = () => {
               {user.effective_permissions.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5">
                   {user.effective_permissions.map((perm) => (
-                    <span
+                    <Tag
                       key={perm}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-mono bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
+                      tone="violet"
+                      icon={<Key />}
+                      mono
+                      size="md"
                     >
-                      <Key className="w-3 h-3" />
                       {perm}
-                    </span>
+                    </Tag>
                   ))}
                 </div>
               ) : (
@@ -381,9 +383,9 @@ export const UserDetailPage: React.FC = () => {
                     {roleName}
                   </span>
                   {user.role.is_system && (
-                    <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300">
+                    <Tag tone="warning">
                       {t.users.systemRoleBadge}
-                    </span>
+                    </Tag>
                   )}
                 </div>
                 {user.role.description && (
@@ -406,13 +408,15 @@ export const UserDetailPage: React.FC = () => {
               {user.effective_permissions.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5">
                   {user.effective_permissions.map((perm) => (
-                    <span
+                    <Tag
                       key={perm}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                      tone="neutral"
+                      icon={<Key />}
+                      mono
+                      size="md"
                     >
-                      <Key className="w-3 h-3 text-slate-400" />
                       {perm}
-                    </span>
+                    </Tag>
                   ))}
                 </div>
               ) : user.can_manage_target === false ? (
