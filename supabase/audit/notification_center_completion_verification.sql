@@ -5,6 +5,7 @@ DO $$
 DECLARE
   v_missing integer;
   v_def text;
+  v_compact text;
 BEGIN
   WITH expected(event_key) AS (
     VALUES
@@ -44,7 +45,13 @@ BEGIN
   WHERE n.nspname='public' AND p.proname='admin_list_notifications'
     AND pg_get_function_identity_arguments(p.oid)='p_limit integer, p_before_created_at timestamp with time zone, p_before_id uuid, p_unread_only boolean, p_category text'
   LIMIT 1;
-  IF v_def IS NULL OR v_def NOT ILIKE '%p_category = ''security''%' OR v_def NOT ILIKE '%p_category = ''configuration''%' OR v_def NOT ILIKE '%p_category = ''administration''%' OR v_def NOT ILIKE '%security_privilege%' THEN
+  v_compact := regexp_replace(COALESCE(v_def, ''), '\\s+', '', 'g');
+  IF v_def IS NULL
+     OR v_compact NOT ILIKE '%p_category=''security''%'
+     OR v_compact NOT ILIKE '%p_category=''configuration''%'
+     OR v_compact NOT ILIKE '%p_category=''administration''%'
+     OR v_compact NOT ILIKE '%security_privilege%'
+  THEN
     RAISE EXCEPTION 'Server-side notification filter contract is incomplete';
   END IF;
 
