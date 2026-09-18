@@ -83,7 +83,7 @@ export const MobileLocationActivityCardList: React.FC<MobileLocationActivityCard
               {/* Header: Permission Badge + Timestamp */}
               <div className="flex items-center justify-between gap-2">
                 <LocationPermissionBadge status={session.permission_status} />
-                <div className="flex items-center gap-1 text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                <div className="flex items-center gap-1 type-meta font-mono text-slate-500 dark:text-slate-400">
                   <Clock className="w-3 h-3 text-slate-400" />
                   <span>{formatTimestamp(session.last_seen_at)}</span>
                 </div>
@@ -110,7 +110,7 @@ export const MobileLocationActivityCardList: React.FC<MobileLocationActivityCard
                             {resolved?.shortLabel || (isBn ? 'লোকেশন' : 'Location available')}
                           </div>
                         )}
-                        <div className="flex items-center justify-between gap-2 mt-0.5 text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                        <div className="flex items-center justify-between gap-2 mt-0.5 type-meta font-mono text-slate-500 dark:text-slate-400">
                           <span>
                             {session.latitude?.toFixed(5)}, {session.longitude?.toFixed(5)}
                           </span>
@@ -127,7 +127,7 @@ export const MobileLocationActivityCardList: React.FC<MobileLocationActivityCard
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={(e) => e.stopPropagation()}
-                              className="text-[10px] text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:underline transition-colors inline-block"
+                              className="type-meta text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:underline transition-colors inline-block"
                             >
                               © OpenStreetMap contributors
                             </a>
@@ -168,7 +168,7 @@ export const MobileLocationActivityCardList: React.FC<MobileLocationActivityCard
 
               {/* Footer: Timezone & Details button */}
               <div className="flex items-center justify-between gap-2 pt-1">
-                <div className="flex items-center gap-1 text-[11px] font-mono text-slate-500 dark:text-slate-400 truncate">
+                <div className="flex items-center gap-1 type-meta font-mono text-slate-500 dark:text-slate-400 truncate">
                   <Compass className="w-3 h-3 text-slate-400 shrink-0" />
                   <span className="truncate">{session.timezone || '—'}</span>
                 </div>
