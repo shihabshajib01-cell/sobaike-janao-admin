@@ -13,6 +13,7 @@ import {
   ComplaintTimelineEvent,
   ReporterDeviceLocation,
   ComplaintConfiguredFields,
+  ComplaintSource,
 } from '@/types/Complaint';
 import { complaintApi } from '@/services/api';
 import { getComplaintParties, ComplaintParty } from '@/services/api/complaintPartiesApi';
@@ -34,7 +35,9 @@ import {
   RotateCcw,
   ArrowLeft,
   AlertTriangle,
+  ExternalLink,
   History,
+  ShieldCheck,
 } from 'lucide-react';
 
 export const ComplaintDetailPage: React.FC = () => {
@@ -61,6 +64,8 @@ export const ComplaintDetailPage: React.FC = () => {
   const [partiesLoading, setPartiesLoading] = useState<boolean>(false);
   const [configuredFields, setConfiguredFields] = useState<ComplaintConfiguredFields | undefined>();
   const [configuredFieldsError, setConfiguredFieldsError] = useState<string | null>(null);
+  const [sources, setSources] = useState<ComplaintSource[]>([]);
+  const [sourcesError, setSourcesError] = useState<string | null>(null);
   const [partiesError, setPartiesError] = useState<string | null>(null);
 
   const fetchComplaintData = useCallback(async () => {
@@ -73,6 +78,7 @@ export const ComplaintDetailPage: React.FC = () => {
     setReporterLocationError(null);
     setReporterLocationDenied(false);
     setConfiguredFieldsError(null);
+    setSourcesError(null);
     try {
       const detailRes = await complaintApi.getComplaintDetail(id, {
         loadEvidence: canViewEvidence,
@@ -91,6 +97,13 @@ export const ComplaintDetailPage: React.FC = () => {
         setReporterLocationDenied(Boolean(detailRes.reporterLocationPermissionDenied));
         setConfiguredFields(detailRes.configuredFields);
         setConfiguredFieldsError(detailRes.configuredFieldsError || null);
+
+        try {
+          setSources(await complaintApi.getComplaintSources(id));
+        } catch (sourceError: any) {
+          setSources([]);
+          setSourcesError(sourceError?.message || 'Failed to load complaint sources.');
+        }
       }
     } catch (err) {
       console.error('Failed to fetch complaint detail:', err);
@@ -201,6 +214,8 @@ export const ComplaintDetailPage: React.FC = () => {
     setPartiesError(null);
     setConfiguredFields(undefined);
     setConfiguredFieldsError(null);
+    setSources([]);
+    setSourcesError(null);
     setNotFound(false);
     setLoadError(false);
   }, [id]);
@@ -437,6 +452,89 @@ export const ComplaintDetailPage: React.FC = () => {
             error={configuredFieldsError}
             onRetry={handleRetryConfiguredFields}
           />
+
+          {(sources.length > 0 || sourcesError) && (
+            <Card id="complaint-source-provenance" variant="default">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>{isBn ? 'উৎস যাচাই' : 'Source verification'}</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {sourcesError ? (
+                  <div
+                    role="alert"
+                    className="p-3 rounded-lg border border-rose-200 dark:border-rose-900/60 bg-rose-50/70 dark:bg-rose-950/30 text-sm text-rose-800 dark:text-rose-200"
+                  >
+                    {isBn ? 'উৎসের তথ্য লোড করা যায়নি।' : sourcesError}
+                  </div>
+                ) : (
+                  sources.map((source) => (
+                    <div
+                      key={source.id}
+                      className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 space-y-2"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 break-words">
+                            {source.sourceTitle || source.publisherName}
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            {source.publisherName}
+                            {source.sourcePublishedDate ? ` · ${source.sourcePublishedDate}` : ''}
+                            {source.sourceVersion ? ` · v${source.sourceVersion}` : ''}
+                          </p>
+                        </div>
+                        <Badge
+                          status={source.verificationStatus === 'verified' ? 'published' : 'pending'}
+                          size="sm"
+                          dot
+                        >
+                          {source.verificationStatus === 'verified'
+                            ? isBn
+                              ? 'যাচাইকৃত'
+                              : 'Verified'
+                            : isBn
+                            ? 'যাচাই বাকি'
+                            : 'Unverified'}
+                        </Badge>
+                      </div>
+
+                      <a
+                        href={source.canonicalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex min-h-[40px] items-center gap-1.5 text-sm font-medium text-sky-700 dark:text-sky-300 hover:underline break-all"
+                      >
+                        <span>{isBn ? 'মূল ডিটেইল পেজ খুলুন' : 'Open canonical detail page'}</span>
+                        <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                      </a>
+
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                        <span>
+                          {isBn ? 'ফাইনাল ডিটেইল পেজ:' : 'Final detail page:'}{' '}
+                          {source.isFinalDetailPage ? (isBn ? 'হ্যাঁ' : 'Yes') : (isBn ? 'না' : 'No')}
+                        </span>
+                        {source.verifiedAt && (
+                          <span>
+                            {isBn ? 'যাচাই:' : 'Verified:'}{' '}
+                            {new Date(source.verifiedAt).toLocaleString(isBn ? 'bn-BD' : 'en-GB')}
+                          </span>
+                        )}
+                      </div>
+
+                      {source.verificationNote && (
+                        <p className="text-xs leading-5 text-slate-600 dark:text-slate-300">
+                          {source.verificationNote}
+                        </p>
+                      )}
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Mob Justice classification details - only for the new Public Safety type */}
           {isMobJusticeComplaint && (
