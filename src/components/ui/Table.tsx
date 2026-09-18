@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React, { forwardRef, HTMLAttributes, TdHTMLAttributes, ThHTMLAttributes } from 'react';
 import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/utils';
@@ -212,7 +213,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
       </div>
 
       <div className="flex items-center gap-1.5">
-        <button
+        <ButtonBase
           onClick={() => onPageChange && onPageChange(currentPage - 1)}
           disabled={currentPage <= 1}
           className="inline-flex items-center justify-center h-7 px-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed type-table transition-colors"
@@ -220,13 +221,13 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
         >
           <ChevronLeft className="w-3.5 h-3.5" />
           <span className="ml-1 hidden sm:inline">Prev</span>
-        </button>
+        </ButtonBase>
 
         <span className="px-2 font-medium text-slate-700 dark:text-slate-300">
           Page {currentPage} of {totalPages || 1}
         </span>
 
-        <button
+        <ButtonBase
           onClick={() => onPageChange && onPageChange(currentPage + 1)}
           disabled={currentPage >= totalPages}
           className="inline-flex items-center justify-center h-7 px-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-xs transition-colors"
@@ -234,7 +235,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
         >
           <span className="mr-1 hidden sm:inline">Next</span>
           <ChevronRight className="w-3.5 h-3.5" />
-        </button>
+        </ButtonBase>
       </div>
     </div>
   );
