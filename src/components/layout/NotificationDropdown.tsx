@@ -11,6 +11,8 @@ import {
   getNotificationVisualMeta,
 } from '@/utils/notificationUtils';
 import { AdminNotification } from '@/types/Notification';
+import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
 
 export const NotificationDropdown: React.FC = () => {
   const {
@@ -212,24 +214,26 @@ export const NotificationDropdown: React.FC = () => {
                 {t.notifications.title}
               </span>
               {unreadCount > 0 && (
-                <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-900/40">
+                <Badge status="info" variant="subtle" size="md">
                   {badgeText} {t.notifications.unread}
-                </span>
+                </Badge>
               )}
             </div>
 
             {unreadCount > 0 && (
-              <button
+              <Button
                 type="button"
                 id="notification-dropdown-mark-all-btn"
+                variant="ghost"
+                size="sm"
                 onClick={handleMarkAll}
                 disabled={isMarkingAll}
-                className="inline-flex items-center gap-1 text-sm font-medium text-slate-500 hover:text-sky-600 dark:text-slate-400 dark:hover:text-sky-400 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-500 rounded px-1.5 py-0.5"
+                isLoading={isMarkingAll}
+                leftIcon={<CheckCheck className="w-3.5 h-3.5" />}
                 title={t.notifications.markAllRead}
               >
-                <CheckCheck className="w-3.5 h-3.5" />
-                <span>{t.notifications.markAllRead}</span>
-              </button>
+                {t.notifications.markAllRead}
+              </Button>
             )}
           </div>
 
@@ -311,132 +315,122 @@ export const NotificationDropdown: React.FC = () => {
               const hasRoute = isSafeNotificationRoute(item.route);
 
               return (
-                <div
+                <article
                   key={item.id}
                   id={`notification-dropdown-item-${item.id}`}
-                  onClick={() => handleItemClick(item)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleItemClick(item);
-                    }
-                  }}
                   className={cn(
-                    'p-3.5 flex items-start gap-3 cursor-pointer transition-colors text-left select-none relative group',
+                    'relative',
                     isUnread
-                      ? 'bg-sky-50/40 dark:bg-sky-950/20 hover:bg-sky-100/50 dark:hover:bg-sky-900/30'
-                      : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                      ? 'bg-sky-50/40 dark:bg-sky-950/20'
+                      : 'bg-white dark:bg-slate-900'
                   )}
-                  aria-label={`${title}. ${isUnread ? t.notifications.unread : ''}`}
                 >
-                  {/* Event Type Icon */}
-                  <div
-                    className={cn(
-                      'w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5',
-                      meta.iconBg,
-                      meta.iconColor
-                    )}
+                  <button
+                    type="button"
+                    onClick={() => void handleItemClick(item)}
+                    className="group w-full p-3.5 flex items-start gap-3 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500"
+                    aria-label={`${title}. ${isUnread ? t.notifications.unread : ''}`}
                   >
-                    <IconComponent className="w-4 h-4" />
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0 pr-1">
-                    <div className="flex items-baseline justify-between gap-1 mb-0.5">
-                      <p
-                        className={cn(
-                          'text-sm text-slate-900 dark:text-slate-100 truncate break-words',
-                          isUnread ? 'font-semibold text-slate-900 dark:text-white' : 'font-medium'
-                        )}
-                      >
-                        {title}
-                      </p>
-                      <span className="text-xs text-slate-500 dark:text-slate-500 whitespace-nowrap shrink-0 ml-1 font-normal">
-                        {relativeTime}
-                      </span>
-                    </div>
-
-                    {body && (
-                      <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed break-words">
-                        {body}
-                      </p>
-                    )}
-
-                    {/* Mark-Read Error & Retry State */}
-                    {itemErrorIds.has(item.id) && (
-                      <div
-                        id={`notification-mark-read-error-${item.id}`}
-                        className="mt-2 p-1.5 rounded bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900/60 flex items-center justify-between gap-2 text-left"
-                        onClick={(e) => e.stopPropagation()}
-                        onKeyDown={(e) => e.stopPropagation()}
-                      >
-                        <div className="flex items-center gap-1.5 text-xs text-rose-700 dark:text-rose-300 font-medium min-w-0">
-                          <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600 dark:text-rose-400" />
-                          <span className="truncate">{t.notifications.errorMarkRead}</span>
-                        </div>
-                        <button
-                          type="button"
-                          id={`notification-retry-mark-read-${item.id}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleItemClick(item);
-                          }}
-                          disabled={markingItemIds.has(item.id)}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold text-rose-700 dark:text-rose-200 bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-800 rounded hover:bg-rose-50 dark:hover:bg-slate-800 transition-colors shrink-0 disabled:opacity-50"
-                        >
-                          <RotateCcw className={cn('w-2.5 h-2.5', markingItemIds.has(item.id) && 'animate-spin')} />
-                          <span>{t.notifications.retry}</span>
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Secondary Route Hint & Status */}
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <span
-                        className={cn(
-                          'text-xs px-2 py-0.5 rounded-md font-medium',
-                          meta.isSecurity
-                            ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
-                            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                        )}
-                      >
-                        {language === 'bn' ? meta.groupLabelBn : meta.groupLabelEn}
-                      </span>
-
-                      {hasRoute && (
-                        <span className="text-xs text-sky-600 dark:text-sky-400 font-medium opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 ml-auto">
-                          {t.notifications.viewAction}
-                          <ArrowRight className="w-2.5 h-2.5" />
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Unread Visual Indicator Dot */}
-                  {isUnread && (
                     <div
-                      className="w-2 h-2 rounded-full bg-sky-500 ring-2 ring-white dark:ring-slate-900 shrink-0 mt-2"
-                      aria-label={t.notifications.unread}
-                    />
+                      className={cn(
+                        'w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5',
+                        meta.iconBg,
+                        meta.iconColor
+                      )}
+                      aria-hidden="true"
+                    >
+                      <IconComponent className="w-4 h-4" />
+                    </div>
+
+                    <div className="flex-1 min-w-0 pr-1">
+                      <div className="flex items-baseline justify-between gap-1 mb-0.5">
+                        <p
+                          className={cn(
+                            'text-sm text-slate-900 dark:text-slate-100 truncate break-words',
+                            isUnread ? 'font-semibold dark:text-white' : 'font-medium'
+                          )}
+                        >
+                          {title}
+                        </p>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap shrink-0 ml-1 font-normal">
+                          {relativeTime}
+                        </span>
+                      </div>
+
+                      {body && (
+                        <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed break-words">
+                          {body}
+                        </p>
+                      )}
+
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge
+                          status={meta.isSecurity ? 'error' : 'default'}
+                          variant="subtle"
+                          size="md"
+                        >
+                          {language === 'bn' ? meta.groupLabelBn : meta.groupLabelEn}
+                        </Badge>
+
+                        {hasRoute && (
+                          <span className="text-xs text-sky-600 dark:text-sky-400 font-medium opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity flex items-center gap-1 ml-auto">
+                            {t.notifications.viewAction}
+                            <ArrowRight className="w-3 h-3" />
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {isUnread && (
+                      <span
+                        className="w-2 h-2 rounded-full bg-sky-500 ring-2 ring-white dark:ring-slate-900 shrink-0 mt-2"
+                        aria-hidden="true"
+                      />
+                    )}
+                  </button>
+
+                  {itemErrorIds.has(item.id) && (
+                    <div
+                      id={`notification-mark-read-error-${item.id}`}
+                      role="alert"
+                      className="mx-3.5 mb-3 flex items-center justify-between gap-2 rounded-md border border-rose-200 bg-rose-50 p-2 text-left dark:border-rose-900/60 dark:bg-rose-950/60"
+                    >
+                      <div className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-rose-700 dark:text-rose-300">
+                        <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
+                        <span>{t.notifications.errorMarkRead}</span>
+                      </div>
+                      <Button
+                        type="button"
+                        id={`notification-retry-mark-read-${item.id}`}
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => void handleItemClick(item)}
+                        disabled={markingItemIds.has(item.id)}
+                        isLoading={markingItemIds.has(item.id)}
+                        leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+                      >
+                        {t.notifications.retry}
+                      </Button>
+                    </div>
                   )}
-                </div>
+                </article>
               );
             })}
           </div>
 
           {/* Popover Footer: Link to full /notifications page */}
           <div className="p-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 text-center">
-            <button
+            <Button
               type="button"
               id="notification-view-all-link"
+              variant="ghost"
+              size="md"
+              fullWidth
               onClick={handleViewAll}
-              className="w-full py-1.5 px-3 rounded-md text-sm font-medium text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-slate-800/80 transition-colors flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-500"
+              rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
             >
-              <span>{t.notifications.viewAll}</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+              {t.notifications.viewAll}
+            </Button>
           </div>
         </div>
       )}
