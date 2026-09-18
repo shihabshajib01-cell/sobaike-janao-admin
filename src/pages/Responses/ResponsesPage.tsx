@@ -428,8 +428,7 @@ export const ResponsesPage: React.FC = () => {
             size="sm"
             onClick={() => fetchResponses(pagination.page)}
             disabled={loading}
-            leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />}
-            className="min-h-[36px]"
+            leftIcon={<RefreshCw className={`${loading ? 'animate-spin' : ''}`} />}
           >
             <span>{isBn ? 'রিফ্রেশ' : 'Refresh'}</span>
           </Button>
@@ -506,7 +505,7 @@ export const ResponsesPage: React.FC = () => {
             variant="primary"
             size="sm"
             onClick={() => fetchResponses(pagination.page)}
-            leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
+            leftIcon={<RefreshCw />}
           >
             <span>{isBn ? 'পুনরায় চেষ্টা করুন' : 'Retry'}</span>
           </Button>
@@ -589,8 +588,7 @@ export const ResponsesPage: React.FC = () => {
                 size="sm"
                 onClick={() => handlePageChange(pagination.page - 1)}
                 disabled={pagination.page <= 1 || loading}
-                leftIcon={<ChevronLeft className="w-4 h-4" />}
-                className="min-h-[36px]"
+                leftIcon={<ChevronLeft />}
               >
                 <span>{isBn ? 'পূর্ববর্তী' : 'Previous'}</span>
               </Button>
@@ -622,8 +620,7 @@ export const ResponsesPage: React.FC = () => {
                 size="sm"
                 onClick={() => handlePageChange(pagination.page + 1)}
                 disabled={pagination.page >= pagination.totalPages || loading}
-                rightIcon={<ChevronRight className="w-4 h-4" />}
-                className="min-h-[36px]"
+                rightIcon={<ChevronRight />}
               >
                 <span>{isBn ? 'পরবর্তী' : 'Next'}</span>
               </Button>
