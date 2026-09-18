@@ -29,10 +29,24 @@ SET LOCAL ROLE authenticated;
 DO $$
 DECLARE
   v_run text:=current_setting('app.notification_verification_run');v_expected integer:=current_setting('app.notification_verification_expected')::integer;
-  v_baseline bigint:=current_setting('app.notification_verification_baseline')::bigint;v_visible integer;v_count bigint;v_notification_id uuid;v_marked boolean;v_marked_all integer;
+  v_baseline bigint:=current_setting('app.notification_verification_baseline')::bigint;v_visible integer;v_count bigint;v_notification_id uuid;v_marked boolean;v_marked_all integer;v_filtered integer;
 BEGIN
   SELECT count(*) INTO v_visible FROM public.admin_list_notifications(50,null,null,false,null) WHERE metadata->>'verification_run'=v_run;
   IF v_visible<>v_expected THEN RAISE EXCEPTION 'Expected % verification notifications, found %',v_expected,v_visible; END IF;
+
+  SELECT count(*) INTO v_filtered FROM public.admin_list_notifications(50,null,null,true,null) WHERE metadata->>'verification_run'=v_run;
+  IF v_filtered<>19 THEN RAISE EXCEPTION 'Unread filter verification failed: expected 19, got %',v_filtered; END IF;
+  SELECT count(*) INTO v_filtered FROM public.admin_list_notifications(50,null,null,false,'complaint') WHERE metadata->>'verification_run'=v_run;
+  IF v_filtered<>5 THEN RAISE EXCEPTION 'Complaint filter verification failed: expected 5, got %',v_filtered; END IF;
+  SELECT count(*) INTO v_filtered FROM public.admin_list_notifications(50,null,null,false,'administration') WHERE metadata->>'verification_run'=v_run;
+  IF v_filtered<>4 THEN RAISE EXCEPTION 'Administration filter verification failed: expected 4, got %',v_filtered; END IF;
+  SELECT count(*) INTO v_filtered FROM public.admin_list_notifications(50,null,null,false,'configuration') WHERE metadata->>'verification_run'=v_run;
+  IF v_filtered<>7 THEN RAISE EXCEPTION 'Configuration filter verification failed: expected 7, got %',v_filtered; END IF;
+  SELECT count(*) INTO v_filtered FROM public.admin_list_notifications(50,null,null,false,'role') WHERE metadata->>'verification_run'=v_run;
+  IF v_filtered<>3 THEN RAISE EXCEPTION 'Role filter verification failed: expected 3, got %',v_filtered; END IF;
+  SELECT count(*) INTO v_filtered FROM public.admin_list_notifications(50,null,null,false,'security') WHERE metadata->>'verification_run'=v_run;
+  IF v_filtered<>2 THEN RAISE EXCEPTION 'Security filter verification failed: expected 2, got %',v_filtered; END IF;
+
   SELECT public.admin_get_unread_notification_count() INTO v_count;
   IF v_count<>v_baseline+v_expected THEN RAISE EXCEPTION 'Unread count after emit mismatch: expected %, got %',v_baseline+v_expected,v_count; END IF;
   SELECT id INTO v_notification_id FROM public.admin_list_notifications(50,null,null,false,null) WHERE metadata->>'verification_run'=v_run ORDER BY created_at DESC,id DESC LIMIT 1;
