@@ -145,7 +145,7 @@ export const CreateUserPage: React.FC = () => {
           variant="ghost"
           size="sm"
           onClick={() => navigate('/users')}
-          className="h-9 w-9 p-0"
+          className="w-9"
           aria-label={t.common.back}
         >
           <ArrowLeft className="w-5 h-5" />
@@ -336,7 +336,7 @@ export const CreateUserPage: React.FC = () => {
                   size="sm"
                   onClick={loadRoles}
                   disabled={rolesLoading}
-                  className="h-7 px-2 text-xs shrink-0"
+                  className="shrink-0"
                 >
                   <RefreshCw className={`w-3 h-3 mr-1 ${rolesLoading ? 'animate-spin' : ''}`} />
                   {t.users.retry}
