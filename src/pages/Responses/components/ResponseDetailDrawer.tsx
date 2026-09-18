@@ -3,6 +3,7 @@ import { ResponseItem, ResponseStatus, ResponseType } from '@/types/Response';
 import { Drawer } from '@/components/ui/Drawer';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { Tag } from '@/components/ui/Tag';
 import { useLanguage } from '@/context/LanguageContext';
 import {
   MessageSquare,
@@ -430,14 +431,13 @@ export const ResponseDetailDrawer: React.FC<ResponseDetailDrawerProps> = ({
                 </p>
                 <div className="mt-1">
                   {response.contactConsent ? (
-                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
-                      <FileCheck className="w-3.5 h-3.5" />
+                    <Tag tone="success" icon={<FileCheck />} size="md">
                       {isBn ? 'হ্যাঁ (সম্মত)' : 'Yes (Consented)'}
-                    </span>
+                    </Tag>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                    <Tag tone="neutral" size="md">
                       {isBn ? 'না' : 'No'}
-                    </span>
+                    </Tag>
                   )}
                 </div>
               </div>
@@ -535,14 +535,13 @@ export const ResponseDetailDrawer: React.FC<ResponseDetailDrawerProps> = ({
                 </p>
                 <div className="mt-1">
                   {response.requestCorrectionOrRemoval ? (
-                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
-                      <ShieldAlert className="w-3.5 h-3.5" />
+                    <Tag tone="warning" icon={<ShieldAlert />} size="md">
                       {isBn ? 'হ্যাঁ (অনুরোধ করা হয়েছে)' : 'Yes (Requested)'}
-                    </span>
+                    </Tag>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                    <Tag tone="neutral" size="md">
                       {isBn ? 'না' : 'No'}
-                    </span>
+                    </Tag>
                   )}
                 </div>
               </div>
