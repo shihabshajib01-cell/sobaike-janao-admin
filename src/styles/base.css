@@ -15,6 +15,10 @@
   --type-card-title-line: 26px;
   --type-body-size: 16px;
   --type-body-line: 26px;
+  --type-action-size: 16px;
+  --type-action-line: 20px;
+  --type-action-sm-size: 14px;
+  --type-action-sm-line: 20px;
   --type-small-size: 14px;
   --type-small-line: 22px;
   --type-technical-size: 12px;
@@ -118,6 +122,8 @@ body {
 .type-section-title { font-size: var(--type-section-title-size) !important; line-height: var(--type-section-title-line) !important; font-weight: 600; letter-spacing: -0.01em; }
 .type-card-title { font-size: var(--type-card-title-size) !important; line-height: var(--type-card-title-line) !important; font-weight: 600; letter-spacing: -0.01em; }
 .type-body, .type-form-value { font-size: var(--type-body-size) !important; line-height: var(--type-body-line) !important; }
+.type-action { font-size: var(--type-action-size) !important; line-height: var(--type-action-line) !important; }
+.type-action-sm { font-size: var(--type-action-sm-size) !important; line-height: var(--type-action-sm-line) !important; }
 .type-secondary, .type-table, .type-label, .type-helper, .type-meta { font-size: var(--type-small-size) !important; line-height: var(--type-small-line) !important; }
 .type-technical { font-size: var(--type-technical-size) !important; line-height: var(--type-technical-line) !important; }
 .type-badge-sm { font-size: var(--type-badge-sm-size) !important; line-height: var(--type-badge-sm-line) !important; }
