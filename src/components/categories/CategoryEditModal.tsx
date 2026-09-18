@@ -50,6 +50,8 @@ export const CategoryEditModal: React.FC<CategoryEditModalProps> = ({
 
   if (!item || !itemType) return null;
 
+  const canToggleActive = item.configStatus === 'published';
+
   const handleSave = () => {
     const trimmedNameEn = nameEn.trim();
     const trimmedNameBn = nameBn.trim();
@@ -160,12 +162,16 @@ export const CategoryEditModal: React.FC<CategoryEditModalProps> = ({
             id="taxonomy-active-switch"
             checked={active}
             onChange={setActive}
-            disabled={isSaving}
+            disabled={isSaving || !canToggleActive}
             label={isBn ? 'পাবলিক রিপোর্টিংয়ে সক্রিয়' : 'Active in public reporting'}
             description={
-              isBn
-                ? 'নিষ্ক্রিয় করলে নতুন পাবলিক রিপোর্টিং অপশনে এই আইটেমটি দেখানো হবে না।'
-                : 'Inactive items are removed from new public reporting options.'
+              !canToggleActive
+                ? isBn
+                  ? 'Draft/Ready/Archived আইটেম প্রকাশ না হওয়া পর্যন্ত Active করা যাবে না।'
+                  : 'Draft, Ready, or Archived items cannot be activated until they are published.'
+                : isBn
+                  ? 'নিষ্ক্রিয় করলে নতুন পাবলিক রিপোর্টিং অপশনে এই আইটেমটি দেখানো হবে না।'
+                  : 'Inactive items are removed from new public reporting options.'
             }
           />
         </div>
