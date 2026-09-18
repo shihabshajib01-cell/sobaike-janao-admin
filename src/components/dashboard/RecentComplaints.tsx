@@ -90,8 +90,7 @@ export const RecentComplaints: React.FC<RecentComplaintsProps> = ({
           variant="ghost"
           size="sm"
           onClick={() => navigate('/complaints')}
-          className="text-xs font-medium text-sky-600 dark:text-sky-400 hover:text-sky-700"
-          rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+          rightIcon={<ArrowRight />}
         >
           {isBn ? 'সকল অভিযোগ দেখুন' : 'View All Complaints'}
         </Button>
@@ -196,7 +195,6 @@ export const RecentComplaints: React.FC<RecentComplaintsProps> = ({
                               e.stopPropagation();
                               navigate(`/complaints/${c.id}`);
                             }}
-                            className="h-7 px-2 text-[11px] text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
                           >
                             {isBn ? 'পর্যালোচনা' : 'Review'}
                           </Button>
