@@ -188,7 +188,7 @@ const isLikelyArticlePath = (url: URL, anchorText: string, baseUrl: string) => {
   if (!path || path==='/') return false;
   if (canonicalHostKey(url.hostname) !== canonicalHostKey(new URL(baseUrl).hostname)) return false;
   if (/\.(jpg|jpeg|png|gif|webp|svg|pdf|mp4|mp3)$/i.test(path)) return false;
-  if (/(\/tag\/|\/topic\/|\/category\/|\/author\/|\/search(?:\/|$)|\/videos?(?:\/|$)|\/m\/video(?:\/|$)|\/photo(?:\/|$)|\/epaper|\/archive|\/contact|\/privacy|\/terms|\/opinion(?:\/|$)|\/editorials?(?:\/|$)|\/analysis(?:\/|$)|\/features?(?:\/|$)|\/lifestyle(?:\/|$)|\/sports?(?:\/|$)|\/cricket(?:\/|$)|\/entertainment(?:\/|$)|\/multimedia(?:\/|$)|\/star-multimedia(?:\/|$))/i.test(path)) return false;
+  if (/(\/tag\/|\/topic\/|\/category\/|\/author\/|\/search(?:\/|$)|\/videos?(?:\/|$)|\/m\/video(?:\/|$)|\/photo(?:\/|$)|\/epaper|\/archive|\/contact|\/privacy|\/terms|\/careers?(?:\/|$)|\/jobs?(?:\/|$)|\/cdn-cgi(?:\/|$)|\/opinion(?:\/|$)|\/editorials?(?:\/|$)|\/analysis(?:\/|$)|\/features?(?:\/|$)|\/lifestyle(?:\/|$)|\/sports?(?:\/|$)|\/cricket(?:\/|$)|\/entertainment(?:\/|$)|\/multimedia(?:\/|$)|\/star-multimedia(?:\/|$))/i.test(path)) return false;
   const cleanText=stripTags(anchorText);
   if (cleanText.length<16) return false;
   if (/^(home|latest|latest news|all news|bangladesh|জাতীয়|সর্বশেষ|আরও|আরও দেখুন|more)$/iu.test(cleanText)) return false;
@@ -481,6 +481,7 @@ const runAutomatedScan = async (
         article.publisherName=finalDomain?.publisherName || source.publisherName;
 
         const fullText=`${article.title} ${article.excerpt} ${article.body}`;
+        const headlineText=`${article.title} ${article.excerpt}`;
         const detected=detectLanguage(fullText);
         const language=detected==='unknown'?(source.languageHint||'unknown'):detected;
 
@@ -500,7 +501,7 @@ const runAutomatedScan = async (
           return;
         }
 
-        const classification=classifyArticle(fullText);
+        const classification=classifyArticle(headlineText);
         if(!classification){
           await record({
             itemKind:'article',
@@ -512,7 +513,7 @@ const runAutomatedScan = async (
             contentLanguage:language,
             action:'discovered',
             duplicateStatus:'unavailable',
-            reason:'No supported report category matched with enough confidence.',
+            reason:'No supported incident category matched in the article headline or summary with enough confidence.',
           });
           return;
         }
