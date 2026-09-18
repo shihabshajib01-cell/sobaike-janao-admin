@@ -11,8 +11,18 @@ interface ConfiguredComplaintFieldsCardProps {
   onRetry?: () => void;
 }
 
-const formatValue = (value: unknown, isBn: boolean): string => {
-  if (Array.isArray(value)) return value.map((item) => String(item)).join(', ');
+const formatValue = (
+  value: unknown,
+  isBn: boolean,
+  options: Array<{ value: string; labelEn: string; labelBn: string }> = []
+): string => {
+  const formatOption = (item: unknown) => {
+    const raw = String(item ?? '');
+    const option = options.find((entry) => entry.value === raw);
+    return option ? (isBn ? option.labelBn : option.labelEn) : raw;
+  };
+
+  if (Array.isArray(value)) return value.map(formatOption).join(', ');
   if (typeof value === 'boolean') return value ? (isBn ? 'হ্যাঁ' : 'Yes') : (isBn ? 'না' : 'No');
   if (value && typeof value === 'object') {
     return Object.entries(value as Record<string, unknown>)
@@ -20,7 +30,7 @@ const formatValue = (value: unknown, isBn: boolean): string => {
       .map(([key, item]) => `${key}: ${String(item)}`)
       .join(', ');
   }
-  return String(value ?? '');
+  return formatOption(value);
 };
 
 export const ConfiguredComplaintFieldsCard: React.FC<ConfiguredComplaintFieldsCardProps> = ({
@@ -45,10 +55,11 @@ export const ConfiguredComplaintFieldsCard: React.FC<ConfiguredComplaintFieldsCa
         labelBn: field?.labelBn || field?.labelEn || storageKey,
         fieldType: field?.fieldType || 'text',
         sortOrder: field?.sortOrder ?? 999,
+        options: field?.options || [],
         value,
       };
     })
-    .filter((row) => formatValue(row.value, isBn).trim())
+    .filter((row) => formatValue(row.value, isBn, row.options).trim())
     .sort((a, b) => a.sortOrder - b.sortOrder || a.fieldKey.localeCompare(b.fieldKey));
 
   if (!error && rows.length === 0) return null;
@@ -100,7 +111,7 @@ export const ConfiguredComplaintFieldsCard: React.FC<ConfiguredComplaintFieldsCa
                   {isBn ? row.labelBn : row.labelEn}
                 </dt>
                 <dd className="mt-1 whitespace-pre-wrap text-sm font-medium text-slate-900 dark:text-slate-100">
-                  {formatValue(row.value, isBn)}
+                  {formatValue(row.value, isBn, row.options)}
                 </dd>
               </div>
             ))}
