@@ -37,3 +37,6 @@ export { auditLogApi } from './auditLogApi';
 
 export * from './reportingFormApi';
 export { default as reportingFormApi } from './reportingFormApi';
+
+export * from './newsIntakeApi';
+export { default as newsIntakeApi } from './newsIntakeApi';
