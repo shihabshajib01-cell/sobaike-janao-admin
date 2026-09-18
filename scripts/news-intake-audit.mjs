@@ -11,6 +11,9 @@ const actions = read('supabase/migrations/20260918161752_news_intake_actions.sql
 const taxonomy = read('supabase/migrations/20260918162008_news_intake_taxonomy_contract.sql');
 const registryIndex = read('supabase/migrations/20260918163153_news_intake_registry_index.sql');
 const canonicalPublisher = read('supabase/migrations/20260918163429_news_intake_canonical_publisher.sql');
+const automation = read('supabase/migrations/20260918172747_news_intake_automation.sql');
+const sourceCompatibility = read('supabase/migrations/20260918173239_news_intake_source_compatibility.sql');
+const automationIndexes = read('supabase/migrations/20260918173920_news_intake_automation_fk_indexes.sql');
 const edge = read('supabase/functions/news-intake-fetch/index.ts');
 const scanner = read('supabase/functions/news-intake-scan/index.ts');
 const automationPanel = read('src/pages/NewsIntake/NewsAutomationPanel.tsx');
@@ -42,6 +45,24 @@ for (const [needle, label] of [
 }
 
 requireText(registryIndex, 'idx_news_source_domains_created_by', 'News Intake registry FK index');
+for (const needle of [
+  'news_intake_runs',
+  'news_intake_run_items',
+  'scan_enabled',
+  'admin_get_news_intake_scan_sources',
+  'admin_begin_news_intake_run',
+  'admin_record_news_intake_item',
+  'admin_finish_news_intake_run',
+  'admin_get_news_intake_automation_dashboard',
+  "public.has_permission('complaints.publish')",
+]) {
+  requireText(automation, needle, 'News Intake automation migration');
+}
+requireText(sourceCompatibility, "A valid HTTPS source URL is required.", 'News Intake source compatibility');
+requireText(sourceCompatibility, "'prothomalo.com'", 'News Intake redirect aliases');
+requireText(automationIndexes, 'idx_news_intake_runs_started_by', 'News Intake automation run index');
+requireText(automationIndexes, 'idx_news_intake_run_items_segment_id', 'News Intake automation segment index');
+requireText(automationIndexes, 'idx_news_intake_run_items_subcategory_id', 'News Intake automation subcategory index');
 requireText(canonicalPublisher, "sourceDomain,publisherName", 'canonical publisher mapping');
 
 for (const needle of [
