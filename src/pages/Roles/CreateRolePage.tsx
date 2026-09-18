@@ -232,7 +232,7 @@ export const CreateRolePage: React.FC = () => {
             variant="secondary"
             size="sm"
             onClick={handleCancelAttempt}
-            leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}
+            leftIcon={<ArrowLeft />}
           >
             <span>{t.common.back}</span>
           </Button>
