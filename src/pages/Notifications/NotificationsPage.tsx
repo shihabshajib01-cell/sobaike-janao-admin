@@ -6,11 +6,8 @@ import {
   CheckCheck,
   RotateCcw,
   ExternalLink,
-  Filter,
-  Shield,
   Clock,
   User,
-  Tag,
   AlertTriangle,
   ChevronDown,
 } from 'lucide-react';
@@ -546,143 +543,139 @@ export const NotificationsPage: React.FC = () => {
                 }
               );
 
+              const routeActionLabel = item.route?.startsWith('/complaints')
+                ? isBn
+                  ? 'অভিযোগের বিবরণ দেখুন'
+                  : 'View Complaint'
+                : item.route?.startsWith('/roles')
+                  ? isBn
+                    ? 'ভূমিকার বিবরণ দেখুন'
+                    : 'View Role'
+                  : item.route?.startsWith('/users')
+                    ? isBn
+                      ? 'ব্যবহারকারী দেখুন'
+                      : 'View User'
+                    : t.notifications.openDetails;
+
               return (
-                <div
+                <article
                   key={item.id}
                   id={`notification-card-${item.id}`}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`${title}. ${isUnread ? t.notifications.unread : ''}`}
-                  onClick={() => handleItemNavigate(item)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      void handleItemNavigate(item);
-                    }
-                  }}
                   className={cn(
-                    'p-4 sm:p-5 rounded-lg border transition-all cursor-pointer relative group text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950',
+                    'rounded-lg border transition-colors',
                     isUnread
-                      ? 'bg-sky-50/30 dark:bg-sky-950/15 border-sky-200 dark:border-sky-900/60 shadow-xs hover:border-sky-300 dark:hover:border-sky-800'
-                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                      ? 'bg-sky-50/30 dark:bg-sky-950/15 border-sky-200 dark:border-sky-900/60 shadow-xs'
+                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
                   )}
                 >
-                  <div className="flex items-start gap-3 sm:gap-4">
-                    {/* Event Icon */}
-                    <div
-                      className={cn(
-                        'w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5',
-                        meta.iconBg,
-                        meta.iconColor
-                      )}
-                    >
-                      <IconComponent className="w-5 h-5" />
-                    </div>
-
-                    {/* Content Section */}
-                    <div className="flex-1 min-w-0">
-                      {/* Top Meta Line: Badges & Relative Time */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          {/* Category Badge */}
-                          <span
-                            className={cn(
-                              'text-xs px-2 py-0.5 rounded-full font-medium',
-                              meta.isSecurity
-                                ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-900/40'
-                                : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
-                            )}
-                          >
-                            {isBn ? meta.groupLabelBn : meta.groupLabelEn}
-                          </span>
-
-                          {/* Target identifier tag if present */}
-                          {item.target_label && (
-                            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-slate-50 text-slate-600 dark:bg-slate-800/60 dark:text-slate-400 border border-slate-200 dark:border-slate-800 truncate max-w-[180px]">
-                              {item.target_label}
-                            </span>
-                          )}
-
-                          {/* Actor if present */}
-                          {item.actor_display_name && (
-                            <span className="text-xs text-slate-500 dark:text-slate-400 hidden md:inline-flex items-center gap-1">
-                              <User className="w-2.5 h-2.5" />
-                              {item.actor_display_name}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Relative & Absolute Timestamp */}
-                        <div className="flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400 font-normal">
-                          <Clock className="w-3 h-3" />
-                          <span title={absoluteTime}>{relativeTime}</span>
-                        </div>
-                      </div>
-
-                      {/* Title */}
-                      <h3
+                  <button
+                    type="button"
+                    onClick={() => void handleItemNavigate(item)}
+                    className="group w-full p-4 sm:p-5 text-left rounded-t-lg transition-colors hover:bg-slate-50/70 dark:hover:bg-slate-800/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500"
+                    aria-label={`${title}. ${isUnread ? t.notifications.unread : ''}`}
+                  >
+                    <div className="flex items-start gap-3 sm:gap-4">
+                      <div
                         className={cn(
-                          'text-base text-slate-900 dark:text-slate-100 leading-snug break-words',
-                          isUnread ? 'font-bold' : 'font-medium'
+                          'w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5',
+                          meta.iconBg,
+                          meta.iconColor
                         )}
+                        aria-hidden="true"
                       >
-                        {title}
-                      </h3>
+                        <IconComponent className="w-5 h-5" />
+                      </div>
 
-                      {/* Full Body / Description */}
-                      <p className="mt-1 text-sm text-slate-600 dark:text-slate-400 leading-relaxed break-words">
-                        {body}
-                      </p>
-
-                      {/* Card Footer: Action Buttons */}
-                      <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          {isUnread && (
-                            <button
-                              type="button"
-                              id={`mark-read-btn-${item.id}`}
-                              onClick={(e) => handleMarkItemRead(e, item)}
-                              disabled={isProcessing}
-                              className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-sky-300 dark:hover:border-sky-800 rounded-md px-2.5 py-1 transition-colors disabled:opacity-50"
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <Badge
+                              status={meta.isSecurity ? 'error' : 'default'}
+                              variant="subtle"
+                              size="md"
                             >
-                              <Check className="w-3 h-3 text-sky-600 dark:text-sky-400" />
-                              <span>{t.notifications.markAsRead}</span>
-                            </button>
-                          )}
+                              {isBn ? meta.groupLabelBn : meta.groupLabelEn}
+                            </Badge>
 
-                          {!isUnread && (
-                            <span className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                              <Check className="w-3 h-3 text-emerald-500" />
-                              <span>{isBn ? 'পঠিত' : 'Read'}</span>
-                            </span>
-                          )}
+                            {item.target_label && (
+                              <Badge
+                                status="default"
+                                variant="outline"
+                                size="md"
+                                className="max-w-[180px] truncate"
+                              >
+                                {item.target_label}
+                              </Badge>
+                            )}
+
+                            {item.actor_display_name && (
+                              <span className="text-sm text-slate-500 dark:text-slate-400 hidden md:inline-flex items-center gap-1">
+                                <User className="w-3.5 h-3.5" />
+                                {item.actor_display_name}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400 font-normal">
+                            <Clock className="w-3.5 h-3.5" />
+                            <span title={absoluteTime}>{relativeTime}</span>
+                          </div>
                         </div>
 
-                        {/* Navigation link if valid route */}
-                        {hasRoute && (
-                          <div className="inline-flex items-center gap-1 text-sm font-medium text-sky-600 dark:text-sky-400 group-hover:underline">
-                            <span>
-                              {item.category === 'complaint'
-                                ? isBn
-                                  ? 'অভিযোগের বিবরণ দেখুন'
-                                  : 'View Complaint'
-                                : item.category === 'role'
-                                ? isBn
-                                  ? 'ভূমিকার বিবরণ দেখুন'
-                                  : 'View Role'
-                                : item.category === 'administration'
-                                ? isBn
-                                  ? 'ব্যবহারকারী দেখুন'
-                                  : 'View User'
-                                : t.notifications.openDetails}
-                            </span>
-                            <ExternalLink className="w-3 h-3" />
-                          </div>
+                        <h3
+                          className={cn(
+                            'text-base text-slate-900 dark:text-slate-100 leading-snug break-words',
+                            isUnread ? 'font-bold' : 'font-medium'
+                          )}
+                        >
+                          {title}
+                        </h3>
+
+                        {body && (
+                          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400 leading-relaxed break-words">
+                            {body}
+                          </p>
                         )}
                       </div>
                     </div>
+                  </button>
+
+                  <div className="mx-4 sm:mx-5 py-3 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      {isUnread ? (
+                        <Button
+                          type="button"
+                          id={`mark-read-btn-${item.id}`}
+                          variant="secondary"
+                          size="sm"
+                          onClick={(event) => void handleMarkItemRead(event, item)}
+                          disabled={isProcessing}
+                          isLoading={isProcessing}
+                          leftIcon={<Check className="w-3.5 h-3.5" />}
+                        >
+                          {t.notifications.markAsRead}
+                        </Button>
+                      ) : (
+                        <span className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                          <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          <span>{isBn ? 'পঠিত' : 'Read'}</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {hasRoute && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => void handleItemNavigate(item)}
+                        rightIcon={<ExternalLink className="w-3.5 h-3.5" />}
+                      >
+                        {routeActionLabel}
+                      </Button>
+                    )}
                   </div>
-                </div>
+                </article>
               );
             })}
 
