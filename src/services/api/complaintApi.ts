@@ -180,6 +180,13 @@ export class ComplaintApi {
             storageMode: String(field.storageMode || ''),
             storageKey: String(field.storageKey || field.fieldKey || ''),
             sortOrder: Number(field.sortOrder || 0),
+            options: Array.isArray(field.options)
+              ? field.options.map((option: any) => ({
+                  value: String(option?.value || ''),
+                  labelEn: String(option?.labelEn || option?.value || ''),
+                  labelBn: String(option?.labelBn || option?.labelEn || option?.value || ''),
+                }))
+              : [],
             config:
               field.config && typeof field.config === 'object'
                 ? field.config
