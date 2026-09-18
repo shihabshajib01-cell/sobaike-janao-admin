@@ -67,7 +67,7 @@ export const ComplaintVersionHistory: React.FC<ComplaintVersionHistoryProps> = (
                       <User className="w-3 h-3 text-slate-400" />
                       {ver.editedBy?.name || 'Admin'}
                     </span>
-                    <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                    <span className="type-meta text-slate-400 flex items-center gap-1">
                       <Clock className="w-3 h-3 text-slate-400" />
                       {formatDate(ver.editedAt)}
                     </span>
@@ -98,26 +98,26 @@ export const ComplaintVersionHistory: React.FC<ComplaintVersionHistoryProps> = (
 
                 {isExpanded && (
                   <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-2 animate-in fade-in">
-                    <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    <div className="type-meta font-semibold uppercase tracking-wider text-slate-400">
                       {isBn ? 'পূর্ববর্তী অবস্থার স্ন্যাপশট' : 'Pre-Revision State Snapshot'}
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs bg-white dark:bg-slate-950 p-2.5 rounded border border-slate-100 dark:border-slate-800">
                       {ver.titleBn && (
                         <div>
-                          <span className="text-slate-400 block text-[11px]">{isBn ? 'শিরোনাম (বাংলা)' : 'Title (BN)'}</span>
+                          <span className="text-slate-400 block type-meta">{isBn ? 'শিরোনাম (বাংলা)' : 'Title (BN)'}</span>
                           <span className="font-medium text-slate-800 dark:text-slate-200">{ver.titleBn}</span>
                         </div>
                       )}
                       {ver.titleEn && (
                         <div>
-                          <span className="text-slate-400 block text-[11px]">{isBn ? 'শিরোনাম (ইংরেজি)' : 'Title (EN)'}</span>
+                          <span className="text-slate-400 block type-meta">{isBn ? 'শিরোনাম (ইংরেজি)' : 'Title (EN)'}</span>
                           <span className="font-medium text-slate-800 dark:text-slate-200">{ver.titleEn}</span>
                         </div>
                       )}
                       {ver.categoryEn && (
                         <div>
-                          <span className="text-slate-400 block text-[11px]">{isBn ? 'ক্যাটাগরি' : 'Category'}</span>
+                          <span className="text-slate-400 block type-meta">{isBn ? 'ক্যাটাগরি' : 'Category'}</span>
                           <span className="font-medium text-slate-800 dark:text-slate-200">
                             {isBn ? ver.categoryBn || ver.categoryEn : ver.categoryEn}
                           </span>
@@ -125,19 +125,19 @@ export const ComplaintVersionHistory: React.FC<ComplaintVersionHistoryProps> = (
                       )}
                       {ver.urgency && (
                         <div>
-                          <span className="text-slate-400 block text-[11px]">{isBn ? 'জরুরিতা' : 'Urgency'}</span>
+                          <span className="text-slate-400 block type-meta">{isBn ? 'জরুরিতা' : 'Urgency'}</span>
                           <span className="font-medium text-slate-800 dark:text-slate-200 capitalize">{ver.urgency}</span>
                         </div>
                       )}
                       {ver.location?.ward && (
                         <div>
-                          <span className="text-slate-400 block text-[11px]">{isBn ? 'ওয়ার্ড' : 'Ward'}</span>
+                          <span className="text-slate-400 block type-meta">{isBn ? 'ওয়ার্ড' : 'Ward'}</span>
                           <span className="font-medium text-slate-800 dark:text-slate-200">{ver.location.ward}</span>
                         </div>
                       )}
                       {ver.descriptionBn && (
                         <div className="col-span-full">
-                          <span className="text-slate-400 block text-[11px]">{isBn ? 'বিবরণ (বাংলা)' : 'Description (BN)'}</span>
+                          <span className="text-slate-400 block type-meta">{isBn ? 'বিবরণ (বাংলা)' : 'Description (BN)'}</span>
                           <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{ver.descriptionBn}</p>
                         </div>
                       )}
