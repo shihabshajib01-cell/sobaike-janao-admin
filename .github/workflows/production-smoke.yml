@@ -171,6 +171,8 @@ jobs:
           check_denied "admin_get_news_intake_scan_sources" '{}'
           check_denied "admin_begin_news_intake_run" '{}'
           check_denied "admin_get_news_intake_automation_dashboard" '{}'
+          check_denied "admin_set_news_intake_auto_update" '{"p_enabled":false}'
+          check_denied "service_begin_news_intake_run" '{}'
           check_denied "admin_record_news_intake_item" '{"p_run_id":"00000000-0000-0000-0000-000000000000","p_item":{}}'
           check_denied "admin_finish_news_intake_run" '{"p_run_id":"00000000-0000-0000-0000-000000000000","p_status":"failed","p_error":"anonymous smoke"}'
 
