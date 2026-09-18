@@ -9,6 +9,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { Drawer } from '@/components/ui/Drawer';
 import { Badge } from '@/components/ui/Badge';
+import { Tag as MetaTag } from '@/components/ui/Tag';
 import { Button } from '@/components/ui/Button';
 import { Divider } from '@/components/ui/Divider';
 import { categoryApi } from '@/services/api/categoryApi';
@@ -313,10 +314,10 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
                 {isBn ? 'অন্তর্ভুক্ত সাব-ক্যাটাগরি' : 'Subcategories'}
               </h4>
-              <Badge status="default" variant="outline" size="sm" className="font-mono text-[11px]">
+              <MetaTag tone="neutral" mono>
                 {target.data.subcategories?.length || 0}{' '}
                 {isBn ? 'টি আইটেম' : 'items'}
-              </Badge>
+              </MetaTag>
             </div>
 
             {target.data.subcategories && target.data.subcategories.length > 0 ? (
@@ -339,7 +340,7 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
                         status={sub.status === 'active' ? 'success' : 'default'}
                         variant="subtle"
                         size="sm"
-                        className="text-[10px]"
+
                       >
                         {sub.status === 'active'
                           ? isBn
