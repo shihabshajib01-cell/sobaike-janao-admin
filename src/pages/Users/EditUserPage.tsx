@@ -303,7 +303,7 @@ export const EditUserPage: React.FC = () => {
                 />
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
-              <p className="text-[11px] text-slate-400 mt-1">
+              <p className="type-meta text-slate-400 mt-1">
                 {t.users.emailImmutableNotice}
               </p>
             </div>
