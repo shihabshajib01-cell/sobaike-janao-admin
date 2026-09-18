@@ -99,15 +99,15 @@ export const LocationActivityTable: React.FC<LocationActivityTableProps> = ({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[180px]">{isBn ? 'সর্বশেষ সক্রিয়' : 'Last Seen'}</TableHead>
-          <TableHead className="w-[130px]">{isBn ? 'অনুমতি' : 'Permission'}</TableHead>
-          <TableHead className="min-w-[200px]">{isBn ? 'লোকেশন' : 'Location'}</TableHead>
-          <TableHead className="w-[100px]">{isBn ? 'নির্ভুলতা' : 'Accuracy'}</TableHead>
-          <TableHead className="w-[110px]">{isBn ? 'ডিভাইস' : 'Device'}</TableHead>
-          <TableHead className="w-[150px]">{isBn ? 'ব্রাউজার' : 'Browser'}</TableHead>
-          <TableHead className="w-[110px]">{isBn ? 'ওএস' : 'OS'}</TableHead>
-          <TableHead className="w-[140px]">{isBn ? 'টাইমজোন' : 'Timezone'}</TableHead>
-          <TableHead className="w-[80px] text-right">{isBn ? 'অ্যাকশন' : 'Action'}</TableHead>
+          <TableHead className="">{isBn ? 'সর্বশেষ সক্রিয়' : 'Last Seen'}</TableHead>
+          <TableHead className="">{isBn ? 'অনুমতি' : 'Permission'}</TableHead>
+          <TableHead className="min-">{isBn ? 'লোকেশন' : 'Location'}</TableHead>
+          <TableHead className="">{isBn ? 'নির্ভুলতা' : 'Accuracy'}</TableHead>
+          <TableHead className="">{isBn ? 'ডিভাইস' : 'Device'}</TableHead>
+          <TableHead className="">{isBn ? 'ব্রাউজার' : 'Browser'}</TableHead>
+          <TableHead className="">{isBn ? 'ওএস' : 'OS'}</TableHead>
+          <TableHead className="">{isBn ? 'টাইমজোন' : 'Timezone'}</TableHead>
+          <TableHead className="text-right">{isBn ? 'অ্যাকশন' : 'Action'}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -165,7 +165,7 @@ export const LocationActivityTable: React.FC<LocationActivityTableProps> = ({
                           <span>{isBn ? 'লোকেশন শনাক্ত করা হচ্ছে…' : 'Resolving location...'}</span>
                         </span>
                       ) : (
-                        <span className="font-semibold text-slate-900 dark:text-slate-100 truncate block max-w-[220px]" title={resolved?.fullAddress || resolved?.shortLabel}>
+                        <span className="font-semibold text-slate-900 dark:text-slate-100 truncate block max-" title={resolved?.fullAddress || resolved?.shortLabel}>
                           {resolved?.shortLabel || (isBn ? 'লোকেশন' : 'Location available')}
                         </span>
                       )}
