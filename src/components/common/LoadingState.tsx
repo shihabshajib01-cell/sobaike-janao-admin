@@ -25,7 +25,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
       }`}
     >
       <Loader2 className={`${sizeClasses[size]} animate-spin text-sky-600 dark:text-sky-400 mb-2`} />
-      {message && <p className="text-sm font-medium">{message}</p>}
+      {message && <p className="type-body font-medium">{message}</p>}
     </div>
   );
 };
