@@ -12,7 +12,8 @@
     "lint": "tsc --noEmit",
     "audit:notifications": "node scripts/notification-center-audit.mjs",
     "audit:responsive-tables": "node scripts/responsive-table-audit.mjs",
-    "audit:buttons": "node scripts/button-system-audit.mjs"
+    "audit:buttons": "node scripts/button-system-audit.mjs",
+    "audit:dependencies": "npm audit --audit-level=moderate"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
@@ -35,7 +36,6 @@
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
-    "vite": "^6.2.3",
-    "vite-plugin-imagemin": "^0.6.1"
+    "vite": "^6.2.3"
   }
 }
