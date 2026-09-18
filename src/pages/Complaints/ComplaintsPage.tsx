@@ -261,7 +261,7 @@ export const ComplaintsPage: React.FC = () => {
               size="sm"
               onClick={() => fetchComplaints(pagination.currentPage)}
               disabled={loading}
-              leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />}
+              leftIcon={<RefreshCw className={`${loading ? 'animate-spin' : ''}`} />}
             >
               <span>{isBn ? 'রিফ্রেশ' : 'Refresh'}</span>
             </Button>
@@ -308,8 +308,8 @@ export const ComplaintsPage: React.FC = () => {
             size="sm"
             onClick={() => fetchComplaints(pagination.currentPage)}
             disabled={loading}
-            leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />}
-            className="shrink-0 border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 hover:bg-rose-100 dark:hover:bg-rose-900/40"
+            leftIcon={<RefreshCw className={`${loading ? 'animate-spin' : ''}`} />}
+            className="shrink-0"
           >
             <span>{isBn ? 'আবার চেষ্টা করুন' : 'Retry'}</span>
           </Button>
@@ -344,8 +344,7 @@ export const ComplaintsPage: React.FC = () => {
                 variant={showAdvancedFilters || hasActiveFilters ? 'secondary' : 'ghost'}
                 size="sm"
                 onClick={() => setShowAdvancedFilters((prev) => !prev)}
-                leftIcon={<SlidersHorizontal className="w-3.5 h-3.5" />}
-                className="text-xs"
+                leftIcon={<SlidersHorizontal />}
               >
                 <span>
                   {showAdvancedFilters
@@ -425,7 +424,7 @@ export const ComplaintsPage: React.FC = () => {
                 size="sm"
                 onClick={() => handlePageChange(pagination.currentPage - 1)}
                 disabled={pagination.currentPage <= 1 || loading}
-                leftIcon={<ChevronLeft className="w-4 h-4" />}
+                leftIcon={<ChevronLeft />}
               >
                 <span>{isBn ? 'পূর্ববর্তী' : 'Previous'}</span>
               </Button>
@@ -455,7 +454,7 @@ export const ComplaintsPage: React.FC = () => {
                 size="sm"
                 onClick={() => handlePageChange(pagination.currentPage + 1)}
                 disabled={pagination.currentPage >= pagination.totalPages || loading}
-                rightIcon={<ChevronRight className="w-4 h-4" />}
+                rightIcon={<ChevronRight />}
               >
                 <span>{isBn ? 'পরবর্তী' : 'Next'}</span>
               </Button>
