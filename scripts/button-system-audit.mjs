@@ -80,8 +80,49 @@ const findOpeningTags = (source, componentName) => {
   return tags;
 };
 
-const systemOwnedVisualToken =
-  /(?:^|\s)(?:(?:dark|hover|active|focus|focus-visible|disabled):)*(?:h-(?!full\b|auto\b)[^\s"'\`}]+|min-h-[^\s"'\`}]+|p(?:x|y)?-[^\s"'\`}]+|text-(?:xs|sm|base|lg|xl|\[[^\]]+\]|slate-[^\s"'\`}]+|sky-[^\s"'\`}]+|red-[^\s"'\`}]+|rose-[^\s"'\`}]+|emerald-[^\s"'\`}]+|amber-[^\s"'\`}]+|indigo-[^\s"'\`}]+|cyan-[^\s"'\`}]+|purple-[^\s"'\`}]+|white\b|black\b)|bg-[^\s"'\`}]+|border(?:-[^\s"'\`}]+)?|rounded(?:-[^\s"'\`}]+)?|shadow(?:-[^\s"'\`}]+)?|font-(?:normal|medium|semibold|bold)|gap-[^\s"'\`}]+|ring-[^\s"'\`}]+|scale-[^\s"'\`}]+)/;
+const isSystemOwnedVisualToken = (token) => {
+  const base = token.trim().split(':').pop();
+  if (!base) return false;
+
+  if (/^h-(?!full$|auto$)/.test(base)) return true;
+  if (/^(?:min|max)-h-/.test(base)) return true;
+  if (/^w-(?!full$|auto$|fit$|max$|min$)/.test(base)) return true;
+  if (/^p(?:x|y|t|r|b|l)?-/.test(base)) return true;
+  if (/^bg-/.test(base)) return true;
+  if (/^border(?:-|$)/.test(base)) return true;
+  if (/^rounded(?:-|$)/.test(base)) return true;
+  if (/^shadow(?:-|$)/.test(base)) return true;
+  if (/^font-(?:normal|medium|semibold|bold)$/.test(base)) return true;
+  if (/^gap-/.test(base)) return true;
+  if (/^ring(?:-|$)/.test(base)) return true;
+  if (/^scale-/.test(base)) return true;
+  if (/^m[lr]-(?!auto$)/.test(base)) return true;
+
+  if (/^text-(?:xs|sm|base|lg|xl|\[.*\])$/.test(base)) return true;
+  if (
+    /^text-(?:slate|sky|red|rose|emerald|amber|indigo|cyan|purple|green|gray|zinc|neutral|stone)-/.test(
+      base
+    )
+  ) {
+    return true;
+  }
+  if (/^text-(?:white|black)$/.test(base)) return true;
+
+  return false;
+};
+
+const getVisualTokens = (tag) => {
+  const tokens = [];
+
+  for (const match of tag.matchAll(/(["'`])([\s\S]*?)\1/g)) {
+    const body = match[2];
+    for (const token of body.split(/\s+/)) {
+      if (isSystemOwnedVisualToken(token)) tokens.push(token);
+    }
+  }
+
+  return [...new Set(tokens)];
+};
 
 for (const filePath of sourceFiles) {
   const relativePath = normalize(filePath);
@@ -97,13 +138,28 @@ for (const filePath of sourceFiles) {
     const tags = findOpeningTags(source, componentName);
 
     for (const tag of tags) {
-      const match = tag.match(systemOwnedVisualToken);
-      if (match) {
-        const preview = tag.replace(/\s+/g, ' ').slice(0, 180);
+      const visualTokens = getVisualTokens(tag);
+      if (visualTokens.length > 0) {
+        const preview = tag.replace(/\s+/g, ' ').slice(0, 220);
         errors.push(
-          `${relativePath}: <${componentName}> overrides system-owned visual token "${match[0].trim()}": ${preview}`
+          `${relativePath}: <${componentName}> overrides system-owned visual tokens [${visualTokens.join(
+            ', '
+          )}]: ${preview}`
         );
       }
+    }
+  }
+
+  const buttonBlocks = source.matchAll(/<Button\b[\s\S]*?>([\s\S]*?)<\/Button>/g);
+  for (const match of buttonBlocks) {
+    const body = match[1]
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
+      .trim();
+
+    if (/^<[A-Z][A-Za-z0-9_]*(?:\s[\s\S]*?)?\/>$/.test(body)) {
+      errors.push(
+        `${relativePath}: icon-only <Button> detected. Use <IconButton> for icon-only actions.`
+      );
     }
   }
 }
@@ -115,8 +171,8 @@ for (const required of [
   "sm: 'type-action-sm h-8",
   "md: 'type-action-sm h-10",
   "lg: 'type-action h-11",
-  "data-button-system=\"button\"",
-  "data-button-system=\"icon\"",
+  'data-button-system="button"',
+  'data-button-system="icon"',
 ]) {
   if (!buttonSource.includes(required)) {
     errors.push(`${nativeButtonOwner}: required system contract missing: ${required}`);
@@ -138,12 +194,10 @@ for (const requiredVariant of [
   }
 }
 
-const primitiveFiles = [
+for (const relativePath of [
   'src/components/ui/SegmentedControl.tsx',
   'src/components/ui/FilterChip.tsx',
-];
-
-for (const relativePath of primitiveFiles) {
+]) {
   if (!fs.existsSync(path.join(repoRoot, relativePath))) {
     errors.push(`${relativePath}: required button-system primitive is missing.`);
   }
@@ -156,5 +210,5 @@ if (errors.length > 0) {
 }
 
 console.log(
-  'Button system audit passed: native actions are centralized and shared buttons own their visual styling.'
+  'Button system audit passed: native actions are centralized, icon-only actions use IconButton, and shared buttons own their visual styling.'
 );
