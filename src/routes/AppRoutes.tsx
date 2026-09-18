@@ -17,6 +17,7 @@ import {
   DashboardPage,
   ComplaintsPage,
   ComplaintDetailPage,
+  NewsIntakePage,
   ResponsesPage,
   CategoriesPage,
   BannersPage,
