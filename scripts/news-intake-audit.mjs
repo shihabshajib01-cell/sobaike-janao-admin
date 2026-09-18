@@ -19,6 +19,7 @@ const collisionErrorContract = read('supabase/migrations/20260918184410_news_int
 const explicitDenyPolicies = read('supabase/migrations/20260918184743_news_intake_explicit_deny_policies.sql');
 const schemaRequirementGuard = read('supabase/migrations/20260918185342_news_intake_schema_requirement_guard.sql');
 const samakalMode = read('supabase/migrations/20260918185535_news_intake_samakal_manual_only.sql');
+const schedulerMigration = read('supabase/migrations/20260918191945_news_intake_36h_scheduler.sql');
 const automationCore = read('supabase/functions/_shared/newsIntakeAutomationCore.ts');
 const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
 const edge = read('supabase/functions/news-intake-fetch/index.ts');
@@ -99,6 +100,19 @@ requireText(schemaRequirementGuard, 'sourced_report_missing_required_fields_inte
 requireText(schemaRequirementGuard, 'trg_guard_sourced_report_schema_requirements', 'News Intake schema requirement trigger');
 requireText(schemaRequirementGuard, 'schemaValidation', 'News Intake schema-aware preview');
 requireText(samakalMode, "scan_enabled=false", 'Samakal safe source mode');
+for (const needle of [
+  'pg_cron',
+  'pg_net',
+  'news_intake_automation_settings',
+  'service_begin_news_intake_run',
+  'admin_set_news_intake_auto_update',
+  'dispatch_news_intake_auto_scan',
+  "interval '36 hours'",
+  'ux_news_intake_runs_one_running',
+  'sobaike-janao-news-intake-auto-dispatch',
+]) {
+  requireText(schedulerMigration, needle, '36-hour News Intake scheduler');
+}
 
 for (const needle of [
   'admin_get_news_intake_taxonomy',
@@ -134,6 +148,10 @@ for (const needle of [
   'buildSourceLanguageFields',
   'scoreDiscoveryLink',
   "itemKind:'source'",
+  'x-news-intake-scheduler',
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'SCHEDULER_SECRET_SHA256',
+  'service_begin_news_intake_run',
   'verify_jwt',
 ]) {
   if (needle === 'verify_jwt') continue;
@@ -141,7 +159,7 @@ for (const needle of [
 }
 
 for (const needle of [
-  'Check Sources & Duplicates',
+  'Check Now',
   'newsIntakeApi.scanSources()',
   'getAutomationDashboard()',
   'created_draft',
@@ -150,6 +168,7 @@ for (const needle of [
   'manualSources',
   'showAllResults',
   'selectedRunId',
+  'newsIntakeApi.setAutoUpdate',
 ]) {
   requireText(automationPanel, needle, 'News Automation panel');
 }
@@ -221,5 +240,5 @@ if (errors.length) {
 }
 
 console.log(
-  'News Intake audit passed: trusted-source modes, one-click scanning, source-language handling, cross-language duplicate safety, run history, draft-first creation, source merge, existing publish gate, and security checks are protected.'
+  'News Intake audit passed: trusted-source modes, secure 36-hour scheduling, manual Check Now, overlap prevention, source-language handling, cross-language duplicate safety, run history, draft-first creation, source merge, existing publish gate, and security checks are protected.'
 );
