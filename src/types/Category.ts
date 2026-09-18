@@ -60,6 +60,16 @@ export interface TaxonomyUpdateInput {
   nameBn: string;
   status: TaxonomyStatus;
   order: number;
+  parentSegmentId?: string;
+  shortNameEn?: string;
+  shortNameBn?: string;
+  descriptionEn?: string;
+  descriptionBn?: string;
+  slug?: string;
+  iconKey?: string;
+  themeKey?: string;
+  categoryGroup?: string | null;
+  isSensitive?: boolean;
 }
 
 
