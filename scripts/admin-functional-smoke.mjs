@@ -36,6 +36,23 @@ async function expectVisible(locator, message) {
   if (!(await locator.isVisible())) throw new Error(message);
 }
 
+async function fetchWithRetry(url, options = {}, attempts = 4) {
+  let lastError;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await fetch(url, options);
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts) {
+        await new Promise((resolve) => setTimeout(resolve, attempt * 750));
+      }
+    }
+  }
+
+  throw lastError;
+}
+
 function attachPageGuards(page, label) {
   page.on('pageerror', (error) => failures.push(label + ' pageerror: ' + error.message));
   page.on('response', (response) => {
@@ -143,14 +160,14 @@ await check('Live Admin login, validation and protected-route boundary', async (
 });
 
 await check('Live Admin production does not publish JavaScript sourcemaps', async () => {
-  const indexResponse = await fetch(LIVE_URL, { redirect: 'follow' });
+  const indexResponse = await fetchWithRetry(LIVE_URL, { redirect: 'follow' });
   if (!indexResponse.ok) throw new Error('live Admin index returned ' + indexResponse.status);
   const html = await indexResponse.text();
   const match = html.match(/<script[^>]+src=["']([^"']+\.js)["']/);
   if (!match) throw new Error('could not locate live Admin JavaScript asset');
 
   const assetUrl = new URL(match[1], LIVE_URL).toString();
-  const sourceMapResponse = await fetch(assetUrl + '.map', { redirect: 'manual' });
+  const sourceMapResponse = await fetchWithRetry(assetUrl + '.map', { redirect: 'manual' });
   if (sourceMapResponse.ok) throw new Error('production JavaScript sourcemap is publicly reachable: ' + assetUrl + '.map');
 });
 
