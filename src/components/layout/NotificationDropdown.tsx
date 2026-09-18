@@ -33,44 +33,64 @@ export const NotificationDropdown: React.FC = () => {
   const [itemErrorIds, setItemErrorIds] = useState<Set<string>>(new Set());
   const [markingItemIds, setMarkingItemIds] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const bellButtonRef = useRef<HTMLButtonElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
 
-  // Close dropdown on click outside
+  const closeDropdown = useCallback((restoreFocus: boolean = false) => {
+    setIsOpen(false);
+    setItemErrorIds(new Set());
+    setGlobalActionError(null);
+
+    if (restoreFocus) {
+      window.requestAnimationFrame(() => bellButtonRef.current?.focus());
+    }
+  }, []);
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-        setItemErrorIds(new Set());
+        closeDropdown(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [closeDropdown]);
 
-  // Close dropdown on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
-        setIsOpen(false);
-        setItemErrorIds(new Set());
+        e.preventDefault();
+        closeDropdown(true);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
+  }, [isOpen, closeDropdown]);
 
-  // Refresh notifications and clear errors when dropdown is opened
   useEffect(() => {
-    if (isOpen) {
-      setItemErrorIds(new Set());
-      setGlobalActionError(null);
-      void refreshRecent();
-    }
+    if (!isOpen) return;
+
+    setItemErrorIds(new Set());
+    setGlobalActionError(null);
+    void refreshRecent();
+
+    const frame = window.requestAnimationFrame(() => {
+      const firstFocusable = dialogRef.current?.querySelector<HTMLElement>(
+        'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+      );
+      firstFocusable?.focus();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
   }, [isOpen, refreshRecent]);
 
-  // Toggle dropdown
   const handleToggle = useCallback(() => {
-    setIsOpen((prev) => !prev);
-  }, []);
+    if (isOpen) {
+      closeDropdown(true);
+    } else {
+      setIsOpen(true);
+    }
+  }, [isOpen, closeDropdown]);
 
   // Notification item click: Mark read, validate route, navigate safely or stay
   const handleItemClick = async (notification: AdminNotification) => {
@@ -177,6 +197,7 @@ export const NotificationDropdown: React.FC = () => {
       <button
         type="button"
         id="header-notification-bell-btn"
+        ref={bellButtonRef}
         onClick={handleToggle}
         className={cn(
           'relative p-2 rounded-md text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500',
@@ -185,6 +206,7 @@ export const NotificationDropdown: React.FC = () => {
         aria-label={accessibleLabel}
         aria-expanded={isOpen}
         aria-haspopup="dialog"
+        aria-controls={isOpen ? 'notification-dropdown-dialog' : undefined}
       >
         <Bell className="w-5 h-5" />
 
@@ -202,6 +224,8 @@ export const NotificationDropdown: React.FC = () => {
       {/* Notifications Popover Menu */}
       {isOpen && (
         <div
+          id="notification-dropdown-dialog"
+          ref={dialogRef}
           role="dialog"
           aria-modal="false"
           aria-label={t.notifications.title}
