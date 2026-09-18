@@ -141,3 +141,49 @@ jobs:
           check_denied "admin_confirm_reports_are_distinct"             '{"p_complaint_id":"__anonymous_duplicate_smoke_a__","p_candidate_complaint_id":"__anonymous_duplicate_smoke_b__","p_review_note":"anonymous access must be denied"}'
 
           echo "Anonymous duplicate-protection RPC denial checks passed"
+
+      - name: Verify News Intake RPCs reject anonymous access
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_KEY"
+
+          check_denied() {
+            rpc_name="$1"
+            payload="$2"
+            output="/tmp/${rpc_name}.json"
+
+            http_code=$(curl -sS               -o "$output"               -w "%{http_code}"               -X POST "$SUPABASE_URL/rest/v1/rpc/$rpc_name"               -H "apikey: $SUPABASE_KEY"               -H "Authorization: Bearer $SUPABASE_KEY"               -H "Content-Type: application/json"               -d "$payload")
+
+            if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+              echo "ERROR: $rpc_name accepted anonymous access"
+              cat "$output"
+              exit 1
+            fi
+          }
+
+          check_denied "admin_check_news_source_domain"             '{"p_url":"https://www.thedailystar.net/__anonymous_news_intake_smoke__"}'
+          check_denied "admin_preview_sourced_report_intake"             '{"p_payload":{"source":{"canonicalUrl":"https://www.thedailystar.net/__anonymous_news_intake_smoke__"},"report":{}}}'
+          check_denied "admin_create_sourced_report_from_intake"             '{"p_payload":{"source":{"canonicalUrl":"https://www.thedailystar.net/__anonymous_news_intake_smoke__"},"report":{}}}'
+          check_denied "admin_merge_intake_source"             '{"p_complaint_id":"__anonymous_news_intake_smoke__","p_source":{"canonicalUrl":"https://www.thedailystar.net/__anonymous_news_intake_smoke__"}}'
+          check_denied "admin_get_news_intake_taxonomy" '{}'
+
+          echo "Anonymous News Intake RPC denial checks passed"
+
+      - name: Verify News Intake fetcher rejects anonymous access
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_KEY"
+
+          http_code=$(curl -sS             -o /tmp/news-intake-fetch-anon.json             -w "%{http_code}"             -X POST "$SUPABASE_URL/functions/v1/news-intake-fetch"             -H "apikey: $SUPABASE_KEY"             -H "Content-Type: application/json"             -d '{"url":"https://www.thedailystar.net/__anonymous_news_intake_smoke__"}')
+
+          if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+            echo "ERROR: news-intake-fetch accepted anonymous access"
+            cat /tmp/news-intake-fetch-anon.json
+            exit 1
+          fi
+
+          echo "Anonymous News Intake Edge Function denial check passed"
