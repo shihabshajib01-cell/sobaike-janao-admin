@@ -98,7 +98,7 @@ export const MapComplaintList: React.FC<MapComplaintListProps> = ({
             <MapPin className="w-4 h-4 text-sky-600 dark:text-sky-400" />
             <span>{isBn ? 'ম্যাপে তালিকাভুক্ত অভিযোগ' : 'Mapped Complaints'}</span>
           </h3>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="type-meta text-slate-500 dark:text-slate-400 mt-0.5">
             {isBn
               ? 'ম্যাপে চিহ্নিত সকল সক্রিয় অভিযোগ পয়েন্ট'
               : 'Interactive markers visible on the map'}
@@ -151,7 +151,7 @@ export const MapComplaintList: React.FC<MapComplaintListProps> = ({
                 </h4>
 
                 {/* Row 3: Segment & Subcategory */}
-                <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                <div className="flex items-center gap-1 type-meta text-slate-500 dark:text-slate-400 mt-1">
                   <Folder className="w-3 h-3 text-slate-400 shrink-0" />
                   <span className="truncate">
                     {(isBn ? item.segmentBn : item.segmentEn) || '—'}
@@ -162,7 +162,7 @@ export const MapComplaintList: React.FC<MapComplaintListProps> = ({
                 </div>
 
                 {/* Row 4: Location & Date & Action */}
-                <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-slate-400 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800/70">
+                <div className="flex items-center justify-between gap-2 type-meta text-slate-500 dark:text-slate-400 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800/70">
                   <div className="flex items-center gap-1 min-w-0">
                     <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
                     <span className="truncate font-medium text-slate-700 dark:text-slate-300">
@@ -171,7 +171,7 @@ export const MapComplaintList: React.FC<MapComplaintListProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[10px] text-slate-400 font-mono">
+                    <span className="type-meta text-slate-400 font-mono">
                       {formatDate(item.createdAt)}
                     </span>
                     {canViewComplaints && (
