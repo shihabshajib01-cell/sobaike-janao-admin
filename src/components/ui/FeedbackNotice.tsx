@@ -17,7 +17,7 @@ export type FeedbackNoticeTone =
   | 'neutral';
 
 export interface FeedbackNoticeProps
-  extends React.HTMLAttributes<HTMLDivElement> {
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
   tone?: FeedbackNoticeTone;
   title?: React.ReactNode;
   children: React.ReactNode;
