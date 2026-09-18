@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
@@ -406,7 +407,7 @@ export const MapPage: React.FC = () => {
 
             {/* Mobile Tab View Switcher (< lg) */}
             <div className="lg:hidden flex items-center justify-center p-1 bg-slate-100 dark:bg-slate-800 rounded-lg max-w-xs mx-auto border border-slate-200 dark:border-slate-700">
-              <button
+              <ButtonBase
                 type="button"
                 onClick={() => setMobileView('map')}
                 className={cn(
@@ -418,8 +419,8 @@ export const MapPage: React.FC = () => {
               >
                 <MapIcon className="w-3.5 h-3.5" />
                 <span>{isBn ? 'মানচিত্র ভিউ' : 'Map View'}</span>
-              </button>
-              <button
+              </ButtonBase>
+              <ButtonBase
                 type="button"
                 onClick={() => setMobileView('list')}
                 className={cn(
@@ -434,7 +435,7 @@ export const MapPage: React.FC = () => {
                 <span className="text-[10px] font-mono px-1 rounded bg-slate-200 dark:bg-slate-700">
                   {filteredComplaints.length}
                 </span>
-              </button>
+              </ButtonBase>
             </div>
 
             {/* Main Interactive Geospatial View / Empty States */}
