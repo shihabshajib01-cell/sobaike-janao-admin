@@ -92,6 +92,15 @@ export interface NewsIntakePreview {
     publisherName?: string | null;
   };
   duplicate: ReportDuplicateCheckResult;
+  schemaValidation: {
+    ready: boolean;
+    missingFields: Array<{
+      fieldKey: string;
+      storageKey: string;
+      labelEn?: string | null;
+      labelBn?: string | null;
+    }>;
+  };
   canCreateDraft: boolean;
   canPublishImmediately: boolean;
 }
