@@ -89,7 +89,7 @@ export const CategoryPopularitySummary: React.FC = () => {
           size="sm"
           onClick={() => void load()}
           disabled={loading}
-          leftIcon={<RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />}
+          leftIcon={<RefreshCw className={loading ? 'animate-spin' : undefined} />}
         >
           <span>{isBn ? 'রিফ্রেশ' : 'Refresh'}</span>
         </Button>
