@@ -64,7 +64,7 @@ export const MapEmptyState: React.FC<MapEmptyStateProps> = ({
           variant="secondary"
           size="sm"
           onClick={onResetFilters}
-          leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+          leftIcon={<RotateCcw />}
         >
           {isBn ? 'ফিল্টার রিসেট করুন' : 'Reset Filters'}
         </Button>
