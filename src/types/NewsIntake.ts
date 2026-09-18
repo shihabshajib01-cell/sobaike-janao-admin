@@ -160,6 +160,7 @@ export interface NewsIntakeAutomationItem {
 
 export interface NewsIntakeAutomationRun {
   runId: string;
+  triggerType: 'manual' | 'automatic';
   status: 'running' | 'completed' | 'partial' | 'failed';
   sourceCount: number;
   discoveredCount: number;
@@ -176,13 +177,24 @@ export interface NewsIntakeAutomationRun {
   items: NewsIntakeAutomationItem[];
 }
 
+export interface NewsIntakeAutomationConfig {
+  enabled: boolean;
+  intervalHours: 36;
+  lastAutoDispatchedAt?: string | null;
+  nextAutoDueAt?: string | null;
+  running: boolean;
+}
+
 export interface NewsIntakeAutomationDashboard {
   sources: NewsIntakeAutomationSource[];
   runs: NewsIntakeAutomationRun[];
+  automation: NewsIntakeAutomationConfig;
 }
 
 export interface NewsIntakeAutomationScanResult {
   runId: string;
+  triggerType: 'manual' | 'automatic';
+  alreadyRunning?: boolean;
   status: 'completed' | 'partial' | 'failed';
   sourceCount: number;
   discoveredCount: number;
