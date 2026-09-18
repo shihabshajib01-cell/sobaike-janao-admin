@@ -85,8 +85,8 @@ export const LocationActivityFilters: React.FC<LocationActivityFiltersProps> = (
               variant="secondary"
               size="sm"
               onClick={onReset}
-              leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
-              className="text-xs h-9 shrink-0"
+              leftIcon={<RotateCcw />}
+              className="shrink-0"
             >
               <span>{isBn ? 'ফিল্টার রিসেট' : 'Reset Filters'}</span>
             </Button>
