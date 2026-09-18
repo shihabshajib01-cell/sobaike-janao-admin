@@ -26,6 +26,9 @@ jobs:
       - name: Notification center audit
         run: npm run audit:notifications
 
+      - name: Responsive table audit
+        run: npm run audit:responsive-tables
+
       - name: Lint
         run: npm run lint
 
