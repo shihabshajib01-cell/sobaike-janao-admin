@@ -118,11 +118,19 @@ export const ComplaintsPage: React.FC = () => {
   const handleFilterChange = (key: keyof ComplaintFilterState, value: string) => {
     setFilters((prev) => {
       const next = { ...prev, [key]: value };
-      if (key === 'category' && value !== 'harassment') {
-        next.affectedPersonAgeGroup = 'all';
-        next.allegedAbuserRelationship = 'all';
-        next.reportingFor = 'all';
+
+      if (key === 'category') {
+        // Subcategory choices belong to the selected category. Never keep a
+        // stale complaint-type filter when the parent changes.
+        next.subcategory = 'all';
+
+        if (value !== 'harassment') {
+          next.affectedPersonAgeGroup = 'all';
+          next.allegedAbuserRelationship = 'all';
+          next.reportingFor = 'all';
+        }
       }
+
       return next;
     });
   };
