@@ -417,10 +417,10 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
 
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              <span className="type-meta font-semibold uppercase tracking-wider text-slate-400">
                 {isBn ? 'উপলব্ধ ট্রায়াজ পদক্ষেপসমূহ' : 'Available Operational Actions'}
               </span>
-              <span className="text-[10px] text-slate-400 font-mono">
+              <span className="type-meta text-slate-400 font-mono">
                 {isBn ? 'রিয়েল-টাইম অডিট' : 'Audit-Ready'}
               </span>
             </div>
