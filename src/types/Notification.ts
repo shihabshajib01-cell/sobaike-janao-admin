@@ -96,6 +96,7 @@ export interface NotificationListParams {
   before_id?: string | null;
   unread_only?: boolean;
   category?: string | null;
+  detect_has_more?: boolean;
 }
 
 export interface NotificationListResult extends Array<AdminNotification> {
