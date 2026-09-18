@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { MapPin, Save, Eye, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { Tag } from '@/components/ui/Tag';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
@@ -231,13 +232,13 @@ export const PublicationComposerModal: React.FC<PublicationComposerModalProps> =
           <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
             <div className="p-4 sm:p-5">
               <div className="mb-3 flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700 dark:bg-sky-950/50 dark:text-sky-300">
+                <Tag tone="info" size="md">
                   {previewCategory}
-                </span>
+                </Tag>
                 {previewSubcategory && (
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  <Tag tone="neutral" size="md">
                     {previewSubcategory}
-                  </span>
+                  </Tag>
                 )}
               </div>
 
