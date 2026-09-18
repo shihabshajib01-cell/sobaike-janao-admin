@@ -124,12 +124,21 @@ export const LocationActivityTable: React.FC<LocationActivityTableProps> = ({
           return (
             <TableRow
               key={session.id}
-              className={`transition-colors cursor-pointer ${
+              className={`transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500 ${
                 isSelected
                   ? 'bg-sky-50/70 dark:bg-sky-950/30'
                   : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/50'
               }`}
               onClick={() => onSelectSession(session)}
+              onKeyDown={(e) => {
+                if (e.target !== e.currentTarget) return;
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onSelectSession(session);
+                }
+              }}
+              tabIndex={0}
+              aria-label={`${isBn ? 'সেশন দেখুন' : 'View session'} ${session.id}`}
             >
               {/* 1. Last Seen */}
               <TableCell>
