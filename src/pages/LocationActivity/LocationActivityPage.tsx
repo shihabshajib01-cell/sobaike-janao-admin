@@ -225,27 +225,23 @@ export const LocationActivityPage: React.FC = () => {
 
         <ResponsiveDataView>
           <ResponsiveDataTableView>
-            <Card variant="default" className="overflow-hidden">
-              <CardContent className="p-0 sm:p-0">
-                {loading && !refreshing ? (
-                  <div className="p-12 text-center space-y-3">
-                    <div className="w-8 h-8 border-2 border-sky-500 border-t-transparent rounded-full animate-spin mx-auto" />
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {isBn ? 'সেশন ডাটা লোড হচ্ছে...' : 'Loading location sessions...'}
-                    </p>
-                  </div>
-                ) : (
-                  <LocationActivityTable
-                    sessions={sessions}
-                    selectedSession={selectedSession}
-                    onSelectSession={handleSelectSession}
-                    hasFilters={hasActiveFilters}
-                    onResetFilters={handleResetFilters}
-                    isLoading={loading}
-                  />
-                )}
-              </CardContent>
-            </Card>
+            {loading && !refreshing ? (
+              <div className="p-12 text-center space-y-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="w-8 h-8 border-2 border-sky-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {isBn ? 'সেশন ডাটা লোড হচ্ছে...' : 'Loading location sessions...'}
+                </p>
+              </div>
+            ) : (
+              <LocationActivityTable
+                sessions={sessions}
+                selectedSession={selectedSession}
+                onSelectSession={handleSelectSession}
+                hasFilters={hasActiveFilters}
+                onResetFilters={handleResetFilters}
+                isLoading={loading}
+              />
+            )}
           </ResponsiveDataTableView>
 
           <ResponsiveDataCardView>
