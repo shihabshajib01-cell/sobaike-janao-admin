@@ -4,10 +4,25 @@ import { cn } from '@/utils';
 import { LoadingState } from '@/components/common/LoadingState';
 import { EmptyState } from '@/components/common/EmptyState';
 
-export const Table = forwardRef<HTMLTableElement, HTMLAttributes<HTMLTableElement>>(
-  ({ className, ...props }, ref) => (
-    <div className="relative w-full max-w-full min-w-0 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
-      <table ref={ref} className={cn('w-max min-w-full table-auto caption-bottom text-xs text-left', className)} {...props} />
+export interface TableProps extends HTMLAttributes<HTMLTableElement> {
+  containerClassName?: string;
+  bare?: boolean;
+}
+
+export const Table = forwardRef<HTMLTableElement, TableProps>(
+  ({ className, containerClassName, bare = false, ...props }, ref) => (
+    <div
+      className={cn(
+        'relative w-full max-w-full min-w-0 overflow-x-auto',
+        !bare && 'rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs',
+        containerClassName
+      )}
+    >
+      <table
+        ref={ref}
+        className={cn('w-max min-w-full table-auto caption-bottom text-xs text-left', className)}
+        {...props}
+      />
     </div>
   )
 );
