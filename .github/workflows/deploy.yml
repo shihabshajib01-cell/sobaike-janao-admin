@@ -36,6 +36,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Notification center audit
+        run: npm run audit:notifications
+
       - name: Responsive table audit
         run: npm run audit:responsive-tables
 
