@@ -266,7 +266,7 @@ export const MapPage: React.FC = () => {
               disabled={loading || refreshing}
               leftIcon={
                 <RefreshCw
-                  className={cn('w-3.5 h-3.5', refreshing && 'animate-spin')}
+                  className={cn('', refreshing && 'animate-spin')}
                 />
               }
             >
@@ -294,7 +294,7 @@ export const MapPage: React.FC = () => {
             variant="primary"
             size="sm"
             onClick={() => loadData(false)}
-            leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
+            leftIcon={<RefreshCw />}
           >
             {isBn ? 'পুনরায় চেষ্টা করুন' : 'Retry'}
           </Button>
@@ -338,7 +338,6 @@ export const MapPage: React.FC = () => {
                     variant="secondary"
                     size="sm"
                     onClick={() => loadData(true)}
-                    className="text-xs h-7 px-2.5"
                   >
                     {isBn ? 'পুনরায় রিফ্রেশ' : 'Retry Refresh'}
                   </Button>
@@ -346,7 +345,6 @@ export const MapPage: React.FC = () => {
                     variant="ghost"
                     size="sm"
                     onClick={() => setRefreshError(null)}
-                    className="text-xs h-7 px-2"
                   >
                     {isBn ? 'বাতিল' : 'Dismiss'}
                   </Button>
