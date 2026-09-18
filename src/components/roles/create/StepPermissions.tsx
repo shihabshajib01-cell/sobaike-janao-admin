@@ -208,7 +208,7 @@ export const StepPermissions: React.FC<StepPermissionsProps> = ({
             variant="secondary"
             size="md"
             onClick={onBack}
-            leftIcon={<ArrowLeft className="w-4 h-4" />}
+            leftIcon={<ArrowLeft />}
           >
             <span>{t.roles.back}</span>
           </Button>
@@ -219,7 +219,7 @@ export const StepPermissions: React.FC<StepPermissionsProps> = ({
             variant="ghost"
             size="md"
             onClick={onCancel}
-            leftIcon={<X className="w-4 h-4" />}
+            leftIcon={<X />}
           >
             <span>{t.roles.cancel}</span>
           </Button>
@@ -264,7 +264,7 @@ export const StepPermissions: React.FC<StepPermissionsProps> = ({
                 variant="secondary"
                 size="sm"
                 onClick={onRetryCatalogue}
-                leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+                leftIcon={<RotateCcw />}
               >
                 <span>{t.roles.retry}</span>
               </Button>
@@ -278,7 +278,7 @@ export const StepPermissions: React.FC<StepPermissionsProps> = ({
             variant="secondary"
             size="md"
             onClick={onBack}
-            leftIcon={<ArrowLeft className="w-4 h-4" />}
+            leftIcon={<ArrowLeft />}
           >
             <span>{t.roles.back}</span>
           </Button>
@@ -287,7 +287,7 @@ export const StepPermissions: React.FC<StepPermissionsProps> = ({
             variant="ghost"
             size="md"
             onClick={onCancel}
-            leftIcon={<X className="w-4 h-4" />}
+            leftIcon={<X />}
           >
             <span>{t.roles.cancel}</span>
           </Button>
@@ -319,8 +319,7 @@ export const StepPermissions: React.FC<StepPermissionsProps> = ({
                 size="sm"
                 onClick={handleSelectAllGlobal}
                 disabled={selectedPermissionIds.length === catalogue.length}
-                leftIcon={<CheckSquare className="w-3.5 h-3.5" />}
-                className="text-xs"
+                leftIcon={<CheckSquare />}
               >
                 <span>{t.roles.selectAll}</span>
               </Button>
@@ -330,8 +329,7 @@ export const StepPermissions: React.FC<StepPermissionsProps> = ({
                 size="sm"
                 onClick={handleClearAllGlobal}
                 disabled={selectedPermissionIds.length === 0}
-                leftIcon={<Square className="w-3.5 h-3.5" />}
-                className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                leftIcon={<Square />}
               >
                 <span>{t.roles.clearAll}</span>
               </Button>
@@ -413,7 +411,6 @@ export const StepPermissions: React.FC<StepPermissionsProps> = ({
                       variant="ghost"
                       size="sm"
                       onClick={() => handleToggleModule(moduleKey)}
-                      className="h-7 text-xs px-2"
                     >
                       {isAllModuleSelected ? t.roles.clearAll : t.roles.selectAll}
                     </Button>
@@ -489,7 +486,7 @@ export const StepPermissions: React.FC<StepPermissionsProps> = ({
           variant="secondary"
           size="md"
           onClick={onBack}
-          leftIcon={<ArrowLeft className="w-4 h-4" />}
+          leftIcon={<ArrowLeft />}
         >
           <span>{t.roles.back}</span>
         </Button>
@@ -501,7 +498,7 @@ export const StepPermissions: React.FC<StepPermissionsProps> = ({
             variant="ghost"
             size="md"
             onClick={onCancel}
-            leftIcon={<X className="w-4 h-4" />}
+            leftIcon={<X />}
           >
             <span>{t.roles.cancel}</span>
           </Button>
@@ -512,7 +509,7 @@ export const StepPermissions: React.FC<StepPermissionsProps> = ({
             variant="primary"
             size="md"
             onClick={onNext}
-            rightIcon={<ArrowRight className="w-4 h-4" />}
+            rightIcon={<ArrowRight />}
           >
             <span>{t.roles.next}</span>
           </Button>
