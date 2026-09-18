@@ -14,6 +14,9 @@ const canonicalPublisher = read('supabase/migrations/20260918163429_news_intake_
 const automation = read('supabase/migrations/20260918172747_news_intake_automation.sql');
 const sourceCompatibility = read('supabase/migrations/20260918173239_news_intake_source_compatibility.sql');
 const automationIndexes = read('supabase/migrations/20260918173920_news_intake_automation_fk_indexes.sql');
+const automationReliability = read('supabase/migrations/20260918184016_news_intake_automation_reliability_hardening.sql');
+const automationCore = read('supabase/functions/_shared/newsIntakeAutomationCore.ts');
+const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
 const edge = read('supabase/functions/news-intake-fetch/index.ts');
 const scanner = read('supabase/functions/news-intake-scan/index.ts');
 const automationPanel = read('src/pages/NewsIntake/NewsAutomationPanel.tsx');
@@ -64,6 +67,26 @@ requireText(automationIndexes, 'idx_news_intake_runs_started_by', 'News Intake a
 requireText(automationIndexes, 'idx_news_intake_run_items_segment_id', 'News Intake automation segment index');
 requireText(automationIndexes, 'idx_news_intake_run_items_subcategory_id', 'News Intake automation subcategory index');
 requireText(canonicalPublisher, "sourceDomain,publisherName", 'canonical publisher mapping');
+for (const needle of [
+  'automation_note',
+  'item_kind',
+  "'cross_language_safe_review'",
+  'trg_guard_automated_sourced_report_collision',
+  "'samakal.com'",
+  "'scanEnabled'",
+]) {
+  requireText(automationReliability, needle, 'News Intake reliability hardening');
+}
+for (const needle of [
+  'inferIncidentDate',
+  'buildSourceLanguageFields',
+  'scoreDiscoveryLink',
+  'MAX_ARTICLE_AGE_DAYS',
+]) {
+  requireText(automationCore, needle, 'News Intake automation core');
+}
+requireText(behaviorAudit, 'classificationCases', 'News Intake behavior audit');
+requireText(behaviorAudit, 'English content must not be duplicated', 'News Intake source-language audit');
 
 for (const needle of [
   'admin_get_news_intake_taxonomy',
@@ -96,6 +119,9 @@ for (const needle of [
   'admin_merge_intake_source',
   'admin_record_news_intake_item',
   'admin_finish_news_intake_run',
+  'buildSourceLanguageFields',
+  'scoreDiscoveryLink',
+  "itemKind:'source'",
   'verify_jwt',
 ]) {
   if (needle === 'verify_jwt') continue;
@@ -109,6 +135,9 @@ for (const needle of [
   'created_draft',
   'merged_source',
   'needs_review',
+  'manualSources',
+  'showAllResults',
+  'selectedRunId',
 ]) {
   requireText(automationPanel, needle, 'News Automation panel');
 }
@@ -180,5 +209,5 @@ if (errors.length) {
 }
 
 console.log(
-  'News Intake audit passed: one-click source scan, source-grounded classification, draft-first creation, duplicate preview, source merge, existing publish gate, and security checks are protected.'
+  'News Intake audit passed: trusted-source modes, one-click scanning, source-language handling, cross-language duplicate safety, run history, draft-first creation, source merge, existing publish gate, and security checks are protected.'
 );
