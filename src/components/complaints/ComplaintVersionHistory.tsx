@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { Tag } from '@/components/ui/Tag';
 import { Button } from '@/components/ui/Button';
 import { useLanguage } from '@/context/LanguageContext';
 import { Complaint, ComplaintVersion } from '@/types/Complaint';
@@ -60,9 +61,9 @@ export const ComplaintVersionHistory: React.FC<ComplaintVersionHistoryProps> = (
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-mono">
+                    <Tag tone="warning" mono>
                       v{ver.versionNumber}.0
-                    </span>
+                    </Tag>
                     <span className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1">
                       <User className="w-3 h-3 text-slate-400" />
                       {ver.editedBy?.name || 'Admin'}
