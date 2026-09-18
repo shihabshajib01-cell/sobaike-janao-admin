@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
+import { TablePageSizeSelect } from '@/components/ui/TablePageSizeSelect';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { adminUserApi } from '@/services/api/adminUserApi';
@@ -90,7 +91,7 @@ export const UsersPage: React.FC = () => {
 
   // Pagination State
   const [page, setPage] = useState<number>(1);
-  const [pageSize] = useState<number>(10);
+  const [pageSize, setPageSize] = useState<number>(10);
   const [totalCount, setTotalCount] = useState<number>(0);
 
   // Filters
@@ -209,6 +210,11 @@ export const UsersPage: React.FC = () => {
   const handleStatusChange = (val: 'all' | 'active' | 'inactive') => {
     setSelectedStatus(val);
     setPage(1);
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPage(1);
+    setPageSize(newPageSize);
   };
 
   const totalPages = Math.ceil(totalCount / pageSize);
@@ -347,20 +353,28 @@ export const UsersPage: React.FC = () => {
       ) : (
         <div className="space-y-3">
           {/* Item Count & Page Summary Header */}
-          <div className="flex items-center justify-between px-1 text-xs text-slate-500 dark:text-slate-400">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-slate-500 dark:text-slate-400">
             <span>
               {t.users.showingUsers
                 .replace('{start}', formatNumber(startItem))
                 .replace('{end}', formatNumber(endItem))
                 .replace('{total}', formatNumber(totalCount))}
             </span>
-            {totalPages > 1 && (
-              <span>
-                {t.users.pageIndicator
-                  .replace('{current}', formatNumber(page))
-                  .replace('{total}', formatNumber(totalPages))}
-              </span>
-            )}
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <TablePageSizeSelect
+                id="users-page-size"
+                value={pageSize}
+                onChange={handlePageSizeChange}
+                disabled={loading}
+              />
+              {totalPages > 1 && (
+                <span>
+                  {t.users.pageIndicator
+                    .replace('{current}', formatNumber(page))
+                    .replace('{total}', formatNumber(totalPages))}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Table & Mobile Cards */}
