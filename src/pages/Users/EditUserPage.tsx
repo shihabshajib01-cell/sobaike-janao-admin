@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/Button';
+import { Button, IconButton } from '@/components/ui/Button';
 import { useLanguage } from '@/context/LanguageContext';
 import { adminUserApi } from '@/services/api/adminUserApi';
 import { AdminUserDetail, AssignableRole } from '@/types/AdminUser';
@@ -164,16 +164,14 @@ export const EditUserPage: React.FC = () => {
     <div className="max-w-3xl mx-auto space-y-6 pb-16" id="edit-user-page">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Button
+        <IconButton
           id="btn-back-to-detail"
           variant="ghost"
           size="sm"
           onClick={() => navigate(userId ? `/users/${userId}` : '/users')}
-          className="w-9"
           aria-label={t.common.back}
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
+          icon={<ArrowLeft />}
+        />
         <div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
             {t.users.editUserTitle}
