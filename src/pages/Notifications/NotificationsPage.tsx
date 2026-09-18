@@ -349,7 +349,7 @@ export const NotificationsPage: React.FC = () => {
               size="sm"
               onClick={handleRefresh}
               isLoading={isLoading}
-              leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+              leftIcon={<RotateCcw />}
             >
               {t.notifications.refresh}
             </Button>
@@ -362,7 +362,7 @@ export const NotificationsPage: React.FC = () => {
               onClick={handleMarkAllRead}
               disabled={unreadCount === 0 || isMarkingAll}
               isLoading={isMarkingAll}
-              leftIcon={<CheckCheck className="w-3.5 h-3.5" />}
+              leftIcon={<CheckCheck />}
             >
               {t.notifications.markAllRead}
             </Button>
@@ -494,7 +494,7 @@ export const NotificationsPage: React.FC = () => {
               variant="secondary"
               size="sm"
               onClick={() => loadNotifications(activeFilter)}
-              leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+              leftIcon={<RotateCcw />}
             >
               {t.notifications.retry}
             </Button>
@@ -671,7 +671,7 @@ export const NotificationsPage: React.FC = () => {
                           onClick={(event) => void handleMarkItemRead(event, item)}
                           disabled={isProcessing}
                           isLoading={isProcessing}
-                          leftIcon={<Check className="w-3.5 h-3.5" />}
+                          leftIcon={<Check />}
                         >
                           {t.notifications.markAsRead}
                         </Button>
@@ -689,7 +689,7 @@ export const NotificationsPage: React.FC = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => void handleItemNavigate(item)}
-                        rightIcon={<ExternalLink className="w-3.5 h-3.5" />}
+                        rightIcon={<ExternalLink />}
                       >
                         {routeActionLabel}
                       </Button>
@@ -709,7 +709,7 @@ export const NotificationsPage: React.FC = () => {
                   size="md"
                   onClick={handleLoadMore}
                   isLoading={isLoadingMore}
-                  leftIcon={<ChevronDown className="w-4 h-4" />}
+                  leftIcon={<ChevronDown />}
                 >
                   {isLoadingMore
                     ? t.notifications.loadingMore
