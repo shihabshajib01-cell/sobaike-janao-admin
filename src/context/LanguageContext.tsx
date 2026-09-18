@@ -298,6 +298,7 @@ export interface TranslationDictionary {
     unread: string;
     complaints: string;
     administration: string;
+    configuration: string;
     roles: string;
     security: string;
     markAllRead: string;
@@ -624,6 +625,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       unread: 'Unread',
       complaints: 'Complaints',
       administration: 'Administration',
+      configuration: 'Configuration',
       roles: 'Roles & Access',
       security: 'Security',
       markAllRead: 'Mark all notifications as read',
@@ -948,6 +950,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       unread: 'অপঠিত',
       complaints: 'অভিযোগ',
       administration: 'প্রশাসন',
+      configuration: 'কনফিগারেশন',
       roles: 'ভূমিকা ও অনুমতি',
       security: 'নিরাপত্তা',
       markAllRead: 'সব বিজ্ঞপ্তি পঠিত হিসেবে চিহ্নিত করুন',
