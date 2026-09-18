@@ -418,6 +418,9 @@ export function mapSupabaseRowToComplaint(
     sexualHarassmentType: (row.sexual_harassment_type as Complaint['sexualHarassmentType']) ?? null,
     sexualHarassmentContext: (row.sexual_harassment_context as Complaint['sexualHarassmentContext']) ?? null,
     sexualHarassmentInstitution: row.sexual_harassment_institution ?? null,
+    relationshipContext: row.relationship_context ?? null,
+    intimateWhatHappened: row.intimate_what_happened ?? null,
+    intimatePlatform: row.intimate_platform ?? null,
     recentBillMonth: row.recent_bill_month ?? null,
     recentBillAmount:
       row.recent_bill_amount !== null && row.recent_bill_amount !== undefined
