@@ -227,9 +227,9 @@ export const BannersPage: React.FC = () => {
       </div>
 
       {notice && !selected && (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300">
+        <FeedbackNotice tone="success">
           {notice}
-        </div>
+        </FeedbackNotice>
       )}
 
       {loadError ? (
@@ -274,12 +274,8 @@ export const BannersPage: React.FC = () => {
                         {banner.categoryKey}
                       </p>
                     </div>
-                    <span
-                      className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-medium ${
-                        draftChanged
-                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300'
-                          : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
-                      }`}
+                    <Tag
+                      tone={draftChanged ? 'warning' : 'success'}
                     >
                       {draftChanged
                         ? isBn
@@ -288,7 +284,7 @@ export const BannersPage: React.FC = () => {
                         : isBn
                           ? 'প্রকাশিত'
                           : 'Published'}
-                    </span>
+                    </Tag>
                   </div>
 
                   <p className="line-clamp-2 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
