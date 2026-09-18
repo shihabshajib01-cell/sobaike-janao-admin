@@ -126,7 +126,20 @@ export const ComplaintTable: React.FC<ComplaintTableProps> = ({
             const location = isBn ? c.location.addressBn : c.location.addressEn;
 
             return (
-              <TableRow key={c.id} className="group hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+              <TableRow
+                key={c.id}
+                onClick={() => handleView(c.id)}
+                onKeyDown={(e) => {
+                  if (e.target !== e.currentTarget) return;
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleView(c.id);
+                  }
+                }}
+                tabIndex={0}
+                aria-label={`${isBn ? 'অভিযোগ দেখুন' : 'View complaint'} ${c.id}`}
+                className="group cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500"
+              >
                 {/* Complaint ID */}
                 <TableCell className="font-mono font-bold text-sky-700 dark:text-sky-400 text-xs">
                   {c.id}
@@ -183,7 +196,10 @@ export const ComplaintTable: React.FC<ComplaintTableProps> = ({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleView(c.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleView(c.id);
+                    }}
                     className="h-7 px-2.5 text-xs text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400"
                     aria-label={`${isBn ? 'অভিযোগ দেখুন' : 'View complaint'} ${c.id}`}
                   >
