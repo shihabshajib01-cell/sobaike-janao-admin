@@ -84,7 +84,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     try {
       const [listResult, countResult] = await Promise.allSettled([
-        notificationApi.listNotifications({ limit: 8 }),
+        notificationApi.listNotifications({ limit: 8, detect_has_more: false }),
         notificationApi.getUnreadCount(),
       ]);
 
