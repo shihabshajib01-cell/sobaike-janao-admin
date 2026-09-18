@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
@@ -49,13 +50,13 @@ export class ErrorBoundary extends Component<Props, State> {
           <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mb-4 font-mono text-xs bg-white dark:bg-slate-900 p-2 rounded border border-slate-200 dark:border-slate-800 break-all">
             {this.state.error?.message || 'An unexpected runtime error occurred.'}
           </p>
-          <button
+          <ButtonBase
             onClick={this.handleReset}
             className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded-md bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 hover:opacity-90 transition-opacity"
           >
             <RefreshCw className="w-4 h-4" />
             Try again
-          </button>
+          </ButtonBase>
         </div>
       );
     }
