@@ -43,6 +43,7 @@ export const ComplaintInfoSection: React.FC<ComplaintInfoSectionProps> = ({
       complaint.briberyService ||
       (complaint.briberyAmount !== null && complaint.briberyAmount !== undefined)
   );
+  const complaintParties = complaint.parties || [];
 
   const hasBnDesc = Boolean(complaint.descriptionBn?.trim());
   const hasEnDesc = Boolean(
@@ -266,6 +267,95 @@ export const ComplaintInfoSection: React.FC<ComplaintInfoSectionProps> = ({
             </div>
             <p className="mt-3 text-[11px] text-slate-400 dark:text-slate-500">
               {isBn ? 'নাগরিকের জমা দেওয়া ঘুষ-সংক্রান্ত কাঠামোবদ্ধ তথ্য।' : 'Structured bribery information submitted by the citizen.'}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {complaintParties.length > 0 && (
+        <Card variant="default">
+          <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <User className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <span>
+                {complaint.categoryId === 'extortion'
+                  ? isBn
+                    ? 'চাঁদা দাবিকারীর তথ্য'
+                    : 'Extortion Demander Information'
+                  : isBn
+                    ? 'সংশ্লিষ্ট পক্ষের তথ্য'
+                    : 'Submitted Party Information'}
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4 space-y-4">
+            {complaintParties.map((party, index) => {
+              const contact = party.phoneOrContact || party.publicProfileHandle;
+              return (
+                <div
+                  key={party.id || `party-${index}`}
+                  className={cn(
+                    'grid grid-cols-1 sm:grid-cols-2 gap-4',
+                    index > 0 && 'pt-4 border-t border-slate-100 dark:border-slate-800'
+                  )}
+                >
+                  {party.name && (
+                    <div className="space-y-1">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {isBn ? 'নাম / পরিচিতি' : 'Name / known identity'}
+                      </p>
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100 break-words">
+                        {party.name}
+                      </p>
+                    </div>
+                  )}
+                  {contact && (
+                    <div className="space-y-1">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {isBn ? 'ফোন / যোগাযোগ' : 'Phone / contact'}
+                      </p>
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100 break-words">
+                        {contact}
+                      </p>
+                    </div>
+                  )}
+                  {party.roleOrDesignation && (
+                    <div className="space-y-1">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {isBn ? 'ভূমিকা / পদবি' : 'Role / designation'}
+                      </p>
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100 break-words">
+                        {party.roleOrDesignation}
+                      </p>
+                    </div>
+                  )}
+                  {party.organization && (
+                    <div className="space-y-1">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {isBn ? 'দল / প্রতিষ্ঠান / সংগঠন' : 'Group / organization'}
+                      </p>
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100 break-words">
+                        {party.organization}
+                      </p>
+                    </div>
+                  )}
+                  {party.identifyingDescription && (
+                    <div className="space-y-1 sm:col-span-2">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {isBn ? 'অন্যান্য শনাক্তকারী তথ্য' : 'Other identifying information'}
+                      </p>
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100 whitespace-pre-wrap break-words">
+                        {party.identifyingDescription}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            <p className="text-[11px] text-slate-400 dark:text-slate-500">
+              {isBn
+                ? 'নাগরিকের জমা দেওয়া ঐচ্ছিক পক্ষ-সংক্রান্ত তথ্য; অ্যাডমিন ভিউতে শুধু-পঠনযোগ্য।'
+                : 'Optional party information submitted by the citizen; read-only in the Admin view.'}
             </p>
           </CardContent>
         </Card>
