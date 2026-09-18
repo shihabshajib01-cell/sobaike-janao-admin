@@ -391,7 +391,7 @@ export const FormBuilderModal: React.FC<FormBuilderModalProps> = ({
                             ? { ...field.config, publicVisible: false }
                             : field.config,
                         });
-                      }
+                      }}
                       disabled={field.storageMode === 'system_block' || locked}
                       options={FIELD_TYPES}
                     />
