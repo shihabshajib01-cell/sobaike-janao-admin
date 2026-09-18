@@ -110,3 +110,77 @@ export interface NewsIntakeMergeResult {
   sourceId: string;
   status: string;
 }
+
+
+export type NewsIntakeAutomationAction =
+  | 'discovered'
+  | 'skip_duplicate'
+  | 'needs_review'
+  | 'created_draft'
+  | 'merged_source'
+  | 'error';
+
+export interface NewsIntakeAutomationSource {
+  hostname: string;
+  publisherName: string;
+  homepageUrl: string;
+  languageHint: 'auto' | 'bn' | 'en';
+  priority: number;
+  lastScannedAt?: string | null;
+}
+
+export interface NewsIntakeAutomationItem {
+  id: string;
+  publisherName: string;
+  sourceHostname: string;
+  canonicalUrl: string;
+  sourceTitle?: string | null;
+  sourcePublishedDate?: string | null;
+  contentLanguage: 'bn' | 'en' | 'mixed' | 'unknown';
+  segmentId?: string | null;
+  subcategoryId?: string | null;
+  confidence?: number | null;
+  duplicateStatus?: 'clear' | 'exact' | 'match' | 'review' | 'unavailable' | null;
+  action: NewsIntakeAutomationAction;
+  reportId?: string | null;
+  reason?: string | null;
+}
+
+export interface NewsIntakeAutomationRun {
+  runId: string;
+  status: 'running' | 'completed' | 'partial' | 'failed';
+  sourceCount: number;
+  discoveredCount: number;
+  classifiedCount: number;
+  duplicateCount: number;
+  createdCount: number;
+  mergedCount: number;
+  reviewCount: number;
+  skippedCount: number;
+  errorCount: number;
+  startedAt: string;
+  completedAt?: string | null;
+  errorSummary?: string | null;
+  items: NewsIntakeAutomationItem[];
+}
+
+export interface NewsIntakeAutomationDashboard {
+  sources: NewsIntakeAutomationSource[];
+  runs: NewsIntakeAutomationRun[];
+}
+
+export interface NewsIntakeAutomationScanResult {
+  runId: string;
+  status: 'completed' | 'partial' | 'failed';
+  sourceCount: number;
+  discoveredCount: number;
+  classifiedCount: number;
+  duplicateCount: number;
+  createdCount: number;
+  mergedCount: number;
+  reviewCount: number;
+  skippedCount: number;
+  errorCount: number;
+  startedAt: string;
+  completedAt?: string | null;
+}
