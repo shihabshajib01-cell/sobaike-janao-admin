@@ -126,11 +126,14 @@ export interface NewsIntakeAutomationSource {
   homepageUrl: string;
   languageHint: 'auto' | 'bn' | 'en';
   priority: number;
+  scanEnabled: boolean;
+  automationNote?: string | null;
   lastScannedAt?: string | null;
 }
 
 export interface NewsIntakeAutomationItem {
   id: string;
+  itemKind?: 'source' | 'article';
   publisherName: string;
   sourceHostname: string;
   canonicalUrl: string;
