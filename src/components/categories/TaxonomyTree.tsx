@@ -119,8 +119,7 @@ export const TaxonomyTree: React.FC<TaxonomyTreeProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => onInspectSegment(segment)}
-                  leftIcon={<Eye className="w-3.5 h-3.5" />}
-                  className="h-8 px-2.5 text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100"
+                  leftIcon={<Eye />}
                 >
                   {isBn ? 'বিবরণ' : 'Details'}
                 </Button>
@@ -224,8 +223,7 @@ export const TaxonomyTree: React.FC<TaxonomyTreeProps> = ({
                                   e.stopPropagation();
                                   onInspectSubcategory(sub, segment);
                                 }}
-                                leftIcon={<Eye className="w-3 h-3" />}
-                                className="h-7 px-2 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
+                                leftIcon={<Eye />}
                               >
                                 {isBn ? 'বিবরণ' : 'Details'}
                               </Button>
