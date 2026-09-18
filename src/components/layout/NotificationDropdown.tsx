@@ -1,5 +1,5 @@
 import { ButtonBase, IconButton } from '@/components/ui/Button';
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Check, ArrowRight, RotateCcw, CheckCheck, AlertCircle } from 'lucide-react';
 import { useNotifications } from '@/context/NotificationContext';
@@ -36,16 +36,21 @@ export const NotificationDropdown: React.FC = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const bellButtonRef = useRef<HTMLButtonElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
+  const restoreFocusOnCloseRef = useRef<boolean>(false);
 
   const closeDropdown = useCallback((restoreFocus: boolean = false) => {
+    restoreFocusOnCloseRef.current = restoreFocus;
     setIsOpen(false);
     setItemErrorIds(new Set());
     setGlobalActionError(null);
-
-    if (restoreFocus) {
-      window.requestAnimationFrame(() => bellButtonRef.current?.focus());
-    }
   }, []);
+
+  useLayoutEffect(() => {
+    if (isOpen || !restoreFocusOnCloseRef.current) return;
+
+    restoreFocusOnCloseRef.current = false;
+    bellButtonRef.current?.focus({ preventScroll: true });
+  }, [isOpen]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
