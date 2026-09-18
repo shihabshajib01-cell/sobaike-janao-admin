@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { DownloadMenu } from '@/components/ui/DownloadMenu';
 import { Card, CardContent } from '@/components/ui/Card';
 import { ResponsiveDataView, ResponsiveDataTableView, ResponsiveDataCardView } from '@/components/ui/ResponsiveDataView';
+import { TablePageSizeSelect } from '@/components/ui/TablePageSizeSelect';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -98,7 +99,7 @@ export const ComplaintsPage: React.FC = () => {
 
   useEffect(() => {
     fetchComplaints(1);
-  }, [filters]);
+  }, [filters, pagination.pageSize]);
 
   // Handle Tab Selection
   const handleSelectStatus = (status: ComplaintLifecycleStatus | 'all') => {
@@ -146,6 +147,14 @@ export const ComplaintsPage: React.FC = () => {
   const handlePageChange = (newPage: number) => {
     if (newPage < 1 || newPage > pagination.totalPages) return;
     fetchComplaints(newPage);
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPagination((prev) => ({
+      ...prev,
+      currentPage: 1,
+      pageSize: newPageSize,
+    }));
   };
 
   // Fetch current filtered dataset for export
@@ -379,19 +388,27 @@ export const ComplaintsPage: React.FC = () => {
       {/* 4. Results Stats & Table */}
       {!(loadError && complaints.length === 0) && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between px-1 text-xs text-slate-500 dark:text-slate-400">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-slate-500 dark:text-slate-400">
             <span>
               {isBn
                 ? `মোট ${formatNumber(pagination.totalItems)} টি অভিযোগ পাওয়া গেছে`
                 : `Showing ${complaints.length} of ${pagination.totalItems} total complaints`}
             </span>
-            {pagination.totalPages > 1 && (
-              <span>
-                {isBn
-                  ? `পৃষ্ঠা ${formatNumber(pagination.currentPage)} / ${formatNumber(pagination.totalPages)}`
-                  : `Page ${pagination.currentPage} of ${pagination.totalPages}`}
-              </span>
-            )}
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <TablePageSizeSelect
+                id="complaints-page-size"
+                value={pagination.pageSize}
+                onChange={handlePageSizeChange}
+                disabled={loading}
+              />
+              {pagination.totalPages > 1 && (
+                <span>
+                  {isBn
+                    ? `পৃষ্ঠা ${formatNumber(pagination.currentPage)} / ${formatNumber(pagination.totalPages)}`
+                    : `Page ${pagination.currentPage} of ${pagination.totalPages}`}
+                </span>
+              )}
+            </div>
           </div>
 
           <ResponsiveDataView>
