@@ -3,6 +3,7 @@ import { AdminUserListItem } from '@/types/AdminUser';
 import { useLanguage } from '@/context/LanguageContext';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { ResponsiveDataView, ResponsiveDataTableView, ResponsiveDataCardView } from '@/components/ui/ResponsiveDataView';
 import {
   Shield,
   ShieldCheck,
@@ -55,9 +56,9 @@ export const UsersTable: React.FC<UsersTableProps> = ({
   }
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
+    <ResponsiveDataView className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
       {/* Desktop Table View */}
-      <div className="hidden md:block overflow-x-auto">
+      <ResponsiveDataTableView className="overflow-x-auto">
         <table className="w-full text-left text-sm" id="admin-users-table">
           <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
             <tr>
@@ -249,10 +250,10 @@ export const UsersTable: React.FC<UsersTableProps> = ({
             })}
           </tbody>
         </table>
-      </div>
+      </ResponsiveDataTableView>
 
-      {/* Mobile Card View */}
-      <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+      {/* Responsive Card View */}
+      <ResponsiveDataCardView className="space-y-3 p-3 bg-slate-50/40 dark:bg-slate-950/20">
         {users.map((user) => {
           const roleName = isBn
             ? user.role_name_bn || user.role_name_en || '—'
@@ -262,7 +263,18 @@ export const UsersTable: React.FC<UsersTableProps> = ({
             <div
               key={user.user_id}
               id={`user-card-${user.user_id}`}
-              className="p-4 space-y-3"
+              onClick={() => onView(user.user_id)}
+              onKeyDown={(e) => {
+                if (e.target !== e.currentTarget) return;
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onView(user.user_id);
+                }
+              }}
+              tabIndex={0}
+              role="button"
+              aria-label={`${t.users.viewUser}: ${user.display_name || user.email}`}
+              className="p-4 space-y-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-sky-300 dark:hover:border-sky-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -326,7 +338,10 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => onView(user.user_id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onView(user.user_id);
+                  }}
                   className="h-8 px-3 text-xs"
                 >
                   <Eye className="w-3.5 h-3.5 mr-1" />
@@ -350,7 +365,10 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                         id={`btn-edit-user-mobile-${user.user_id}`}
                         variant="secondary"
                         size="sm"
-                        onClick={() => onEdit(user.user_id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(user.user_id);
+                        }}
                         className="h-8 px-3 text-xs"
                       >
                         <Edit2 className="w-3.5 h-3.5 mr-1" />
@@ -362,7 +380,10 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                           id={`btn-delete-user-mobile-${user.user_id}`}
                           variant="ghost"
                           size="sm"
-                          onClick={() => onDelete(user)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(user);
+                          }}
                           className="h-8 px-3 text-xs text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40"
                           title={t.users.deleteUser}
                         >
@@ -377,7 +398,7 @@ export const UsersTable: React.FC<UsersTableProps> = ({
             </div>
           );
         })}
-      </div>
-    </div>
+      </ResponsiveDataCardView>
+    </ResponsiveDataView>
   );
 };
