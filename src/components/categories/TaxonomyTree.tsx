@@ -70,14 +70,14 @@ export const TaxonomyTree: React.FC<TaxonomyTreeProps> = ({
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                    <Badge status="default" variant="outline" size="sm" className="font-mono text-[11px]">
+                    <Badge status="default" variant="outline" size="sm" className="font-mono type-meta">
                       {segment.id}
                     </Badge>
                     <Badge
                       status={segment.status === 'active' ? 'success' : 'default'}
                       variant="subtle"
                       size="sm"
-                      className="text-[11px]"
+                      className="type-meta"
                     >
                       {segment.status === 'active' ? (
                         <span className="flex items-center gap-1">
@@ -96,12 +96,12 @@ export const TaxonomyTree: React.FC<TaxonomyTreeProps> = ({
                         status="warning"
                         variant="subtle"
                         size="sm"
-                        className="text-[10px] capitalize"
+                        className="type-meta capitalize"
                       >
                         {segment.configStatus}
                       </Badge>
                     )}
-                    <span className="inline-flex items-center gap-1 text-[11px] text-slate-400 font-mono">
+                    <span className="inline-flex items-center gap-1 type-meta text-slate-400 font-mono">
                       <ArrowUpDown className="w-3 h-3" />
                       #{segment.order}
                     </span>
@@ -166,7 +166,7 @@ export const TaxonomyTree: React.FC<TaxonomyTreeProps> = ({
                                   <p className="font-semibold text-slate-900 dark:text-slate-100 truncate">
                                     {isBn ? sub.nameBn : sub.nameEn}
                                   </p>
-                                  <p className="text-[11px] text-slate-400 truncate">
+                                  <p className="type-meta text-slate-400 truncate">
                                     {isBn ? sub.nameEn : sub.nameBn}
                                   </p>
                                 </div>
@@ -185,7 +185,7 @@ export const TaxonomyTree: React.FC<TaxonomyTreeProps> = ({
                                   status={sub.status === 'active' ? 'success' : 'default'}
                                   variant="subtle"
                                   size="sm"
-                                  className="text-[10px]"
+                                  className="type-meta"
                                 >
                                   {sub.status === 'active' ? (
                                     <span className="flex items-center gap-1">
@@ -204,7 +204,7 @@ export const TaxonomyTree: React.FC<TaxonomyTreeProps> = ({
                                     status="warning"
                                     variant="subtle"
                                     size="sm"
-                                    className="text-[10px] capitalize"
+                                    className="type-meta capitalize"
                                   >
                                     {sub.configStatus}
                                   </Badge>
@@ -283,7 +283,7 @@ export const TaxonomyTree: React.FC<TaxonomyTreeProps> = ({
                             <div className="flex items-center gap-2 min-w-0">
                               <span className="font-mono text-slate-500 dark:text-slate-400 truncate">{sub.id}</span>
                               {sub.configStatus !== 'published' && (
-                                <Badge status="warning" variant="subtle" size="sm" className="text-[10px] capitalize">
+                                <Badge status="warning" variant="subtle" size="sm" className="type-meta capitalize">
                                   {sub.configStatus}
                                 </Badge>
                               )}

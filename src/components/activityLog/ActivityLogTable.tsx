@@ -138,7 +138,7 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
                           {actorInfo.primary}
                         </p>
                         {actorInfo.secondary && (
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                          <p className="type-meta text-slate-500 dark:text-slate-400 truncate">
                             {actorInfo.secondary}
                           </p>
                         )}
@@ -149,7 +149,7 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
                   {/* Target */}
                   <TableCell className="whitespace-nowrap">
                     <div className="flex items-center gap-1.5">
-                      <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                      <span className="px-2 py-0.5 rounded-md type-meta font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                         {formatTargetType(log.target_type, language)}
                       </span>
                       <span className="font-mono text-xs text-slate-800 dark:text-slate-200 font-semibold max-w-[130px] truncate">
@@ -224,7 +224,7 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
                   <ActionIcon className="w-3.5 h-3.5 shrink-0" />
                   <span>{language === 'bn' ? meta.labelBn : meta.labelEn}</span>
                 </span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 shrink-0">
+                <span className="type-meta text-slate-500 dark:text-slate-400 shrink-0">
                   {time.date}
                 </span>
               </div>
@@ -237,7 +237,7 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
                       {actorInfo.primary}
                     </span>
                     {actorInfo.secondary && (
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate block">
+                      <span className="type-meta text-slate-500 dark:text-slate-400 truncate block">
                         {actorInfo.secondary}
                       </span>
                     )}

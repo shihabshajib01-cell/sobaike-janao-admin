@@ -141,7 +141,7 @@ export const MobileComplaintCardList: React.FC<MobileComplaintCardListProps> = (
                       {complaint.id}
                     </span>
                     {category && (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                      <span className="inline-flex items-center gap-1 type-meta font-medium text-slate-500 dark:text-slate-400">
                         <Tag className="w-3 h-3 text-slate-400" />
                         <span className="truncate max-w-[110px]">{category}</span>
                       </span>
@@ -216,7 +216,7 @@ export const MobileComplaintCardList: React.FC<MobileComplaintCardListProps> = (
             {/* Status & ID Header */}
             <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
               <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                <span className="type-meta uppercase font-bold text-slate-400 block">
                   {isBn ? 'অভিযোগ আইডি' : 'Complaint ID'}
                 </span>
                 <span className="font-mono text-sm font-bold text-sky-700 dark:text-sky-400">
@@ -249,14 +249,14 @@ export const MobileComplaintCardList: React.FC<MobileComplaintCardListProps> = (
             {/* Categorization and Meta Info */}
             <div className="grid grid-cols-2 gap-2">
               <div className="p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-0.5">
-                <span className="text-[10px] text-slate-400 font-medium">{isBn ? 'বিভাগ' : 'Category'}</span>
+                <span className="type-meta text-slate-400 font-medium">{isBn ? 'বিভাগ' : 'Category'}</span>
                 <p className="font-semibold text-slate-800 dark:text-slate-200 truncate">
                   {isBn ? selectedComplaint.categoryBn : selectedComplaint.categoryEn}
                 </p>
               </div>
 
               <div className="p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-0.5">
-                <span className="text-[10px] text-slate-400 font-medium">{isBn ? 'উপ-বিভাগ' : 'Subcategory'}</span>
+                <span className="type-meta text-slate-400 font-medium">{isBn ? 'উপ-বিভাগ' : 'Subcategory'}</span>
                 <p className="font-semibold text-slate-800 dark:text-slate-200 truncate">
                   {isBn ? selectedComplaint.subcategoryBn : selectedComplaint.subcategoryEn}
                 </p>
@@ -269,13 +269,13 @@ export const MobileComplaintCardList: React.FC<MobileComplaintCardListProps> = (
                 <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
                 <span>{selectedComplaint.location.ward}</span>
               </div>
-              <p className="text-slate-500 dark:text-slate-400 text-[11px] pl-5">
+              <p className="text-slate-500 dark:text-slate-400 type-meta pl-5">
                 {isBn ? selectedComplaint.location.addressBn : selectedComplaint.location.addressEn}
               </p>
             </div>
 
             {/* Reporter and Date */}
-            <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between type-meta text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-1">
                 <User className="w-3.5 h-3.5 text-slate-400" />
                 <span>

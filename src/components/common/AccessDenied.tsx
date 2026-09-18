@@ -91,7 +91,7 @@ export const AccessDenied: React.FC<AccessDeniedProps> = ({
                   <Lock className="w-3.5 h-3.5 text-slate-400" />
                   <span>{t.access.requiredPermission}</span>
                 </span>
-                <Badge variant="subtle" size="sm" className="font-mono text-[11px]">
+                <Badge variant="subtle" size="sm" className="font-mono type-meta">
                   {requiredPermission}
                 </Badge>
               </div>

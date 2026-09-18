@@ -104,7 +104,7 @@ export const ActivityLogDetailDrawer: React.FC<ActivityLogDetailDrawerProps> = (
                   </p>
                 )}
                 {log.actor_id && actorInfo.primary !== log.actor_id && actorInfo.secondary !== `ID: ${log.actor_id}` && (
-                  <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500 truncate">
+                  <p className="type-meta font-mono text-slate-400 dark:text-slate-500 truncate">
                     ID: {log.actor_id}
                   </p>
                 )}
@@ -119,14 +119,14 @@ export const ActivityLogDetailDrawer: React.FC<ActivityLogDetailDrawerProps> = (
               <span>{language === 'bn' ? 'টার্গেট রেফারেন্স' : 'Target Reference'}</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              <span className="px-2 py-0.5 rounded-md type-meta font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                 {formatTargetType(log.target_type, language)}
               </span>
               <p className="text-sm font-semibold font-mono text-slate-900 dark:text-slate-100 truncate">
                 {log.target_id || '—'}
               </p>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            <p className="type-meta text-slate-500 dark:text-slate-400">
               {language === 'bn' ? 'টাইপ:' : 'Entity:'} {log.target_type}
             </p>
           </div>
@@ -188,7 +188,7 @@ export const ActivityLogDetailDrawer: React.FC<ActivityLogDetailDrawerProps> = (
                     {log.details.added_permissions.map((perm: string) => (
                       <span
                         key={perm}
-                        className="px-2 py-0.5 rounded-md text-[11px] font-mono font-medium bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800"
+                        className="px-2 py-0.5 rounded-md type-meta font-mono font-medium bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800"
                       >
                         +{perm}
                       </span>
@@ -210,7 +210,7 @@ export const ActivityLogDetailDrawer: React.FC<ActivityLogDetailDrawerProps> = (
                     {log.details.removed_permissions.map((perm: string) => (
                       <span
                         key={perm}
-                        className="px-2 py-0.5 rounded-md text-[11px] font-mono font-medium bg-rose-100 dark:bg-rose-950/70 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800"
+                        className="px-2 py-0.5 rounded-md type-meta font-mono font-medium bg-rose-100 dark:bg-rose-950/70 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800"
                       >
                         -{perm}
                       </span>
@@ -291,7 +291,7 @@ export const ActivityLogDetailDrawer: React.FC<ActivityLogDetailDrawerProps> = (
                   </span>
                   <span
                     className={cn(
-                      'px-2 py-0.5 rounded-md font-medium text-[11px]',
+                      'px-2 py-0.5 rounded-md font-medium type-meta',
                       log.details.active
                         ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
                         : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
@@ -328,7 +328,7 @@ export const ActivityLogDetailDrawer: React.FC<ActivityLogDetailDrawerProps> = (
           </button>
 
           {showTechnicalDetails && (
-            <div className="mt-2.5 p-3 rounded-lg bg-slate-900 text-slate-200 font-mono text-[11px] overflow-x-auto max-h-56 leading-relaxed">
+            <div className="mt-2.5 p-3 rounded-lg bg-slate-900 text-slate-200 font-mono type-meta overflow-x-auto max-h-56 leading-relaxed">
               <pre>{JSON.stringify(sanitizedDetails, null, 2)}</pre>
             </div>
           )}

@@ -95,7 +95,7 @@ export const CategoryOverview: React.FC<CategoryOverviewProps> = ({ categories, 
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
+                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-mono type-meta">
                       <strong className="text-slate-800 dark:text-slate-200 font-mono">
                         {formatNumber(cat.count)}
                       </strong>

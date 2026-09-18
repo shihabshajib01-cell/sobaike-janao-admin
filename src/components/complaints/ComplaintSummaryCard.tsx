@@ -100,7 +100,7 @@ export const ComplaintSummaryCard: React.FC<ComplaintSummaryCardProps> = ({
       <CardHeader className="bg-slate-50/70 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800/80 pb-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            <span className="type-meta font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
               {isBn ? 'প্রতিবেদন আইডি' : 'Report ID'}
             </span>
             <div className="flex items-center gap-3">

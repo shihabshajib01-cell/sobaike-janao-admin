@@ -402,7 +402,7 @@ export const StepPermissions: React.FC<StepPermissionsProps> = ({
                       <span className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100">
                         {getModuleLabel(moduleKey)}
                       </span>
-                      <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                      <span className="type-meta text-slate-400 dark:text-slate-500">
                         ({formatNumber(selectedInModule.length)}/
                         {formatNumber(items.length)})
                       </span>
@@ -459,13 +459,13 @@ export const StepPermissions: React.FC<StepPermissionsProps> = ({
                             </div>
 
                             {perm.description && (
-                              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+                              <p className="type-meta text-slate-500 dark:text-slate-400 leading-snug">
                                 {perm.description}
                               </p>
                             )}
 
                             <div className="pt-0.5">
-                              <code className="text-[10px] font-mono text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800/80 px-1.5 py-0.5 rounded">
+                              <code className="type-meta font-mono text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800/80 px-1.5 py-0.5 rounded">
                                 {perm.id}
                               </code>
                             </div>

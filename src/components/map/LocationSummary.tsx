@@ -57,7 +57,7 @@ export const LocationSummary: React.FC<LocationSummaryProps> = ({
               <span className="text-xl font-bold text-slate-900 dark:text-slate-100 font-mono">
                 {summary.mappedCount}
               </span>
-              <span className="text-[11px] text-slate-400">
+              <span className="type-meta text-slate-400">
                 {isBn ? 'টি' : 'items'}
               </span>
             </div>
@@ -83,7 +83,7 @@ export const LocationSummary: React.FC<LocationSummaryProps> = ({
               <span className="text-xl font-bold text-amber-600 dark:text-amber-400 font-mono">
                 {summary.submittedCount}
               </span>
-              <span className="text-[11px] text-slate-400">
+              <span className="type-meta text-slate-400">
                 / {summary.mappedCount}
               </span>
             </div>
@@ -109,7 +109,7 @@ export const LocationSummary: React.FC<LocationSummaryProps> = ({
               <span className="text-xl font-bold text-sky-600 dark:text-sky-400 font-mono">
                 {summary.publishedCount}
               </span>
-              <span className="text-[11px] text-slate-400">
+              <span className="type-meta text-slate-400">
                 / {summary.mappedCount}
               </span>
             </div>
@@ -135,7 +135,7 @@ export const LocationSummary: React.FC<LocationSummaryProps> = ({
               <span className="text-xl font-bold text-slate-900 dark:text-slate-100 font-mono">
                 {summary.districtsCount}
               </span>
-              <span className="text-[11px] text-slate-400">
+              <span className="type-meta text-slate-400">
                 {isBn ? 'টি জেলা' : 'areas'}
               </span>
             </div>

@@ -136,7 +136,7 @@ export const DownloadMenu: React.FC<DownloadMenuProps> = ({
         >
           {/* Menu Section Header */}
           <div className="px-2.5 py-1.5 border-b border-slate-100 dark:border-slate-800/80 mb-1">
-            <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400 dark:text-slate-500">
+            <span className="type-meta font-bold tracking-wider uppercase text-slate-400 dark:text-slate-500">
               {isBn ? 'ডাউনলোড ফরম্যাট নির্বাচন' : 'Choose Export Format'}
             </span>
           </div>
@@ -156,11 +156,11 @@ export const DownloadMenu: React.FC<DownloadMenuProps> = ({
                 <span className="text-xs font-semibold text-slate-800 dark:text-slate-100">
                   {isBn ? 'সিএসভি স্প্রেডশিট (.CSV)' : 'CSV Spreadsheet (.csv)'}
                 </span>
-                <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-emerald-100/60 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                <span className="type-meta font-mono font-medium px-1.5 py-0.5 rounded bg-emerald-100/60 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
                   CSV
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5">
+              <p className="type-meta text-slate-500 dark:text-slate-400 leading-tight mt-0.5">
                 {isBn
                   ? 'এক্সেল ও স্প্রেডশিটের জন্য সম্পূর্ণ রো ডাটা (UTF-8)'
                   : 'Tabular dataset for Excel & Google Sheets (UTF-8)'}
@@ -183,11 +183,11 @@ export const DownloadMenu: React.FC<DownloadMenuProps> = ({
                 <span className="text-xs font-semibold text-slate-800 dark:text-slate-100">
                   {isBn ? 'ফরম্যাটেড পিডিএফ (.PDF)' : 'Formatted PDF (.pdf)'}
                 </span>
-                <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-cyan-100/60 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300">
+                <span className="type-meta font-mono font-medium px-1.5 py-0.5 rounded bg-cyan-100/60 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300">
                   PDF
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5">
+              <p className="type-meta text-slate-500 dark:text-slate-400 leading-tight mt-0.5">
                 {isBn
                   ? 'অফিসিয়াল ও প্রিন্টযোগ্য ডকুমেন্ট (মেটাডাটা ও টেবিলসহ)'
                   : 'Printable report with metadata, KPIs & structured tables'}

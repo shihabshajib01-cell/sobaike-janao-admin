@@ -263,7 +263,7 @@ export const ComplaintInfoSection: React.FC<ComplaintInfoSectionProps> = ({
                 </div>
               )}
             </div>
-            <p className="mt-3 text-[11px] text-slate-400 dark:text-slate-500">
+            <p className="mt-3 type-meta text-slate-400 dark:text-slate-500">
               {isBn ? 'নাগরিকের জমা দেওয়া ঘুষ-সংক্রান্ত কাঠামোবদ্ধ তথ্য।' : 'Structured bribery information submitted by the citizen.'}
             </p>
           </CardContent>
@@ -342,7 +342,7 @@ export const ComplaintInfoSection: React.FC<ComplaintInfoSectionProps> = ({
               </div>
             )}
 
-            <p className="mt-3 text-[11px] text-slate-400 dark:text-slate-500">
+            <p className="mt-3 type-meta text-slate-400 dark:text-slate-500">
               {isBn ? 'নাগরিকের জমা দেওয়া শ্রেণিবিন্যাস; অ্যাডমিন ভিউতে শুধু-পঠনযোগ্য।' : 'Citizen-submitted classification; read-only in the Admin view.'}
             </p>
           </CardContent>
@@ -457,7 +457,7 @@ export const ComplaintInfoSection: React.FC<ComplaintInfoSectionProps> = ({
                 <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                   {isBn ? 'নাগরিকের প্রকাশনা পছন্দ' : 'Citizen Publication Preferences'}
                 </p>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                <p className="type-meta text-slate-500 dark:text-slate-400 mt-0.5">
                   {isBn
                     ? 'নাগরিক যেভাবে জমা দিয়েছেন সেভাবেই শুধু-পঠনযোগ্যভাবে দেখানো হচ্ছে। অনুপস্থিত পছন্দ অনুমান করা হয়নি।'
                     : 'Read-only values as submitted by the citizen. Missing preferences are not inferred.'}

@@ -322,7 +322,7 @@ export const StepReview: React.FC<StepReviewProps> = ({
                           <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
                             {getModuleLabel(moduleKey)}
                           </span>
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                          <span className="type-meta text-slate-500 dark:text-slate-400">
                             {formatNumber(items.length)}{' '}
                             {items.length === 1
                               ? t.roles.permissionSingular
@@ -340,7 +340,7 @@ export const StepReview: React.FC<StepReviewProps> = ({
                               >
                                 <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0" />
                                 <span>{displayName}</span>
-                                <code className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                                <code className="type-meta font-mono text-slate-400 dark:text-slate-500">
                                   {perm.id}
                                 </code>
                               </span>

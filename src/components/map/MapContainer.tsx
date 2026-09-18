@@ -314,7 +314,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
                     {isBn ? item.titleBn : item.titleEn}
                   </h4>
 
-                  <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 mb-1">
+                  <div className="flex items-center gap-1 type-meta text-slate-500 dark:text-slate-400 mb-1">
                     <Folder className="w-3 h-3 shrink-0 text-slate-400" />
                     <span className="truncate">
                       {(isBn ? item.segmentBn : item.segmentEn) || '—'}
@@ -324,7 +324,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
                     </span>
                   </div>
 
-                  <div className="flex items-start gap-1 text-[11px] text-slate-600 dark:text-slate-300 mb-2">
+                  <div className="flex items-start gap-1 type-meta text-slate-600 dark:text-slate-300 mb-2">
                     <MapPin className="w-3 h-3 text-sky-500 shrink-0 mt-0.5" />
                     <span className="line-clamp-2">
                       {formatLocationDisplay(item)}
@@ -332,7 +332,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
                   </div>
 
                   <div className="pt-1.5 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between gap-1">
-                    <span className="text-[10px] text-slate-400 font-mono">
+                    <span className="type-meta text-slate-400 font-mono">
                       {new Date(item.createdAt).toLocaleDateString(isBn ? 'bn-BD' : 'en-US', {
                         month: 'short',
                         day: 'numeric',
@@ -390,7 +390,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
           {/* Location & Taxonomy metadata */}
           <div className="grid grid-cols-2 gap-2 text-xs py-1.5 border-t border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-300">
             <div>
-              <span className="text-[10px] text-slate-400 block uppercase tracking-wider">
+              <span className="type-meta text-slate-400 block uppercase tracking-wider">
                 {isBn ? 'বিভাগ / উপ-শ্রেণি:' : 'Segment / Sub:'}
               </span>
               <span className="font-medium text-slate-800 dark:text-slate-200 truncate block">
@@ -401,7 +401,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
               </span>
             </div>
             <div>
-              <span className="text-[10px] text-slate-400 block uppercase tracking-wider">
+              <span className="type-meta text-slate-400 block uppercase tracking-wider">
                 {isBn ? 'জেলা:' : 'District:'}
               </span>
               <span className="font-medium text-slate-800 dark:text-slate-200 truncate block">
@@ -411,7 +411,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
           </div>
 
           {/* Address full line */}
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-start gap-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800/60 mb-2.5">
+          <div className="type-meta text-slate-500 dark:text-slate-400 flex items-start gap-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800/60 mb-2.5">
             <MapPin className="w-3.5 h-3.5 text-sky-500 shrink-0 mt-0.5" />
             <span className="line-clamp-2">
               {formatLocationDisplay(selectedComplaint)}

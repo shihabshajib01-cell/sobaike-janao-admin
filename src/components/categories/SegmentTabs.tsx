@@ -49,7 +49,7 @@ export const SegmentTabs: React.FC<SegmentTabsProps> = ({
           variant={selectedSegmentId === 'all' ? 'outline' : 'subtle'}
           size="sm"
           className={cn(
-            'text-[10px] px-1.5 py-0 font-medium',
+            'type-meta px-1.5 py-0 font-medium',
             selectedSegmentId === 'all'
               ? 'border-white/30 text-white dark:border-slate-800 dark:text-slate-900'
               : ''
@@ -84,7 +84,7 @@ export const SegmentTabs: React.FC<SegmentTabsProps> = ({
               variant={isSelected ? 'outline' : 'subtle'}
               size="sm"
               className={cn(
-                'text-[10px] px-1.5 py-0 font-medium',
+                'type-meta px-1.5 py-0 font-medium',
                 isSelected
                   ? 'border-white/30 text-white dark:border-slate-800 dark:text-slate-900'
                   : ''

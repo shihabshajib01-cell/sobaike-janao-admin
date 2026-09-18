@@ -156,7 +156,7 @@ export const ComplaintTable: React.FC<ComplaintTableProps> = ({
                     <p className="text-xs font-medium text-slate-900 dark:text-slate-100 line-clamp-1 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
                       {title}
                     </p>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
+                    <span className="type-meta text-slate-500 dark:text-slate-400 block truncate">
                       {subcategory}
                     </span>
                   </div>
@@ -168,7 +168,7 @@ export const ComplaintTable: React.FC<ComplaintTableProps> = ({
                     <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     <div className="truncate max-w-[160px]">
                       <span className="font-medium">{c.location.ward}</span>
-                      <span className="text-[11px] text-slate-400 block truncate">{location}</span>
+                      <span className="type-meta text-slate-400 block truncate">{location}</span>
                     </div>
                   </div>
                 </TableCell>

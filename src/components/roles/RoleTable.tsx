@@ -104,7 +104,7 @@ export const RoleTable: React.FC<RoleTableProps> = ({ roles }) => {
                         )}
                       </div>
                       {role.description && (
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 leading-normal">
+                        <p className="type-meta text-slate-500 dark:text-slate-400 line-clamp-1 leading-normal">
                           {role.description}
                         </p>
                       )}

@@ -262,7 +262,7 @@ export const CreateUserPage: React.FC = () => {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              <p className="text-[11px] text-slate-400 mt-1">
+              <p className="type-meta text-slate-400 mt-1">
                 {t.users.passwordHelper}
               </p>
             </div>

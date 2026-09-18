@@ -535,7 +535,7 @@ export const EditRolePage: React.FC = () => {
               >
                 <span>{t.roles.englishName}</span>
                 {role.is_system && (
-                  <span className="text-[11px] text-slate-400 flex items-center gap-1 font-normal">
+                  <span className="type-meta text-slate-400 flex items-center gap-1 font-normal">
                     <Lock className="w-3 h-3" /> {t.roles.readOnlyField}
                   </span>
                 )}
@@ -565,7 +565,7 @@ export const EditRolePage: React.FC = () => {
                 />
               )}
 
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="type-meta text-slate-500 dark:text-slate-400">
                 {role.is_system
                   ? t.roles.systemRoleProtectedNotice
                   : t.roles.roleNameEnglishHelper}
@@ -580,7 +580,7 @@ export const EditRolePage: React.FC = () => {
               >
                 <span>{t.roles.bengaliName}</span>
                 {role.is_system && (
-                  <span className="text-[11px] text-slate-400 flex items-center gap-1 font-normal">
+                  <span className="type-meta text-slate-400 flex items-center gap-1 font-normal">
                     <Lock className="w-3 h-3" /> {t.roles.readOnlyField}
                   </span>
                 )}
@@ -606,7 +606,7 @@ export const EditRolePage: React.FC = () => {
                 />
               )}
 
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="type-meta text-slate-500 dark:text-slate-400">
                 {role.is_system
                   ? t.roles.systemRoleProtectedNotice
                   : t.roles.roleNameBengaliHelper}
@@ -620,7 +620,7 @@ export const EditRolePage: React.FC = () => {
                   <Hash className="w-3 h-3 text-slate-400" />
                   {t.roles.technicalRoleId}
                 </span>
-                <span className="text-[11px] text-slate-400 flex items-center gap-1 font-normal">
+                <span className="type-meta text-slate-400 flex items-center gap-1 font-normal">
                   <Lock className="w-3 h-3" /> {t.roles.readOnlyField}
                 </span>
               </label>
@@ -634,7 +634,7 @@ export const EditRolePage: React.FC = () => {
                 </div>
                 <Lock className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="type-meta text-slate-500 dark:text-slate-400">
                 {t.roles.technicalRoleIdHelper}
               </p>
             </div>
@@ -645,7 +645,7 @@ export const EditRolePage: React.FC = () => {
             <label id="edit-role-status-label" className="text-xs font-semibold text-slate-900 dark:text-slate-100 flex items-center justify-between">
               <span>{t.roles.status}</span>
               {role.is_system && (
-                <span className="text-[11px] text-slate-400 flex items-center gap-1 font-normal">
+                <span className="type-meta text-slate-400 flex items-center gap-1 font-normal">
                   <Lock className="w-3 h-3" /> {t.roles.readOnlyField}
                 </span>
               )}
@@ -696,7 +696,7 @@ export const EditRolePage: React.FC = () => {
                     <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 block">
                       {t.roles.active}
                     </span>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal">
+                    <p className="type-meta text-slate-500 dark:text-slate-400 leading-normal">
                       {t.roles.statusActiveDesc}
                     </p>
                   </div>
@@ -732,7 +732,7 @@ export const EditRolePage: React.FC = () => {
                     <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 block">
                       {t.roles.inactive}
                     </span>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal">
+                    <p className="type-meta text-slate-500 dark:text-slate-400 leading-normal">
                       {t.roles.statusInactiveDesc}
                     </p>
                   </div>
@@ -751,7 +751,7 @@ export const EditRolePage: React.FC = () => {
                 <FileText className="w-3.5 h-3.5 text-slate-400" />
                 {t.roles.descriptionLabel}
               </span>
-              <span className="text-[11px] text-slate-400 font-normal">
+              <span className="type-meta text-slate-400 font-normal">
                 {t.roles.descriptionOptional}
               </span>
             </label>
@@ -765,7 +765,7 @@ export const EditRolePage: React.FC = () => {
               maxLength={500}
               className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
             />
-            <div className="flex justify-between items-center text-[11px] text-slate-400">
+            <div className="flex justify-between items-center type-meta text-slate-400">
               <span>{t.roles.descriptionEditHelper}</span>
               <span>{description.length}/500</span>
             </div>

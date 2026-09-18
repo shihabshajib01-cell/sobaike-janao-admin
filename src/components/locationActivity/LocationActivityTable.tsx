@@ -171,7 +171,7 @@ export const LocationActivityTable: React.FC<LocationActivityTableProps> = ({
                       )}
                     </div>
                     {/* Secondary Raw Coordinates */}
-                    <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pl-5">
+                    <div className="type-meta font-mono text-slate-500 dark:text-slate-400 pl-5">
                       {session.latitude?.toFixed(6)}, {session.longitude?.toFixed(6)}
                     </div>
                     {resolved && (
@@ -181,7 +181,7 @@ export const LocationActivityTable: React.FC<LocationActivityTableProps> = ({
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          className="text-[10px] text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:underline transition-colors inline-block"
+                          className="type-meta text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:underline transition-colors inline-block"
                         >
                           © OpenStreetMap contributors
                         </a>

@@ -214,7 +214,7 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {/* English Name */}
             <div className="p-3 rounded-lg border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 space-y-1">
-              <span className="text-[11px] text-slate-400 block">
+              <span className="type-meta text-slate-400 block">
                 {isBn ? 'ইংরেজি নাম (English)' : 'Name (English)'}
               </span>
               <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
@@ -224,7 +224,7 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
 
             {/* Bangla Name */}
             <div className="p-3 rounded-lg border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 space-y-1">
-              <span className="text-[11px] text-slate-400 block">
+              <span className="type-meta text-slate-400 block">
                 {isBn ? 'বাংলা নাম (Bangla)' : 'Name (Bangla)'}
               </span>
               <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
@@ -234,7 +234,7 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
 
             {/* Unique Slug/ID */}
             <div className="p-3 rounded-lg border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 space-y-1">
-              <span className="text-[11px] text-slate-400 flex items-center gap-1">
+              <span className="type-meta text-slate-400 flex items-center gap-1">
                 <Hash className="w-3 h-3" />
                 {isBn ? 'অনন্য শনাক্তকারী (ID)' : 'Unique Identifier (ID)'}
               </span>
@@ -245,7 +245,7 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
 
             {/* Sort Order */}
             <div className="p-3 rounded-lg border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 space-y-1">
-              <span className="text-[11px] text-slate-400 flex items-center gap-1">
+              <span className="type-meta text-slate-400 flex items-center gap-1">
                 <ArrowUpDown className="w-3 h-3" />
                 {isBn ? 'প্রদর্শনের ক্রম (Sort Order)' : 'Sort Order'}
               </span>
@@ -255,7 +255,7 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
             </div>
 
             <div className="p-3 rounded-lg border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 space-y-1">
-              <span className="text-[11px] text-slate-400">
+              <span className="type-meta text-slate-400">
                 {isBn ? 'কনফিগারেশন অবস্থা' : 'Configuration Status'}
               </span>
               <span className="text-xs font-semibold capitalize text-slate-800 dark:text-slate-200">
@@ -266,7 +266,7 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
             {/* Parent Segment (for Subcategories) */}
             {!isSegment && target.parentSegment && (
               <div className="sm:col-span-2 p-3 rounded-lg border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 space-y-1">
-                <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                <span className="type-meta text-slate-400 flex items-center gap-1">
                   <Layers className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                   {isBn ? 'মূল বিভাগ (Parent Segment)' : 'Parent Segment'}
                 </span>
@@ -274,7 +274,7 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
                   <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
                     {isBn ? target.parentSegment.nameBn : target.parentSegment.nameEn}
                   </span>
-                  <span className="text-[11px] font-mono text-slate-400">
+                  <span className="type-meta font-mono text-slate-400">
                     {target.parentSegment.id}
                   </span>
                 </div>
@@ -290,7 +290,7 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
                 {isBn ? 'অন্তর্ভুক্ত সাব-ক্যাটাগরি' : 'Subcategories'}
               </h4>
-              <Badge status="default" variant="outline" size="sm" className="font-mono text-[11px]">
+              <Badge status="default" variant="outline" size="sm" className="font-mono type-meta">
                 {target.data.subcategories?.length || 0}{' '}
                 {isBn ? 'টি আইটেম' : 'items'}
               </Badge>
@@ -307,7 +307,7 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
                       <div className="font-medium text-slate-800 dark:text-slate-200 truncate">
                         {isBn ? sub.nameBn : sub.nameEn}
                       </div>
-                      <div className="text-[10px] font-mono text-slate-400 truncate">
+                      <div className="type-meta font-mono text-slate-400 truncate">
                         {sub.id}
                       </div>
                     </div>
@@ -316,7 +316,7 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
                         status={sub.status === 'active' ? 'success' : 'default'}
                         variant="subtle"
                         size="sm"
-                        className="text-[10px]"
+                        className="type-meta"
                       >
                         {sub.status === 'active'
                           ? isBn
@@ -366,7 +366,7 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
         <Divider />
 
         {/* Read-Only Notice */}
-        <div className="text-[11px] text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl">
+        <div className="type-meta text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl">
           {canManage
             ? isBn
               ? 'শ্রেণিবিন্যাসের তথ্য সরাসরি সুপাবেজ ডেটাবেসের সাথে সমন্বিত। অনুমোদিত পরিবর্তন পাবলিক রিপোর্টিং অপশনে প্রযোজ্য হবে।'

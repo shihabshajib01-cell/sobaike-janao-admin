@@ -116,7 +116,7 @@ export const RoleMobileCardList: React.FC<RoleMobileCardListProps> = ({ roles })
               </div>
 
               {/* Footer: Created Date + View Details button */}
-              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between type-meta text-slate-400 dark:text-slate-500">
                 <span className="flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
                   {formatDate(role.created_at)}

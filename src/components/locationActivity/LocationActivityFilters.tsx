@@ -97,7 +97,7 @@ export const LocationActivityFilters: React.FC<LocationActivityFiltersProps> = (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 border-t border-slate-100 dark:border-slate-800">
           {/* 1. Permission Status */}
           <div className="space-y-1">
-            <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
+            <label className="type-meta font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
               <ShieldCheck className="w-3 h-3 text-slate-400" />
               <span>{isBn ? 'অনুমতি অবস্থা' : 'Permission'}</span>
             </label>
@@ -116,7 +116,7 @@ export const LocationActivityFilters: React.FC<LocationActivityFiltersProps> = (
 
           {/* 2. Device Category */}
           <div className="space-y-1">
-            <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
+            <label className="type-meta font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
               <Smartphone className="w-3 h-3 text-slate-400" />
               <span>{isBn ? 'ডিভাইস' : 'Device'}</span>
             </label>
@@ -135,7 +135,7 @@ export const LocationActivityFilters: React.FC<LocationActivityFiltersProps> = (
 
           {/* 3. Browser */}
           <div className="space-y-1">
-            <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
+            <label className="type-meta font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
               <Globe className="w-3 h-3 text-slate-400" />
               <span>{isBn ? 'ব্রাউজার' : 'Browser'}</span>
             </label>
@@ -165,7 +165,7 @@ export const LocationActivityFilters: React.FC<LocationActivityFiltersProps> = (
 
           {/* 4. Time Range */}
           <div className="space-y-1">
-            <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
+            <label className="type-meta font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
               <Clock className="w-3 h-3 text-slate-400" />
               <span>{isBn ? 'সময়কাল' : 'Time Range'}</span>
             </label>

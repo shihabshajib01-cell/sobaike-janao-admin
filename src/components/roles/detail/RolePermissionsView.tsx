@@ -169,7 +169,7 @@ export const RolePermissionsView: React.FC<RolePermissionsViewProps> = ({
                     </span>
                   </div>
 
-                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                  <span className="type-meta font-medium text-slate-500 dark:text-slate-400">
                     {t.roles.assignedCountBadge.replace('{count}', formatNumber(items.length))}
                   </span>
                 </div>
@@ -193,13 +193,13 @@ export const RolePermissionsView: React.FC<RolePermissionsViewProps> = ({
                             <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
                               {permName}
                             </span>
-                            <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 shrink-0">
+                            <span className="font-mono type-meta text-slate-400 dark:text-slate-500 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 shrink-0">
                               {perm.id}
                             </span>
                           </div>
 
                           {perm.description && (
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal line-clamp-2">
+                            <p className="type-meta text-slate-500 dark:text-slate-400 leading-normal line-clamp-2">
                               {perm.description}
                             </p>
                           )}

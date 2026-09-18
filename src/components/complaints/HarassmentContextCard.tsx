@@ -82,7 +82,7 @@ export const HarassmentContextCard: React.FC<HarassmentContextCardProps> = ({ co
             </div>
           ))}
         </div>
-        <p className="mt-3 text-[11px] text-slate-400 dark:text-slate-500">
+        <p className="mt-3 type-meta text-slate-400 dark:text-slate-500">
           {isBn
             ? 'নাগরিকের জমা দেওয়া প্রসঙ্গ; অ্যাডমিন ভিউতে শুধু-পঠনযোগ্য।'
             : 'Citizen-submitted context; read-only in the Admin view.'}

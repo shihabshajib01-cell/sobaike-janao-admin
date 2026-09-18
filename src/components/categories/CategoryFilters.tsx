@@ -121,7 +121,7 @@ export const CategoryFilters: React.FC<CategoryFiltersProps> = ({
           </span>
 
           {!hasActiveFilters ? (
-            <span className="text-slate-400 italic text-[11px]">
+            <span className="text-slate-400 italic type-meta">
               {isBn ? 'সকল শ্রেণিবিন্যাস প্রদর্শিত হচ্ছে' : 'Showing all taxonomy records'}
             </span>
           ) : (
