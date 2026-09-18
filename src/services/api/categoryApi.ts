@@ -11,6 +11,8 @@ import {
   TaxonomySegmentNode,
   TaxonomyStats,
   TaxonomyUpdateInput,
+  TaxonomyCreateInput,
+  TaxonomyConfigStatus,
 } from '@/types/Category';
 
 export interface TaxonomyBundle {
@@ -26,10 +28,20 @@ interface RawSegmentRow {
   name_bn: string;
   active: boolean;
   sort_order: number;
+  config_status?: TaxonomyConfigStatus;
+  slug?: string | null;
+  short_name_en?: string | null;
+  short_name_bn?: string | null;
+  description_en?: string | null;
+  description_bn?: string | null;
+  icon_key?: string | null;
+  theme_key?: string | null;
 }
 
 interface RawSubcategoryRow extends RawSegmentRow {
   segment_id: string;
+  category_group?: string | null;
+  is_sensitive?: boolean | null;
 }
 
 interface RawTaxonomyBundle {
@@ -47,7 +59,7 @@ export class CategoryApi {
       throw new Error('Supabase taxonomy service is not configured in this environment.');
     }
 
-    const { data, error } = await supabase.rpc('admin_get_taxonomy');
+    const { data, error } = await supabase.rpc('admin_get_taxonomy_configuration');
 
     if (error) {
       console.error('Supabase admin taxonomy query failed:', error);
@@ -63,7 +75,15 @@ export class CategoryApi {
       nameEn: row.name_en || row.name_bn || row.id,
       nameBn: row.name_bn || row.name_en || row.id,
       status: row.active === false ? 'inactive' : 'active',
+      configStatus: row.config_status || 'published',
       order: row.sort_order ?? 0,
+      slug: row.slug || undefined,
+      shortNameEn: row.short_name_en || undefined,
+      shortNameBn: row.short_name_bn || undefined,
+      descriptionEn: row.description_en || undefined,
+      descriptionBn: row.description_bn || undefined,
+      iconKey: row.icon_key || undefined,
+      themeKey: row.theme_key || undefined,
     }));
 
     const subcategories: TaxonomySubcategory[] = subcategoryRows.map((row) => ({
@@ -72,7 +92,12 @@ export class CategoryApi {
       nameEn: row.name_en || row.name_bn || row.id,
       nameBn: row.name_bn || row.name_en || row.id,
       status: row.active === false ? 'inactive' : 'active',
+      configStatus: row.config_status || 'published',
       order: row.sort_order ?? 0,
+      descriptionEn: row.description_en || undefined,
+      descriptionBn: row.description_bn || undefined,
+      categoryGroup: row.category_group ?? null,
+      isSensitive: Boolean(row.is_sensitive),
     }));
 
     const fullTree: TaxonomySegmentNode[] = segments.map((seg) => ({
@@ -95,6 +120,49 @@ export class CategoryApi {
       fullTree,
       stats,
     };
+  }
+
+  /**
+   * Create a new taxonomy item as an inactive draft.
+   * Draft items are intentionally not available to the Public reporting flow.
+   */
+  async createTaxonomyItem(input: TaxonomyCreateInput): Promise<void> {
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase taxonomy service is not configured in this environment.');
+    }
+
+    const id = input.id.trim().toLowerCase();
+    const nameEn = input.nameEn.trim();
+    const nameBn = input.nameBn.trim();
+
+    if (!id || !/^[a-z0-9]+(?:_[a-z0-9]+)*$/.test(id)) {
+      throw new Error('ID must use lowercase letters, numbers, and underscores only.');
+    }
+
+    if (!nameEn || !nameBn) {
+      throw new Error('Both English and Bangla names are required.');
+    }
+
+    if (!Number.isInteger(input.order) || input.order < 1 || input.order > 999) {
+      throw new Error('Sort order must be an integer from 1 to 999.');
+    }
+
+    if (input.itemType === 'subcategory' && !input.parentSegmentId?.trim()) {
+      throw new Error('Parent category is required for a subcategory.');
+    }
+
+    const { error } = await supabase.rpc('admin_create_taxonomy_item', {
+      p_item_type: input.itemType,
+      p_item_id: id,
+      p_parent_segment_id: input.parentSegmentId?.trim() || null,
+      p_name_en: nameEn,
+      p_name_bn: nameBn,
+      p_sort_order: input.order,
+    });
+
+    if (error) {
+      throw new Error(`Failed to create taxonomy draft: ${error.message}`);
+    }
   }
 
   /**

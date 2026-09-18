@@ -131,24 +131,30 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
               ID: {target.data.id}
             </p>
           </div>
-          <Badge
-            status={target.data.status === 'active' ? 'success' : 'default'}
-            variant="subtle"
-            size="sm"
-            className="shrink-0"
-          >
-            {target.data.status === 'active' ? (
-              <span className="flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3" />
-                {isBn ? 'সক্রিয়' : 'Active'}
-              </span>
-            ) : (
-              <span className="flex items-center gap-1">
-                <XCircle className="w-3 h-3" />
-                {isBn ? 'নিষ্ক্রিয়' : 'Inactive'}
-              </span>
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
+            <Badge
+              status={target.data.status === 'active' ? 'success' : 'default'}
+              variant="subtle"
+              size="sm"
+            >
+              {target.data.status === 'active' ? (
+                <span className="flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" />
+                  {isBn ? 'সক্রিয়' : 'Active'}
+                </span>
+              ) : (
+                <span className="flex items-center gap-1">
+                  <XCircle className="w-3 h-3" />
+                  {isBn ? 'নিষ্ক্রিয়' : 'Inactive'}
+                </span>
+              )}
+            </Badge>
+            {target.data.configStatus !== 'published' && (
+              <Badge status="warning" variant="subtle" size="sm" className="capitalize">
+                {target.data.configStatus}
+              </Badge>
             )}
-          </Badge>
+          </div>
         </div>
 
         {/* Detailed Metadata Grid */}
@@ -197,6 +203,15 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
               </span>
               <span className="text-xs font-mono font-medium text-slate-800 dark:text-slate-200">
                 #{target.data.order}
+              </span>
+            </div>
+
+            <div className="p-3 rounded-lg border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 space-y-1">
+              <span className="text-[11px] text-slate-400">
+                {isBn ? 'কনফিগারেশন অবস্থা' : 'Configuration Status'}
+              </span>
+              <span className="text-xs font-semibold capitalize text-slate-800 dark:text-slate-200">
+                {target.data.configStatus}
               </span>
             </div>
 

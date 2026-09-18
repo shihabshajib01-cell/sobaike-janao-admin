@@ -4,6 +4,7 @@
  */
 
 export type TaxonomyStatus = 'active' | 'inactive';
+export type TaxonomyConfigStatus = 'draft' | 'ready' | 'published' | 'archived';
 export type TaxonomyItemType = 'segment' | 'subcategory';
 
 export interface TaxonomySegment {
@@ -11,7 +12,15 @@ export interface TaxonomySegment {
   nameEn: string;
   nameBn: string;
   status: TaxonomyStatus;
+  configStatus: TaxonomyConfigStatus;
   order: number;
+  slug?: string;
+  shortNameEn?: string;
+  shortNameBn?: string;
+  descriptionEn?: string;
+  descriptionBn?: string;
+  iconKey?: string;
+  themeKey?: string;
 }
 
 export interface TaxonomySubcategory {
@@ -20,7 +29,12 @@ export interface TaxonomySubcategory {
   nameEn: string;
   nameBn: string;
   status: TaxonomyStatus;
+  configStatus: TaxonomyConfigStatus;
   order: number;
+  descriptionEn?: string;
+  descriptionBn?: string;
+  categoryGroup?: string | null;
+  isSensitive?: boolean;
 }
 
 export interface TaxonomySegmentNode extends TaxonomySegment {
@@ -45,5 +59,15 @@ export interface TaxonomyUpdateInput {
   nameEn: string;
   nameBn: string;
   status: TaxonomyStatus;
+  order: number;
+}
+
+
+export interface TaxonomyCreateInput {
+  itemType: TaxonomyItemType;
+  id: string;
+  parentSegmentId?: string;
+  nameEn: string;
+  nameBn: string;
   order: number;
 }
