@@ -317,13 +317,13 @@ export const RolePermissionEditor: React.FC<RolePermissionEditorProps> = ({
                             >
                               {permName}
                             </span>
-                            <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500 px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800">
+                            <span className="font-mono type-meta text-slate-400 dark:text-slate-500 px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800">
                               {perm.id}
                             </span>
                           </div>
 
                           {perm.description && (
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal line-clamp-2">
+                            <p className="type-meta text-slate-500 dark:text-slate-400 leading-normal line-clamp-2">
                               {perm.description}
                             </p>
                           )}
