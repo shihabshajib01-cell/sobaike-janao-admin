@@ -127,6 +127,22 @@ export interface ReporterDeviceLocation {
   capturedAt?: string | null;
 }
 
+export interface ComplaintSource {
+  id: string;
+  sourceType: 'news' | 'official' | 'social' | 'article' | 'other';
+  publisherName: string;
+  sourceTitle?: string | null;
+  canonicalUrl: string;
+  sourcePublishedDate?: string | null;
+  verificationStatus: 'unverified' | 'verified' | 'rejected';
+  isFinalDetailPage: boolean;
+  sourceVersion: number;
+  verificationNote?: string | null;
+  verifiedAt?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
 export interface ComplaintMedia {
   id: string;
   type: 'image' | 'video' | 'document';
