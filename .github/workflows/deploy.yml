@@ -42,6 +42,9 @@ jobs:
       - name: Responsive table audit
         run: npm run audit:responsive-tables
 
+      - name: Button system audit
+        run: npm run audit:buttons
+
       - name: Type check
         run: npm run lint
 
