@@ -206,7 +206,7 @@ export const BannersPage: React.FC = () => {
           <Button
             variant="secondary"
             size="sm"
-            leftIcon={<RefreshCw className="h-4 w-4" />}
+            leftIcon={<RefreshCw />}
             onClick={() => void loadBanners()}
             disabled={loading}
           >
@@ -302,7 +302,7 @@ export const BannersPage: React.FC = () => {
                     <Button
                       size="sm"
                       variant="secondary"
-                      leftIcon={<Pencil className="h-3.5 w-3.5" />}
+                      leftIcon={<Pencil />}
                       onClick={() => openEditor(banner)}
                     >
                       {isBn ? 'সম্পাদনা' : 'Edit'}
