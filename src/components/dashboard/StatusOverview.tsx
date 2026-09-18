@@ -126,7 +126,7 @@ export const StatusOverview: React.FC<StatusOverviewProps> = ({ statusItems, loa
                           {item.percentage.toFixed(1)}%
                         </Badge>
                       </div>
-                      <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate mt-0.5 max-w-xs md:max-w-sm">
+                      <p className="type-meta text-slate-400 dark:text-slate-500 truncate mt-0.5 max-w-xs md:max-w-sm">
                         {desc}
                       </p>
                     </div>
@@ -136,7 +136,7 @@ export const StatusOverview: React.FC<StatusOverviewProps> = ({ statusItems, loa
                     <span className="text-xs font-bold text-slate-900 dark:text-slate-100 font-mono">
                       {formatNumber(item.count)}
                     </span>
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500 block">
+                    <span className="type-meta text-slate-400 dark:text-slate-500 block">
                       {isBn ? 'টি' : 'reports'}
                     </span>
                   </div>
