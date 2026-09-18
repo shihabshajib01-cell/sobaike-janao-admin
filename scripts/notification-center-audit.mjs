@@ -9,6 +9,7 @@ const assert = (condition, message) => {
 };
 
 const migration = read('supabase/migrations/20260918061006_notification_center_completion.sql');
+const backfillMigration = read('supabase/migrations/20260918061325_notification_center_backfill_missing_submissions.sql');
 const api = read('src/services/api/notificationApi.ts');
 const context = read('src/context/NotificationContext.tsx');
 const page = read('src/pages/Notifications/NotificationsPage.tsx');
@@ -54,14 +55,29 @@ assert(
   'Realtime callback still performs duplicate notification refreshes'
 );
 assert(
-  page.includes('role="button"') &&
-    page.includes('tabIndex={0}') &&
-    page.includes("event.key === 'Enter' || event.key === ' '"),
-  'notification cards are not keyboard operable'
+  page.includes('<article') &&
+    page.includes('type="button"') &&
+    page.includes('onClick={() => void handleItemNavigate(item)}'),
+  'notification cards do not expose a native keyboard-operable action'
+);
+assert(
+  page.includes('<Badge') &&
+    page.includes('<Button'),
+  'notification page is not reusing shared Badge/Button controls'
+);
+assert(
+  dropdown.includes('<Badge') &&
+    dropdown.includes('<Button') &&
+    dropdown.includes('<article'),
+  'notification dropdown is not reusing shared controls/native item semantics'
 );
 assert(
   utils.includes('/^\\/banners\\/?$/'),
   'notification route allowlist does not include Banner Management'
+);
+assert(
+  backfillMigration.includes("p_dedupe_key := 'complaint.submitted:' || v_row.id"),
+  'missing-submission backfill is not idempotent'
 );
 assert(
   language.includes("Mark all notifications as read") &&
