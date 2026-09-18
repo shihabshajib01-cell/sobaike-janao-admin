@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Eye, FilePenLine, Check } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { Tag } from '@/components/ui/Tag';
+import { FeedbackNotice } from '@/components/ui/FeedbackNotice';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
@@ -41,10 +43,9 @@ export const ComplaintActionAreaWithPublication: React.FC<ComplaintActionAreaPro
               <span>{isBn ? 'পাবলিক পোস্ট প্রস্তুতি' : 'Public Post Preparation'}</span>
             </CardTitle>
             {hasPreparedDraft && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-                <Check className="h-3 w-3" />
+              <Tag tone="success" icon={<Check />}>
                 {isBn ? 'প্রস্তুত' : 'Prepared'}
-              </span>
+              </Tag>
             )}
           </CardHeader>
 
@@ -56,10 +57,9 @@ export const ComplaintActionAreaWithPublication: React.FC<ComplaintActionAreaPro
             </p>
 
             {savedMessage && (
-              <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-2.5 text-xs text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
-                <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                <p>{savedMessage}</p>
-              </div>
+              <FeedbackNotice tone="success" compact>
+                {savedMessage}
+              </FeedbackNotice>
             )}
 
             <Button
