@@ -198,8 +198,7 @@ export const CategoryFilters: React.FC<CategoryFiltersProps> = ({
               variant="ghost"
               size="sm"
               onClick={onReset}
-              leftIcon={<RotateCcw className="w-3 h-3" />}
-              className="h-7 px-2 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
+              leftIcon={<RotateCcw />}
             >
               {isBn ? 'রিসেট' : 'Reset'}
             </Button>
