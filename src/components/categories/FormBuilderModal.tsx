@@ -254,7 +254,7 @@ export const FormBuilderModal: React.FC<FormBuilderModalProps> = ({
       closeOnBackdrop={!saving && !publishing}
       footer={
         <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-between">
-          <Button variant="secondary" onClick={add} leftIcon={<Plus className="h-4 w-4" />}>
+          <Button variant="secondary" onClick={add} leftIcon={<Plus />}>
             {isBn ? 'ফিল্ড যোগ করুন' : 'Add field'}
           </Button>
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -263,7 +263,7 @@ export const FormBuilderModal: React.FC<FormBuilderModalProps> = ({
               onClick={save}
               isLoading={saving}
               disabled={loading || publishing}
-              leftIcon={<Save className="h-4 w-4" />}
+              leftIcon={<Save />}
             >
               {isBn ? 'Draft সংরক্ষণ' : 'Save Draft'}
             </Button>
@@ -272,7 +272,7 @@ export const FormBuilderModal: React.FC<FormBuilderModalProps> = ({
               onClick={publish}
               isLoading={publishing}
               disabled={loading || saving}
-              leftIcon={<Send className="h-4 w-4" />}
+              leftIcon={<Send />}
             >
               {isBn ? 'Form প্রকাশ করুন' : 'Publish Form'}
             </Button>
@@ -359,7 +359,6 @@ export const FormBuilderModal: React.FC<FormBuilderModalProps> = ({
                           size="sm"
                           onClick={() => remove(index)}
                           aria-label="Remove field"
-                          className="text-red-600 dark:text-red-400"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
