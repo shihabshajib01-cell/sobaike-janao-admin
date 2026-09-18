@@ -20,6 +20,8 @@ import {
   getHarassmentAgeGroupLabel,
   getHarassmentRelationshipLabel,
   getHarassmentReportingForLabel,
+  getSexualHarassmentContextLabel,
+  getSexualHarassmentTypeLabel,
 } from '@/utils/harassmentClassification';
 
 export interface ComplaintInfoSectionProps {
@@ -304,6 +306,42 @@ export const ComplaintInfoSection: React.FC<ComplaintInfoSectionProps> = ({
                 </p>
               </div>
             </div>
+            {complaint.subcategoryId === 'sexual-harassment' && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
+                <div className="space-y-1">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {isBn ? 'যৌন হয়রানির ধরন' : 'Type of harassment'}
+                  </p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                    {getSexualHarassmentTypeLabel(
+                      complaint.sexualHarassmentType,
+                      isBn ? 'bn' : 'en'
+                    )}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {isBn ? 'ঘটনার প্রেক্ষাপট' : 'Incident context'}
+                  </p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                    {getSexualHarassmentContextLabel(
+                      complaint.sexualHarassmentContext,
+                      isBn ? 'bn' : 'en'
+                    )}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {isBn ? 'প্রতিষ্ঠান / সংস্থা' : 'Institution / organization'}
+                  </p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100 break-words">
+                    {complaint.sexualHarassmentInstitution ||
+                      (isBn ? 'উল্লেখ করা হয়নি' : 'Not specified')}
+                  </p>
+                </div>
+              </div>
+            )}
+
             <p className="mt-3 text-[11px] text-slate-400 dark:text-slate-500">
               {isBn ? 'নাগরিকের জমা দেওয়া শ্রেণিবিন্যাস; অ্যাডমিন ভিউতে শুধু-পঠনযোগ্য।' : 'Citizen-submitted classification; read-only in the Admin view.'}
             </p>
