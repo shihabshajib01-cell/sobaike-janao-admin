@@ -44,6 +44,22 @@ for (const [subcategoryId, text, segmentId] of classificationCases) {
 }
 
 assert.equal(
+  classifyArticle('টিউবওয়েলের পানি নিয়ে বিরোধ, কিল-ঘুষিতে বৃদ্ধের মৃত্যু'),
+  null,
+  'Bangla word ঘুষিতে must not be treated as bribery'
+);
+assert.equal(
+  classifyArticle('নেত্রকোণায় দুপক্ষের সংঘর্ষে আহত যুবকের মৃত্যু'),
+  null,
+  'Generic non-road সংঘর্ষ must not be classified as a road accident'
+);
+assert.equal(
+  classifyArticle('Golam Porwar urges patience and restraint for Dhaka-Rangpur long march'),
+  null,
+  'Political programme headlines must not be treated as report incidents without incident keywords'
+);
+
+assert.equal(
   inferIncidentDate('ঘটনাটি ১৮ সেপ্টেম্বর ২০২৬ সকালে ঘটে', '2026-09-19'),
   '2026-09-18',
   'Bangla named date must parse without regex errors'
