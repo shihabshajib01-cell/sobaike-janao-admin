@@ -1,4 +1,4 @@
-import { ButtonBase } from '@/components/ui/Button';
+import { ButtonBase, IconButton } from '@/components/ui/Button';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
@@ -140,16 +140,14 @@ export const CreateUserPage: React.FC = () => {
     <div className="max-w-3xl mx-auto space-y-6 pb-16" id="create-user-page">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Button
+        <IconButton
           id="btn-back-to-users"
           variant="ghost"
           size="sm"
           onClick={() => navigate('/users')}
-          className="w-9"
           aria-label={t.common.back}
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
+          icon={<ArrowLeft />}
+        />
         <div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
             {t.users.createUserTitle}
