@@ -2,6 +2,7 @@ import { ButtonBase } from '@/components/ui/Button';
 import React, { useState, useEffect, useCallback } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
+import { TablePageSizeSelect } from '@/components/ui/TablePageSizeSelect';
 import { AccessDenied } from '@/components/common';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
@@ -84,7 +85,7 @@ export const ActivityLogPage: React.FC = () => {
 
   // Pagination State
   const [page, setPage] = useState<number>(1);
-  const [pageSize] = useState<number>(15);
+  const [pageSize, setPageSize] = useState<number>(15);
   const [totalCount, setTotalCount] = useState<number>(0);
 
   // Filters State
@@ -164,6 +165,11 @@ export const ActivityLogPage: React.FC = () => {
   const handleViewDetails = (log: AuditLogItem) => {
     setSelectedLog(log);
     setIsDrawerOpen(true);
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPage(1);
+    setPageSize(newPageSize);
   };
 
   const totalPages = Math.ceil(totalCount / pageSize);
@@ -283,55 +289,66 @@ export const ActivityLogPage: React.FC = () => {
             )}
           </p>
 
-          {totalPages > 1 && (
-            <div className="flex items-center gap-1.5">
-              <Button
-                id="btn-prev-page"
-                variant="secondary"
-                size="sm"
-                onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                disabled={page === 1 || loading}
-                aria-label="Previous page"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <TablePageSizeSelect
+              id="activity-log-page-size"
+              value={pageSize}
+              onChange={handlePageSizeChange}
+              disabled={loading}
+            />
 
-              <div className="flex items-center gap-1">
-                {getVisiblePages(page, totalPages).map((p, idx) =>
-                  p === 'ellipsis' ? (
-                    <span key={`ellipsis-${idx}`} className="px-2 text-slate-400 text-xs">
-                      ...
-                    </span>
-                  ) : (
-                    <ButtonBase
-                      key={`page-${p}`}
-                      type="button"
-                      onClick={() => setPage(p)}
-                      disabled={loading}
-                      className={`min-w-[32px] h-8 text-xs font-semibold rounded-lg transition-colors ${
-                        page === p
-                          ? 'bg-sky-600 text-white dark:bg-sky-500'
-                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                      }`}
-                    >
-                      {formatNumber(p)}
-                    </ButtonBase>
-                  )
-                )}
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <Button
+                  id="btn-prev-page"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(p - 1, 1))}
+                  disabled={page === 1 || loading}
+                  aria-label="Previous page"
+                  leftIcon={<ChevronLeft />}
+                >
+                  {language === 'bn' ? 'পূর্ববর্তী' : 'Previous'}
+                </Button>
+
+                <div className="flex items-center gap-1">
+                  {getVisiblePages(page, totalPages).map((p, idx) =>
+                    p === 'ellipsis' ? (
+                      <span key={`ellipsis-${idx}`} className="px-2 text-slate-400 text-xs">
+                        ...
+                      </span>
+                    ) : (
+                      <ButtonBase
+                        key={`page-${p}`}
+                        type="button"
+                        onClick={() => setPage(p)}
+                        disabled={loading}
+                        className={`min-w-[32px] h-8 text-xs font-semibold rounded-lg transition-colors ${
+                          page === p
+                            ? 'bg-sky-600 text-white dark:bg-sky-500'
+                            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        }`}
+                      >
+                        {formatNumber(p)}
+                      </ButtonBase>
+                    )
+                  )}
+                </div>
+
+                <Button
+                  id="btn-next-page"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+                  disabled={page === totalPages || loading}
+                  aria-label="Next page"
+                  rightIcon={<ChevronRight />}
+                >
+                  {language === 'bn' ? 'পরবর্তী' : 'Next'}
+                </Button>
               </div>
-
-              <Button
-                id="btn-next-page"
-                variant="secondary"
-                size="sm"
-                onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-                disabled={page === totalPages || loading}
-                aria-label="Next page"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
 
