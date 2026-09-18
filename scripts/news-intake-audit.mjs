@@ -141,7 +141,13 @@ for (const name of [
   'admin_create_sourced_report_from_intake',
   'admin_merge_intake_source',
   'admin_get_news_intake_taxonomy',
+  'admin_get_news_intake_scan_sources',
+  'admin_begin_news_intake_run',
+  'admin_get_news_intake_automation_dashboard',
+  'admin_record_news_intake_item',
+  'admin_finish_news_intake_run',
   'news-intake-fetch',
+  'news-intake-scan',
 ]) {
   requireText(productionSmoke, name, 'Production News Intake security smoke');
 }
@@ -153,5 +159,5 @@ if (errors.length) {
 }
 
 console.log(
-  'News Intake audit passed: approved-source fetch, draft-first creation, duplicate preview, source merge, existing publish gate, and security checks are protected.'
+  'News Intake audit passed: one-click source scan, source-grounded classification, draft-first creation, duplicate preview, source merge, existing publish gate, and security checks are protected.'
 );
