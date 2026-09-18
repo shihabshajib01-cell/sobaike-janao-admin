@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React, { useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -143,7 +144,7 @@ const MapCustomControls: React.FC<{
 
   return (
     <div className="absolute top-3 right-3 z-[1000] flex items-center gap-1.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 rounded-lg p-1 shadow-md">
-      <button
+      <ButtonBase
         type="button"
         onClick={handleZoomIn}
         className="p-1.5 rounded text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -151,8 +152,8 @@ const MapCustomControls: React.FC<{
         aria-label={isBn ? 'জুম ইন' : 'Zoom In'}
       >
         <ZoomIn className="w-4 h-4" />
-      </button>
-      <button
+      </ButtonBase>
+      <ButtonBase
         type="button"
         onClick={handleZoomOut}
         className="p-1.5 rounded text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -160,9 +161,9 @@ const MapCustomControls: React.FC<{
         aria-label={isBn ? 'জুম আউট' : 'Zoom Out'}
       >
         <ZoomOut className="w-4 h-4" />
-      </button>
+      </ButtonBase>
       <div className="w-px h-3.5 bg-slate-200 dark:bg-slate-700 mx-0.5" />
-      <button
+      <ButtonBase
         type="button"
         onClick={handleResetView}
         className="p-1.5 rounded text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -170,7 +171,7 @@ const MapCustomControls: React.FC<{
         aria-label={isBn ? 'ভিউ রিসেট' : 'Reset View'}
       >
         <Compass className="w-4 h-4" />
-      </button>
+      </ButtonBase>
     </div>
   );
 };
@@ -340,7 +341,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
                       })}
                     </span>
                     {canViewComplaints && (
-                      <button
+                      <ButtonBase
                         type="button"
                         onClick={() => navigate(`/complaints/${item.id}`)}
                         className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-white bg-sky-600 hover:bg-sky-700 rounded transition-colors"
@@ -348,7 +349,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
                       >
                         <span>{isBn ? 'বিস্তারিত' : 'Open'}</span>
                         <ExternalLink className="w-3 h-3" />
-                      </button>
+                      </ButtonBase>
                     )}
                   </div>
                 </div>
@@ -371,14 +372,14 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 
             <div className="flex items-center gap-2">
               {getStatusBadge(selectedComplaint.status)}
-              <button
+              <ButtonBase
                 type="button"
                 onClick={() => onSelectComplaint(null)}
                 className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 aria-label="Close preview"
               >
                 <X className="w-4 h-4" />
-              </button>
+              </ButtonBase>
             </div>
           </div>
 
