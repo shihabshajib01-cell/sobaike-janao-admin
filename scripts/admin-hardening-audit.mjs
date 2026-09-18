@@ -35,7 +35,7 @@ if (!workflow.includes('VITE_ADMIN_E2E_MODE: true')) {
   fail('Admin browser smoke is not using the isolated DEV-only E2E session');
 }
 
-if (!workflow.includes('playwright@1.55.0')) {
+if (!workflow.includes('playwright@1.63.0')) {
   fail('Admin browser smoke Playwright runtime is not pinned');
 }
 
