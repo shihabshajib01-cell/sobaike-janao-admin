@@ -53,7 +53,7 @@ for (const needle of [
   requireText(actions, needle, 'Publish duplicate gate');
 }
 
-requireText(reviewUi, 'Exact source duplicate cannot be overridden', 'exact source non-override UX');
+requireText(reviewUi, 'cannot be overridden as a separate incident', 'exact source non-override UX');
 requireText(reviewUi, 'Confirm Separate Incident', 'human distinct-incident review UX');
 requireText(reviewUi, "import { Tag } from '@/components/ui/Tag';", 'shared tag system');
 
