@@ -236,6 +236,7 @@ export interface Complaint {
   subcategoryBn: string;
   location: ComplaintLocation;
   media: ComplaintMedia[];
+  parties?: ComplaintParty[];
   status: ComplaintLifecycleStatus;
   urgency: ComplaintUrgency;
   citizenName?: string;
