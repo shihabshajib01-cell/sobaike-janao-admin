@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
-    "build": "vite build",
+    "build": "node scripts/build-production.mjs",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
@@ -14,7 +14,8 @@
     "audit:responsive-tables": "node scripts/responsive-table-audit.mjs",
     "audit:buttons": "node scripts/button-system-audit.mjs",
     "audit:table-page-size": "node scripts/table-page-size-audit.mjs",
-    "audit:dependencies": "npm audit --audit-level=low"
+    "audit:dependencies": "npm audit --audit-level=low",
+    "audit:bundle": "node scripts/build-production.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
