@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React, { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -282,7 +283,7 @@ export const LocationActivityPage: React.FC = () => {
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
                 const isCurrent = p === page;
                 return (
-                  <button
+                  <ButtonBase
                     key={p}
                     onClick={() => handlePageChange(p)}
                     disabled={loading}
@@ -293,7 +294,7 @@ export const LocationActivityPage: React.FC = () => {
                     }`}
                   >
                     {formatNumber(p)}
-                  </button>
+                  </ButtonBase>
                 );
               })}
             </div>
