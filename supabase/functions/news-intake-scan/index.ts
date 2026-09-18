@@ -623,8 +623,35 @@ const runAutomatedScan = async (supabase: any) => {
         const exact=Array.isArray(preview?.duplicate?.exactSourceDuplicates)
           ? preview.duplicate.exactSourceDuplicates
           : [];
+        const schemaReady=preview?.schemaValidation?.ready !== false;
+        const missingSchemaFields=Array.isArray(preview?.schemaValidation?.missingFields)
+          ? preview.schemaValidation.missingFields
+          : [];
 
-        if(exact.length||preview?.canCreateDraft===false){
+        if(!schemaReady){
+          const missingLabels=missingSchemaFields
+            .map((field:any)=>String(field?.labelEn||field?.fieldKey||'required field'))
+            .filter(Boolean)
+            .join(', ');
+          await record({
+            itemKind:'article',
+            sourceHostname:source.hostname,
+            publisherName:article.publisherName,
+            canonicalUrl:article.canonicalUrl,
+            sourceTitle:article.title,
+            sourcePublishedDate:article.sourcePublishedDate||'',
+            contentLanguage:language,
+            segmentId:classification.segmentId,
+            subcategoryId:classification.subcategoryId,
+            confidence:classification.confidence,
+            action:'needs_review',
+            duplicateStatus,
+            reason:`The current published report form requires source facts that could not be established safely: ${missingLabels||'required fields'}.`,
+          });
+          return;
+        }
+
+        if(exact.length){
           await record({
             itemKind:'article',
             sourceHostname:source.hostname,
