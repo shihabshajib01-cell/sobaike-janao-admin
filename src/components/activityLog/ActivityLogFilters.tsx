@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React from 'react';
 import { Search, Filter, X, Calendar } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
@@ -140,7 +141,7 @@ export const ActivityLogFilters: React.FC<ActivityLogFiltersProps> = ({
           </div>
 
           {hasActiveFilters && (
-            <button
+            <ButtonBase
               id="btn-clear-activity-filters"
               type="button"
               onClick={onClearFilters}
@@ -149,7 +150,7 @@ export const ActivityLogFilters: React.FC<ActivityLogFiltersProps> = ({
             >
               <X className="w-3.5 h-3.5" />
               <span className="hidden sm:inline xl:hidden 2xl:inline">{language === 'bn' ? 'রিসেট' : 'Clear'}</span>
-            </button>
+            </ButtonBase>
           )}
         </div>
       </div>
