@@ -1,5 +1,7 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import {
+  NewsIntakeAutomationDashboard,
+  NewsIntakeAutomationScanResult,
   NewsIntakeCreateResult,
   NewsIntakeMergeResult,
   NewsIntakePayload,
@@ -47,6 +49,40 @@ export class NewsIntakeApi {
       hostname: String(data.hostname || ''),
       approved: Boolean(data.approved),
     };
+  }
+
+  async getAutomationDashboard(): Promise<NewsIntakeAutomationDashboard> {
+    assertConfigured();
+
+    const { data, error } = await supabase.rpc(
+      'admin_get_news_intake_automation_dashboard'
+    );
+    if (error) {
+      throw new Error(error.message || 'Failed to load News Automation status.');
+    }
+
+    const raw = (data || {}) as NewsIntakeAutomationDashboard;
+    return {
+      sources: Array.isArray(raw.sources) ? raw.sources : [],
+      runs: Array.isArray(raw.runs) ? raw.runs : [],
+    };
+  }
+
+  async scanSources(): Promise<NewsIntakeAutomationScanResult> {
+    assertConfigured();
+
+    const { data, error } = await supabase.functions.invoke('news-intake-scan', {
+      body: {},
+    });
+
+    if (error) {
+      throw new Error(error.message || 'Failed to scan news sources.');
+    }
+    if (!data || data.error) {
+      throw new Error(data?.error || 'Failed to scan news sources.');
+    }
+
+    return data as NewsIntakeAutomationScanResult;
   }
 
   async getTaxonomy(): Promise<NewsIntakeTaxonomy> {
