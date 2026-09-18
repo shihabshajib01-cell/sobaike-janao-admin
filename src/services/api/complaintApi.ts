@@ -14,6 +14,7 @@ import {
   ReporterDeviceLocation,
   ComplaintConfiguredFields,
   ComplaintSource,
+  ComplaintParty,
   WorkflowActionResult,
 } from '@/types/Complaint';
 import {
@@ -49,13 +50,43 @@ async function enrichComplaintDetail(complaint: Complaint): Promise<Complaint> {
   const shouldLoadMobJustice =
     complaint.categoryId === 'public_safety' && complaint.subcategoryId === 'mob-justice';
   const shouldLoadHarassmentContext = complaint.categoryId === 'harassment';
+  const shouldLoadParties = [
+    'extortion',
+    'rickshaw',
+    'public_safety',
+    'road_transport',
+    'illegal_occupation',
+  ].includes(complaint.categoryId);
 
-  const [canonicalLocation, mobJusticeDetails, harassmentContext] = await Promise.all([
+  const partiesPromise: Promise<ComplaintParty[]> = shouldLoadParties
+    ? supabase
+        .rpc('admin_get_complaint_parties', { p_complaint_id: complaint.id })
+        .then(({ data, error }) => {
+          if (error) throw new Error(error.message || 'Failed to load complaint parties.');
+          if (!Array.isArray(data)) return [];
+          return data.map((party: any) => ({
+            id: String(party.id || ''),
+            complaintId: String(party.complaint_id || complaint.id),
+            name: party.name ? String(party.name) : null,
+            partyType: String(party.party_type || 'unknown'),
+            roleOrDesignation: party.role_or_designation ? String(party.role_or_designation) : null,
+            organization: party.organization ? String(party.organization) : null,
+            phoneOrContact: party.phone_or_contact ? String(party.phone_or_contact) : null,
+            publicProfileHandle: party.public_profile_handle ? String(party.public_profile_handle) : null,
+            address: party.address ? String(party.address) : null,
+            identifyingDescription: party.identifying_description ? String(party.identifying_description) : null,
+            createdAt: party.created_at ? String(party.created_at) : null,
+          }));
+        })
+    : Promise.resolve([]);
+
+  const [canonicalLocation, mobJusticeDetails, harassmentContext, parties] = await Promise.all([
     getComplaintIncidentLocation(complaint.id),
     shouldLoadMobJustice ? getComplaintMobJusticeDetails(complaint.id) : Promise.resolve(null),
     shouldLoadHarassmentContext
       ? getComplaintHarassmentContext(complaint.id)
       : Promise.resolve(null),
+    partiesPromise,
   ]);
 
   return {
@@ -67,6 +98,7 @@ async function enrichComplaintDetail(complaint: Complaint): Promise<Complaint> {
         }
       : complaint.location,
     mobJusticeDetails: shouldLoadMobJustice ? mobJusticeDetails : null,
+    parties,
     relationshipContext:
       harassmentContext?.relationshipContext ?? complaint.relationshipContext ?? null,
     intimateWhatHappened:
