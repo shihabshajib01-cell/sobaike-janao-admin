@@ -86,6 +86,7 @@ export type NotificationFilterType =
   | 'unread'
   | 'complaint'
   | 'administration'
+  | 'configuration'
   | 'role'
   | 'security';
 
