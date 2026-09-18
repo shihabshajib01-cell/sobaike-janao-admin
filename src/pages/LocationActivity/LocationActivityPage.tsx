@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { ResponsiveDataView, ResponsiveDataTableView, ResponsiveDataCardView } from '@/components/ui/ResponsiveDataView';
+import { TablePageSizeSelect } from '@/components/ui/TablePageSizeSelect';
 import {
   LocationActivityStatsCards,
   LocationActivityFilters as FiltersComponent,
@@ -36,7 +37,7 @@ export const LocationActivityPage: React.FC = () => {
 
   // Pagination states
   const [page, setPage] = useState<number>(1);
-  const [pageSize] = useState<number>(20);
+  const [pageSize, setPageSize] = useState<number>(20);
   const [totalItems, setTotalItems] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
 
@@ -137,6 +138,11 @@ export const LocationActivityPage: React.FC = () => {
     }
   };
 
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPage(1);
+    setPageSize(newPageSize);
+  };
+
   const hasActiveFilters = Boolean(
     (filters.search && filters.search.trim().length > 0) ||
       (filters.permission && filters.permission !== 'all') ||
@@ -209,19 +215,27 @@ export const LocationActivityPage: React.FC = () => {
       {/* 5. Main Content Area */}
       <div className="space-y-3">
         {/* Results count & Pagination stats */}
-        <div className="flex items-center justify-between px-1 text-xs text-slate-500 dark:text-slate-400">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-slate-500 dark:text-slate-400">
           <span>
             {isBn
               ? `মোট ${formatNumber(totalItems)} টি সেশন রেকর্ড পাওয়া গেছে`
               : `Showing ${sessions.length} of ${formatNumber(totalItems)} total sessions`}
           </span>
-          {totalPages > 1 && (
-            <span>
-              {isBn
-                ? `পৃষ্ঠা ${formatNumber(page)} / ${formatNumber(totalPages)}`
-                : `Page ${page} of ${totalPages}`}
-            </span>
-          )}
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <TablePageSizeSelect
+              id="location-activity-page-size"
+              value={pageSize}
+              onChange={handlePageSizeChange}
+              disabled={loading || refreshing}
+            />
+            {totalPages > 1 && (
+              <span>
+                {isBn
+                  ? `পৃষ্ঠা ${formatNumber(page)} / ${formatNumber(totalPages)}`
+                  : `Page ${page} of ${totalPages}`}
+              </span>
+            )}
+          </div>
         </div>
 
         <ResponsiveDataView>
