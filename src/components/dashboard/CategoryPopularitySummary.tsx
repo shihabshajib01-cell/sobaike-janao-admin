@@ -106,7 +106,7 @@ export const CategoryPopularitySummary: React.FC = () => {
         ) : (
           <ResponsiveDataView>
             <ResponsiveDataTableView>
-              <Table className="text-sm">
+              <Table bare className="text-sm">
                 <TableHeader>
                   <TableRow>
                     <TableHead>{isBn ? 'র‍্যাঙ্ক' : 'Rank'}</TableHead>
@@ -132,7 +132,7 @@ export const CategoryPopularitySummary: React.FC = () => {
                           <TableCell className="font-semibold text-slate-700 dark:text-slate-200">
                             #{formatNumber(item.popularityRank)}
                           </TableCell>
-                          <TableCell className="font-medium text-slate-900 dark:text-slate-100">
+                          <TableCell className="font-medium text-slate-900 dark:text-slate-100 max-w-sm">
                             {label ? (isBn ? label.nameBn : label.nameEn) : item.segmentId}
                           </TableCell>
                           <TableCell className="text-slate-600 dark:text-slate-300">
