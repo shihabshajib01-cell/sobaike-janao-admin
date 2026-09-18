@@ -13,6 +13,7 @@ const service = read('src/services/api/supabaseComplaintService.ts');
 const api = read('src/services/api/complaintApi.ts');
 const actions = read('src/components/complaints/ComplaintActionArea.tsx');
 const reviewUi = read('src/components/complaints/SourcedReportDuplicateReview.tsx');
+const productionSmoke = read('.github/workflows/production-smoke.yml');
 
 for (const [needle, label] of [
   ['ux_complaint_sources_global_canonical_url', 'global exact-source uniqueness'],
@@ -56,6 +57,14 @@ for (const needle of [
 requireText(reviewUi, 'cannot be overridden as a separate incident', 'exact source non-override UX');
 requireText(reviewUi, 'Confirm Separate Incident', 'human distinct-incident review UX');
 requireText(reviewUi, "import { Tag } from '@/components/ui/Tag';", 'shared tag system');
+
+for (const rpcName of [
+  'admin_check_source_duplicate',
+  'admin_check_report_duplicate',
+  'admin_confirm_reports_are_distinct',
+]) {
+  requireText(productionSmoke, rpcName, 'Production duplicate RPC security smoke');
+}
 
 if (/originType\s*!==?\s*['"]sourced_report['"][\s\S]{0,240}checkReportDuplicate/.test(actions)) {
   errors.push('Citizen complaint flow appears to call the sourced-report duplicate checker.');
