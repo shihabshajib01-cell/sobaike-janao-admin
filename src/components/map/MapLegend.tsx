@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React from 'react';
 import { ComplaintLifecycleStatus } from '@/types/Complaint';
 import { useLanguage } from '@/context/LanguageContext';
@@ -71,13 +72,13 @@ export const MapLegend: React.FC<MapLegendProps> = ({
           {isBn ? 'ম্যাপ লেজেন্ড (স্ট্যাটাস নির্দেশক)' : 'Map Legend (Status Indicators)'}
         </span>
         {selectedStatus !== 'all' && onSelectStatus && (
-          <button
+          <ButtonBase
             type="button"
             onClick={() => onSelectStatus('all')}
             className="text-[11px] font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors cursor-pointer"
           >
             {isBn ? 'সব দেখুন' : 'Show All'}
-          </button>
+          </ButtonBase>
         )}
       </div>
 
@@ -87,7 +88,7 @@ export const MapLegend: React.FC<MapLegendProps> = ({
           const count = counts ? counts[item.status] : undefined;
 
           return (
-            <button
+            <ButtonBase
               key={item.status}
               type="button"
               onClick={() => onSelectStatus?.(isSelected ? 'all' : item.status)}
@@ -113,7 +114,7 @@ export const MapLegend: React.FC<MapLegendProps> = ({
                   {count}
                 </span>
               )}
-            </button>
+            </ButtonBase>
           );
         })}
       </div>
