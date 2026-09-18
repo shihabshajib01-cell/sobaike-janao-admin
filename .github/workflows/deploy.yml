@@ -45,6 +45,9 @@ jobs:
       - name: Button system audit
         run: npm run audit:buttons
 
+      - name: Table page-size audit
+        run: npm run audit:table-page-size
+
       - name: Dependency security audit
         run: npm run audit:dependencies
 
