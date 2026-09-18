@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React from 'react';
 import { ResponseItem, ResponseStatus, ResponseType } from '@/types/Response';
 import { Badge } from '@/components/ui/Badge';
@@ -158,7 +159,7 @@ export const ResponseTable: React.FC<ResponseTableProps> = ({
       <ResponsiveDataCardView>
         <div className="space-y-3">
           {responses.map((item) => (
-            <button
+            <ButtonBase
               key={item.id}
               type="button"
               onClick={() => onViewDetails(item)}
@@ -191,7 +192,7 @@ export const ResponseTable: React.FC<ResponseTableProps> = ({
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                 </span>
               </div>
-            </button>
+            </ButtonBase>
           ))}
         </div>
       </ResponsiveDataCardView>
