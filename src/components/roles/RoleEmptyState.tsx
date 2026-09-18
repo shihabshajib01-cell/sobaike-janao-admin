@@ -34,7 +34,7 @@ export const RoleEmptyState: React.FC<RoleEmptyStateProps> = ({ className = '' }
           variant="primary"
           size="sm"
           onClick={() => navigate('/roles/create')}
-          leftIcon={<Plus className="w-4 h-4" />}
+          leftIcon={<Plus />}
         >
           <span>{t.roles.createRole}</span>
         </Button>
