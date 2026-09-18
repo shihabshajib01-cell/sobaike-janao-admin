@@ -267,7 +267,7 @@ export const CategoriesPage: React.FC = () => {
                   variant="primary"
                   size="sm"
                   onClick={() => handleOpenCreate('segment')}
-                  leftIcon={<Plus className="h-3.5 w-3.5" />}
+                  leftIcon={<Plus />}
                 >
                   {isBn ? 'ক্যাটাগরি' : 'Category'}
                 </Button>
@@ -276,7 +276,7 @@ export const CategoriesPage: React.FC = () => {
                   variant="secondary"
                   size="sm"
                   onClick={() => handleOpenCreate('subcategory')}
-                  leftIcon={<Plus className="h-3.5 w-3.5" />}
+                  leftIcon={<Plus />}
                 >
                   {isBn ? 'সাব-ক্যাটাগরি' : 'Subcategory'}
                 </Button>
@@ -288,7 +288,7 @@ export const CategoriesPage: React.FC = () => {
               size="sm"
               onClick={handleRefresh}
               isLoading={refreshing}
-              leftIcon={<RefreshCw className={cn('w-3.5 h-3.5', refreshing && 'animate-spin')} />}
+              leftIcon={<RefreshCw className={cn('', refreshing && 'animate-spin')} />}
               aria-label="Refresh taxonomy"
             >
               {isBn ? 'রিফ্রেশ' : 'Refresh'}
@@ -397,8 +397,8 @@ export const CategoriesPage: React.FC = () => {
             variant="secondary"
             size="sm"
             onClick={() => loadTaxonomyData()}
-            leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
-            className="mt-2 border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200"
+            leftIcon={<RotateCcw />}
+            className="mt-2"
           >
             {isBn ? 'আবার চেষ্টা করুন' : 'Retry'}
           </Button>
