@@ -18,6 +18,8 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useNotifications } from '@/context/NotificationContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
+import { ADMIN_NAVIGATION_ITEMS, getFirstAccessibleRoute } from '@/routes/routes.config';
 import { notificationApi } from '@/services/api/notificationApi';
 import { AdminNotification, NotificationFilterType } from '@/types/Notification';
 import { cn } from '@/utils';
@@ -39,6 +41,24 @@ export const NotificationsPage: React.FC = () => {
   const { t, language } = useLanguage();
   const isBn = language === 'bn';
   const navigate = useNavigate();
+  const { hasPermission, isBootstrapMode } = useAuth();
+
+  const homePath = getFirstAccessibleRoute(hasPermission, isBootstrapMode);
+  const homeItem = ADMIN_NAVIGATION_ITEMS.find((item) => item.path === homePath);
+  const homeLabel = homeItem
+    ? homeItem.labelKey
+      ? t.nav[homeItem.labelKey]
+      : isBn
+        ? homeItem.defaultLabelBn || homeItem.defaultLabel
+        : homeItem.defaultLabel
+    : t.notifications.title;
+  const notificationBreadcrumbs =
+    homePath === '/notifications'
+      ? [{ label: t.notifications.title }]
+      : [
+          { label: homeLabel, onClick: () => navigate(homePath) },
+          { label: t.notifications.title },
+        ];
 
   const {
     unreadCount,
@@ -318,10 +338,7 @@ export const NotificationsPage: React.FC = () => {
       <PageHeader
         title={t.notifications.title}
         description={t.notifications.subtitle}
-        breadcrumbs={[
-          { label: t.nav.dashboard, onClick: () => navigate('/dashboard') },
-          { label: t.notifications.title },
-        ]}
+        breadcrumbs={notificationBreadcrumbs}
         actions={
           <div className="flex items-center gap-2">
             <Button
