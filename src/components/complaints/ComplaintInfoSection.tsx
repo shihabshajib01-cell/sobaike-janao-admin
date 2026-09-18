@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -119,7 +120,7 @@ export const ComplaintInfoSection: React.FC<ComplaintInfoSectionProps> = ({
           {/* Language display switcher: only rendered when both language versions exist */}
           {hasBothDesc && (
             <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-md text-xs">
-              <button
+              <ButtonBase
                 type="button"
                 onClick={() => setDescLangTab('both')}
                 className={cn(
@@ -130,8 +131,8 @@ export const ComplaintInfoSection: React.FC<ComplaintInfoSectionProps> = ({
                 )}
               >
                 {isBn ? 'উভয় ভাষা' : 'Both (EN & BN)'}
-              </button>
-              <button
+              </ButtonBase>
+              <ButtonBase
                 type="button"
                 onClick={() => setDescLangTab('bn')}
                 className={cn(
@@ -142,8 +143,8 @@ export const ComplaintInfoSection: React.FC<ComplaintInfoSectionProps> = ({
                 )}
               >
                 {isBn ? 'বাংলা' : 'Bengali'}
-              </button>
-              <button
+              </ButtonBase>
+              <ButtonBase
                 type="button"
                 onClick={() => setDescLangTab('en')}
                 className={cn(
@@ -154,7 +155,7 @@ export const ComplaintInfoSection: React.FC<ComplaintInfoSectionProps> = ({
                 )}
               >
                 {isBn ? 'ইংরেজি' : 'English'}
-              </button>
+              </ButtonBase>
             </div>
           )}
 
