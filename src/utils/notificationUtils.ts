@@ -15,6 +15,11 @@ import {
   ShieldAlert,
   Key,
   Info,
+  FolderPlus,
+  FolderCheck,
+  MoveRight,
+  FileCheck2,
+  ImageIcon,
 } from 'lucide-react';
 import { NotificationEventKey, NotificationCategory } from '@/types/Notification';
 
@@ -50,6 +55,7 @@ export const isSafeNotificationRoute = (route: string | null | undefined): boole
     /^\/complaints\/[a-zA-Z0-9_-]+\/?$/,
     /^\/responses\/?$/,
     /^\/categories\/?$/,
+    /^\/banners\/?$/,
     /^\/map\/?$/,
     /^\/location-activity\/?$/,
     /^\/roles\/?$/,
@@ -287,6 +293,54 @@ export const getNotificationVisualMeta = (
         groupLabelEn: 'Security',
         groupLabelBn: 'নিরাপত্তা',
         isSecurity: true,
+      };
+
+    case 'taxonomy.category_created':
+    case 'taxonomy.subcategory_created':
+      return {
+        icon: FolderPlus,
+        iconBg: 'bg-sky-100 dark:bg-sky-950/50',
+        iconColor: 'text-sky-600 dark:text-sky-400',
+        groupLabelEn: 'Configuration',
+        groupLabelBn: 'কনফিগারেশন',
+        isSecurity: false,
+      };
+    case 'taxonomy.category_published':
+    case 'taxonomy.subcategory_published':
+      return {
+        icon: FolderCheck,
+        iconBg: 'bg-emerald-100 dark:bg-emerald-950/50',
+        iconColor: 'text-emerald-600 dark:text-emerald-400',
+        groupLabelEn: 'Configuration',
+        groupLabelBn: 'কনফিগারেশন',
+        isSecurity: false,
+      };
+    case 'taxonomy.subcategory_moved':
+      return {
+        icon: MoveRight,
+        iconBg: 'bg-amber-100 dark:bg-amber-950/50',
+        iconColor: 'text-amber-600 dark:text-amber-400',
+        groupLabelEn: 'Configuration',
+        groupLabelBn: 'কনফিগারেশন',
+        isSecurity: false,
+      };
+    case 'reporting_form.published':
+      return {
+        icon: FileCheck2,
+        iconBg: 'bg-indigo-100 dark:bg-indigo-950/50',
+        iconColor: 'text-indigo-600 dark:text-indigo-400',
+        groupLabelEn: 'Configuration',
+        groupLabelBn: 'কনফিগারেশন',
+        isSecurity: false,
+      };
+    case 'banner.published':
+      return {
+        icon: ImageIcon,
+        iconBg: 'bg-violet-100 dark:bg-violet-950/50',
+        iconColor: 'text-violet-600 dark:text-violet-400',
+        groupLabelEn: 'Configuration',
+        groupLabelBn: 'কনফিগারেশন',
+        isSecurity: false,
       };
 
     default:
