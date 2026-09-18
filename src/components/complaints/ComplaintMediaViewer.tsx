@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { Tag } from '@/components/ui/Tag';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { ComplaintMedia } from '@/types/Complaint';
@@ -73,11 +74,11 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
           </CardTitle>
 
           {hasMedia && (
-            <Badge variant="subtle" size="sm">
+            <Tag tone="neutral">
               {isBn
                 ? `${media.length} টি ফাইল সংযুক্ত`
                 : `${media.length} File${media.length > 1 ? 's' : ''} Attached`}
-            </Badge>
+            </Tag>
           )}
         </CardHeader>
 
@@ -96,9 +97,9 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
                   {t.access.evidenceRestrictedDesc}
                 </p>
               </div>
-              <Badge variant="subtle" size="sm" className="font-mono text-[11px]">
+              <Tag tone="neutral" mono>
                 complaints.evidence_view
-              </Badge>
+              </Tag>
             </div>
           ) : error ? (
             /* 1. Real Evidence Error State */
