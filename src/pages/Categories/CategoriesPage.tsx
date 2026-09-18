@@ -309,7 +309,7 @@ export const CategoriesPage: React.FC = () => {
               <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">
                 {stats.segments}
               </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <p className="type-meta text-slate-400 mt-0.5">
                 {isBn ? 'মূল রিপোর্টিং বিভাগ' : 'Primary report segments'}
               </p>
             </div>
@@ -329,7 +329,7 @@ export const CategoriesPage: React.FC = () => {
               <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">
                 {stats.subcategories}
               </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <p className="type-meta text-slate-400 mt-0.5">
                 {isBn ? 'নির্দিষ্ট অভিযোগের ধরণ' : 'Specific complaint types'}
               </p>
             </div>
@@ -349,7 +349,7 @@ export const CategoriesPage: React.FC = () => {
               <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">
                 {stats.activeItems}
               </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <p className="type-meta text-slate-400 mt-0.5">
                 {isBn ? 'সক্রিয় বিভাগ ও সাব-ক্যাটাগরি' : 'Active segments and subcategories'}
               </p>
             </div>
