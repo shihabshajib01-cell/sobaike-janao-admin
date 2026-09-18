@@ -184,7 +184,6 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                           e.stopPropagation();
                           onView(user.user_id);
                         }}
-                        className="h-8 px-2.5 text-xs text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400"
                         title={t.users.viewUser}
                       >
                         <Eye className="w-3.5 h-3.5 mr-1" />
@@ -218,7 +217,6 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                                 e.stopPropagation();
                                 onEdit(user.user_id);
                               }}
-                              className="h-8 px-2.5 text-xs"
                               title={t.users.editUser}
                             >
                               <Edit2 className="w-3.5 h-3.5 mr-1" />
@@ -234,7 +232,6 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                                   e.stopPropagation();
                                   onDelete(user);
                                 }}
-                                className="h-8 px-2.5 text-xs text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40"
                                 title={t.users.deleteUser}
                               >
                                 <Trash2 className="w-3.5 h-3.5 mr-1" />
@@ -343,7 +340,6 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                     e.stopPropagation();
                     onView(user.user_id);
                   }}
-                  className="h-8 px-3 text-xs"
                 >
                   <Eye className="w-3.5 h-3.5 mr-1" />
                   {t.common.viewDetails}
@@ -370,7 +366,6 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                           e.stopPropagation();
                           onEdit(user.user_id);
                         }}
-                        className="h-8 px-3 text-xs"
                       >
                         <Edit2 className="w-3.5 h-3.5 mr-1" />
                         {t.users.editUser}
@@ -385,7 +380,6 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                             e.stopPropagation();
                             onDelete(user);
                           }}
-                          className="h-8 px-3 text-xs text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40"
                           title={t.users.deleteUser}
                         >
                           <Trash2 className="w-3.5 h-3.5 mr-1" />
