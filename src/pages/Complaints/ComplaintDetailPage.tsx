@@ -291,7 +291,7 @@ export const ComplaintDetailPage: React.FC = () => {
                     variant="secondary"
                     size="sm"
                     onClick={() => navigate('/complaints')}
-                    leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}
+                    leftIcon={<ArrowLeft />}
                   >
                     <span>{isBn ? 'অভিযোগের তালিকায় যান' : 'Go to Complaints List'}</span>
                   </Button>
@@ -331,7 +331,7 @@ export const ComplaintDetailPage: React.FC = () => {
                     variant="secondary"
                     size="sm"
                     onClick={() => navigate('/complaints')}
-                    leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}
+                    leftIcon={<ArrowLeft />}
                   >
                     <span>{isBn ? 'অভিযোগ তালিকায় ফিরুন' : 'Back to Complaints'}</span>
                   </Button>
@@ -340,7 +340,7 @@ export const ComplaintDetailPage: React.FC = () => {
                     size="sm"
                     onClick={fetchComplaintData}
                     disabled={loading}
-                    leftIcon={<RotateCcw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />}
+                    leftIcon={<RotateCcw className={`${loading ? 'animate-spin' : ''}`} />}
                   >
                     <span>{isBn ? 'আবার চেষ্টা করুন' : 'Retry'}</span>
                   </Button>
@@ -396,7 +396,7 @@ export const ComplaintDetailPage: React.FC = () => {
                 fetchParties();
               }}
               disabled={loading || partiesLoading}
-              leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${loading || partiesLoading ? 'animate-spin' : ''}`} />}
+              leftIcon={<RefreshCw className={`${loading || partiesLoading ? 'animate-spin' : ''}`} />}
               aria-label="Refresh complaint"
             >
               <span className="hidden sm:inline">{isBn ? 'রিফ্রেশ' : 'Refresh'}</span>
@@ -429,8 +429,8 @@ export const ComplaintDetailPage: React.FC = () => {
             size="sm"
             onClick={fetchComplaintData}
             disabled={loading}
-            leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />}
-            className="shrink-0 border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 hover:bg-rose-100 dark:hover:bg-rose-900/40"
+            leftIcon={<RefreshCw className={`${loading ? 'animate-spin' : ''}`} />}
+            className="shrink-0"
           >
             <span>{isBn ? 'আবার চেষ্টা করুন' : 'Retry'}</span>
           </Button>
@@ -614,8 +614,7 @@ export const ComplaintDetailPage: React.FC = () => {
                       size="sm"
                       onClick={handleRetryTimeline}
                       disabled={timelineLoading}
-                      leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${timelineLoading ? 'animate-spin' : ''}`} />}
-                      className="border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 hover:bg-rose-100 dark:hover:bg-rose-900/40"
+                      leftIcon={<RefreshCw className={`${timelineLoading ? 'animate-spin' : ''}`} />}
                     >
                       <span>{isBn ? 'টাইমলাইন আবার লোড করুন' : 'Retry Timeline'}</span>
                     </Button>
