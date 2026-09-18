@@ -128,14 +128,14 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
       size="md"
       footer={
         canManage ? (
-          <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-end">
+          <>
             {!isSegment && (
               <Button
                 type="button"
                 variant="secondary"
+                size="lg"
                 onClick={() => setIsFormBuilderOpen(true)}
                 leftIcon={<Wrench />}
-                className="w-full sm:w-auto"
               >
                 {isBn ? 'Form Builder' : 'Form Builder'}
               </Button>
@@ -144,10 +144,10 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
               <Button
                 type="button"
                 variant="success"
+                size="lg"
                 onClick={handlePublish}
                 isLoading={isPublishing}
                 leftIcon={<Send />}
-                className="w-full sm:w-auto"
               >
                 {isBn ? 'Publish' : 'Publish'}
               </Button>
@@ -155,13 +155,13 @@ export const CategoryDetailDrawer: React.FC<CategoryDetailDrawerProps> = ({
             <Button
               type="button"
               variant="primary"
+              size="lg"
               onClick={handleOpenEdit}
               leftIcon={<Pencil />}
-              className="w-full sm:w-auto"
             >
               {isBn ? 'সম্পাদনা করুন' : 'Edit'}
             </Button>
-          </div>
+          </>
         ) : undefined
       }
     >
