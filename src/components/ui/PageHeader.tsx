@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { cn } from '@/utils';
@@ -41,13 +42,13 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                 {isLast || (!item.href && !item.onClick) ? (
                   <span className="font-medium text-slate-800 dark:text-slate-200 truncate">{item.label}</span>
                 ) : (
-                  <button
+                  <ButtonBase
                     type="button"
                     onClick={item.onClick}
                     className="hover:text-slate-900 dark:hover:text-slate-100 hover:underline transition-colors truncate"
                   >
                     {item.label}
-                  </button>
+                  </ButtonBase>
                 )}
               </React.Fragment>
             );
@@ -57,14 +58,14 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 
       {backButton && (
         <div>
-          <button
+          <ButtonBase
             type="button"
             onClick={backButton.onClick}
             className="inline-flex items-center type-meta font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 gap-1.5 transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>{backButton.label || 'Back'}</span>
-          </button>
+          </ButtonBase>
         </div>
       )}
 
