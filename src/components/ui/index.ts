@@ -17,6 +17,7 @@ export * from './Divider';
 export * from './Tooltip';
 export * from './Table';
 export * from './ResponsiveDataView';
+export * from './TablePageSizeSelect';
 export * from './Drawer';
 export * from './Modal';
 export * from './PageHeader';
