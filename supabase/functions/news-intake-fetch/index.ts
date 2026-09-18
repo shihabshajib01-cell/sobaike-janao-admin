@@ -110,12 +110,13 @@ Deno.serve(async (req: Request) => {
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-    if (!supabaseUrl || !anonKey) {
+    const publishableKey =
+      req.headers.get("apikey") ?? Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    if (!supabaseUrl || !publishableKey) {
       return json({ error: "Function configuration error." }, 500);
     }
 
-    const supabase = createClient(supabaseUrl, anonKey, {
+    const supabase = createClient(supabaseUrl, publishableKey, {
       global: { headers: { Authorization: authHeader } },
       auth: { persistSession: false, autoRefreshToken: false },
     });
