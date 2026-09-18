@@ -142,8 +142,7 @@ export const ComplaintTimeline: React.FC<ComplaintTimelineProps> = ({
                   size="sm"
                   onClick={onRetry}
                   disabled={loading}
-                  leftIcon={<RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />}
-                  className="h-7 text-xs border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 hover:bg-rose-100 dark:hover:bg-rose-900/40"
+                  leftIcon={<RefreshCw className={`${loading ? 'animate-spin' : ''}`} />}
                 >
                   <span>{isBn ? 'আবার চেষ্টা করুন' : 'Retry'}</span>
                 </Button>
