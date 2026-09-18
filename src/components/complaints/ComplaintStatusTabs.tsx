@@ -74,7 +74,7 @@ export const ComplaintStatusTabs: React.FC<ComplaintStatusTabsProps> = ({
               size="sm"
               status={isActive ? tab.badgeStatus : 'default'}
               className={cn(
-                'text-[10px] px-1.5 py-0 font-mono transition-colors',
+                'type-meta px-1.5 py-0 font-mono transition-colors',
                 isActive
                   ? 'bg-slate-100 dark:bg-slate-700/80 font-bold'
                   : 'bg-slate-200/60 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400'
