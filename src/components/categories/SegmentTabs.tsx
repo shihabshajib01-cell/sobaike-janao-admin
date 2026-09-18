@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React from 'react';
 import { TaxonomySegmentNode } from '@/types/Category';
 import { useLanguage } from '@/context/LanguageContext';
@@ -31,7 +32,7 @@ export const SegmentTabs: React.FC<SegmentTabsProps> = ({
       )}
     >
       {/* All Segments Tab */}
-      <button
+      <ButtonBase
         type="button"
         id="segment-tab-all"
         onClick={() => onSelectSegment('all')}
@@ -57,7 +58,7 @@ export const SegmentTabs: React.FC<SegmentTabsProps> = ({
         >
           {totalItemsCount}
         </Badge>
-      </button>
+      </ButtonBase>
 
       {/* Dynamic Segment Tabs from Supabase */}
       {segments.map((segment) => {
@@ -65,7 +66,7 @@ export const SegmentTabs: React.FC<SegmentTabsProps> = ({
         const subCount = segment.subcategories?.length || 0;
 
         return (
-          <button
+          <ButtonBase
             key={segment.id}
             type="button"
             id={`segment-tab-${segment.id}`}
@@ -92,7 +93,7 @@ export const SegmentTabs: React.FC<SegmentTabsProps> = ({
             >
               {subCount}
             </Badge>
-          </button>
+          </ButtonBase>
         );
       })}
     </div>
