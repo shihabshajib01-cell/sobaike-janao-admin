@@ -431,7 +431,7 @@ export const MapPage: React.FC = () => {
               >
                 <ListIcon className="w-3.5 h-3.5" />
                 <span>{isBn ? 'তালিকা ভিউ' : 'List View'}</span>
-                <span className="text-[10px] font-mono px-1 rounded bg-slate-200 dark:bg-slate-700">
+                <span className="type-meta font-mono px-1 rounded bg-slate-200 dark:bg-slate-700">
                   {filteredComplaints.length}
                 </span>
               </button>
