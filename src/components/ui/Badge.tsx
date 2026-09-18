@@ -114,8 +114,8 @@ export const Badge: React.FC<BadgeProps> = ({
 
   const sizeClass =
     size === 'sm'
-      ? 'text-[10px] px-1.5 py-0.5 gap-1'
-      : 'text-xs px-2.5 py-0.5 gap-1.5 font-medium';
+      ? 'type-badge-sm px-1.5 py-0.5 gap-1'
+      : 'type-badge-md px-2.5 py-0.5 gap-1.5 font-medium';
 
   return (
     <span
