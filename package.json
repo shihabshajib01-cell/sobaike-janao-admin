@@ -14,6 +14,7 @@
     "audit:responsive-tables": "node scripts/responsive-table-audit.mjs",
     "audit:buttons": "node scripts/button-system-audit.mjs",
     "audit:table-page-size": "node scripts/table-page-size-audit.mjs",
+    "audit:tags-feedback": "node scripts/tag-feedback-audit.mjs",
     "audit:dependencies": "npm audit --audit-level=low",
     "audit:bundle": "node scripts/build-production.mjs",
     "audit:hardening": "node scripts/admin-hardening-audit.mjs"
