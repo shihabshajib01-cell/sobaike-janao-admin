@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
@@ -253,14 +254,14 @@ export const CreateUserPage: React.FC = () => {
                   minLength={6}
                   className="w-full pl-3 pr-10 py-2 text-sm bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-400 text-slate-900 dark:text-slate-100 font-mono"
                 />
-                <button
+                <ButtonBase
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                   aria-label={showPassword ? t.users.hidePassword : t.users.showPassword}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                </ButtonBase>
               </div>
               <p className="text-[11px] text-slate-400 mt-1">
                 {t.users.passwordHelper}
@@ -287,14 +288,14 @@ export const CreateUserPage: React.FC = () => {
                   minLength={6}
                   className="w-full pl-3 pr-10 py-2 text-sm bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-400 text-slate-900 dark:text-slate-100 font-mono"
                 />
-                <button
+                <ButtonBase
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                   aria-label={showConfirmPassword ? t.users.hidePassword : t.users.showPassword}
                 >
                   {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                </ButtonBase>
               </div>
             </div>
           </div>
@@ -307,7 +308,7 @@ export const CreateUserPage: React.FC = () => {
               {t.users.role} <span className="text-rose-500">*</span>
             </h3>
             {rolesError && (
-              <button
+              <ButtonBase
                 type="button"
                 onClick={loadRoles}
                 disabled={rolesLoading}
@@ -315,7 +316,7 @@ export const CreateUserPage: React.FC = () => {
               >
                 <RefreshCw className={`w-3 h-3 ${rolesLoading ? 'animate-spin' : ''}`} />
                 {t.users.retry}
-              </button>
+              </ButtonBase>
             )}
           </div>
 
@@ -365,14 +366,14 @@ export const CreateUserPage: React.FC = () => {
                       <ExternalLink className="w-3 h-3" />
                     </Link>
                   )}
-                  <button
+                  <ButtonBase
                     type="button"
                     onClick={loadRoles}
                     className="text-amber-700 dark:text-amber-300 hover:underline flex items-center gap-1 font-medium"
                   >
                     <RefreshCw className="w-3 h-3" />
                     {t.users.retry}
-                  </button>
+                  </ButtonBase>
                 </div>
               </div>
             ) : (
