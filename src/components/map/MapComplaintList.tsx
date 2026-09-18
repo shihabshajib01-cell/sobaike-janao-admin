@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React, { useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapComplaint } from '@/types/Map';
@@ -175,7 +176,7 @@ export const MapComplaintList: React.FC<MapComplaintListProps> = ({
                       {formatDate(item.createdAt)}
                     </span>
                     {canViewComplaints && (
-                      <button
+                      <ButtonBase
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -186,7 +187,7 @@ export const MapComplaintList: React.FC<MapComplaintListProps> = ({
                         aria-label={isBn ? `অভিযোগ #${item.id}-এর বিস্তারিত দেখুন` : `Open full complaint workspace for #${item.id}`}
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
-                      </button>
+                      </ButtonBase>
                     )}
                   </div>
                 </div>
