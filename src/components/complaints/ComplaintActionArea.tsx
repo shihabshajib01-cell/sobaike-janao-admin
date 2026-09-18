@@ -7,9 +7,10 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
-import { Complaint, ComplaintTimelineEvent, ComplaintUrgency } from '@/types/Complaint';
+import { Complaint, ComplaintTimelineEvent, ComplaintUrgency, ReportDuplicateCheckResult } from '@/types/Complaint';
 import { complaintApi } from '@/services';
 import { useComplaintEditTaxonomy } from '@/hooks/useComplaintEditTaxonomy';
+import { SourcedReportDuplicateReview } from './SourcedReportDuplicateReview';
 import {
   getAvailableComplaintActions,
   getComplaintStatusGuidance,
@@ -52,11 +53,19 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
   const { language } = useLanguage();
   const isBn = language === 'bn';
 
+  const isSourcedReport = complaint.originType === 'sourced_report';
+
   const [activeModal, setActiveModal] = useState<ActionModalType>(null);
   const [actionNotes, setActionNotes] = useState<string>('');
   const [rejectReason, setRejectReason] = useState<string>('duplicate');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [duplicateCheck, setDuplicateCheck] = useState<ReportDuplicateCheckResult | null>(null);
+  const [duplicateCheckLoading, setDuplicateCheckLoading] = useState(false);
+  const [duplicateCheckError, setDuplicateCheckError] = useState<string | null>(null);
+  const [distinctCandidateId, setDistinctCandidateId] = useState<string | null>(null);
+  const [duplicateReviewNote, setDuplicateReviewNote] = useState('');
+  const [isConfirmingDistinct, setIsConfirmingDistinct] = useState(false);
   const [feedbackToast, setFeedbackToast] = useState<{
     type: 'success' | 'info' | 'error';
     message: string;
@@ -138,6 +147,75 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
   useEffect(() => {
     initEditForm(complaint);
   }, [complaint]);
+
+  const loadDuplicateCheck = async () => {
+    if (!isSourcedReport) {
+      setDuplicateCheck(null);
+      setDuplicateCheckError(null);
+      return null;
+    }
+
+    setDuplicateCheckLoading(true);
+    setDuplicateCheckError(null);
+    try {
+      const result = await complaintApi.checkReportDuplicate(complaint.id);
+      setDuplicateCheck(result);
+      return result;
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to check report duplication.';
+      setDuplicateCheck(null);
+      setDuplicateCheckError(message);
+      return null;
+    } finally {
+      setDuplicateCheckLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeModal !== 'publish') return;
+
+    setDistinctCandidateId(null);
+    setDuplicateReviewNote('');
+
+    if (isSourcedReport) {
+      void loadDuplicateCheck();
+    } else {
+      setDuplicateCheck(null);
+      setDuplicateCheckError(null);
+      setDuplicateCheckLoading(false);
+    }
+  }, [activeModal, complaint.id, isSourcedReport]);
+
+  const handleConfirmDistinct = async (candidateComplaintId: string) => {
+    if (duplicateReviewNote.trim().length < 8) {
+      setDuplicateCheckError(
+        isBn
+          ? 'আলাদা ঘটনা নিশ্চিত করার আগে অন্তত ৮ অক্ষরের রিভিউ নোট দিন।'
+          : 'Add a review note of at least 8 characters before confirming separate incidents.'
+      );
+      return;
+    }
+
+    setIsConfirmingDistinct(true);
+    setDuplicateCheckError(null);
+    try {
+      const result = await complaintApi.confirmReportsAreDistinct(
+        complaint.id,
+        candidateComplaintId,
+        duplicateReviewNote.trim()
+      );
+      setDuplicateCheck(result);
+      setDistinctCandidateId(null);
+      setDuplicateReviewNote('');
+    } catch (error: unknown) {
+      setDuplicateCheckError(
+        error instanceof Error ? error.message : 'Failed to confirm separate incidents.'
+      );
+    } finally {
+      setIsConfirmingDistinct(false);
+    }
+  };
 
   const availableActions = getAvailableComplaintActions(complaint.status);
   const statusGuidance = getComplaintStatusGuidance(complaint.status, language);
@@ -302,6 +380,21 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
     setIsSubmitting(true);
     setActionError(null);
     try {
+      if (isSourcedReport) {
+        const latestDuplicateCheck = await complaintApi.checkReportDuplicate(complaint.id);
+        setDuplicateCheck(latestDuplicateCheck);
+        setDuplicateCheckError(null);
+
+        if (latestDuplicateCheck.status !== 'clear' || latestDuplicateCheck.requiresReview) {
+          setActionError(
+            isBn
+              ? 'প্রকাশ বন্ধ করা হয়েছে: সম্ভাব্য ডুপ্লিকেট ঘটনা আগে রিভিউ করতে হবে।'
+              : 'Publishing blocked: review the unresolved duplicate candidates first.'
+          );
+          return;
+        }
+      }
+
       const result = await complaintApi.publishComplaint(complaint.id);
       showToast(isBn ? result.messageBn : result.messageEn, 'success');
       if (onComplaintUpdated) {
@@ -364,6 +457,13 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
   const openAction = (actionId: ComplaintActionId) => {
     setActionError(null);
     if (actionId === 'edit') initEditForm(complaint);
+    if (actionId === 'publish') {
+      setDuplicateCheck(null);
+      setDuplicateCheckError(null);
+      setDuplicateCheckLoading(isSourcedReport);
+      setDistinctCandidateId(null);
+      setDuplicateReviewNote('');
+    }
     setActiveModal(actionId);
   };
 
@@ -762,6 +862,15 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
               isLoading={isSubmitting}
               onClick={handlePublish}
               leftIcon={<Share2 />}
+              disabled={
+                isSubmitting ||
+                (isSourcedReport &&
+                  (duplicateCheckLoading ||
+                    Boolean(duplicateCheckError) ||
+                    !duplicateCheck ||
+                    duplicateCheck.status !== 'clear' ||
+                    duplicateCheck.requiresReview))
+              }
             >
               <span>{isBn ? 'পাবলিক ফিডে প্রকাশ করুন' : 'Publish Live'}</span>
             </Button>
@@ -774,14 +883,38 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
               {actionError}
             </div>
           )}
+          {isSourcedReport && (
+            <SourcedReportDuplicateReview
+              isBn={isBn}
+              loading={duplicateCheckLoading}
+              error={duplicateCheckError}
+              result={duplicateCheck}
+              selectedCandidateId={distinctCandidateId}
+              reviewNote={duplicateReviewNote}
+              isConfirming={isConfirmingDistinct}
+              onRetry={() => void loadDuplicateCheck()}
+              onSelectCandidate={(candidateId) => {
+                setDistinctCandidateId(candidateId);
+                setDuplicateReviewNote('');
+                setDuplicateCheckError(null);
+              }}
+              onReviewNoteChange={setDuplicateReviewNote}
+              onConfirmDistinct={(candidateId) => void handleConfirmDistinct(candidateId)}
+            />
+          )}
+
           <div className="p-3 bg-sky-50 dark:bg-sky-950/40 rounded-lg border border-sky-200 dark:border-sky-900 text-xs text-sky-800 dark:text-sky-300 space-y-1">
             <p className="font-semibold">
               {isBn ? 'ফিড পাবলিকেশন তথ্য:' : 'Public Feed Information:'}
             </p>
             <p>
               {isBn
-                ? 'প্রকাশের পর অভিযোগটি পাবলিক ফিডে দৃশ্যমান হবে।'
-                : 'After publishing, this complaint will become visible on the public feed.'}
+                ? isSourcedReport
+                  ? 'ডুপ্লিকেট যাচাই পাস করার পর প্রকাশ করলে রিপোর্টটি পাবলিক ফিডে দৃশ্যমান হবে। সার্ভার প্রকাশের মুহূর্তে আবার যাচাই করবে।'
+                  : 'প্রকাশের পর অভিযোগটি পাবলিক ফিডে দৃশ্যমান হবে।'
+                : isSourcedReport
+                  ? 'After the duplicate check passes, publishing will make this report visible on the public feed. The server checks again at the publication boundary.'
+                  : 'After publishing, this complaint will become visible on the public feed.'}
             </p>
           </div>
         </div>
