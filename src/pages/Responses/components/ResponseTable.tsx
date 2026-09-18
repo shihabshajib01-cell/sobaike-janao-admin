@@ -143,7 +143,6 @@ export const ResponseTable: React.FC<ResponseTableProps> = ({
                       onViewDetails(item);
                     }}
                     disabled={isLoading}
-                    className="h-8 px-2.5 text-xs text-sky-600 hover:text-sky-700 hover:bg-sky-50 dark:text-sky-400 dark:hover:bg-sky-950/40 font-medium"
                     aria-label={`${isBn ? 'দেখুন' : 'View'} #${item.id}`}
                   >
                     <Eye className="w-3.5 h-3.5 mr-1" />
