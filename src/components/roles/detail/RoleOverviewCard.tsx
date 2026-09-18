@@ -105,7 +105,7 @@ export const RoleOverviewCard: React.FC<RoleOverviewCardProps> = ({ role }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* 1. English Name */}
           <div className="p-3.5 rounded-lg bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 space-y-1">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <span className="type-meta font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
               {t.roles.englishName}
             </span>
             <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
@@ -115,7 +115,7 @@ export const RoleOverviewCard: React.FC<RoleOverviewCardProps> = ({ role }) => {
 
           {/* 2. Bengali Name */}
           <div className="p-3.5 rounded-lg bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 space-y-1">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <span className="type-meta font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
               {t.roles.bengaliName}
             </span>
             <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
@@ -130,7 +130,7 @@ export const RoleOverviewCard: React.FC<RoleOverviewCardProps> = ({ role }) => {
           {/* 3. Technical Role ID */}
           <div className="p-3.5 rounded-lg bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
+              <span className="type-meta font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
                 <Hash className="w-3 h-3" />
                 {t.roles.technicalRoleId}
               </span>
@@ -138,7 +138,7 @@ export const RoleOverviewCard: React.FC<RoleOverviewCardProps> = ({ role }) => {
                 variant="ghost"
                 size="sm"
                 onClick={handleCopyId}
-                className="h-6 px-1.5 text-[11px] text-slate-500 hover:text-sky-600 dark:hover:text-sky-400"
+                className="h-6 px-1.5 type-meta text-slate-500 hover:text-sky-600 dark:hover:text-sky-400"
                 aria-label={t.roles.copyId}
                 title={t.roles.copyId}
               >
@@ -186,7 +186,7 @@ export const RoleOverviewCard: React.FC<RoleOverviewCardProps> = ({ role }) => {
               <Users className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
+              <span className="type-meta text-slate-500 dark:text-slate-400 block truncate">
                 {t.roles.assignedUsers}
               </span>
               <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -201,7 +201,7 @@ export const RoleOverviewCard: React.FC<RoleOverviewCardProps> = ({ role }) => {
               <KeyRound className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
+              <span className="type-meta text-slate-500 dark:text-slate-400 block truncate">
                 {t.roles.permissions}
               </span>
               <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -216,7 +216,7 @@ export const RoleOverviewCard: React.FC<RoleOverviewCardProps> = ({ role }) => {
               <Calendar className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
+              <span className="type-meta text-slate-500 dark:text-slate-400 block truncate">
                 {t.roles.created}
               </span>
               <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 block truncate" title={formatDate(role.created_at)}>
@@ -231,7 +231,7 @@ export const RoleOverviewCard: React.FC<RoleOverviewCardProps> = ({ role }) => {
               <Clock className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
+              <span className="type-meta text-slate-500 dark:text-slate-400 block truncate">
                 {t.roles.lastUpdated}
               </span>
               <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 block truncate" title={formatDate(role.updated_at)}>
