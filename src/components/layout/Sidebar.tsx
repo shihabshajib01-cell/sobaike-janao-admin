@@ -1,4 +1,4 @@
-import { ButtonBase } from '@/components/ui/Button';
+import { IconButton } from '@/components/ui/Button';
 import React, { useEffect } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { ADMIN_NAVIGATION_ITEMS, getFirstAccessibleRoute } from '@/routes/routes.config';
@@ -98,14 +98,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </Link>
 
           {/* Close button on mobile */}
-          <ButtonBase
-            type="button"
+          <IconButton
+            variant="ghost"
+            size="sm"
             onClick={onClose}
-            className="p-1.5 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden"
+            className="lg:hidden"
             aria-label="Close navigation"
-          >
-            <X className="w-5 h-5" />
-          </ButtonBase>
+            icon={<X />}
+          />
         </div>
 
         {/* Navigation Items List */}
