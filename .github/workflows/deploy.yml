@@ -67,11 +67,13 @@ jobs:
         run: |
           ls -la dist
           cat dist/index.html
-          if grep -q "/src/main.tsx" dist/index.html; then
-            echo "ERROR: dist/index.html contains /src/main.tsx! Aborting deployment."
+          if grep -Eq 'src/(main\.tsx|entry\.js)' dist/index.html; then
+            echo "ERROR: dist/index.html still references source entry files. Aborting deployment."
             exit 1
           fi
-          echo "VERIFICATION PASSED: dist/index.html correctly references bundled assets."
+          expected_asset=$(grep -o 'assets/index-[^" ]*\.js' dist/index.html | head -1)
+          test -n "$expected_asset"
+          echo "VERIFICATION PASSED: dist/index.html references bundled assets only."
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -151,10 +153,13 @@ jobs:
           for attempt in {1..18}; do
             code=$(curl -L -sS -o /tmp/admin-index.html -w "%{http_code}" "$SITE_URL" || true)
             if [ "$code" = "200" ] \
-              && ! grep -q '/src/main.tsx' /tmp/admin-index.html \
+              && ! grep -Eq 'src/(main\.tsx|entry\.js)' /tmp/admin-index.html \
               && grep -q "$expected_asset" /tmp/admin-index.html; then
-              echo "Production bundle verification passed."
-              exit 0
+              asset_code=$(curl -L -sS -o /tmp/admin-asset.js -w "%{http_code}" "$SITE_URL$expected_asset" || true)
+              if [ "$asset_code" = "200" ]; then
+                echo "Production bundle verification passed."
+                exit 0
+              fi
             fi
 
             echo "Attempt $attempt did not yet serve the expected bundle; retrying..."
