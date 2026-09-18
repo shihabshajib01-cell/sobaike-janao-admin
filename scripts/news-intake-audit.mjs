@@ -16,6 +16,7 @@ const sourceCompatibility = read('supabase/migrations/20260918173239_news_intake
 const automationIndexes = read('supabase/migrations/20260918173920_news_intake_automation_fk_indexes.sql');
 const automationReliability = read('supabase/migrations/20260918184016_news_intake_automation_reliability_hardening.sql');
 const collisionErrorContract = read('supabase/migrations/20260918184410_news_intake_collision_error_contract.sql');
+const explicitDenyPolicies = read('supabase/migrations/20260918184743_news_intake_explicit_deny_policies.sql');
 const automationCore = read('supabase/functions/_shared/newsIntakeAutomationCore.ts');
 const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
 const edge = read('supabase/functions/news-intake-fetch/index.ts');
@@ -90,6 +91,8 @@ requireText(behaviorAudit, 'classificationCases', 'News Intake behavior audit');
 requireText(behaviorAudit, 'English content must not be duplicated', 'News Intake source-language audit');
 requireText(collisionErrorContract, "errcode='P0001'", 'News Intake collision error contract');
 requireText(collisionErrorContract, 'DUPLICATE_REVIEW_REQUIRED', 'News Intake collision error contract');
+requireText(explicitDenyPolicies, 'news_intake_runs_authenticated_deny', 'News Intake run-table deny policy');
+requireText(explicitDenyPolicies, 'news_intake_run_items_authenticated_deny', 'News Intake item-table deny policy');
 
 for (const needle of [
   'admin_get_news_intake_taxonomy',
