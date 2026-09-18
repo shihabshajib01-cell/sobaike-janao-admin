@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React, { useState, useRef, useEffect } from 'react';
 import { Download, FileSpreadsheet, FileText, ChevronDown, Check, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
@@ -102,7 +103,7 @@ export const DownloadMenu: React.FC<DownloadMenuProps> = ({
   return (
     <div ref={menuRef} className={`relative inline-block text-left ${className}`}>
       {/* Trigger Button */}
-      <button
+      <ButtonBase
         id={id}
         type="button"
         onClick={() => !disabled && !isExporting && setIsOpen((prev) => !prev)}
@@ -122,7 +123,7 @@ export const DownloadMenu: React.FC<DownloadMenuProps> = ({
             isOpen ? 'rotate-180' : ''
           }`}
         />
-      </button>
+      </ButtonBase>
 
       {/* Popover Dropdown Menu */}
       {isOpen && (
@@ -142,7 +143,7 @@ export const DownloadMenu: React.FC<DownloadMenuProps> = ({
           </div>
 
           {/* Option 1: CSV Export */}
-          <button
+          <ButtonBase
             type="button"
             role="menuitem"
             onClick={handleSelectCsv}
@@ -166,10 +167,10 @@ export const DownloadMenu: React.FC<DownloadMenuProps> = ({
                   : 'Tabular dataset for Excel & Google Sheets (UTF-8)'}
               </p>
             </div>
-          </button>
+          </ButtonBase>
 
           {/* Option 2: PDF Export */}
-          <button
+          <ButtonBase
             type="button"
             role="menuitem"
             onClick={handleSelectPdf}
@@ -193,7 +194,7 @@ export const DownloadMenu: React.FC<DownloadMenuProps> = ({
                   : 'Printable report with metadata, KPIs & structured tables'}
               </p>
             </div>
-          </button>
+          </ButtonBase>
         </div>
       )}
     </div>
