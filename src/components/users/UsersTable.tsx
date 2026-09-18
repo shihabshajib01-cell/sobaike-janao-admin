@@ -4,6 +4,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { ResponsiveDataView, ResponsiveDataTableView, ResponsiveDataCardView } from '@/components/ui/ResponsiveDataView';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/Table';
 import {
   Shield,
   ShieldCheck,
@@ -56,40 +57,40 @@ export const UsersTable: React.FC<UsersTableProps> = ({
   }
 
   return (
-    <ResponsiveDataView className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
+    <ResponsiveDataView>
       {/* Desktop Table View */}
-      <ResponsiveDataTableView className="overflow-x-auto">
-        <table className="w-full text-left text-sm" id="admin-users-table">
-          <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
-            <tr>
-              <th scope="col" className="px-5 py-3.5">
+      <ResponsiveDataTableView>
+        <Table className="text-sm" id="admin-users-table">
+          <TableHeader>
+            <TableRow>
+              <TableHead scope="col">
                 {t.users.displayName} / {t.users.email}
-              </th>
-              <th scope="col" className="px-5 py-3.5">
+              </TableHead>
+              <TableHead scope="col">
                 {t.users.accountType}
-              </th>
-              <th scope="col" className="px-5 py-3.5">
+              </TableHead>
+              <TableHead scope="col">
                 {t.users.role}
-              </th>
-              <th scope="col" className="px-5 py-3.5">
+              </TableHead>
+              <TableHead scope="col">
                 {t.users.status}
-              </th>
-              <th scope="col" className="px-5 py-3.5">
+              </TableHead>
+              <TableHead scope="col">
                 {t.users.created}
-              </th>
-              <th scope="col" className="px-5 py-3.5 text-right">
+              </TableHead>
+              <TableHead scope="col" className="text-right">
                 {t.common.actions}
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {users.map((user) => {
               const roleName = isBn
                 ? user.role_name_bn || user.role_name_en || '—'
                 : user.role_name_en || '—';
 
               return (
-                <tr
+                <TableRow
                   key={user.user_id}
                   id={`user-row-${user.user_id}`}
                   onClick={() => onView(user.user_id)}
@@ -104,7 +105,7 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                   aria-label={`${t.users.viewUser}: ${user.display_name || user.email}`}
                   className="cursor-pointer hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500"
                 >
-                  <td className="px-5 py-4">
+                  <TableCell>
                     <div className="flex items-center gap-3">
                       <div
                         className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm font-semibold ${
@@ -133,8 +134,8 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                         </p>
                       </div>
                     </div>
-                  </td>
-                  <td className="px-5 py-4 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
                     {user.is_super_admin ? (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 dark:bg-purple-950/80 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                         <Lock className="w-3 h-3 shrink-0" />
@@ -145,8 +146,8 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                         {t.users.standardAdmin}
                       </span>
                     )}
-                  </td>
-                  <td className="px-5 py-4 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
                     {user.is_super_admin ? (
                       <span className="text-xs font-medium text-purple-700 dark:text-purple-300 italic">
                         {t.users.systemAccessPermanent}
@@ -156,8 +157,8 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                         {roleName}
                       </span>
                     )}
-                  </td>
-                  <td className="px-5 py-4 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
                     {user.active ? (
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                         <CheckCircle2 className="w-3 h-3 text-emerald-500" />
@@ -169,11 +170,11 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                         {t.users.inactive}
                       </span>
                     )}
-                  </td>
-                  <td className="px-5 py-4 whitespace-nowrap text-xs text-slate-500 dark:text-slate-400">
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-xs text-slate-500 dark:text-slate-400">
                     {formatDate(user.created_at)}
-                  </td>
-                  <td className="px-5 py-4 whitespace-nowrap text-right">
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Button
                         id={`btn-view-user-${user.user_id}`}
@@ -244,12 +245,12 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                         )
                       )}
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </ResponsiveDataTableView>
 
       {/* Responsive Card View */}
