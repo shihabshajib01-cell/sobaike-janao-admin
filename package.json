@@ -13,7 +13,7 @@
     "audit:notifications": "node scripts/notification-center-audit.mjs",
     "audit:responsive-tables": "node scripts/responsive-table-audit.mjs",
     "audit:buttons": "node scripts/button-system-audit.mjs",
-    "audit:dependencies": "npm audit --audit-level=moderate"
+    "audit:dependencies": "npm audit --audit-level=low"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
