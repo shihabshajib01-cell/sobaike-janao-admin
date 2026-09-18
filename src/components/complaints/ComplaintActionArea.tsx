@@ -435,9 +435,9 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
                     onClick={() => openAction(action.id)}
                     leftIcon={renderActionIcon(action.iconName)}
                     className={cn(
-                      'justify-start h-9 text-xs',
+                      'justify-start',
                       action.id === 'publish' &&
-                        'bg-sky-600 hover:bg-sky-700 text-white shadow-xs',
+                        '',
                       permittedActions.length === 1 && 'col-span-full'
                     )}
                   >
@@ -485,7 +485,7 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
               size="sm"
               isLoading={isSubmitting}
               onClick={handleSaveEdit}
-              leftIcon={<Check className="w-3.5 h-3.5" />}
+              leftIcon={<Check />}
               disabled={isSubmitting || taxonomyLoading}
             >
               <span>{isBn ? 'সংরক্ষণ করুন' : 'Save Changes'}</span>
@@ -514,7 +514,7 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={() => void reloadTaxonomy()}
-                leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
+                leftIcon={<RefreshCw />}
               >
                 <span>{isBn ? 'আবার চেষ্টা' : 'Retry'}</span>
               </Button>
@@ -678,7 +678,7 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
               size="sm"
               isLoading={isSubmitting}
               onClick={handleReject}
-              leftIcon={<XCircle className="w-3.5 h-3.5" />}
+              leftIcon={<XCircle />}
             >
               <span>{isBn ? 'বাতিল নিশ্চিত করুন' : 'Confirm Rejection'}</span>
             </Button>
@@ -761,8 +761,7 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
               size="sm"
               isLoading={isSubmitting}
               onClick={handlePublish}
-              leftIcon={<Share2 className="w-3.5 h-3.5" />}
-              className="bg-sky-600 hover:bg-sky-700 text-white"
+              leftIcon={<Share2 />}
             >
               <span>{isBn ? 'পাবলিক ফিডে প্রকাশ করুন' : 'Publish Live'}</span>
             </Button>
@@ -808,7 +807,7 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
               size="sm"
               isLoading={isSubmitting}
               onClick={handleUnpublish}
-              leftIcon={<EyeOff className="w-3.5 h-3.5" />}
+              leftIcon={<EyeOff />}
             >
               <span>{isBn ? 'প্রকাশনা বন্ধ করুন' : 'Unpublish'}</span>
             </Button>
@@ -844,8 +843,8 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
               onClick={() => openAction(action.id)}
               leftIcon={renderActionIcon(action.iconName)}
               className={cn(
-                'flex-1 h-10 text-xs justify-center font-medium shadow-xs',
-                action.id === 'publish' && 'bg-sky-600 hover:bg-sky-700 text-white'
+                'flex-1 justify-center',
+                action.id === 'publish' && ''
               )}
             >
               <span>{isBn ? action.labelBn : action.labelEn}</span>
