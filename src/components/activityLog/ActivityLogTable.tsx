@@ -94,7 +94,17 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
                 <tr
                   key={log.id}
                   id={`audit-row-${log.id}`}
-                  className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+                  onClick={() => onViewDetails(log)}
+                  onKeyDown={(e) => {
+                    if (e.target !== e.currentTarget) return;
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onViewDetails(log);
+                    }
+                  }}
+                  tabIndex={0}
+                  aria-label={`${language === 'bn' ? 'অডিট বিস্তারিত দেখুন' : 'View audit details'} ${log.id}`}
+                  className="cursor-pointer hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500"
                 >
                   {/* Timestamp */}
                   <td className="px-5 py-3.5 whitespace-nowrap">
@@ -162,7 +172,10 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
                       id={`btn-view-log-${log.id}`}
                       variant="ghost"
                       size="sm"
-                      onClick={() => onViewDetails(log)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onViewDetails(log);
+                      }}
                       className="h-8 px-2.5 text-xs text-sky-600 dark:text-sky-400 hover:text-sky-700 hover:bg-sky-50 dark:hover:bg-sky-950/40"
                     >
                       <Eye className="w-3.5 h-3.5 mr-1" />
