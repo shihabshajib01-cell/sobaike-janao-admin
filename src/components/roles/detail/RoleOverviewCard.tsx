@@ -138,7 +138,6 @@ export const RoleOverviewCard: React.FC<RoleOverviewCardProps> = ({ role }) => {
                 variant="ghost"
                 size="sm"
                 onClick={handleCopyId}
-                className="h-6 px-1.5 text-[11px] text-slate-500 hover:text-sky-600 dark:hover:text-sky-400"
                 aria-label={t.roles.copyId}
                 title={t.roles.copyId}
               >
