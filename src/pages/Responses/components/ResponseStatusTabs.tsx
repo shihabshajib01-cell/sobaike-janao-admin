@@ -3,6 +3,7 @@ import React from 'react';
 import { ResponseStatusFilter } from '@/types/Response';
 import { useLanguage } from '@/context/LanguageContext';
 import { cn } from '@/utils';
+import { Badge } from '@/components/ui/Badge';
 
 export interface ResponseStatusTabsProps {
   activeStatus: ResponseStatusFilter;
