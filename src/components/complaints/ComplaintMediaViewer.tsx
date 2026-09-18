@@ -95,7 +95,7 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
                   {t.access.evidenceRestrictedDesc}
                 </p>
               </div>
-              <Badge variant="subtle" size="sm" className="font-mono text-[11px]">
+              <Badge variant="subtle" size="sm" className="font-mono type-meta">
                 complaints.evidence_view
               </Badge>
             </div>
@@ -155,7 +155,7 @@ export const ComplaintMediaViewer: React.FC<ComplaintMediaViewerProps> = ({
                       <p className="text-xs font-medium">
                         {isBn ? 'ছবি লোড করা যায়নি' : 'Image preview unavailable'}
                       </p>
-                      <span className="text-[11px] text-slate-500">{currentItem.url}</span>
+                      <span className="type-meta text-slate-500">{currentItem.url}</span>
                     </div>
                   ) : (
                     <div className="relative w-full h-full flex items-center justify-center group">
