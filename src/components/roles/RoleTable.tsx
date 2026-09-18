@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -87,7 +88,7 @@ export const RoleTable: React.FC<RoleTableProps> = ({ roles }) => {
                     </div>
                     <div className="min-w-0 max-w-sm space-y-0.5">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <button
+                        <ButtonBase
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -96,7 +97,7 @@ export const RoleTable: React.FC<RoleTableProps> = ({ roles }) => {
                           className="font-semibold text-slate-900 dark:text-slate-100 text-xs sm:text-sm hover:text-sky-600 dark:hover:text-sky-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-500 rounded text-left transition-colors"
                         >
                           {displayName}
-                        </button>
+                        </ButtonBase>
                         {role.is_system && (
                           <Badge size="sm" variant="subtle" status="info">
                             {t.roles.system}
