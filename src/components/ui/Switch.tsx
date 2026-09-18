@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React, { forwardRef } from 'react';
 import { cn } from '@/utils';
 
@@ -37,7 +38,7 @@ export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(
 
     return (
       <div className={cn('inline-flex items-start gap-2.5 select-none', disabled && 'opacity-60 cursor-not-allowed')}>
-        <button
+        <ButtonBase
           id={id}
           ref={ref}
           type="button"
@@ -60,7 +61,7 @@ export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(
               checked ? (isSmall ? 'translate-x-3' : 'translate-x-4') : 'translate-x-0'
             )}
           />
-        </button>
+        </ButtonBase>
 
         {(label || description) && (
           <div className="flex flex-col text-left cursor-pointer" onClick={handleClick}>
