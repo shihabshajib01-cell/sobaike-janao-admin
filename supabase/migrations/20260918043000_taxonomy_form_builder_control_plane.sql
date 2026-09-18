@@ -977,7 +977,7 @@ from public.reporting_form_schemas s
 join public.subcategories sc on sc.id=s.scope_id
 cross join lateral (
   values
-    ('affected_person_age_group','select','affectedPersonAgeGroup',"Affected person's age group",'প্রভাবিত ব্যক্তির বয়স',true,22,
+    ('affected_person_age_group','select','affectedPersonAgeGroup','Affected person''s age group','প্রভাবিত ব্যক্তির বয়স',true,22,
      '[{"value":"under_18","labelEn":"Under 18","labelBn":"১৮ বছরের কম"},{"value":"18_29","labelEn":"18–29","labelBn":"১৮–২৯"},{"value":"30_59","labelEn":"30–59","labelBn":"৩০–৫৯"},{"value":"60_plus","labelEn":"60+","labelBn":"৬০+"},{"value":"prefer_not_to_say","labelEn":"Prefer not to say","labelBn":"বলতে অনিচ্ছুক"}]'),
     ('alleged_abuser_relationship','select','allegedAbuserRelationship','Relationship with alleged abuser','অভিযুক্ত ব্যক্তির সঙ্গে সম্পর্ক',true,23,
      '[{"value":"intimate_partner","labelEn":"Intimate partner","labelBn":"ঘনিষ্ঠ সঙ্গী"},{"value":"household_family","labelEn":"Household / family","labelBn":"পরিবার / একই পরিবারের সদস্য"},{"value":"other_relative","labelEn":"Other relative","labelBn":"অন্যান্য আত্মীয়"},{"value":"friend_acquaintance","labelEn":"Friend / acquaintance","labelBn":"বন্ধু / পরিচিত"},{"value":"coworker_classmate","labelEn":"Coworker / classmate","labelBn":"সহকর্মী / সহপাঠী"},{"value":"authority_caregiver_service_provider","labelEn":"Authority / caregiver / service provider","labelBn":"কর্তৃপক্ষ / সেবাদাতা"},{"value":"stranger","labelEn":"Stranger","labelBn":"অপরিচিত"},{"value":"other_or_unknown","labelEn":"Other / unknown","labelBn":"অন্যান্য / অজানা"}]'),
