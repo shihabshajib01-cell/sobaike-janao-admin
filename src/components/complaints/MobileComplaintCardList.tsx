@@ -196,7 +196,6 @@ export const MobileComplaintCardList: React.FC<MobileComplaintCardListProps> = (
                 variant="ghost"
                 size="sm"
                 onClick={handleCloseDrawer}
-                className="text-xs"
               >
                 <span>{isBn ? 'বন্ধ করুন' : 'Close'}</span>
               </Button>
@@ -204,8 +203,7 @@ export const MobileComplaintCardList: React.FC<MobileComplaintCardListProps> = (
                 variant="primary"
                 size="sm"
                 onClick={() => handleNavigateToFullDetail(selectedComplaint.id)}
-                rightIcon={<ExternalLink className="w-3.5 h-3.5 ml-1" />}
-                className="text-xs"
+                rightIcon={<ExternalLink className="ml-1" />}
               >
                 <span>{isBn ? 'সম্পূর্ণ বিবরণ ও অ্যাকশন' : 'Full Detail & Actions'}</span>
               </Button>
