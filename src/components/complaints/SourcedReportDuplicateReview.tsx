@@ -2,6 +2,7 @@ import React from 'react';
 import { AlertTriangle, CheckCircle2, ExternalLink, RefreshCw, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
+import { Tag } from '@/components/ui/Tag';
 import {
   ReportDuplicateCandidate,
   ReportDuplicateCheckResult,
@@ -215,13 +216,7 @@ export const SourcedReportDuplicateReview: React.FC<SourcedReportDuplicateReview
                   <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                     {candidateTitle(candidate, isBn)}
                   </p>
-                  <span
-                    className={
-                      candidate.matchLevel === 'match'
-                        ? 'rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
-                        : 'rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
-                    }
-                  >
+                  <Tag tone={candidate.matchLevel === 'match' ? 'danger' : 'warning'}>
                     {candidate.matchLevel === 'match'
                       ? isBn
                         ? 'শক্ত মিল'
@@ -229,7 +224,7 @@ export const SourcedReportDuplicateReview: React.FC<SourcedReportDuplicateReview
                       : isBn
                         ? 'রিভিউ প্রয়োজন'
                         : 'Review'}
-                  </span>
+                  </Tag>
                 </div>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                   {candidate.complaintId}
