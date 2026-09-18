@@ -101,6 +101,9 @@ export interface SupabaseComplaintRow {
   affected_person_age_group: string | null;
   alleged_abuser_relationship: string | null;
   reporting_for: string | null;
+  sexual_harassment_type?: string | null;
+  sexual_harassment_context?: string | null;
+  sexual_harassment_institution?: string | null;
   publication_preferences: Record<string, unknown> | null;
   recent_bill_month?: string | null;
   recent_bill_amount?: number | null;
@@ -412,6 +415,9 @@ export function mapSupabaseRowToComplaint(
     affectedPersonAgeGroup: (row.affected_person_age_group as HarassmentAgeGroup | null) ?? null,
     allegedAbuserRelationship: (row.alleged_abuser_relationship as HarassmentAbuserRelationship | null) ?? null,
     reportingFor: (row.reporting_for as HarassmentReportingFor | null) ?? null,
+    sexualHarassmentType: (row.sexual_harassment_type as Complaint['sexualHarassmentType']) ?? null,
+    sexualHarassmentContext: (row.sexual_harassment_context as Complaint['sexualHarassmentContext']) ?? null,
+    sexualHarassmentInstitution: row.sexual_harassment_institution ?? null,
     recentBillMonth: row.recent_bill_month ?? null,
     recentBillAmount:
       row.recent_bill_amount !== null && row.recent_bill_amount !== undefined
