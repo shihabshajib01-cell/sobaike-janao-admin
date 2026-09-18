@@ -144,6 +144,18 @@ async function expectVisible(locator, message) {
   if (!(await locator.isVisible())) throw new Error(message);
 }
 
+async function expectInputValue(locator, expected, message) {
+  await locator.waitFor({ state: 'visible', timeout: 15000 });
+  const deadline = Date.now() + 15000;
+
+  while (Date.now() < deadline) {
+    if ((await locator.inputValue()) === expected) return;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+
+  throw new Error(message);
+}
+
 async function fetchWithRetry(url, options = {}, attempts = 4) {
   let lastError;
 
@@ -533,8 +545,9 @@ await check('News Intake clear source reaches one-click publication', async () =
     'https://www.thedailystar.net/e2e-news-intake'
   );
   await page.getByRole('button', { name: 'Fetch Metadata', exact: true }).click();
-  await expectVisible(
-    page.getByDisplayValue('E2E approved source article'),
+  await expectInputValue(
+    page.getByLabel('Source article title *', { exact: true }),
+    'E2E approved source article',
     'source metadata was not populated'
   );
 
