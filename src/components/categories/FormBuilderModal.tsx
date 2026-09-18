@@ -32,6 +32,7 @@ interface FormBuilderBaseProps {
 
 interface FormBuilderPanelProps extends FormBuilderBaseProps {
   showInlineActions?: boolean;
+  onBusyChange?: (busy: boolean) => void;
 }
 
 interface FormBuilderModalProps extends FormBuilderBaseProps {
@@ -140,6 +141,7 @@ export const FormBuilderPanel: React.FC<FormBuilderPanelProps> = ({
   subcategoryName,
   onPublished,
   showInlineActions = true,
+  onBusyChange,
 }) => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
@@ -186,6 +188,11 @@ export const FormBuilderPanel: React.FC<FormBuilderPanelProps> = ({
   );
 
   const busy = loading || saving || publishing;
+
+  useEffect(() => {
+    onBusyChange?.(busy);
+    return () => onBusyChange?.(false);
+  }, [busy, onBusyChange]);
 
   const updateField = (index: number, patch: Partial<ReportingFormField>) => {
     setFields((current) =>
@@ -964,21 +971,27 @@ export const FormBuilderModal: React.FC<FormBuilderModalProps> = ({
 }) => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
+  const [panelBusy, setPanelBusy] = useState(false);
+
+  const handleClose = () => {
+    if (!panelBusy) onClose();
+  };
 
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       title={isBn ? 'ফর্ম বিল্ডার' : 'Form Builder'}
       description={`${subcategoryName} · ${subcategoryId}`}
       size="xl"
-      closeOnBackdrop
+      closeOnBackdrop={!panelBusy}
     >
       {isOpen && (
         <FormBuilderPanel
           subcategoryId={subcategoryId}
           subcategoryName={subcategoryName}
           onPublished={onPublished}
+          onBusyChange={setPanelBusy}
         />
       )}
     </Modal>
