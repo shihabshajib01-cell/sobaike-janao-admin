@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "audit:notifications": "node scripts/notification-center-audit.mjs"
+    "audit:notifications": "node scripts/notification-center-audit.mjs",
+    "audit:responsive-tables": "node scripts/responsive-table-audit.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
