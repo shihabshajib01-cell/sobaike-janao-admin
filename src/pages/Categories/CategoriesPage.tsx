@@ -151,15 +151,16 @@ export const CategoriesPage: React.FC = () => {
     setCreateError(null);
   };
 
-  const handleCreate = async (input: TaxonomyCreateInput) => {
+  const handleCreate = async (input: TaxonomyCreateInput): Promise<boolean> => {
     setIsCreating(true);
     setCreateError(null);
     try {
       await categoryApi.createTaxonomyItem(input);
-      setCreateType(null);
       await loadTaxonomyData(true);
+      return true;
     } catch (err: any) {
       setCreateError(err?.message || 'Failed to create taxonomy draft.');
+      return false;
     } finally {
       setIsCreating(false);
     }
@@ -451,6 +452,9 @@ export const CategoriesPage: React.FC = () => {
         error={createError}
         onClose={handleCloseCreate}
         onSave={handleCreate}
+        onCompleted={() => {
+          void loadTaxonomyData(true);
+        }}
       />
     </div>
   );
