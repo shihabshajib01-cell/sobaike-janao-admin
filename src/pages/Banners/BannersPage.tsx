@@ -1,7 +1,7 @@
 import React, { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Image as ImageIcon, Pencil, RefreshCw, Upload } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
-import { Button, Input, Modal, PageHeader, Switch, Textarea } from '@/components/ui';
+import { Button, FeedbackNotice, Input, Modal, PageHeader, Switch, Tag, Textarea } from '@/components/ui';
 import {
   BannerContent,
   ManagedBanner,
