@@ -136,7 +136,9 @@ export const Badge: React.FC<BadgeProps> = ({
           aria-hidden="true"
         />
       )}
-      <span>{children}</span>
+      <span className="inline-flex min-w-0 items-center gap-1 [&_svg]:size-3.5 [&_svg]:shrink-0">
+        {children}
+      </span>
     </span>
   );
 };
