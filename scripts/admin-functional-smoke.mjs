@@ -30,6 +30,17 @@ const e2eNewsIntakeComplaint = {
   updated_at: '2026-09-18T12:00:00Z',
 };
 
+const duplicateClearFixture = {
+  applicable: true,
+  status: 'clear',
+  requiresReview: false,
+  candidateCount: 0,
+  matchCount: 0,
+  reviewCount: 0,
+  exactSourceDuplicates: [],
+  candidates: [],
+};
+
 const newsIntakeClearFixture = {
   sourceDomain: {
     approved: true,
@@ -98,17 +109,6 @@ const duplicateMatchFixture = {
       ],
     },
   ],
-};
-
-const duplicateClearFixture = {
-  applicable: true,
-  status: 'clear',
-  requiresReview: false,
-  candidateCount: 0,
-  matchCount: 0,
-  reviewCount: 0,
-  exactSourceDuplicates: [],
-  candidates: [],
 };
 
 const failures = [];
