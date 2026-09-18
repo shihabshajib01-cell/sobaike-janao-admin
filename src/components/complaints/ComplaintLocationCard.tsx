@@ -344,7 +344,6 @@ export const ComplaintLocationCard: React.FC<ComplaintLocationCardProps> = ({
                   variant="secondary"
                   size="sm"
                   onClick={handleCopyIncidentCoords}
-                  className="h-7 text-xs bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700 hover:text-white"
                 >
                   {copiedIncident ? (
                     <>
@@ -447,8 +446,8 @@ export const ComplaintLocationCard: React.FC<ComplaintLocationCardProps> = ({
                   variant="secondary"
                   size="sm"
                   onClick={onRetryReporterLocation}
-                  leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
-                  className="shrink-0 h-8 text-xs bg-rose-100 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200 border-rose-200 dark:border-rose-800 hover:bg-rose-200"
+                  leftIcon={<RefreshCw />}
+                  className="shrink-0"
                 >
                   <span>{isBn ? 'পুনরায় চেষ্টা করুন' : 'Retry'}</span>
                 </Button>
@@ -536,7 +535,6 @@ export const ComplaintLocationCard: React.FC<ComplaintLocationCardProps> = ({
                     variant="secondary"
                     size="sm"
                     onClick={handleCopyDeviceCoords}
-                    className="h-7 text-xs bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700 hover:text-white"
                   >
                     {copiedDevice ? (
                       <>
