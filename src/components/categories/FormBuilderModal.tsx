@@ -124,6 +124,13 @@ export const FormBuilderModal: React.FC<FormBuilderModalProps> = ({
         if (patch.fieldKey && field.storageMode === 'custom_json' && field.storageKey === field.fieldKey) {
           next.storageKey = patch.fieldKey;
         }
+        if (
+          patch.fieldType &&
+          patch.fieldType !== field.fieldType &&
+          (patch.fieldType === 'phone' || patch.fieldType === 'email')
+        ) {
+          next.config = { ...field.config, ...patch.config, publicVisible: false };
+        }
         return next;
       })
     );
@@ -142,7 +149,7 @@ export const FormBuilderModal: React.FC<FormBuilderModalProps> = ({
 
   const remove = (index: number) => {
     const field = fields[index];
-    if (field.config?.locked) return;
+    if (field.config?.locked || field.storageMode === 'system_block') return;
     setFields((current) => current.filter((_, idx) => idx !== index));
   };
 
@@ -167,6 +174,13 @@ export const FormBuilderModal: React.FC<FormBuilderModalProps> = ({
       }
       if (['select', 'radio', 'multiselect'].includes(field.fieldType) && field.options.length === 0) {
         return `Add at least one option for ${field.labelEn}.`;
+      }
+      if (
+        (field.fieldType === 'phone' || field.fieldType === 'email') &&
+        field.storageMode === 'custom_json' &&
+        field.config?.publicVisible === true
+      ) {
+        return `${field.labelEn} contains sensitive contact information and cannot be public by default.`;
       }
     }
 
@@ -278,8 +292,8 @@ export const FormBuilderModal: React.FC<FormBuilderModalProps> = ({
             </span>
             <span className="text-slate-500 dark:text-slate-400">
               {isBn
-                ? 'Title ও Description নিরাপত্তার জন্য লক করা আছে।'
-                : 'Title and Description are protected platform fields.'}
+                ? 'Title, Description ও system block নিরাপত্তার জন্য লক করা আছে; এগুলোর ক্রম পরিবর্তন করা যায়।'
+                : 'Title, Description, and system blocks are protected; their order can still be changed.'}
             </span>
           </div>
         </div>
@@ -300,7 +314,8 @@ export const FormBuilderModal: React.FC<FormBuilderModalProps> = ({
         ) : (
           <div className="space-y-3">
             {fields.map((field, index) => {
-              const locked = Boolean(field.config?.locked);
+              const locked =
+                Boolean(field.config?.locked) || field.storageMode === 'system_block';
               const hasOptions = ['select', 'radio', 'multiselect'].includes(field.fieldType);
               const publicVisible = field.config?.publicVisible !== false;
 
