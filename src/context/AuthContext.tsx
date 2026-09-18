@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 import { User, Session } from '@supabase/supabase-js';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { authService, checkAdminStatus, LoginCredentials, LoginResponse } from '@/services/auth/authService';
-import { permissionService, UserAssignedRole } from '@/services/auth/permissionService';
+import { CANONICAL_PERMISSIONS, permissionService, UserAssignedRole } from '@/services/auth/permissionService';
 
 export interface AuthContextType {
   user: User | null;
@@ -29,6 +29,11 @@ export interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const ADMIN_E2E_MODE =
+  Boolean(typeof import.meta !== 'undefined' && import.meta.env?.DEV) &&
+  import.meta.env?.VITE_ADMIN_E2E_MODE === 'true';
+
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -135,6 +140,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     isMountedRef.current = true;
+
+    // Browser regression mode is intentionally DEV-only. Production builds can never
+    // activate this path because import.meta.env.DEV is false after vite build.
+    if (ADMIN_E2E_MODE) {
+      const e2eUser: User = {
+        id: 'e2e-admin-id-0001',
+        app_metadata: { provider: 'email' },
+        user_metadata: { name: 'E2E Administrator', full_name: 'E2E Administrator' },
+        aud: 'authenticated',
+        created_at: new Date().toISOString(),
+        email: 'e2e-admin@example.invalid',
+        role: 'authenticated',
+      };
+      const e2eSession: Session = {
+        access_token: 'e2e-dev-only-token',
+        token_type: 'bearer',
+        expires_in: 3600,
+        refresh_token: 'e2e-dev-only-refresh-token',
+        user: e2eUser,
+      };
+      const e2ePermissions = [...CANONICAL_PERMISSIONS];
+
+      setSession(e2eSession);
+      setUser(e2eUser);
+      setIsAdmin(true);
+      setIsSuperAdmin(true);
+      setPermissions(e2ePermissions);
+      setRole({
+        id: 'e2e-super-admin',
+        name_en: 'E2E Super Administrator',
+        name_bn: 'E2E সুপার অ্যাডমিন',
+        active: true,
+        is_system: true,
+      });
+      setIsBootstrapMode(false);
+      setPermissionsLoading(false);
+      setPermissionsError(false);
+      setIsLoading(false);
+
+      userRef.current = e2eUser;
+      isAdminRef.current = true;
+      isSuperAdminRef.current = true;
+      permissionsRef.current = e2ePermissions;
+
+      return () => {
+        isMountedRef.current = false;
+      };
+    }
 
     // 1. Initial session check on mount
     const initAuth = async () => {
