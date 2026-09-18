@@ -69,7 +69,7 @@ export const ComplaintActionAreaWithPublication: React.FC<ComplaintActionAreaPro
                 setSavedMessage(null);
                 setIsComposerOpen(true);
               }}
-              leftIcon={<Eye className="h-3.5 w-3.5" />}
+              leftIcon={<Eye />}
               className="w-full justify-center"
             >
               <span>
