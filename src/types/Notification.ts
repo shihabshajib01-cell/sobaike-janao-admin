@@ -49,6 +49,13 @@ export type NotificationEventKey =
   | 'role.created'
   | 'role.updated'
   | 'role.permissions_changed'
+  | 'taxonomy.category_created'
+  | 'taxonomy.category_published'
+  | 'taxonomy.subcategory_created'
+  | 'taxonomy.subcategory_published'
+  | 'taxonomy.subcategory_moved'
+  | 'reporting_form.published'
+  | 'banner.published'
   | string;
 
 export interface AdminNotification {

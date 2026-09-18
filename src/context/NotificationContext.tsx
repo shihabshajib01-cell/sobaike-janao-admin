@@ -164,13 +164,12 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   // Initial load when active admin state changes
   useEffect(() => {
     if (isAdmin) {
-      refreshUnreadCount();
-      refreshRecent();
+      void refreshRecent();
     } else {
       setUnreadCount(0);
       setRecentNotifications([]);
     }
-  }, [isAdmin, refreshUnreadCount, refreshRecent]);
+  }, [isAdmin, refreshRecent]);
 
   // Real-time Postgres Changes Subscription under existing RLS (Section 5)
   useEffect(() => {
@@ -190,9 +189,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           filter: `recipient_user_id=eq.${user.id}`,
         },
         () => {
-          // Whenever an event occurs for this admin, refresh unread count and recent notifications
-          refreshUnreadCount();
-          refreshRecent();
+          // One refresh updates both the recent list and unread count.
+          void refreshRecent();
         }
       )
       .subscribe((status) => {
@@ -204,7 +202,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isAdmin, user?.id, refreshUnreadCount, refreshRecent]);
+  }, [isAdmin, user?.id, refreshRecent]);
 
   return (
     <NotificationContext.Provider

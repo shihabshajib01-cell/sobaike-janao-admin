@@ -75,3 +75,27 @@ jobs:
               raise SystemExit('Private contact data appeared in anonymous RPC response')
           print('Anonymous Admin RPC denial check passed')
           PY
+      - name: Verify notification RPC rejects anonymous access
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_KEY"
+
+          http_code=$(curl -sS \
+            -o /tmp/admin-notifications-rpc.json \
+            -w "%{http_code}" \
+            -X POST "$SUPABASE_URL/rest/v1/rpc/admin_list_notifications" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{"p_limit":1,"p_before_created_at":null,"p_before_id":null,"p_unread_only":false,"p_category":null}')
+
+          if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+            echo "ERROR: admin_list_notifications accepted anonymous access"
+            cat /tmp/admin-notifications-rpc.json
+            exit 1
+          fi
+
+          echo "Anonymous notification RPC denial check passed"
+
