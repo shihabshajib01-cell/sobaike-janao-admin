@@ -46,8 +46,7 @@ export const LocationActivityEmptyState: React.FC<LocationActivityEmptyStateProp
           variant="secondary"
           size="sm"
           onClick={onResetFilters}
-          leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
-          className="text-xs"
+          leftIcon={<RotateCcw />}
         >
           <span>{isBn ? 'ফিল্টার রিসেট' : 'Reset Filters'}</span>
         </Button>
