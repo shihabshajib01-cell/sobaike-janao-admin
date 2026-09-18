@@ -257,8 +257,8 @@ export const NewsIntakePage: React.FC = () => {
     }
     if (!report.titleBn.trim() || !report.descriptionBn.trim()) {
       return isBn
-        ? 'রিপোর্টের বাংলা শিরোনাম ও ঘটনার প্রেক্ষাপট দিন।'
-        : 'Enter the Bangla report title and incident context.';
+        ? 'উৎসের ভাষায় রিপোর্টের শিরোনাম ও ঘটনার প্রেক্ষাপট দিন।'
+        : 'Enter the report title and incident context in the source language.';
     }
     if (report.titleBn.trim().length > 100 || report.titleEn.trim().length > 100) {
       return isBn ? 'রিপোর্ট শিরোনাম সর্বোচ্চ ১০০ অক্ষর।' : 'Report titles can contain at most 100 characters.';
@@ -651,41 +651,32 @@ export const NewsIntakePage: React.FC = () => {
             </FeedbackNotice>
           )}
 
-          <div className="grid gap-3 md:grid-cols-2">
-            <Input
-              label={isBn ? 'রিপোর্ট শিরোনাম (বাংলা) *' : 'Report title (Bangla) *'}
-              maxLength={100}
-              value={report.titleBn}
-              onChange={(event) => updateReport({ titleBn: event.target.value })}
-            />
-            <Input
-              label={isBn ? 'রিপোর্ট শিরোনাম (English)' : 'Report title (English)'}
-              maxLength={100}
-              value={report.titleEn}
-              onChange={(event) => updateReport({ titleEn: event.target.value })}
-            />
-          </div>
+          <FeedbackNotice tone="neutral" compact>
+            <p>
+              {isBn
+                ? 'শিরোনাম ও ঘটনার প্রেক্ষাপট উৎস সংবাদ যে ভাষায় লেখা, সেই ভাষাতেই লিখুন। আলাদা অনুবাদ প্রয়োজন নেই।'
+                : 'Write the title and incident context in the language used by the source article. Do not create a second translated version.'}
+            </p>
+          </FeedbackNotice>
 
-          <div className="grid gap-3 md:grid-cols-2">
-            <Textarea
-              label={isBn ? 'ঘটনার প্রেক্ষাপট (বাংলা) *' : 'Incident context (Bangla) *'}
-              rows={5}
-              maxLength={2000}
-              value={report.descriptionBn}
-              onChange={(event) =>
-                updateReport({ descriptionBn: event.target.value })
-              }
-            />
-            <Textarea
-              label={isBn ? 'ঘটনার প্রেক্ষাপট (English)' : 'Incident context (English)'}
-              rows={5}
-              maxLength={2000}
-              value={report.descriptionEn}
-              onChange={(event) =>
-                updateReport({ descriptionEn: event.target.value })
-              }
-            />
-          </div>
+          <Input
+            label={isBn ? 'রিপোর্ট শিরোনাম (উৎসের ভাষা) *' : 'Report title (source language) *'}
+            maxLength={100}
+            value={report.titleBn}
+            onChange={(event) =>
+              updateReport({ titleBn: event.target.value, titleEn: '' })
+            }
+          />
+
+          <Textarea
+            label={isBn ? 'ঘটনার প্রেক্ষাপট (উৎসের ভাষা) *' : 'Incident context (source language) *'}
+            rows={6}
+            maxLength={2000}
+            value={report.descriptionBn}
+            onChange={(event) =>
+              updateReport({ descriptionBn: event.target.value, descriptionEn: '' })
+            }
+          />
 
           <div className="grid gap-3 md:grid-cols-4">
             <Input
