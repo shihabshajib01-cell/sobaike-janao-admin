@@ -250,8 +250,7 @@ export const LocationActivityTable: React.FC<LocationActivityTableProps> = ({
                     e.stopPropagation();
                     onSelectSession(session);
                   }}
-                  leftIcon={<Eye className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />}
-                  className="text-xs"
+                  leftIcon={<Eye />}
                 >
                   {isBn ? 'দেখুন' : 'View'}
                 </Button>
