@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React, { InputHTMLAttributes, forwardRef, useState } from 'react';
 import { Eye, EyeOff, Search, X } from 'lucide-react';
 import { cn } from '@/utils';
@@ -78,23 +79,23 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 
           {/* Right actions: Clear button or Password reveal or Custom Right Icon */}
           {onClear && value && !disabled ? (
-            <button
+            <ButtonBase
               type="button"
               onClick={onClear}
               className="absolute right-2.5 p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
               aria-label="Clear input"
             >
               <X className="w-3.5 h-3.5" />
-            </button>
+            </ButtonBase>
           ) : isPasswordType ? (
-            <button
+            <ButtonBase
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
               className="absolute right-2.5 p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
+            </ButtonBase>
           ) : rightIcon ? (
             <div className="absolute right-3 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
               {rightIcon}
