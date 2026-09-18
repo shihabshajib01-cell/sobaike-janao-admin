@@ -144,10 +144,9 @@ export const UserDetailPage: React.FC = () => {
                 {user.display_name || user.email}
               </h1>
               {user.is_super_admin && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 dark:bg-purple-950/80 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                  <Lock className="w-3 h-3" />
+                <Tag tone="violet" icon={<Lock />}>
                   {t.users.superAdmin}
-                </span>
+                </Tag>
               )}
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -159,21 +158,23 @@ export const UserDetailPage: React.FC = () => {
         {/* Edit Button (Disabled/Hidden for Super Admin or out-of-ceiling administrator) */}
         {canManageUsers && (
           user.is_super_admin ? (
-            <div
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-400 dark:text-slate-500 rounded-lg bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 cursor-not-allowed"
+            <Tag
+              tone="neutral"
+              size="md"
+              icon={<Lock />}
               title={t.users.superAdminCannotBeEdited}
             >
-              <Lock className="w-3.5 h-3.5" />
               {t.users.protectedBadge}
-            </div>
+            </Tag>
           ) : user.can_manage_target === false ? (
-            <div
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-400 dark:text-slate-500 rounded-lg bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 cursor-not-allowed"
+            <Tag
+              tone="warning"
+              size="md"
+              icon={<Lock />}
               title={t.users.strongerUserCannotBeEdited}
             >
-              <Lock className="w-3.5 h-3.5" />
               {t.users.restrictedBadge}
-            </div>
+            </Tag>
           ) : (
             <div className="flex items-center gap-2">
               <Button
@@ -204,53 +205,34 @@ export const UserDetailPage: React.FC = () => {
 
       {/* Success Notification Banner */}
       {successBanner && (
-        <div
+        <FeedbackNotice
           id="user-detail-success-banner"
-          className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 flex items-center gap-3 shadow-xs animate-in fade-in"
+          tone="success"
         >
-          <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-          <p className="text-sm font-medium">{successBanner}</p>
-        </div>
+          {successBanner}
+        </FeedbackNotice>
       )}
 
       {/* Super Administrator Protection Notice Banner */}
       {user.is_super_admin && (
-        <div
+        <FeedbackNotice
           id="super-admin-protection-banner"
-          className="p-4 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/80 flex items-start gap-3 shadow-xs"
+          tone="neutral"
+          title={t.users.protectedAccountNotice}
         >
-          <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/60 flex items-center justify-center shrink-0 text-purple-700 dark:text-purple-300">
-            <Lock className="w-4 h-4" />
-          </div>
-          <div>
-            <h4 className="text-sm font-bold text-purple-900 dark:text-purple-200">
-              {t.users.protectedAccountNotice}
-            </h4>
-            <p className="text-xs text-purple-700 dark:text-purple-300/90 mt-1 leading-relaxed">
-              {t.users.protectedAccountDesc}
-            </p>
-          </div>
-        </div>
+          {t.users.protectedAccountDesc}
+        </FeedbackNotice>
       )}
 
       {/* Ceiling Restriction Banner */}
       {!user.is_super_admin && user.can_manage_target === false && (
-        <div
+        <FeedbackNotice
           id="ceiling-restriction-banner"
-          className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 flex items-start gap-3 shadow-xs"
+          tone="warning"
+          title={t.users.restrictedBadge}
         >
-          <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/60 flex items-center justify-center shrink-0 text-amber-700 dark:text-amber-300">
-            <Lock className="w-4 h-4" />
-          </div>
-          <div>
-            <h4 className="text-sm font-bold text-amber-900 dark:text-amber-200">
-              {t.users.restrictedBadge}
-            </h4>
-            <p className="text-xs text-amber-700 dark:text-amber-300/90 mt-1 leading-relaxed">
-              {t.users.strongerUserCannotBeEdited}
-            </p>
-          </div>
-        </div>
+          {t.users.strongerUserCannotBeEdited}
+        </FeedbackNotice>
       )}
 
       {/* Account Overview Card */}
@@ -292,14 +274,13 @@ export const UserDetailPage: React.FC = () => {
             </p>
             <div className="mt-1">
               {user.is_super_admin ? (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 dark:bg-purple-950/80 text-purple-800 dark:text-purple-300">
-                  <ShieldCheck className="w-3.5 h-3.5" />
+                <Tag tone="violet" icon={<ShieldCheck />} size="md">
                   {t.users.superAdmin}
-                </span>
+                </Tag>
               ) : (
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                <Tag tone="neutral" size="md">
                   {t.users.standardAdmin}
-                </span>
+                </Tag>
               )}
             </div>
           </div>
@@ -311,15 +292,15 @@ export const UserDetailPage: React.FC = () => {
             </p>
             <div className="mt-1">
               {user.active ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                <Badge status="success" size="md">
+                  <CheckCircle2 />
                   {t.users.active}
-                </span>
+                </Badge>
               ) : (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
-                  <XCircle className="w-3.5 h-3.5 text-rose-500" />
+                <Badge status="error" size="md">
+                  <XCircle />
                   {t.users.inactive}
-                </span>
+                </Badge>
               )}
             </div>
           </div>
