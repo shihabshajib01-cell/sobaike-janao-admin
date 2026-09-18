@@ -67,7 +67,7 @@ export const CardTitle: React.FC<HTMLAttributes<HTMLHeadingElement>> = ({
 }) => {
   return (
     <h3
-      className={cn('text-base font-semibold leading-none tracking-tight text-slate-900 dark:text-slate-100', className)}
+      className={cn('type-card-title text-slate-900 dark:text-slate-100', className)}
       {...props}
     >
       {children}
@@ -83,7 +83,7 @@ export const CardDescription: React.FC<HTMLAttributes<HTMLParagraphElement>> = (
 }) => {
   return (
     <p
-      className={cn('text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1', className)}
+      className={cn('type-secondary text-slate-500 dark:text-slate-400 mt-1', className)}
       {...props}
     >
       {children}
@@ -113,7 +113,7 @@ export const CardFooter: React.FC<HTMLAttributes<HTMLDivElement>> = ({
   return (
     <div
       className={cn(
-        'flex items-center justify-between pt-4 mt-4 border-t border-slate-100 dark:border-slate-800/60 text-xs text-slate-500 dark:text-slate-400',
+        'flex items-center justify-between pt-4 mt-4 border-t border-slate-100 dark:border-slate-800/60 type-meta text-slate-500 dark:text-slate-400',
         className
       )}
       {...props}
