@@ -381,8 +381,16 @@ export const FormBuilderModal: React.FC<FormBuilderModalProps> = ({
                     <Select
                       label={isBn ? 'ফিল্ড টাইপ' : 'Field type'}
                       value={field.fieldType}
-                      onChange={(event) =>
-                        updateField(index, { fieldType: event.target.value as ReportingFieldType })
+                      onChange={(event) => {
+                        const fieldType = event.target.value as ReportingFieldType;
+                        const sensitivePublicType =
+                          fieldType === 'phone' || fieldType === 'email';
+                        updateField(index, {
+                          fieldType,
+                          config: sensitivePublicType
+                            ? { ...field.config, publicVisible: false }
+                            : field.config,
+                        });
                       }
                       disabled={field.storageMode === 'system_block' || locked}
                       options={FIELD_TYPES}
@@ -492,6 +500,7 @@ export const FormBuilderModal: React.FC<FormBuilderModalProps> = ({
                     {field.storageMode === 'custom_json' && (
                       <Switch
                         checked={publicVisible}
+                        disabled={field.fieldType === 'phone' || field.fieldType === 'email'}
                         onChange={(checked) =>
                           updateField(index, {
                             config: { ...field.config, publicVisible: checked },
