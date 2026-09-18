@@ -12,6 +12,8 @@ const taxonomy = read('supabase/migrations/20260918162008_news_intake_taxonomy_c
 const registryIndex = read('supabase/migrations/20260918163153_news_intake_registry_index.sql');
 const canonicalPublisher = read('supabase/migrations/20260918163429_news_intake_canonical_publisher.sql');
 const edge = read('supabase/functions/news-intake-fetch/index.ts');
+const scanner = read('supabase/functions/news-intake-scan/index.ts');
+const automationPanel = read('src/pages/NewsIntake/NewsAutomationPanel.tsx');
 const page = read('src/pages/NewsIntake/NewsIntakePage.tsx');
 const api = read('src/services/api/newsIntakeApi.ts');
 const routes = read('src/routes/AppRoutes.tsx');
@@ -64,6 +66,34 @@ for (const needle of [
 ]) {
   requireText(edge, needle, 'secure metadata fetcher');
 }
+
+for (const needle of [
+  'admin_begin_news_intake_run',
+  'admin_get_news_intake_scan_sources',
+  'admin_preview_sourced_report_intake',
+  'admin_create_sourced_report_from_intake',
+  'admin_merge_intake_source',
+  'admin_record_news_intake_item',
+  'admin_finish_news_intake_run',
+  'verify_jwt',
+]) {
+  if (needle === 'verify_jwt') continue;
+  requireText(scanner, needle, 'automated News Intake scanner');
+}
+
+for (const needle of [
+  'Check Sources & Duplicates',
+  'newsIntakeApi.scanSources()',
+  'getAutomationDashboard()',
+  'created_draft',
+  'merged_source',
+  'needs_review',
+]) {
+  requireText(automationPanel, needle, 'News Automation panel');
+}
+
+requireText(api, "supabase.functions.invoke('news-intake-scan'", 'News Automation API');
+requireText(api, "supabase.rpc(\n      'admin_get_news_intake_automation_dashboard'", 'News Automation dashboard API');
 
 if (/articleBody|fullArticle|bodyText|innerText/.test(edge)) {
   errors.push('secure metadata fetcher: article body must not be returned to the Admin client.');
