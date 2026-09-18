@@ -32,7 +32,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     <div className={cn('w-full max-w-full min-w-0 flex flex-col gap-3 pb-5 border-b border-slate-200 dark:border-slate-800', className)}>
       {/* Breadcrumbs or Back button */}
       {breadcrumbs && breadcrumbs.length > 0 && (
-        <nav aria-label="Breadcrumb" className="flex items-center space-x-1.5 text-xs text-slate-500 dark:text-slate-400 overflow-hidden truncate">
+        <nav aria-label="Breadcrumb" className="flex items-center space-x-1.5 type-meta text-slate-500 dark:text-slate-400 overflow-hidden truncate">
           {breadcrumbs.map((item, index) => {
             const isLast = index === breadcrumbs.length - 1;
             return (
@@ -60,7 +60,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           <button
             type="button"
             onClick={backButton.onClick}
-            className="inline-flex items-center text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 gap-1.5 transition-colors"
+            className="inline-flex items-center type-meta font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 gap-1.5 transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>{backButton.label || 'Back'}</span>
@@ -71,11 +71,11 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       {/* Main Header Row */}
       <div className="w-full min-w-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100 sm:text-2xl break-words">
+          <h1 className="type-page-title text-slate-900 dark:text-slate-100 break-words">
             {title}
           </h1>
           {description && (
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 max-w-3xl leading-relaxed break-words">
+            <p className="mt-1 type-secondary text-slate-500 dark:text-slate-400 max-w-3xl break-words">
               {description}
             </p>
           )}
