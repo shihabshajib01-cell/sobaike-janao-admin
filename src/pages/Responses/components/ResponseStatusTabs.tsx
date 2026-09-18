@@ -1,3 +1,4 @@
+import { ButtonBase } from '@/components/ui/Button';
 import React from 'react';
 import { ResponseStatusFilter } from '@/types/Response';
 import { useLanguage } from '@/context/LanguageContext';
@@ -57,7 +58,7 @@ export const ResponseStatusTabs: React.FC<ResponseStatusTabsProps> = ({
         {tabs.map((tab) => {
           const isActive = activeStatus === tab.key;
           return (
-            <button
+            <ButtonBase
               key={tab.key}
               type="button"
               disabled={disabled}
@@ -80,7 +81,7 @@ export const ResponseStatusTabs: React.FC<ResponseStatusTabsProps> = ({
               >
                 {formatNum(tab.count)}
               </span>
-            </button>
+            </ButtonBase>
           );
         })}
       </nav>
