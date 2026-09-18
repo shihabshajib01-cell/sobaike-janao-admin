@@ -118,7 +118,17 @@ export const ResponseTable: React.FC<ResponseTableProps> = ({
             {responses.map((item) => (
               <tr
                 key={item.id}
-                className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+                onClick={() => onViewDetails(item)}
+                onKeyDown={(e) => {
+                  if (e.target !== e.currentTarget) return;
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onViewDetails(item);
+                  }
+                }}
+                tabIndex={0}
+                aria-label={`${isBn ? 'রেসপন্স দেখুন' : 'View response'} #${item.id}`}
+                className="cursor-pointer hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500"
               >
                 {/* Response ID */}
                 <td className="py-3.5 px-4 font-mono text-xs font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap">
@@ -158,7 +168,10 @@ export const ResponseTable: React.FC<ResponseTableProps> = ({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => onViewDetails(item)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onViewDetails(item);
+                    }}
                     disabled={isLoading}
                     className="h-8 px-2.5 text-xs text-sky-600 hover:text-sky-700 hover:bg-sky-50 dark:text-sky-400 dark:hover:bg-sky-950/40 font-medium"
                     aria-label={`${isBn ? 'দেখুন' : 'View'} #${item.id}`}
