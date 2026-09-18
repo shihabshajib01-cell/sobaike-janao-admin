@@ -74,7 +74,7 @@ export const MapLegend: React.FC<MapLegendProps> = ({
           <button
             type="button"
             onClick={() => onSelectStatus('all')}
-            className="text-[11px] font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors cursor-pointer"
+            className="type-meta font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors cursor-pointer"
           >
             {isBn ? 'সব দেখুন' : 'Show All'}
           </button>
@@ -109,7 +109,7 @@ export const MapLegend: React.FC<MapLegendProps> = ({
                 {isBn ? item.labelBn : item.labelEn}
               </span>
               {count !== undefined && (
-                <span className="text-[10px] font-mono px-1 rounded bg-slate-200/70 dark:bg-slate-700/70 text-slate-600 dark:text-slate-300">
+                <span className="type-meta font-mono px-1 rounded bg-slate-200/70 dark:bg-slate-700/70 text-slate-600 dark:text-slate-300">
                   {count}
                 </span>
               )}
