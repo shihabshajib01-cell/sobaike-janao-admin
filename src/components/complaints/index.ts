@@ -14,3 +14,5 @@ export * from './ComplaintTimeline';
 export type { ComplaintActionAreaProps } from './ComplaintActionArea';
 export { ComplaintActionAreaWithPublication as ComplaintActionArea } from './ComplaintActionAreaWithPublication';
 export * from './ComplaintVersionHistory';
+
+export * from './ConfiguredComplaintFieldsCard';
