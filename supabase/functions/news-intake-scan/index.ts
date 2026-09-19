@@ -411,6 +411,89 @@ const buildReportPayload = (
   };
 };
 
+const normalizeNetworkHost = (hostname: string) =>
+  hostname.trim().toLowerCase().replace(/^\[/, '').replace(/\]$/, '').replace(/\.$/, '');
+
+const parseIpv4 = (value: string): number[] | null => {
+  if (!/^\d{1,3}(?:\.\d{1,3}){3}$/.test(value)) return null;
+  const parts=value.split('.').map(Number);
+  return parts.every((part)=>Number.isInteger(part)&&part>=0&&part<=255) ? parts : null;
+};
+
+const isBlockedIpv4 = (value: string): boolean => {
+  const parts=parseIpv4(value);
+  if(!parts) return false;
+  const [a,b]=parts;
+  return (
+    a===0 ||
+    a===10 ||
+    a===127 ||
+    (a===100 && b>=64 && b<=127) ||
+    (a===169 && b===254) ||
+    (a===172 && b>=16 && b<=31) ||
+    (a===192 && b===0) ||
+    (a===192 && b===168) ||
+    (a===198 && (b===18 || b===19)) ||
+    a>=224
+  );
+};
+
+const isIpv6Literal = (value: string) => value.includes(':');
+
+const isBlockedIpv6 = (value: string): boolean => {
+  const ip=normalizeNetworkHost(value);
+  if(!isIpv6Literal(ip)) return false;
+  if(ip==='::' || ip==='::1') return true;
+  if(ip.startsWith('::ffff:')) {
+    return isBlockedIpv4(ip.slice('::ffff:'.length));
+  }
+  const first=(ip.split(':')[0]||'0').toLowerCase();
+  if(first==='fc' || first==='fd' || first.startsWith('fc') || first.startsWith('fd')) return true;
+  if(/^fe[89ab]/i.test(first)) return true;
+  if(/^ff/i.test(first)) return true;
+  if(ip.startsWith('2001:db8:') || ip==='2001:db8::') return true;
+  return false;
+};
+
+const assertPublicNetworkTarget = async (url: URL) => {
+  const host=normalizeNetworkHost(url.hostname);
+  if(
+    !host ||
+    host==='localhost' ||
+    host.endsWith('.localhost') ||
+    host.endsWith('.local') ||
+    host.endsWith('.internal')
+  ) {
+    throw new Error('Private or local source host blocked.');
+  }
+
+  const literalV4=parseIpv4(host);
+  if(literalV4) {
+    if(isBlockedIpv4(host)) throw new Error('Private or reserved source IP blocked.');
+    return;
+  }
+  if(isIpv6Literal(host)) {
+    if(isBlockedIpv6(host)) throw new Error('Private or reserved source IP blocked.');
+    return;
+  }
+
+  const [aResult,aaaaResult]=await Promise.allSettled([
+    Deno.resolveDns(host,'A'),
+    Deno.resolveDns(host,'AAAA'),
+  ]);
+  const addresses:string[]=[];
+  if(aResult.status==='fulfilled') addresses.push(...aResult.value);
+  if(aaaaResult.status==='fulfilled') addresses.push(...aaaaResult.value);
+
+  if(addresses.length===0) {
+    throw new Error('Source hostname could not be resolved safely.');
+  }
+
+  if(addresses.some((address)=>isBlockedIpv4(address)||isBlockedIpv6(address))) {
+    throw new Error('Source hostname resolves to a private or reserved network.');
+  }
+};
+
 const safeScanFetch = async (
   initialUrl: string,
   checkDomain: (url:string)=>Promise<any>,
@@ -425,6 +508,11 @@ const safeScanFetch = async (
 
   let response: Response | null=null;
   for(let redirectCount=0;redirectCount<=3;redirectCount+=1){
+    // Defense-in-depth against SSRF and DNS rebinding to private infrastructure.
+    // Domain approval is checked separately; every actual fetch hop must also
+    // resolve only to public network addresses.
+    await assertPublicNetworkTarget(current);
+
     response=await fetch(current.toString(),{
       redirect:'manual',
       headers:{
