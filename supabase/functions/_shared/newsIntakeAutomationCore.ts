@@ -250,20 +250,20 @@ const relativeIncidentDateFromText = (text: string, publishedDate?: string | nul
   }
 
   const weekdayNames: Array<[number, RegExp]> = [
-    [0, /(গত\s*)?রবিবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?sunday(?:\s+(?:night|morning|afternoon|evening))?/iu],
-    [1, /(গত\s*)?সোমবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?monday(?:\s+(?:night|morning|afternoon|evening))?/iu],
-    [2, /(গত\s*)?মঙ্গলবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?tuesday(?:\s+(?:night|morning|afternoon|evening))?/iu],
-    [3, /(গত\s*)?বুধবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?wednesday(?:\s+(?:night|morning|afternoon|evening))?/iu],
-    [4, /(গত\s*)?বৃহস্পতিবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?thursday(?:\s+(?:night|morning|afternoon|evening))?/iu],
-    [5, /(গত\s*)?শুক্রবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?friday(?:\s+(?:night|morning|afternoon|evening))?/iu],
-    [6, /(গত\s*)?শনিবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?saturday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [0, /(গত\s*)?রবিবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?))?|(?:last\s+)?sunday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [1, /(গত\s*)?সোমবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?))?|(?:last\s+)?monday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [2, /(গত\s*)?মঙ্গলবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?))?|(?:last\s+)?tuesday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [3, /(গত\s*)?বুধবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?))?|(?:last\s+)?wednesday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [4, /(গত\s*)?বৃহস্পতিবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?))?|(?:last\s+)?thursday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [5, /(গত\s*)?শুক্রবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?))?|(?:last\s+)?friday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [6, /(গত\s*)?শনিবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?))?|(?:last\s+)?saturday(?:\s+(?:night|morning|afternoon|evening))?/iu],
   ];
   const base=new Date(publishedDate + 'T00:00:00Z');
   for (const [weekday,pattern] of weekdayNames) {
     const match=text.match(pattern);
     if (!match) continue;
     const matchedText=match[0];
-    const hasPastCue=/(গত|last|রাতে|সকালে|ভোরে|দুপুরে|বিকেলে|night|morning|afternoon|evening)/iu.test(matchedText);
+    const hasPastCue=/(গত|last|রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|night|morning|afternoon|evening)/iu.test(matchedText);
     if (!hasPastCue) continue;
     const d=new Date(base);
     let delta=(d.getUTCDay()-weekday+7)%7;
