@@ -55,12 +55,29 @@
         }
 
         window.sessionStorage.removeItem(storageKey);
-        fallback.innerHTML =
-          '<section style="width:min(440px,100%);text-align:center">' +
-          '<h1 style="margin:0 0 8px;font-size:20px;line-height:1.4">Admin panel did not finish loading</h1>' +
-          '<p style="margin:0 0 16px;color:#64748b;font-size:14px;line-height:1.6">A cached deployment may still be open in this tab.</p>' +
-          '<button type="button" onclick="window.location.reload()" style="min-height:40px;padding:0 16px;border:0;border-radius:6px;background:#0284c7;color:#fff;font:600 14px system-ui;cursor:pointer">Reload</button>' +
-          '</section>';
+        fallback.replaceChildren();
+
+        var section = document.createElement('section');
+        section.style.cssText = 'width:min(440px,100%);text-align:center';
+
+        var heading = document.createElement('h1');
+        heading.style.cssText = 'margin:0 0 8px;font-size:20px;line-height:1.4';
+        heading.textContent = 'Admin panel did not finish loading';
+
+        var message = document.createElement('p');
+        message.style.cssText = 'margin:0 0 16px;color:#64748b;font-size:14px;line-height:1.6';
+        message.textContent = 'A cached deployment may still be open in this tab.';
+
+        var reloadButton = document.createElement('button');
+        reloadButton.type = 'button';
+        reloadButton.style.cssText = 'min-height:40px;padding:0 16px;border:0;border-radius:6px;background:#0284c7;color:#fff;font:600 14px system-ui;cursor:pointer';
+        reloadButton.textContent = 'Reload';
+        reloadButton.addEventListener('click', function () {
+          window.location.reload();
+        });
+
+        section.append(heading, message, reloadButton);
+        fallback.appendChild(section);
       }, 4000);
 
       window.addEventListener('load', function () {
