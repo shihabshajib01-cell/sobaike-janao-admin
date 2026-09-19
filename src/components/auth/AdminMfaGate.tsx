@@ -12,7 +12,7 @@ const ADMIN_MFA_TEST_MODE =
   import.meta.env?.VITE_ADMIN_E2E_MODE === 'true';
 
 export const AdminMfaGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { logout } = useAuth();
+  const { logout, refreshPermissions } = useAuth();
   const { language } = useLanguage();
   const [mode, setMode] = useState<MfaMode>(ADMIN_MFA_TEST_MODE ? 'ready' : 'loading');
   const [factorId, setFactorId] = useState('');
@@ -85,7 +85,7 @@ export const AdminMfaGate: React.FC<{ children: React.ReactNode }> = ({ children
     setQrCode(enrollment.data.totp.qr_code);
     setSecret(enrollment.data.totp.secret);
     setMode('enroll');
-  }, []);
+  }, [refreshPermissions]);
 
   useEffect(() => {
     void prepareMfa();
@@ -111,11 +111,17 @@ export const AdminMfaGate: React.FC<{ children: React.ReactNode }> = ({ children
       });
       if (verification.error) throw verification.error;
 
-      await supabase.auth.refreshSession();
+      const refreshResult = await supabase.auth.refreshSession();
+      if (refreshResult.error) throw refreshResult.error;
+
       const aal = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
       if (aal.error || aal.data.currentLevel !== 'aal2') {
         throw aal.error || new Error('MFA verification did not elevate the session.');
       }
+
+      // Permissions that require AAL2 may have been intentionally absent while
+      // the session was still AAL1. Reload them only after the token is elevated.
+      await refreshPermissions();
 
       setCode('');
       setMode('ready');
