@@ -47,6 +47,9 @@ jobs:
       - name: News Intake behavior audit
         run: npm run audit:news-intake-behavior
 
+      - name: Bundle-check News Intake Edge Function
+        run: npx --no-install esbuild supabase/functions/news-intake-scan/index.ts --bundle --platform=neutral --format=esm --external:jsr:* --external:npm:* --outfile=/tmp/news-intake-scan.mjs
+
       - name: Browser smoke syntax check
         run: node --check scripts/admin-functional-smoke.mjs
 
