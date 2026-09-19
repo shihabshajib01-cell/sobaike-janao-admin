@@ -553,10 +553,10 @@ await check('News Intake clear source reaches one-click publication', async () =
 
   await page.getByLabel('Category *', { exact: true }).selectOption('public_safety');
   await page.getByLabel('Subcategory *', { exact: true }).selectOption('theft');
-  await page.getByLabel('Report title (Bangla) *').fill(
+  await page.getByLabel('Report title (source language) *', { exact: true }).fill(
     'নিউজ ইনটেক ব্রাউজার পরীক্ষার রিপোর্ট'
   );
-  await page.getByLabel('Incident context (Bangla) *').fill(
+  await page.getByLabel('Incident context (source language) *', { exact: true }).fill(
     'বিশ্বস্ত সংবাদ উৎসভিত্তিক পরীক্ষামূলক ঘটনার প্রেক্ষাপট।'
   );
   await page.getByLabel('Incident date *').fill('2026-09-18');
