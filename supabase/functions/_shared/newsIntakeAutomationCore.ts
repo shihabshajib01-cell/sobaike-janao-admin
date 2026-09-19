@@ -164,13 +164,19 @@ const incidentLocationScopes = (text: string) =>
 
 const locationFromScope = (scope: string, district?: string | null) => {
   // Incident sentences often use a bare proper place after "at/near" without
-  // adding words such as area, road, market, or village. Prefer the first
-  // source-backed proper place so later home/hospital references do not win.
-  const englishIncidentPlace = scope.match(
-    /\b(?:at|near)\s+([A-Z][A-Za-z0-9.'’\-]*(?:\s+[A-Z][A-Za-z0-9.'’\-]*){0,5})(?=\s+(?:around|about|at|on|when|where|while|after|before|and|but)|[,.!?]|$)/u
-  )?.[1];
-  if (englishIncidentPlace) {
-    const candidate=compactLocationPhrase(englishIncidentPlace);
+  // adding words such as area, road, market, or village. Evaluate each match
+  // in reading order, but ignore medical/destination phrases such as
+  // "died at RMCH" so they cannot beat the actual incident place.
+  const englishIncidentPlacePattern =
+    /\b(?:at|near)\s+([A-Z][A-Za-z0-9.'’\-]*(?:\s+[A-Z][A-Za-z0-9.'’\-]*){0,5})(?=\s+(?:around|about|at|on|when|where|while|after|before|and|but)|[,.!?]|$)/gu;
+  for (const match of scope.matchAll(englishIncidentPlacePattern)) {
+    const matchIndex=match.index ?? 0;
+    const prefix=scope.slice(Math.max(0,matchIndex-48),matchIndex);
+    const medicalDestination=
+      /(?:dies?|died|death|treated|admitted|hospitali[sz]ed|taken|shifted|referred)\s*$/i.test(prefix);
+    if (medicalDestination) continue;
+
+    const candidate=compactLocationPhrase(match[1] || '');
     if (locationCandidateIsUsable(candidate,district)) return candidate;
   }
 
