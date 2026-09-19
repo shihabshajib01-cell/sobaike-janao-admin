@@ -4,7 +4,9 @@ import {
   buildSourceLanguageFields,
   classifyArticle,
   findLocation,
+  inferDistrictWideScope,
   inferIncidentDate,
+  inferSpecificLocationPhrase,
   isUnsupportedArticleType,
 } from '../supabase/functions/_shared/newsIntakeAutomationCore.ts';
 
@@ -29,6 +31,8 @@ const classificationCases: Array<[string, string, string]> = [
   ['mob-justice', 'চুরির সন্দেহে গণপিটুনিতে একজন নিহত', 'public_safety'],
   ['road-repair-delay', 'রাস্তা মেরামত কাজ দীর্ঘদিন ধরে বিলম্বিত', 'road_transport'],
   ['road-accident', 'বাস ও ট্রাকের সংঘর্ষে দুইজন নিহত', 'road_transport'],
+  ['road-accident', 'বরিশালে নিয়ন্ত্রণ হারিয়ে বাস পুকুরে, একজনের লাশ উদ্ধার', 'road_transport'],
+  ['snatching', 'একজন ছুরি ধরে আছেন, আরেকজন কাটছেন রিকশাযাত্রীর পকেট', 'public_safety'],
   ['road-block', 'দাবি আদায়ে সড়ক অবরোধ', 'road_transport'],
   ['road-public-space-encroachment', 'ফুটপাত দখল করে দোকান বসানোর অভিযোগ', 'illegal_occupation'],
   ['private-property-occupation', 'ব্যক্তিগত জমি দখলের অভিযোগ', 'illegal_occupation'],
@@ -80,6 +84,17 @@ assert.equal(
   'Relative yesterday date must be source-date grounded'
 );
 
+assert.equal(
+  inferIncidentDate('দুর্ঘটনাটি শুক্রবার রাতে ঘটে', '2026-09-19'),
+  '2026-09-18',
+  'Bangla weekday with a past-time cue must resolve against publication date'
+);
+assert.equal(
+  inferIncidentDate('Police said the incident happened Thursday night', '2026-09-19'),
+  '2026-09-17',
+  'English weekday with a past-time cue must resolve against publication date'
+);
+
 assert.deepEqual(
   findLocation("Two killed in bus crash in Cox's Bazar"),
   { division: 'Chattogram', district: 'Coxs Bazar' },
@@ -89,6 +104,22 @@ assert.deepEqual(
   findLocation('Road crash leaves one dead in Comilla'),
   { division: 'Chattogram', district: 'Cumilla' },
   'Legacy English district spelling must resolve'
+);
+
+assert.equal(
+  inferSpecificLocationPhrase('ঘটনাটি খুলনা মহানগরীর সোনাডাঙ্গা এলাকায় ঘটে', 'Khulna'),
+  'খুলনা মহানগরীর সোনাডাঙ্গা এলাকা',
+  'Specific Bangla area wording should be retained for report location'
+);
+assert.equal(
+  inferSpecificLocationPhrase('The incident happened near Shah Ali Market in Dhaka', 'Dhaka'),
+  'Shah Ali Market',
+  'Specific English market wording should be retained for report location'
+);
+assert.equal(
+  inferDistrictWideScope('জেলাজুড়ে বিদ্যুৎ বিভ্রাটের অভিযোগ পাওয়া গেছে'),
+  true,
+  'Explicit Bangla district-wide scope should be recognized'
 );
 
 const englishFields = buildSourceLanguageFields(
@@ -129,5 +160,5 @@ assert.equal(
 );
 
 console.log(
-  `News Intake behavior audit passed: ${classificationCases.length} published subcategory fixtures, date parsing, location aliases, source-language handling, context generation, and content filtering.`
+  `News Intake behavior audit passed: ${classificationCases.length} published subcategory fixtures, date parsing, location grounding, source-language handling, context generation, and content filtering.`
 );
