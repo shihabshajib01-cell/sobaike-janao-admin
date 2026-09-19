@@ -34,6 +34,26 @@ const ADMIN_E2E_MODE =
   Boolean(typeof import.meta !== 'undefined' && import.meta.env?.DEV) &&
   import.meta.env?.VITE_ADMIN_E2E_MODE === 'true';
 
+const AUTH_BOOTSTRAP_TIMEOUT_MS = 8000;
+
+const withTimeout = async <T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string
+): Promise<T> => {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
+
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -192,11 +212,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // 1. Initial session check on mount
     const initAuth = async () => {
       try {
-        const initialSession = await authService.getSession();
+        const initialSession = await withTimeout(
+          authService.getSession(),
+          AUTH_BOOTSTRAP_TIMEOUT_MS,
+          'Session verification timed out.'
+        );
         if (!isMountedRef.current) return;
 
         if (initialSession?.user) {
-          const active = await checkAdminStatus(initialSession.user.id);
+          const active = await withTimeout(
+            checkAdminStatus(initialSession.user.id),
+            AUTH_BOOTSTRAP_TIMEOUT_MS,
+            'Administrator verification timed out.'
+          );
           if (!isMountedRef.current) return;
 
           if (active) {
@@ -252,6 +280,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (err) {
         console.warn('Error during initial auth verification:', err);
+        if (isMountedRef.current) {
+          resetAuthState();
+        }
       } finally {
         if (isMountedRef.current) {
           setIsLoading(false);
@@ -259,64 +290,80 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
 
-    initAuth();
+    let unsubscribeAuth: (() => void) | null = null;
 
-    // 2. Auth state subscription (synchronous callback, deferred async verification)
-    const {
-      data: { subscription },
-    } = authService.onAuthStateChange((event, newSession) => {
-      if (!isMountedRef.current) return;
-
-      if (event === 'SIGNED_OUT' || !newSession?.user) {
-        resetAuthState();
-        setIsLoading(false);
-        return;
-      }
-
-      // Check if already authenticated and verified as admin for the same user
-      if (userRef.current?.id === newSession.user.id && isAdminRef.current) {
-        setSession(newSession);
-        setUser(newSession.user);
-        userRef.current = newSession.user;
-        setIsLoading(false);
-        return;
-      }
-
-      // Defer admin verification safely outside the synchronous callback
-      setTimeout(async () => {
+    const registerAuthSubscription = () => {
+      const {
+        data: { subscription },
+      } = authService.onAuthStateChange((event, newSession) => {
         if (!isMountedRef.current) return;
-        try {
-          const active = await checkAdminStatus(newSession.user.id);
-          if (!isMountedRef.current) return;
 
-          if (active) {
-            setSession(newSession);
-            setUser(newSession.user);
-            setIsAdmin(true);
-            userRef.current = newSession.user;
-            isAdminRef.current = true;
-
-            await loadUserPermissions();
-          } else {
-            resetAuthState();
-            // Safely sign out non-admin user outside the callback
-            await authService.logout();
-          }
-        } catch (err) {
-          console.error('Error during deferred admin verification:', err);
-          if (!isMountedRef.current) return;
+        if (event === 'SIGNED_OUT' || !newSession?.user) {
           resetAuthState();
-        } finally {
-          if (isMountedRef.current) {
-            setIsLoading(false);
-          }
+          setIsLoading(false);
+          return;
         }
-      }, 0);
+
+        // Check if already authenticated and verified as admin for the same user
+        if (userRef.current?.id === newSession.user.id && isAdminRef.current) {
+          setSession(newSession);
+          setUser(newSession.user);
+          userRef.current = newSession.user;
+          setIsLoading(false);
+          return;
+        }
+
+        // Defer admin verification safely outside the synchronous callback.
+        setTimeout(async () => {
+          if (!isMountedRef.current) return;
+          try {
+            const active = await withTimeout(
+              checkAdminStatus(newSession.user.id),
+              AUTH_BOOTSTRAP_TIMEOUT_MS,
+              'Administrator verification timed out.'
+            );
+            if (!isMountedRef.current) return;
+
+            if (active) {
+              setSession(newSession);
+              setUser(newSession.user);
+              setIsAdmin(true);
+              userRef.current = newSession.user;
+              isAdminRef.current = true;
+
+              await loadUserPermissions();
+            } else {
+              resetAuthState();
+              // Safely sign out non-admin user outside the callback
+              await authService.logout();
+            }
+          } catch (err) {
+            console.error('Error during deferred admin verification:', err);
+            if (!isMountedRef.current) return;
+            resetAuthState();
+          } finally {
+            if (isMountedRef.current) {
+              setIsLoading(false);
+            }
+          }
+        }, 0);
+      });
+
+      unsubscribeAuth = () => subscription.unsubscribe();
+    };
+
+    // Avoid registering onAuthStateChange while Supabase auth initialization is
+    // still acquiring its browser lock. Register only after the initial session
+    // verification completes so the auth client cannot deadlock the Admin shell.
+    void initAuth().finally(() => {
+      if (isMountedRef.current) {
+        registerAuthSubscription();
+      }
     });
 
     return () => {
       isMountedRef.current = false;
-      subscription.unsubscribe();
+      unsubscribeAuth?.();
     };
   }, [loadUserPermissions, resetAuthState]);
 
