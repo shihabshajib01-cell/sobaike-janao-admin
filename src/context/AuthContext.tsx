@@ -36,7 +36,7 @@ const ADMIN_E2E_MODE =
 
 const AUTH_BOOTSTRAP_TIMEOUT_MS = 8000;
 
-const withTimeout = async <T>(
+const withTimeout = async <T,>(
   promise: Promise<T>,
   timeoutMs: number,
   message: string
