@@ -27,6 +27,7 @@ const edge = read('supabase/functions/news-intake-fetch/index.ts');
 const scanner = read('supabase/functions/news-intake-scan/index.ts');
 const automationPanel = read('src/pages/NewsIntake/NewsAutomationPanel.tsx');
 const page = read('src/pages/NewsIntake/NewsIntakePage.tsx');
+const manualForm = read('src/pages/NewsIntake/ManualNewsIntakeForm.tsx');
 const api = read('src/services/api/newsIntakeApi.ts');
 const routes = read('src/routes/AppRoutes.tsx');
 const routeConfig = read('src/routes/routes.config.ts');
@@ -223,7 +224,19 @@ for (const needle of [
   'if (!preview.canCreateDraft)',
   'if (publishAfterCreate && !preview.canPublishImmediately)',
 ]) {
-  requireText(page, needle, 'News Intake UI safety flow');
+  requireText(manualForm, needle, 'Manual News Intake UI safety flow');
+}
+
+for (const needle of [
+  'News Intake Workspace',
+  'Scan All Sources Now',
+  'Raw news found',
+  'Feed-ready report',
+  'Publish Selected to Feed',
+  'ManualNewsIntakeForm',
+  'complaintApi.publishComplaint(reportId)',
+]) {
+  requireText(page, needle, 'News Intake dashboard workspace');
 }
 
 for (const needle of [
