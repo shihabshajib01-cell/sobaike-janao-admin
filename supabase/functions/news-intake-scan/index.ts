@@ -780,6 +780,10 @@ const processNewsIntakeRun = async (
         }
 
         if(location.quality !== 'specific' && location.locationScope !== 'district_wide'){
+          const locationReason =
+            location.quality === 'multiple_locations'
+              ? 'Multiple source-backed locations were detected. Review the incident scope before creating a feed-ready report.'
+              : 'Category and district were detected, but a specific source-backed upazila/thana could not be established. Review the location before creating a feed-ready report.';
           await record({
             itemKind:'article',
             sourceHostname:source.hostname,
@@ -793,7 +797,7 @@ const processNewsIntakeRun = async (
             confidence:classification.confidence,
             action:'needs_review',
             duplicateStatus:'unavailable',
-            reason:'Category and district were detected, but a specific source-backed upazila/thana could not be established. Review the location before creating a feed-ready report.',
+            reason:locationReason,
           });
           return;
         }
