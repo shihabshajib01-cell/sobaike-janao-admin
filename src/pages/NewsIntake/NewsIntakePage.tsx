@@ -23,6 +23,7 @@ import {
   NewsIntakeAutomationDashboard,
   NewsIntakeAutomationItem,
   NewsIntakeAutomationRun,
+  NewsIntakeTaxonomy,
 } from '@/types/NewsIntake';
 import { FeedReadyReportPreview } from './FeedReadyReportPreview';
 import { ManualNewsIntakeForm } from './ManualNewsIntakeForm';
@@ -42,7 +43,7 @@ const EMPTY_DASHBOARD: NewsIntakeAutomationDashboard = {
 
 type IntakeMode = 'automatic' | 'manual';
 type WorkspaceStep = 1 | 2 | 3;
-type RawNewsFilter = 'all' | 'matched' | 'review' | 'duplicate' | 'not_report' | 'error';
+type RawNewsFilter = 'all' | 'matched' | 'review' | 'duplicate' | 'excluded' | 'not_report' | 'error';
 
 interface PublishOutcome {
   reportId: string;
@@ -81,6 +82,10 @@ export const NewsIntakePage: React.FC = () => {
   const [feedReadyExpanded, setFeedReadyExpanded] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [publishOutcomes, setPublishOutcomes] = useState<PublishOutcome[]>([]);
+  const [taxonomy, setTaxonomy] = useState<NewsIntakeTaxonomy>({
+    segments: [],
+    subcategories: [],
+  });
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -103,10 +108,28 @@ export const NewsIntakePage: React.FC = () => {
     void loadDashboard();
   }, [loadDashboard]);
 
+  useEffect(() => {
+    let mounted = true;
+    void newsIntakeApi
+      .getTaxonomy()
+      .then((nextTaxonomy) => {
+        if (mounted) setTaxonomy(nextTaxonomy);
+      })
+      .catch(() => {
+        // The review workspace remains functional with stable IDs if taxonomy
+        // labels are temporarily unavailable.
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const latestRun = dashboard.runs[0] || null;
   const selectedRun =
     dashboard.runs.find((run) => run.runId === selectedRunId) || latestRun;
   const selectedItems = articleItems(selectedRun || null);
+  const isExcludedItem = (item: NewsIntakeAutomationItem) =>
+    item.action === 'discovered' && Boolean(item.segmentId || item.subcategoryId);
 
   const automatedSources = dashboard.sources.filter((source) => source.scanEnabled);
   const manualSources = dashboard.sources.filter((source) => !source.scanEnabled);
@@ -239,11 +262,20 @@ export const NewsIntakePage: React.FC = () => {
     const duplicate = selectedItems.filter(
       (item) => item.action === 'skip_duplicate' || item.action === 'merged_source'
     ).length;
+    const excluded = selectedItems.filter(isExcludedItem).length;
     const notReport = selectedItems.filter(
       (item) => item.action === 'discovered' && !item.segmentId && !item.subcategoryId
     ).length;
     const error = selectedItems.filter((item) => item.action === 'error').length;
-    return { all: selectedItems.length, matched, review, duplicate, not_report: notReport, error };
+    return {
+      all: selectedItems.length,
+      matched,
+      review,
+      duplicate,
+      excluded,
+      not_report: notReport,
+      error,
+    };
   }, [selectedItems]);
 
   const filteredRawItems = useMemo(() => {
@@ -258,6 +290,9 @@ export const NewsIntakePage: React.FC = () => {
       return selectedItems.filter(
         (item) => item.action === 'skip_duplicate' || item.action === 'merged_source'
       );
+    }
+    if (rawFilter === 'excluded') {
+      return selectedItems.filter(isExcludedItem);
     }
     if (rawFilter === 'not_report') {
       return selectedItems.filter(
@@ -368,6 +403,72 @@ export const NewsIntakePage: React.FC = () => {
     setPublishing(false);
   };
 
+  const runStatusLabel = (status: NewsIntakeAutomationRun['status']) => {
+    if (!isBn) return status === 'completed' ? 'Completed' : status === 'partial' ? 'Partial' : status === 'failed' ? 'Failed' : 'Running';
+    return status === 'completed'
+      ? 'সম্পন্ন'
+      : status === 'partial'
+        ? 'আংশিক'
+        : status === 'failed'
+          ? 'ব্যর্থ'
+          : 'চলছে';
+  };
+
+  const reasonLabel = (reason?: string | null) => {
+    if (!reason || !isBn) return reason || '';
+    const exact: Record<string, string> = {
+      'Outside the 7-day automated intake window.': '৭ দিনের স্বয়ংক্রিয় ইনটেক সময়সীমার বাইরে।',
+      'No supported incident category matched in the article headline or summary with enough confidence.': 'শিরোনাম বা সারাংশ থেকে সমর্থিত কোনো ঘটনার ক্যাটাগরি যথেষ্ট নিশ্চিতভাবে মেলেনি।',
+      'Section, homepage, or non-article URL was excluded from automated intake.': 'সেকশন, হোমপেজ বা নন-আর্টিকেল লিংক স্বয়ংক্রিয় ইনটেক থেকে বাদ দেওয়া হয়েছে।',
+      'Non-incident opinion/editorial/feature/media content was excluded.': 'ঘটনা নয়—এমন মতামত, সম্পাদকীয়, ফিচার বা মিডিয়া কনটেন্ট বাদ দেওয়া হয়েছে।',
+      'Category detected, but the source publication date could not be verified safely.': 'ক্যাটাগরি পাওয়া গেছে, কিন্তু উৎসের প্রকাশের তারিখ নিরাপদভাবে যাচাই করা যায়নি।',
+      'Source publication date is unexpectedly in the future.': 'উৎসের প্রকাশের তারিখ অস্বাভাবিকভাবে ভবিষ্যতের।',
+      'Multiple source-backed locations were detected. Review the incident scope before creating a feed-ready report.': 'উৎসে একাধিক লোকেশন পাওয়া গেছে। ফিড-রেডি রিপোর্ট তৈরির আগে ঘটনার সঠিক লোকেশন যাচাই করুন।',
+      'Bribery category detected, but department and service fields require source-specific verification.': 'ঘুষের ক্যাটাগরি পাওয়া গেছে, তবে বিভাগ ও সেবার তথ্য উৎস দেখে আলাদাভাবে যাচাই করতে হবে।',
+      'Exact source URL already exists in the report database.': 'এই একই উৎস URL ইতিমধ্যে রিপোর্ট ডাটাবেসে আছে।',
+      'Possible same incident detected. No new report was created automatically.': 'সম্ভবত একই ঘটনা আগে থেকেই আছে। নতুন রিপোর্ট স্বয়ংক্রিয়ভাবে তৈরি করা হয়নি।',
+      'Source-grounded draft created; publication remains a separate admin action.': 'উৎসভিত্তিক ড্রাফট তৈরি হয়েছে; প্রকাশ করা এখনও আলাদা অ্যাডমিন অ্যাকশন।',
+      'Draft created, but the final server duplicate evaluation requires review before publication.': 'ড্রাফট তৈরি হয়েছে, তবে প্রকাশের আগে সার্ভারের চূড়ান্ত ডুপ্লিকেট যাচাই রিভিউ করতে হবে।',
+      'Potential retaliatory or mob violence following a theft allegation; confirm the incident category manually.': 'চুরির অভিযোগকে ঘিরে প্রতিশোধমূলক বা মব সহিংসতা হতে পারে; ক্যাটাগরি ম্যানুয়ালি নিশ্চিত করুন।',
+    };
+    if (exact[reason]) return exact[reason];
+    if (reason.startsWith('Category detected, but ') && reason.endsWith(' could not be established safely from the source.')) {
+      const missing = reason
+        .slice('Category detected, but '.length, -' could not be established safely from the source.'.length)
+        .replace('location, incident date', 'লোকেশন ও ঘটনার তারিখ')
+        .replace('incident date', 'ঘটনার তারিখ')
+        .replace('location', 'লোকেশন')
+        .replace('incident context', 'ঘটনার প্রেক্ষাপট');
+      return `ক্যাটাগরি পাওয়া গেছে, কিন্তু উৎস থেকে ${missing} নিরাপদভাবে নির্ধারণ করা যায়নি।`;
+    }
+    if (reason.startsWith('The current published report form requires source facts that could not be established safely:')) {
+      return 'বর্তমান প্রকাশিত রিপোর্ট ফর্মে এমন কিছু উৎসভিত্তিক তথ্য প্রয়োজন, যা নিরাপদভাবে নির্ধারণ করা যায়নি।';
+    }
+    if (reason.startsWith('Strong same-incident match; source merged into the existing sourced report.')) {
+      return 'একই ঘটনার শক্ত মিল পাওয়া গেছে; উৎসটি বিদ্যমান রিপোর্টে মার্জ করা হয়েছে।';
+    }
+    return reason;
+  };
+
+  const segmentLabel = (segmentId?: string | null) => {
+    if (!segmentId) return '';
+    const segment = taxonomy.segments.find((item) => item.id === segmentId);
+    return (isBn ? segment?.nameBn : segment?.nameEn) || segmentId;
+  };
+
+  const subcategoryLabel = (subcategoryId?: string | null) => {
+    if (!subcategoryId) return '';
+    const subcategory = taxonomy.subcategories.find((item) => item.id === subcategoryId);
+    return (isBn ? subcategory?.nameBn : subcategory?.nameEn) || subcategoryId;
+  };
+
+  const confidenceLabel = (confidence?: number | null) => {
+    if (typeof confidence !== 'number' || !Number.isFinite(confidence)) return '';
+    const value = Math.round(confidence * 100);
+    const formatted = new Intl.NumberFormat(isBn ? 'bn-BD' : 'en-BD').format(value);
+    return isBn ? `রুল স্কোর ${formatted}%` : `Rule score ${formatted}%`;
+  };
+
   const actionLabel = (item: NewsIntakeAutomationItem) => {
     switch (item.action) {
       case 'created_draft': {
@@ -390,6 +491,7 @@ export const NewsIntakePage: React.FC = () => {
       case 'error':
         return isBn ? 'ত্রুটি' : 'Error';
       default:
+        if (isExcludedItem(item)) return isBn ? 'বাদ দেওয়া' : 'Excluded';
         return isBn ? 'রিপোর্ট নয়' : 'Not a report';
     }
   };
@@ -639,7 +741,7 @@ export const NewsIntakePage: React.FC = () => {
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Tag tone={run.status === 'completed' ? 'success' : run.status === 'failed' ? 'danger' : 'warning'}>
-                    {run.status}
+                    {runStatusLabel(run.status)}
                   </Tag>
                   <Tag tone="neutral">
                     {run.triggerType === 'automatic'
@@ -825,7 +927,7 @@ export const NewsIntakePage: React.FC = () => {
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Tag tone={selectedRun.status === 'completed' ? 'success' : 'warning'}>
-                      {selectedRun.status}
+                      {runStatusLabel(selectedRun.status)}
                     </Tag>
                     <Tag tone="neutral">
                       {selectedItems.length} {isBn ? 'টি সংবাদ পাওয়া গেছে' : 'news items found'}
@@ -928,6 +1030,7 @@ export const NewsIntakePage: React.FC = () => {
                         ['matched', isBn ? 'ক্যাটাগরি মিল' : 'Category matched', rawFilterCounts.matched],
                         ['review', isBn ? 'রিভিউ' : 'Needs review', rawFilterCounts.review],
                         ['duplicate', isBn ? 'ডুপ্লিকেট' : 'Duplicate', rawFilterCounts.duplicate],
+                        ['excluded', isBn ? 'বাদ দেওয়া' : 'Excluded', rawFilterCounts.excluded],
                         ['not_report', isBn ? 'রিপোর্ট নয়' : 'Not a report', rawFilterCounts.not_report],
                         ['error', isBn ? 'ত্রুটি' : 'Error', rawFilterCounts.error],
                       ] as Array<[RawNewsFilter, string, number]>).map(([value, label, count]) => (
@@ -935,6 +1038,7 @@ export const NewsIntakePage: React.FC = () => {
                           key={value}
                           variant={rawFilter === value ? 'secondary' : 'ghost'}
                           size="sm"
+                          className="min-h-11 lg:min-h-8"
                           onClick={() => setRawFilter(value)}
                           aria-pressed={rawFilter === value}
                         >
@@ -942,7 +1046,7 @@ export const NewsIntakePage: React.FC = () => {
                         </Button>
                       ))}
                     </div>
-                    <div className="space-y-3 lg:max-h-[calc(94vh-23rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-2 lg:[scrollbar-gutter:stable]">
+                    <div className="space-y-3 lg:max-h-[calc(94vh-22rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-2 lg:[scrollbar-gutter:stable]">
                     {filteredRawItems.map((item) => (
                       <Card key={item.id} padding="sm" className="h-full">
                         <div className="flex h-full flex-col gap-3">
@@ -1033,13 +1137,14 @@ export const NewsIntakePage: React.FC = () => {
                   <div
                     className={
                       (feedReadyExpanded ? 'block' : 'hidden') +
-                      ' lg:block lg:max-h-[calc(94vh-20rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-2 lg:[scrollbar-gutter:stable]'
+                      ' lg:block lg:max-h-[calc(94vh-22rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-2 lg:[scrollbar-gutter:stable]'
                     }
                   >
                     <div className="mb-3 flex flex-wrap items-center justify-end gap-2 lg:hidden">
                       <Button
                         variant="secondary"
                         size="sm"
+                        className="min-h-11 lg:min-h-8"
                         onClick={selectAllEligible}
                         disabled={eligibleReportIds.length === 0 || loadingReports}
                       >
@@ -1048,6 +1153,7 @@ export const NewsIntakePage: React.FC = () => {
                       <Button
                         variant="ghost"
                         size="sm"
+                        className="min-h-11 lg:min-h-8"
                         onClick={() => setSelectedReportIds([])}
                         disabled={selectedReportIds.length === 0}
                       >
@@ -1098,6 +1204,12 @@ export const NewsIntakePage: React.FC = () => {
                               publishable={eligibleReportIds.includes(reportId)}
                               onToggle={() => toggleReport(reportId)}
                               disabled={publishing}
+                              categoryLabelBn={
+                                taxonomy.segments.find((segment) => segment.id === complaint.categoryId)?.nameBn
+                              }
+                              categoryLabelEn={
+                                taxonomy.segments.find((segment) => segment.id === complaint.categoryId)?.nameEn
+                              }
                             />
                           );
                         })
@@ -1116,11 +1228,24 @@ export const NewsIntakePage: React.FC = () => {
                               </p>
                             </div>
                             {selectedRun.reviewCount > 0 && (
-                              <Tag tone="warning">
-                                {isBn
-                                  ? `${selectedRun.reviewCount}টি সংবাদ রিভিউ প্রয়োজন`
-                                  : `${selectedRun.reviewCount} need review`}
-                              </Tag>
+                              <>
+                                <Tag tone="warning">
+                                  {isBn
+                                    ? `${selectedRun.reviewCount}টি সংবাদ রিভিউ প্রয়োজন`
+                                    : `${selectedRun.reviewCount} need review`}
+                                </Tag>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  className="min-h-11 lg:min-h-8"
+                                  onClick={() => {
+                                    setRawFilter('review');
+                                    setRawNewsExpanded(true);
+                                  }}
+                                >
+                                  {isBn ? 'রিভিউ সংবাদ দেখুন' : 'Show items needing review'}
+                                </Button>
+                              </>
                             )}
                           </div>
                         </Card>
