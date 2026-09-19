@@ -22,6 +22,7 @@ const samakalMode = read('supabase/migrations/20260918185535_news_intake_samakal
 const schedulerMigration = read('supabase/migrations/20260918191945_news_intake_36h_scheduler.sql');
 const schedulerAcknowledgement = read('supabase/migrations/20260919042801_news_intake_scheduler_acknowledgement.sql');
 const publishGroundingGuard = read('supabase/migrations/20260919082837_news_intake_publish_grounding_guard.sql');
+const groundingGuardAlignment = read('supabase/migrations/20260919083754_news_intake_grounding_guard_align_duplicate_gate.sql');
 const automationCore = read('supabase/functions/_shared/newsIntakeAutomationCore.ts');
 const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
 const edge = read('supabase/functions/news-intake-fetch/index.ts');
@@ -140,10 +141,17 @@ for (const needle of [
   'guard_sourced_report_publish_readiness',
   'trg_guard_sourced_report_publish_readiness',
   'SOURCE_GROUNDING_REVIEW_REQUIRED',
-  'SOURCE_DUPLICATE_REVIEW_REQUIRED',
-  'evaluate_sourced_report_duplicate_internal',
 ]) {
-  requireText(publishGroundingGuard, needle, 'News Intake final publish guard');
+  requireText(publishGroundingGuard, needle, 'News Intake grounding publish guard');
+}
+for (const needle of [
+  'guard_sourced_report_publish_readiness',
+  'SOURCE_GROUNDING_REVIEW_REQUIRED',
+]) {
+  requireText(groundingGuardAlignment, needle, 'News Intake grounding guard alignment');
+}
+if (groundingGuardAlignment.includes('evaluate_sourced_report_duplicate_internal')) {
+  errors.push('News Intake grounding guard alignment must not duplicate the existing sourced-report duplicate publish trigger.');
 }
 
 for (const needle of [
