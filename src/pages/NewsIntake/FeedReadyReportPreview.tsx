@@ -5,6 +5,7 @@ import {
   Eye,
   HeartHandshake,
   MapPin,
+  Newspaper,
   Share2,
   ShieldAlert,
   ShieldCheck,
@@ -21,8 +22,18 @@ interface FeedReadyReportPreviewProps {
   selected: boolean;
   publishable?: boolean;
   disabled?: boolean;
+  categoryLabelBn?: string;
+  categoryLabelEn?: string;
   onToggle: () => void;
 }
+
+const DEFAULT_CATEGORY_STYLE = {
+  labelBn: 'ক্যাটাগরি',
+  labelEn: 'Category',
+  badgeClass:
+    'border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200',
+  icon: Newspaper,
+};
 
 const CATEGORY_STYLES: Record<
   string,
@@ -218,10 +229,12 @@ export const FeedReadyReportPreview: React.FC<FeedReadyReportPreviewProps> = ({
   selected,
   publishable = true,
   disabled = false,
+  categoryLabelBn,
+  categoryLabelEn,
   onToggle,
 }) => {
   const category =
-    CATEGORY_STYLES[complaint.categoryId] || CATEGORY_STYLES.public_safety;
+    CATEGORY_STYLES[complaint.categoryId] || DEFAULT_CATEGORY_STYLE;
   const CategoryIcon = category.icon;
   const title = getPublicTitle(complaint, isBn);
   const summary = getPublicSummary(complaint, isBn);
@@ -282,14 +295,14 @@ export const FeedReadyReportPreview: React.FC<FeedReadyReportPreviewProps> = ({
             className={`inline-flex min-h-[26px] shrink-0 items-center gap-1 rounded-md border px-2.5 py-1 text-sm font-semibold leading-none ${category.badgeClass}`}
           >
             <CategoryIcon className="size-3.5" aria-hidden="true" />
-            <span>{isBn ? category.labelBn : category.labelEn}</span>
+            <span>{isBn ? (categoryLabelBn || category.labelBn) : (categoryLabelEn || category.labelEn)}</span>
           </span>
           <p className="shrink-0 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400">
             {previewPublishedTime}
           </p>
         </div>
 
-        <h3 className="line-clamp-2 break-words text-xl font-semibold leading-[30px] text-slate-950 dark:text-slate-50">
+        <h3 className="type-h3 line-clamp-2 break-words text-slate-950 dark:text-slate-50">
           {title}
         </h3>
 

@@ -15,6 +15,7 @@ type Fixture = {
   expectedIncidentDate: string | null;
   expectedDistrict?: string;
   expectedLocationIncludes?: string;
+  expectReviewReason?: boolean;
 };
 
 const fixtures: Fixture[] = [
@@ -62,6 +63,36 @@ const fixtures: Fixture[] = [
     expectedLocationIncludes: 'Gopalnagar',
   },
   {
+    name: 'bdnews24 theft-accusation killing must fail closed to mob-justice review',
+    title: '‘ভাত চুরির’ অপবাদে বিশ্ববিদ্যালয় ছাত্রকে খুন: চারজনের বিরুদ্ধে মামলা',
+    context:
+      'চুরির অপবাদে এক বিশ্ববিদ্যালয় ছাত্রকে পিটিয়ে হত্যার অভিযোগে মামলা হয়েছে।',
+    publishedDate: '2026-09-19',
+    expectedCategory: { segmentId: 'public_safety', subcategoryId: 'mob-justice' },
+    expectedIncidentDate: null,
+    expectReviewReason: true,
+  },
+  {
+    name: 'TBS theft-suspicion assault must not become a theft report',
+    title: 'Khulna student ‘assaulted over theft suspicion’, dies after falling from 5th floor',
+    context:
+      'The student was assaulted over a theft suspicion before his death. The source requires human review of the incident classification.',
+    publishedDate: '2026-09-19',
+    expectedCategory: { segmentId: 'public_safety', subcategoryId: 'mob-justice' },
+    expectedIncidentDate: null,
+    expectedDistrict: 'Khulna',
+    expectReviewReason: true,
+  },
+  {
+    name: 'bdnews24 detainee taken from police is not property snatching',
+    title: 'বরিশালে পুলিশকে পিটিয়ে ‘মাদক কারবারি’ ছিনতাই, পরে বাবা-ছেলে গ্রেপ্তার',
+    context:
+      'পুলিশের কাছ থেকে আটক মাদক কারবারিকে ছিনিয়ে নেওয়ার ঘটনায় পরে বাবা ও ছেলেকে গ্রেপ্তার করা হয়।',
+    publishedDate: '2026-09-19',
+    expectedCategory: null,
+    expectedIncidentDate: null,
+  },
+  {
     name: 'Gas supply recovery headline is not a citizen gas-shortage incident',
     title: 'গ্যাস সংকটে স্বস্তি, জাতীয় গ্রিডে যুক্ত হলো ১২.৫ মিলিয়ন ঘনফুট',
     context:
@@ -96,6 +127,12 @@ for (const fixture of fixtures) {
     fixture.expectedCategory.subcategoryId,
     `${fixture.name}: wrong subcategory`
   );
+  if (fixture.expectReviewReason) {
+    assert.ok(
+      classification?.reviewReason,
+      `${fixture.name}: ambiguous production wording must require human review`
+    );
+  }
 
   const location = findLocation(fullText);
   if (fixture.expectedDistrict) {

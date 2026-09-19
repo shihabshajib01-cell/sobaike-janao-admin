@@ -1,5 +1,5 @@
 import { ActionGroup, IconButton } from './Button';
-import React, { useEffect } from 'react';
+import React, { useEffect, useId, useRef } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/utils';
 
@@ -26,23 +26,73 @@ export const Modal: React.FC<ModalProps> = ({
   className,
   closeOnBackdrop = true,
 }) => {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  const titleId = useId();
+  const descriptionId = useId();
+
   useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    const getFocusable = () =>
+      Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        ) || []
+      ).filter((element) => element.getAttribute('aria-hidden') !== 'true');
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
+      if (!isOpen) return;
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+
+      const focusable = getFocusable();
+      if (focusable.length === 0) {
+        e.preventDefault();
+        dialogRef.current?.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+
+      if (e.shiftKey && (active === first || active === dialogRef.current)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
       }
     };
 
+    const previousOverflow = document.body.style.overflow;
+
     if (isOpen) {
+      previousFocusRef.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
       document.body.style.overflow = 'hidden';
       window.addEventListener('keydown', handleKeyDown);
+      window.requestAnimationFrame(() => {
+        const focusable = getFocusable();
+        (focusable[0] || dialogRef.current)?.focus();
+      });
     }
 
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', handleKeyDown);
+      previousFocusRef.current?.focus();
+      previousFocusRef.current = null;
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -59,6 +109,8 @@ export const Modal: React.FC<ModalProps> = ({
       className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
       role="dialog"
       aria-modal="true"
+      aria-labelledby={title ? titleId : undefined}
+      aria-describedby={description ? descriptionId : undefined}
     >
       {/* Backdrop */}
       <div
@@ -69,6 +121,8 @@ export const Modal: React.FC<ModalProps> = ({
 
       {/* Modal Card */}
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         className={cn(
           'relative w-full bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden z-10 transition-all duration-200 animate-in zoom-in-95',
           size === 'full' && 'h-[94vh] flex flex-col',
@@ -80,12 +134,12 @@ export const Modal: React.FC<ModalProps> = ({
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800/80">
           <div>
             {title && (
-              <h3 className="type-card-title text-slate-900 dark:text-slate-100">
+              <h3 id={titleId} className="type-card-title text-slate-900 dark:text-slate-100">
                 {title}
               </h3>
             )}
             {description && (
-              <p className="type-secondary text-slate-500 dark:text-slate-400 mt-0.5">{description}</p>
+              <p id={descriptionId} className="type-secondary text-slate-500 dark:text-slate-400 mt-0.5">{description}</p>
             )}
           </div>
           <IconButton

@@ -69,6 +69,45 @@ assert.equal(
   'Metaphorical or labor-rights theft wording must not be treated as public-safety theft'
 );
 
+
+const theftAccusationBn = classifyArticle(
+  '‘ভাত চুরির’ অপবাদে বিশ্ববিদ্যালয় ছাত্রকে খুন: চারজনের বিরুদ্ধে মামলা'
+);
+assert.equal(
+  theftAccusationBn?.subcategoryId,
+  'mob-justice',
+  'Theft-accusation violence must not fall through to the broad theft rule'
+);
+assert.ok(
+  theftAccusationBn?.reviewReason,
+  'Ambiguous theft-accusation violence must fail closed to human review'
+);
+
+const theftAccusationEn = classifyArticle(
+  'Khulna student ‘beaten to death’ over ‘stolen meal’'
+);
+assert.equal(
+  theftAccusationEn?.subcategoryId,
+  'mob-justice',
+  'English theft-accusation violence must not be published as theft'
+);
+assert.ok(
+  theftAccusationEn?.reviewReason,
+  'English theft-accusation violence must require human review'
+);
+
+assert.equal(
+  classifyArticle('বরিশালে পুলিশকে পিটিয়ে ‘মাদক কারবারি’ ছিনতাই, পরে বাবা-ছেলে গ্রেপ্তার'),
+  null,
+  'Taking a detainee/suspect from police must not be classified as property snatching'
+);
+
+assert.equal(
+  classifyArticle('ছিনতাই: একজনের হাতে ছুরি, আরেকজন রিকশাযাত্রীর পকেট কাটল')?.subcategoryId,
+  'snatching',
+  'Real property-snatching headlines must remain classified as snatching'
+);
+
 assert.equal(
   inferIncidentDate('ঘটনাটি ১৮ সেপ্টেম্বর ২০২৬ সকালে ঘটে', '2026-09-19'),
   '2026-09-18',
@@ -225,5 +264,5 @@ assert.equal(
 );
 
 console.log(
-  `News Intake behavior audit passed: ${classificationCases.length} published subcategory fixtures, date parsing, location grounding, source-language handling, context generation, and content filtering.`
+  `News Intake behavior audit passed: ${classificationCases.length} published subcategory fixtures plus production false-positive regressions, date parsing, location grounding, source-language handling, context generation, and content filtering.`
 );

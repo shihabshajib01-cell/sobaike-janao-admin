@@ -40,6 +40,11 @@ export type Classification = {
   segmentId: string;
   subcategoryId: string;
   confidence: number;
+  /**
+   * When present, the rule identified a likely category but the wording is
+   * ambiguous enough that automation must stop before draft creation.
+   */
+  reviewReason?: string;
 };
 
 const ARTICLE_RULES: Array<[string, string, number, RegExp[]]> = [
@@ -68,10 +73,33 @@ const ARTICLE_RULES: Array<[string, string, number, RegExp[]]> = [
 const EXTORTION_RE = /(চাঁদাবাজি|চাঁদা\s*(দাবি|আদায়|আদায়)|চাঁদাবাজ|\bextortion\b)/iu;
 const NON_INCIDENT_THEFT_RE = /(শ্রম\s*চুরি|মজুরি\s*চুরি|মেধা\s*চুরি|আইডিয়া\s*চুরি|আইডিয়া\s*চুরি|কনটেন্ট\s*চুরি|wage\s+theft|labor\s+theft|content\s+theft|idea\s+theft|intellectual\s+property\s+theft)/iu;
 const NON_INCIDENT_GAS_RECOVERY_RE = /(গ্যাস\s*সংকটে\s*স্বস্তি|জাতীয়\s*গ্রিডে\s*যুক্ত\s*হলো|জাতীয়\s*গ্রিডে\s*যুক্ত\s*হলো|গ্যাস\s*সরবরাহ.{0,24}(বাড়ল|বাড়ল|বেড়েছে|বেড়েছে|উন্নতি)|gas\s+shortage.{0,24}(eases|improves)|gas\s+supply.{0,24}(improves|increases|restored))/iu;
+// "ছিনতাই" is also used in Bangla for forcibly taking a detainee/person away.
+// That is not a property-snatching report and must not fall through to the broad
+// public-safety snatching keyword rule.
+const NON_PROPERTY_SNATCHING_RE = /(পুলিশ(?:কে)?.{0,80}(আসামি|অভিযুক্ত|সন্দেহভাজন|মাদক\s*কারবারি|আটক).{0,80}ছিনতাই|(আসামি|অভিযুক্ত|সন্দেহভাজন|মাদক\s*কারবারি|আটক).{0,80}ছিনতাই.{0,80}(পুলিশ|থানা)|(?:suspect|detainee|accused|prisoner).{0,80}(?:snatched|taken).{0,80}(?:police|custody))/iu;
+// Theft words can describe the allegation that triggered retaliatory/mob violence
+// rather than the incident being reported. Treat those as a tentative mob-violence
+// classification and force human review instead of publishing them as Theft.
+const THEFT_ALLEGATION_VIOLENCE_RE = /((?:চুরি(?:র)?[\s'’‘"“”\-–—]*(?:অপবাদ|সন্দেহ|অভিযোগ)|ভাত\s*চুরির[\s'’‘"“”\-–—]*অপবাদ|theft\s+(?:suspicion|allegation)|suspected\s+theft|stolen\s+(?:meal|food)).{0,160}(?:পিটিয়ে|পিটিয়ে|পিটুনি|মারধর|হত্যা|খুন|নিহত|assault(?:ed)?|beat(?:en)?|killed|dies|died|death)|(?:পিটিয়ে|পিটিয়ে|পিটুনি|মারধর|হত্যা|খুন|নিহত|assault(?:ed)?|beat(?:en)?|killed|dies|died|death).{0,160}(?:চুরি(?:র)?[\s'’‘"“”\-–—]*(?:অপবাদ|সন্দেহ|অভিযোগ)|theft\s+(?:suspicion|allegation)|stolen\s+(?:meal|food)))/iu;
 
 export const classifyArticle = (value: unknown): Classification | null => {
   const text = normalizeText(value);
-  if (NON_INCIDENT_THEFT_RE.test(text) || NON_INCIDENT_GAS_RECOVERY_RE.test(text)) return null;
+  if (
+    NON_INCIDENT_THEFT_RE.test(text) ||
+    NON_INCIDENT_GAS_RECOVERY_RE.test(text) ||
+    NON_PROPERTY_SNATCHING_RE.test(text)
+  ) return null;
+  if (
+    THEFT_ALLEGATION_VIOLENCE_RE.test(text) &&
+    !/(গণপিটুনি|মব\s*সহিংসতা|mob\s+violence|lynch|beaten\s+by\s+a\s+mob)/iu.test(text)
+  ) {
+    return {
+      segmentId:'public_safety',
+      subcategoryId:'mob-justice',
+      confidence:0.62,
+      reviewReason:'Potential retaliatory or mob violence following a theft allegation; confirm the incident category manually.',
+    };
+  }
   for (const [segmentId, subcategoryId, confidence, patterns] of ARTICLE_RULES) {
     if (patterns.some((pattern) => pattern.test(text))) {
       return { segmentId, subcategoryId, confidence };

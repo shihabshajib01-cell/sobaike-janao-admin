@@ -371,6 +371,50 @@ async function installSupabaseFixtures(page) {
             order: 1,
             isSensitive: false,
           },
+          {
+            id: 'e2e-dynamic-intake',
+            segmentId: 'public_safety',
+            nameEn: 'Dynamic Intake Test',
+            nameBn: 'ডাইনামিক ইনটেক টেস্ট',
+            order: 2,
+            isSensitive: false,
+          },
+        ],
+      };
+    } else if (path.includes('/rest/v1/rpc/get_public_reporting_configuration')) {
+      body = {
+        forms: [
+          {
+            subcategoryId: 'theft',
+            schemaId: 'e2e-theft-legacy',
+            version: 1,
+            engineMode: 'legacy',
+            fields: [],
+          },
+          {
+            subcategoryId: 'e2e-dynamic-intake',
+            schemaId: 'e2e-dynamic-schema',
+            version: 3,
+            engineMode: 'schema',
+            fields: [
+              {
+                fieldKey: 'source_verification_note',
+                fieldType: 'text',
+                storageMode: 'custom_json',
+                storageKey: 'sourceVerificationNote',
+                labelEn: 'Source verification note',
+                labelBn: 'উৎস যাচাই নোট',
+                helperEn: 'Required by the currently published public reporting schema.',
+                helperBn: 'বর্তমানে প্রকাশিত পাবলিক রিপোর্টিং স্কিমায় এটি আবশ্যক।',
+                required: true,
+                active: true,
+                sortOrder: 70,
+                options: [],
+                validation: {},
+                config: {},
+              },
+            ],
+          },
         ],
       };
     } else if (path.includes('/rest/v1/rpc/admin_preview_sourced_report_intake')) {
@@ -876,6 +920,77 @@ await check('News Intake clear source reaches one-click publication', async () =
     }),
     'one-click publish did not land on the created report'
   );
+
+  await context.close();
+});
+
+await check('News Intake manual form follows the published dynamic schema and fails closed', async () => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const page = await context.newPage();
+  attachPageGuards(page, 'local-news-intake-dynamic-schema');
+  await installSupabaseFixtures(page);
+
+  await page.goto(hashUrl(LOCAL_URL, '/news-intake'), {
+    waitUntil: 'domcontentloaded',
+    timeout: 30000,
+  });
+  await page.getByRole('button', { name: 'Check Now', exact: true }).click();
+  await page.getByText('Manual intake', { exact: true }).click();
+  await page.getByRole('button', { name: 'Open Manual Intake', exact: true }).click();
+
+  await page.locator('#news-intake-source-url').fill(
+    'https://www.thedailystar.net/e2e-news-intake'
+  );
+  await page.getByRole('button', { name: 'Fetch Metadata', exact: true }).click();
+
+  await page.getByLabel('Category *', { exact: true }).selectOption('public_safety');
+  await page.getByLabel('Subcategory *', { exact: true }).selectOption('e2e-dynamic-intake');
+
+  await expectVisible(
+    page.getByText('Published v3', { exact: true }),
+    'published schema version was not shown in Manual News Intake'
+  );
+  const dynamicField = page.getByLabel('Source verification note *', { exact: true });
+  await expectVisible(dynamicField, 'required published-schema custom field did not render');
+
+  await page.getByLabel('Report title (source language) *', { exact: true }).fill(
+    'Dynamic schema intake report'
+  );
+  await page.getByLabel('Incident context (source language) *', { exact: true }).fill(
+    'Source-backed incident context for published-schema regression coverage.'
+  );
+  await page.getByLabel('Incident date *').fill('2026-09-18');
+  await page.getByLabel('Division *').selectOption({ label: 'Dhaka' });
+  await page.getByLabel('District *').selectOption({ label: 'Dhaka' });
+  await page.getByLabel('Area', { exact: true }).fill('E2E Intake Area');
+
+  await page
+    .getByRole('button', { name: 'Check Source & Duplicates', exact: true })
+    .click();
+  await expectVisible(
+    page.getByText(/Complete the required published-form fields: Source verification note/),
+    'missing required published-schema field did not block duplicate preview'
+  );
+
+  await dynamicField.fill('Verified against the final source article.');
+  await page
+    .getByRole('button', { name: 'Check Source & Duplicates', exact: true })
+    .click();
+  await expectVisible(
+    page.getByText('Clear as a new incident', { exact: true }),
+    'published-schema field completion did not unblock the safe intake preview'
+  );
+
+  const smallAction = page
+    .getByRole('dialog')
+    .locator('[data-button-size="sm"]')
+    .first();
+  const smallActionBox = await smallAction.boundingBox();
+  if (!smallActionBox || smallActionBox.height < 44) {
+    throw new Error(
+      `mobile News Intake small action target is below 44px: ${smallActionBox?.height || 0}px`
+    );
+  }
 
   await context.close();
 });
