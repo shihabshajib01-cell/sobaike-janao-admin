@@ -8,6 +8,7 @@ const requireText = (source, needle, label) => {
 
 const migration = read('supabase/migrations/20260918154536_sourced_report_duplicate_guard.sql');
 const hardening = read('supabase/migrations/20260918154616_sourced_report_duplicate_guard_hardening.sql');
+const publishGuard = read('supabase/migrations/20260919082837_news_intake_publish_grounding_guard.sql');
 const types = read('src/types/Complaint.ts');
 const service = read('src/services/api/supabaseComplaintService.ts');
 const api = read('src/services/api/complaintApi.ts');
@@ -30,6 +31,10 @@ for (const [needle, label] of [
 
 requireText(hardening, 'idx_report_duplicate_overrides_report_b_id', 'override FK index');
 requireText(hardening, 'report_duplicate_overrides_authenticated_deny', 'override direct-access deny policy');
+requireText(publishGuard, 'trg_guard_sourced_report_publish_readiness', 'final sourced-report publish trigger');
+requireText(publishGuard, 'evaluate_sourced_report_duplicate_internal', 'final duplicate recheck');
+requireText(publishGuard, 'SOURCE_DUPLICATE_REVIEW_REQUIRED', 'fail-closed final duplicate result');
+requireText(publishGuard, 'SOURCE_GROUNDING_REVIEW_REQUIRED', 'source-grounding quarantine gate');
 
 requireText(types, "originType?: 'citizen' | 'sourced_report' | string", 'Complaint origin type');
 requireText(types, 'ReportDuplicateCheckResult', 'duplicate result types');
@@ -77,5 +82,5 @@ if (errors.length > 0) {
 }
 
 console.log(
-  'Sourced-report duplicate audit passed: global source uniqueness, conservative incident review, audited overrides, and fail-closed publication are protected.'
+  'Sourced-report duplicate audit passed: global source uniqueness, conservative incident review, audited overrides, and transaction-level final publication rechecks are protected.'
 );
