@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Button } from '@/components/ui/Button';
+import { Button, ButtonBase } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { FeedbackNotice } from '@/components/ui/FeedbackNotice';
 import { Modal } from '@/components/ui/Modal';
@@ -785,8 +785,7 @@ export const NewsIntakePage: React.FC = () => {
 
               <div className="grid items-start gap-4 lg:grid-cols-2">
                 <section className="min-w-0">
-                  <button
-                    type="button"
+                  <ButtonBase
                     className="mb-2 flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left dark:border-slate-800 dark:bg-slate-900/60 lg:hidden"
                     aria-expanded={rawNewsExpanded}
                     onClick={() => setRawNewsExpanded((value) => !value)}
@@ -806,7 +805,7 @@ export const NewsIntakePage: React.FC = () => {
                       }
                       aria-hidden="true"
                     />
-                  </button>
+                  </ButtonBase>
 
                   <div
                     className={
@@ -857,8 +856,7 @@ export const NewsIntakePage: React.FC = () => {
                 </section>
 
                 <section className="min-w-0">
-                  <button
-                    type="button"
+                  <ButtonBase
                     className="mb-2 flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left dark:border-slate-800 dark:bg-slate-900/60 lg:hidden"
                     aria-expanded={feedReadyExpanded}
                     onClick={() => setFeedReadyExpanded((value) => !value)}
@@ -880,7 +878,7 @@ export const NewsIntakePage: React.FC = () => {
                       }
                       aria-hidden="true"
                     />
-                  </button>
+                  </ButtonBase>
 
                   <div
                     className={
