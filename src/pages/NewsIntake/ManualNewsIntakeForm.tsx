@@ -911,8 +911,7 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
             <Button
               variant="secondary"
               size="sm"
-                      className="max-sm:min-h-11"
-              className="mt-2"
+              className="mt-2 max-sm:min-h-11"
               onClick={() => navigate(`/complaints/${encodeURIComponent(createdReportId)}`)}
               leftIcon={<ExternalLink />}
             >
