@@ -325,7 +325,7 @@ for (const needle of [
   'feedReadyExpanded',
   'scrollbar-gutter:stable',
   'lg:max-h-[calc(94vh-22rem)]',
-  'min-h-11 lg:min-h-8',
+  'max-sm:[&_[data-button-size=sm]]:min-h-11',
   'Show items needing review',
   'aria-expanded',
   'ManualNewsIntakeForm',
