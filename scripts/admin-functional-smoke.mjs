@@ -981,9 +981,12 @@ await check('News Intake manual form follows the published dynamic schema and fa
     'published-schema field completion did not unblock the safe intake preview'
   );
 
-  const smallActions = page.locator('button.max-sm\\:min-h-11');
-  if ((await smallActions.count()) === 0) {
-    throw new Error('mobile News Intake actions are missing the 44px touch-target guard');
+  const smallAction = page.locator('[data-button-size="sm"]').first();
+  const smallActionBox = await smallAction.boundingBox();
+  if (!smallActionBox || smallActionBox.height < 44) {
+    throw new Error(
+      `mobile News Intake small action target is below 44px: ${smallActionBox?.height || 0}px`
+    );
   }
 
   await context.close();
