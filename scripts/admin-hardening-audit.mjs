@@ -98,7 +98,7 @@ const createUserEdge = read('supabase/functions/admin-create-user/index.ts');
 for (const needle of [
   'npm:@supabase/supabase-js@2.112.4',
   'cleanPassword.length < 12',
-  'ADMIN_ALLOWED_ORIGINS',
+  'ALLOWED_ORIGINS',
 ]) {
   if (!createUserEdge.includes(needle)) {
     fail('Admin user creation Edge hardening is missing: ' + needle);
@@ -111,7 +111,7 @@ if (createUserEdge.includes('"Access-Control-Allow-Origin": "*"')) {
 const deleteUserEdge = read('supabase/functions/admin-delete-user/index.ts');
 for (const needle of [
   'npm:@supabase/supabase-js@2.112.4',
-  'ADMIN_ALLOWED_ORIGINS',
+  'ALLOWED_ORIGINS',
 ]) {
   if (!deleteUserEdge.includes(needle)) {
     fail('Admin user deletion Edge hardening is missing: ' + needle);
