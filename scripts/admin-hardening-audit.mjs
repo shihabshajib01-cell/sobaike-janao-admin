@@ -171,4 +171,22 @@ for (const needle of [
   }
 }
 
+
+const formLifecycleMigrationFile = 'supabase/migrations/20260919153609_reporting_form_taxonomy_lifecycle_guard.sql';
+if (!fs.existsSync(formLifecycleMigrationFile)) {
+  fail('missing reporting-form taxonomy lifecycle guard migration');
+}
+const formLifecycleMigration = read(formLifecycleMigrationFile);
+for (const needle of [
+  'PUBLISHED_FORM_REQUIRES_ACTIVE_SUBCATEGORY',
+  'PUBLISHED_FORM_REQUIRES_ACTIVE_SEGMENT',
+  'trg_archive_forms_on_subcategory_deactivate',
+  'trg_archive_forms_on_segment_deactivate',
+  "status = 'archived'",
+]) {
+  if (!formLifecycleMigration.includes(needle)) {
+    fail('reporting-form taxonomy lifecycle guard is missing: ' + needle);
+  }
+}
+
 console.log('Admin hardening audit passed: E2E test mode is DEV-only, auth bootstrap is bounded, MFA/AAL2 guards are present, privileged Edge CORS is restricted, News Intake resolves and blocks private addresses, production source maps are disabled, and browser smoke follows the deployed commit.');
