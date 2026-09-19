@@ -26,6 +26,37 @@ const normalizeField = (raw: any): ReportingFormField => ({
 });
 
 export class ReportingFormApi {
+  async getPublished(subcategoryId: string): Promise<ReportingFormBundle> {
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase reporting form service is not configured.');
+    }
+
+    const { data, error } = await supabase.rpc('get_public_reporting_configuration');
+    if (error) {
+      throw new Error(`Failed to load published form configuration: ${error.message}`);
+    }
+
+    const raw = (data || {}) as any;
+    const form = Array.isArray(raw.forms)
+      ? raw.forms.find((item: any) => String(item?.subcategoryId || '') === subcategoryId)
+      : null;
+
+    if (!form) return { schema: null, fields: [] };
+
+    return {
+      schema: {
+        id: String(form.schemaId || ''),
+        scopeType: 'subcategory',
+        scopeId: subcategoryId,
+        version: Number(form.version || 0),
+        status: 'published',
+        engineMode: form.engineMode === 'schema' ? 'schema' : 'legacy',
+        publishedAt: form.publishedAt || null,
+      },
+      fields: Array.isArray(form.fields) ? form.fields.map(normalizeField) : [],
+    };
+  }
+
   async get(subcategoryId: string): Promise<ReportingFormBundle> {
     if (!isSupabaseConfigured) {
       throw new Error('Supabase reporting form service is not configured.');
