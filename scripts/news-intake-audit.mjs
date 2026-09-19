@@ -90,6 +90,8 @@ for (const needle of [
   'inferIncidentDate',
   'inferSpecificLocationPhrase',
   'inferDistrictWideScope',
+  "location.quality !== 'multiple_locations'",
+  "location.locationScope !== 'multi_location'",
   'buildSourceLanguageFields',
   'scoreDiscoveryLink',
   'MAX_ARTICLE_AGE_DAYS',
@@ -146,6 +148,8 @@ for (const needle of [
 
 for (const needle of [
   'admin_get_news_intake_taxonomy',
+  'admin_get_location_taxonomy',
+  'admin_resolve_news_intake_location',
   "public.has_permission('complaints.publish')",
   "config_status='published'",
 ]) {
@@ -300,6 +304,7 @@ for (const needle of [
   "supabase.rpc('admin_create_sourced_report_from_intake'",
   "supabase.rpc('admin_merge_intake_source'",
   "supabase.rpc('admin_get_news_intake_taxonomy'",
+  "supabase.rpc('admin_get_location_taxonomy'",
 ]) {
   requireText(api, needle, 'News Intake API');
 }
