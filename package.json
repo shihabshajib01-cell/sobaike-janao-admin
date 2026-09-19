@@ -20,7 +20,9 @@
     "audit:hardening": "node scripts/admin-hardening-audit.mjs",
     "audit:duplicate-reports": "node scripts/sourced-report-duplicate-audit.mjs",
     "audit:news-intake": "node scripts/news-intake-audit.mjs",
-    "audit:news-intake-behavior": "tsx scripts/news-intake-behavior-audit.ts"
+    "audit:news-intake-behavior": "tsx scripts/news-intake-behavior-audit.ts",
+    "audit:news-intake-publisher-fixtures": "tsx scripts/news-intake-publisher-fixture-audit.ts",
+    "audit:news-intake-preview-parity": "node scripts/news-intake-preview-parity-audit.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",

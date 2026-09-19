@@ -67,10 +67,11 @@ const ARTICLE_RULES: Array<[string, string, number, RegExp[]]> = [
 
 const EXTORTION_RE = /(চাঁদাবাজি|চাঁদা\s*(দাবি|আদায়|আদায়)|চাঁদাবাজ|\bextortion\b)/iu;
 const NON_INCIDENT_THEFT_RE = /(শ্রম\s*চুরি|মজুরি\s*চুরি|মেধা\s*চুরি|আইডিয়া\s*চুরি|আইডিয়া\s*চুরি|কনটেন্ট\s*চুরি|wage\s+theft|labor\s+theft|content\s+theft|idea\s+theft|intellectual\s+property\s+theft)/iu;
+const NON_INCIDENT_GAS_RECOVERY_RE = /(গ্যাস\s*সংকটে\s*স্বস্তি|জাতীয়\s*গ্রিডে\s*যুক্ত\s*হলো|জাতীয়\s*গ্রিডে\s*যুক্ত\s*হলো|গ্যাস\s*সরবরাহ.{0,24}(বাড়ল|বাড়ল|বেড়েছে|বেড়েছে|উন্নতি)|gas\s+shortage.{0,24}(eases|improves)|gas\s+supply.{0,24}(improves|increases|restored))/iu;
 
 export const classifyArticle = (value: unknown): Classification | null => {
   const text = normalizeText(value);
-  if (NON_INCIDENT_THEFT_RE.test(text)) return null;
+  if (NON_INCIDENT_THEFT_RE.test(text) || NON_INCIDENT_GAS_RECOVERY_RE.test(text)) return null;
   for (const [segmentId, subcategoryId, confidence, patterns] of ARTICLE_RULES) {
     if (patterns.some((pattern) => pattern.test(text))) {
       return { segmentId, subcategoryId, confidence };
@@ -163,13 +164,19 @@ const incidentLocationScopes = (text: string) =>
 
 const locationFromScope = (scope: string, district?: string | null) => {
   // Incident sentences often use a bare proper place after "at/near" without
-  // adding words such as area, road, market, or village. Prefer the first
-  // source-backed proper place so later home/hospital references do not win.
-  const englishIncidentPlace = scope.match(
-    /\b(?:at|near)\s+([A-Z][A-Za-z0-9.'’\-]*(?:\s+[A-Z][A-Za-z0-9.'’\-]*){0,5})(?=\s+(?:around|about|at|on|when|where|while|after|before|and|but)|[,.!?]|$)/u
-  )?.[1];
-  if (englishIncidentPlace) {
-    const candidate=compactLocationPhrase(englishIncidentPlace);
+  // adding words such as area, road, market, or village. Evaluate each match
+  // in reading order, but ignore medical/destination phrases such as
+  // "died at RMCH" so they cannot beat the actual incident place.
+  const englishIncidentPlacePattern =
+    /\b(?:at|near)\s+([A-Z][A-Za-z0-9.'’\-]*(?:\s+[A-Z][A-Za-z0-9.'’\-]*){0,5})(?=\s+(?:around|about|at|on|when|where|while|after|before|and|but)|[,.!?]|$)/gu;
+  for (const match of scope.matchAll(englishIncidentPlacePattern)) {
+    const matchIndex=match.index ?? 0;
+    const prefix=scope.slice(Math.max(0,matchIndex-48),matchIndex);
+    const medicalDestination=
+      /(?:dies?|died|death|treated|admitted|hospitali[sz]ed|taken|shifted|referred)\s*$/i.test(prefix);
+    if (medicalDestination) continue;
+
+    const candidate=compactLocationPhrase(match[1] || '');
     if (locationCandidateIsUsable(candidate,district)) return candidate;
   }
 
@@ -286,7 +293,7 @@ const relativeIncidentDateFromText = (text: string, publishedDate?: string | nul
 };
 
 const INCIDENT_DATE_CUE_RE =
-  /(ঘটনাটি|এ ঘটনা|এই ঘটনা|দুর্ঘটনাটি|হামলাটি|ধর্ষণের ঘটনা|ছিনতাইয়ের ঘটনা|ছিনতাইয়ের ঘটনা|ডাকাতির ঘটনা|চুরির ঘটনা|ঘটেছে|ঘটে|ঘটেছিল|সংঘটিত|incident|accident|attack|rape|robbery|snatching|theft)/iu;
+  /(ঘটনাটি|এ ঘটনা|এই ঘটনা|দুর্ঘটনা(?:টি|য়|য়)?|হামলাটি|ধর্ষণের ঘটনা|ছিনতাইয়ের ঘটনা|ছিনতাইয়ের ঘটনা|ডাকাতির ঘটনা|চুরির ঘটনা|ঘটেছে|ঘটে|ঘটেছিল|সংঘটিত|নিয়ন্ত্রণ হারিয়ে|নিয়ন্ত্রণ হারিয়ে|incident|accident|attack|rape|robbery|snatching|theft|lost control)/iu;
 
 export const inferIncidentDate = (value: unknown, publishedDate?: string | null) => {
   const text = asciiDigits(normalizeText(value));
