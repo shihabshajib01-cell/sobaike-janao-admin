@@ -72,6 +72,8 @@ export const NewsIntakePage: React.FC = () => {
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [reportMap, setReportMap] = useState<Record<string, Complaint | null>>({});
   const [loadingReports, setLoadingReports] = useState(false);
+  const [reportLoadErrors, setReportLoadErrors] = useState<string[]>([]);
+  const [manualSourceUrl, setManualSourceUrl] = useState('');
   const [selectedReportIds, setSelectedReportIds] = useState<string[]>([]);
   const [rawNewsExpanded, setRawNewsExpanded] = useState(true);
   const [feedReadyExpanded, setFeedReadyExpanded] = useState(true);
@@ -128,6 +130,7 @@ export const NewsIntakePage: React.FC = () => {
 
     setSelectedReportIds([]);
     setReportMap({});
+    setReportLoadErrors([]);
     if (reportIds.length === 0) return;
 
     setLoadingReports(true);
@@ -142,6 +145,9 @@ export const NewsIntakePage: React.FC = () => {
         })
       );
       setReportMap(Object.fromEntries(entries));
+      setReportLoadErrors(
+        entries.filter(([, complaint]) => complaint === null).map(([reportId]) => reportId)
+      );
     } finally {
       setLoadingReports(false);
     }
@@ -153,6 +159,8 @@ export const NewsIntakePage: React.FC = () => {
     setSelectedRunId(null);
     setSelectedReportIds([]);
     setReportMap({});
+    setReportLoadErrors([]);
+    setManualSourceUrl('');
     setPublishOutcomes([]);
     setWorkspaceError(null);
     setWorkspaceOpen(true);
@@ -223,20 +231,34 @@ export const NewsIntakePage: React.FC = () => {
     }
   };
 
-  const feedReadyItems = useMemo(
+  const feedDisplayItems = useMemo(
     () =>
       selectedItems.filter((item) => {
         if (item.action !== 'created_draft' || !item.reportId) return false;
-        return reportMap[String(item.reportId)]?.status === 'submitted';
+        return Boolean(reportMap[String(item.reportId)]);
       }),
     [selectedItems, reportMap]
   );
 
-  const eligibleReportIds = useMemo(
+  const feedReadyItems = useMemo(
     () =>
-      feedReadyItems
-        .map((item) => String(item.reportId))
-        .filter(Boolean),
+      feedDisplayItems.filter((item) => {
+        const complaint = reportMap[String(item.reportId)];
+        const reviewRequired =
+          (complaint as Complaint & {
+            customFieldAnswers?: Record<string, unknown>;
+          } | null)?.customFieldAnswers?.newsIntakeReviewRequired === true;
+        return (
+          item.duplicateStatus === 'clear' &&
+          complaint?.status === 'submitted' &&
+          !reviewRequired
+        );
+      }),
+    [feedDisplayItems, reportMap]
+  );
+
+  const eligibleReportIds = useMemo(
+    () => feedReadyItems.map((item) => String(item.reportId)).filter(Boolean),
     [feedReadyItems]
   );
 
@@ -250,6 +272,30 @@ export const NewsIntakePage: React.FC = () => {
 
   const selectAllEligible = () => {
     setSelectedReportIds(eligibleReportIds);
+  };
+
+  const requestWorkspaceClose = () => {
+    if (scanning || publishing) {
+      setWorkspaceError(
+        isBn
+          ? 'চলমান কাজ শেষ হলে ওয়ার্কস্পেস বন্ধ করুন।'
+          : 'Wait for the current operation to finish before closing the workspace.'
+      );
+      return;
+    }
+    setWorkspaceOpen(false);
+  };
+
+  const reviewItemManually = (item: NewsIntakeAutomationItem) => {
+    if (item.reportId) {
+      setWorkspaceOpen(false);
+      navigate(`/complaints/${encodeURIComponent(String(item.reportId))}`);
+      return;
+    }
+    setManualSourceUrl(item.canonicalUrl);
+    setMode('manual');
+    setStep(2);
+    setWorkspaceError(null);
   };
 
   const handlePublishSelected = async () => {
@@ -590,7 +636,7 @@ export const NewsIntakePage: React.FC = () => {
 
       <Modal
         isOpen={workspaceOpen}
-        onClose={() => setWorkspaceOpen(false)}
+        onClose={requestWorkspaceClose}
         size="full"
         closeOnBackdrop={false}
         title={isBn ? 'নিউজ ইনটেক ওয়ার্কস্পেস' : 'News Intake Workspace'}
@@ -718,7 +764,7 @@ export const NewsIntakePage: React.FC = () => {
           )}
 
           {step === 2 && mode === 'manual' && (
-            <ManualNewsIntakeForm />
+            <ManualNewsIntakeForm initialSourceUrl={manualSourceUrl} />
           )}
 
           {step === 2 && mode === 'automatic' && selectedRun && (
@@ -834,15 +880,29 @@ export const NewsIntakePage: React.FC = () => {
                               {item.reason}
                             </p>
                           )}
-                          <a
-                            href={item.canonicalUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="mt-auto inline-flex items-center gap-1 type-action-sm text-sky-700 hover:underline dark:text-sky-400"
-                          >
-                            <ExternalLink className="size-3.5" />
-                            {isBn ? 'মূল সংবাদ খুলুন' : 'Open source'}
-                          </a>
+                          <div className="mt-auto flex flex-wrap items-center gap-2">
+                            <a
+                              href={item.canonicalUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 type-action-sm text-sky-700 hover:underline dark:text-sky-400"
+                            >
+                              <ExternalLink className="size-3.5" />
+                              {isBn ? 'মূল সংবাদ খুলুন' : 'Open source'}
+                            </a>
+                            {item.action === 'needs_review' && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => reviewItemManually(item)}
+                                leftIcon={<Newspaper />}
+                              >
+                                {item.reportId
+                                  ? isBn ? 'ড্রাফট রিভিউ করুন' : 'Review draft'
+                                  : isBn ? 'ম্যানুয়ালি রিভিউ করুন' : 'Review manually'}
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </Card>
                     ))}
@@ -906,6 +966,25 @@ export const NewsIntakePage: React.FC = () => {
                     </div>
 
                     <div className="space-y-3">
+                      {reportLoadErrors.length > 0 && (
+                        <FeedbackNotice tone="warning">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <p>
+                              {isBn
+                                ? `${reportLoadErrors.length}টি রিপোর্ট প্রিভিউ লোড করা যায়নি।`
+                                : `${reportLoadErrors.length} report preview(s) could not be loaded.`}
+                            </p>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => selectedRun && void loadReportCards(selectedRun)}
+                              disabled={loadingReports}
+                            >
+                              {isBn ? 'আবার চেষ্টা করুন' : 'Retry'}
+                            </Button>
+                          </div>
+                        </FeedbackNotice>
+                      )}
                       {loadingReports && selectedRun.createdCount > 0 ? (
                         <Card padding="sm">
                           <div className="flex min-h-40 items-center justify-center">
@@ -914,8 +993,8 @@ export const NewsIntakePage: React.FC = () => {
                             </p>
                           </div>
                         </Card>
-                      ) : feedReadyItems.length > 0 ? (
-                        feedReadyItems.map((item) => {
+                      ) : feedDisplayItems.length > 0 ? (
+                        feedDisplayItems.map((item) => {
                           const reportId = String(item.reportId);
                           const complaint = reportMap[reportId];
                           if (!complaint) return null;
@@ -926,6 +1005,7 @@ export const NewsIntakePage: React.FC = () => {
                               complaint={complaint}
                               isBn={isBn}
                               selected={selectedReportIds.includes(reportId)}
+                              publishable={eligibleReportIds.includes(reportId)}
                               onToggle={() => toggleReport(reportId)}
                               disabled={publishing}
                             />
