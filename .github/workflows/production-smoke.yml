@@ -79,7 +79,7 @@ jobs:
           import json
           from pathlib import Path
 
-          expected = "2026-09-19.2"
+          expected = "2026-09-19.3"
           actual = json.loads(Path('/tmp/platform-sync-contract.json').read_text())
           if actual != expected:
               raise SystemExit(
