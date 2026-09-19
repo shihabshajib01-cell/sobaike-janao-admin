@@ -252,9 +252,9 @@ const extractArticle = (html: string, finalUrl: string, publisherFallback: strin
   let canonicalUrl = finalUrl;
   try { canonicalUrl = new URL(canonicalRaw,finalUrl).toString(); } catch {}
   const sourcePublishedDate = extractPublishedDate(html,jsonLd);
+  const articleMatch = html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i);
   let body = String(jsonLd?.articleBody || '').trim();
   if (!body) {
-    const articleMatch = html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i);
     const scope = articleMatch?.[1] || html;
     body = [...scope.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)]
       .map((m)=>stripTags(m[1]))
@@ -264,6 +264,14 @@ const extractArticle = (html: string, finalUrl: string, publisherFallback: strin
   }
   body = clip(stripTags(body),12000);
   const excerpt = clip(description || body,1800);
+  // Do not treat a section/index page as a news article merely because it has
+  // an OpenGraph title. A real article must expose article JSON-LD, an
+  // <article> element, or a publication date together with substantive body text.
+  const articleDocumentSignal = Boolean(
+    jsonLd ||
+    articleMatch ||
+    (sourcePublishedDate && body.length >= 300)
+  );
   return {
     title:clip(title,500),
     publisherName:clip(publisherName,160),
@@ -271,6 +279,7 @@ const extractArticle = (html: string, finalUrl: string, publisherFallback: strin
     sourcePublishedDate,
     body,
     excerpt,
+    articleDocumentSignal,
   };
 };
 
@@ -283,7 +292,7 @@ const isLikelyArticlePath = (url: URL, anchorText: string, baseUrl: string) => {
   if (!path || path==='/') return false;
   if (canonicalHostKey(url.hostname) !== canonicalHostKey(new URL(baseUrl).hostname)) return false;
   if (/\.(jpg|jpeg|png|gif|webp|svg|pdf|mp4|mp3)$/i.test(path)) return false;
-  if (/(\/tag\/|\/topic\/|\/category\/|\/author\/|\/search(?:\/|$)|\/videos?(?:\/|$)|\/m\/video(?:\/|$)|\/photo(?:\/|$)|\/epaper|\/archive|\/contact|\/privacy|\/terms|\/careers?(?:\/|$)|\/jobs?(?:\/|$)|\/cdn-cgi(?:\/|$)|\/opinion(?:\/|$)|\/editorials?(?:\/|$)|\/analysis(?:\/|$)|\/features?(?:\/|$)|\/lifestyle(?:\/|$)|\/sports?(?:\/|$)|\/cricket(?:\/|$)|\/entertainment(?:\/|$)|\/multimedia(?:\/|$)|\/star-multimedia(?:\/|$))/i.test(path)) return false;
+  if (/(\/tag\/|\/topic\/|\/category\/|\/author\/|\/search(?:\/|$)|\/videos?(?:\/|$)|\/m\/video(?:\/|$)|\/photo(?:\/|$)|\/epaper|\/archive|\/contact|\/privacy|\/terms|\/careers?(?:\/|$)|\/jobs?(?:\/|$)|\/cdn-cgi(?:\/|$)|\/opinion(?:\/|$)|\/editorials?(?:\/|$)|\/analysis(?:\/|$)|\/features?(?:\/|$)|\/lifestyle(?:\/|$)|\/sports?(?:\/|$)|\/cricket(?:\/|$)|\/entertainment(?:\/|$)|\/multimedia(?:\/|$)|\/star-multimedia(?:\/|$)|\/law-our-rights(?:\/|$)|\/investigative-stories(?:\/|$)|\/books-literature(?:\/|$)|\/health-fitness(?:\/|$))/i.test(path)) return false;
   const cleanText=stripTags(anchorText);
   if (cleanText.length<16) return false;
   if (/^(home|latest|latest news|all news|news|bangladesh|national|country|crime\s*&\s*justice|crime and justice|politics|business|education|world|জাতীয়|সর্বশেষ|দেশ|রাজনীতি|ব্যবসা|শিক্ষা|আরও|আরও দেখুন|more)$/iu.test(cleanText)) return false;
@@ -327,7 +336,9 @@ const mapLimit = async <T,R>(items: T[], limit: number, worker: (item:T,index:nu
     while(true){
       const index=cursor++;
       if(index>=items.length) break;
-      try{results[index]=await worker(items[index],index);}catch{}
+      // Every source/article worker already records expected per-item failures.
+      // Let unexpected exceptions escape so a run cannot silently lose items.
+      results[index]=await worker(items[index],index);
     }
   });
   await Promise.all(runners);
@@ -679,6 +690,22 @@ const processNewsIntakeRun = async (
           return;
         }
 
+        if(!article.articleDocumentSignal){
+          await record({
+            itemKind:'article',
+            sourceHostname:source.hostname,
+            publisherName:article.publisherName,
+            canonicalUrl:article.canonicalUrl,
+            sourceTitle:article.title,
+            sourcePublishedDate:article.sourcePublishedDate||'',
+            contentLanguage:source.languageHint||'unknown',
+            action:'discovered',
+            duplicateStatus:'unavailable',
+            reason:'Section, homepage, or non-article URL was excluded from automated intake.',
+          });
+          return;
+        }
+
         let finalPathLooksLikeArticle=false;
         try {
           finalPathLooksLikeArticle=isLikelyArticlePath(
@@ -742,6 +769,25 @@ const processNewsIntakeRun = async (
             action:'discovered',
             duplicateStatus:'unavailable',
             reason:'No supported incident category matched in the article headline or summary with enough confidence.',
+          });
+          return;
+        }
+
+        if(classification.reviewReason){
+          await record({
+            itemKind:'article',
+            sourceHostname:source.hostname,
+            publisherName:article.publisherName,
+            canonicalUrl:article.canonicalUrl,
+            sourceTitle:article.title,
+            sourcePublishedDate:article.sourcePublishedDate||'',
+            contentLanguage:language,
+            segmentId:classification.segmentId,
+            subcategoryId:classification.subcategoryId,
+            confidence:classification.confidence,
+            action:'needs_review',
+            duplicateStatus:'unavailable',
+            reason:classification.reviewReason,
           });
           return;
         }
@@ -1130,7 +1176,9 @@ const processNewsIntakeRun = async (
       {
         p_run_id:runId,
         p_status:processingErrors>0?'partial':'completed',
-        p_error:null,
+        p_error:processingErrors>0
+          ? `${processingErrors} source/article processing error(s) were recorded; review the run items for details.`
+          : null,
       }
     );
     if(finishError) throw new Error(finishError.message);
