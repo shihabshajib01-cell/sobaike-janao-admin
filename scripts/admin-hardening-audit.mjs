@@ -172,20 +172,28 @@ for (const needle of [
 }
 
 
-const formLifecycleMigrationFile = 'supabase/migrations/20260919153609_reporting_form_taxonomy_lifecycle_guard.sql';
-if (!fs.existsSync(formLifecycleMigrationFile)) {
-  fail('missing reporting-form taxonomy lifecycle guard migration');
+const formPrepublicationRestoreFile = 'supabase/migrations/20260919154219_restore_reporting_form_prepublication_contract.sql';
+if (!fs.existsSync(formPrepublicationRestoreFile)) {
+  fail('missing reporting-form prepublication contract correction');
 }
-const formLifecycleMigration = read(formLifecycleMigrationFile);
+const formPrepublicationRestore = read(formPrepublicationRestoreFile);
 for (const needle of [
-  'PUBLISHED_FORM_REQUIRES_ACTIVE_SUBCATEGORY',
-  'PUBLISHED_FORM_REQUIRES_ACTIVE_SEGMENT',
-  'trg_archive_forms_on_subcategory_deactivate',
-  'trg_archive_forms_on_segment_deactivate',
-  "status = 'archived'",
+  'trg_enforce_reporting_form_active_taxonomy',
+  'archive_reporting_forms_for_inactive_taxonomy',
+  "scope_id='bribe-paid'",
+  "status='published'",
 ]) {
-  if (!formLifecycleMigration.includes(needle)) {
-    fail('reporting-form taxonomy lifecycle guard is missing: ' + needle);
+  if (!formPrepublicationRestore.includes(needle)) {
+    fail('reporting-form prepublication correction is missing: ' + needle);
+  }
+}
+
+for (const needle of [
+  'Verify public reporting configuration exposure contract',
+  'get_public_reporting_configuration',
+]) {
+  if (!productionSmoke.includes(needle)) {
+    fail('production smoke is missing reporting-config exposure guard: ' + needle);
   }
 }
 
