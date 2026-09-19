@@ -93,6 +93,28 @@ const fixtures: Fixture[] = [
     expectedIncidentDate: null,
   },
   {
+    name: 'Child abduction report is classified under public safety child protection',
+    title: 'ঢাকায় ৯ বছরের শিশু অপহরণ, থানায় মামলা',
+    context:
+      'পুলিশ জানিয়েছে ১৯ সেপ্টেম্বর ২০২৬ সন্ধ্যায় ঢাকার মিরপুর এলাকায় ৯ বছরের এক শিশু অপহরণের ঘটনা ঘটে।',
+    publishedDate: '2026-09-20',
+    expectedCategory: { segmentId: 'public_safety', subcategoryId: 'child_abduction_murder' },
+    expectedIncidentDate: '2026-09-19',
+    expectedDistrict: 'Dhaka',
+    expectedLocationIncludes: 'মিরপুর',
+  },
+  {
+    name: 'Child road-crash fatality remains a road accident',
+    title: 'School bus crash kills a 10-year-old child in Dhaka',
+    context:
+      'Police said the road crash happened on 19 September 2026 near Mirpur in Dhaka.',
+    publishedDate: '2026-09-20',
+    expectedCategory: { segmentId: 'road_transport', subcategoryId: 'road-accident' },
+    expectedIncidentDate: '2026-09-19',
+    expectedDistrict: 'Dhaka',
+    expectedLocationIncludes: 'Mirpur',
+  },
+  {
     name: 'Gas supply recovery headline is not a citizen gas-shortage incident',
     title: 'গ্যাস সংকটে স্বস্তি, জাতীয় গ্রিডে যুক্ত হলো ১২.৫ মিলিয়ন ঘনফুট',
     context:
