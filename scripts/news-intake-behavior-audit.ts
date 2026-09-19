@@ -58,6 +58,11 @@ assert.equal(
   null,
   'Political programme headlines must not be treated as report incidents without incident keywords'
 );
+assert.equal(
+  classifyArticle('ইতিহাসের বৃহত্তম শ্রম চুরি করেছে প্রতিষ্ঠান'),
+  null,
+  'Metaphorical or labor-rights theft wording must not be treated as public-safety theft'
+);
 
 assert.equal(
   inferIncidentDate('ঘটনাটি ১৮ সেপ্টেম্বর ২০২৬ সকালে ঘটে', '2026-09-19'),
