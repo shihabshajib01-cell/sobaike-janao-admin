@@ -24,6 +24,7 @@ const schedulerAcknowledgement = read('supabase/migrations/20260919042801_news_i
 const publishGroundingGuard = read('supabase/migrations/20260919082837_news_intake_publish_grounding_guard.sql');
 const groundingGuardAlignment = read('supabase/migrations/20260919083754_news_intake_grounding_guard_align_duplicate_gate.sql');
 const adminLocationRpcHardening = read('supabase/migrations/20260919085346_news_intake_admin_location_rpc_hardening.sql');
+const sourceLanguageGroundingCleanup = read('supabase/migrations/20260919093100_news_intake_source_language_grounding_cleanup.sql');
 const automationCore = read('supabase/functions/_shared/newsIntakeAutomationCore.ts');
 const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
 const edge = read('supabase/functions/news-intake-fetch/index.ts');
@@ -105,6 +106,8 @@ requireText(behaviorAudit, 'Incident-anchored date must win over page publicatio
 requireText(behaviorAudit, 'Incident location must win over later narrative text ending in এলাকা', 'News Intake location grounding regression');
 requireText(behaviorAudit, 'Bangla weekday plus bare সকাল must resolve against same-day publication date', 'News Intake Bangla daypart incident-date regression');
 requireText(behaviorAudit, 'Excerpt/body overlap must not duplicate the same incident sentence', 'News Intake context de-duplication regression');
+requireText(behaviorAudit, 'Near-identical excerpt/body incident sentences must not be repeated', 'News Intake near-duplicate context regression');
+requireText(behaviorAudit, 'Bare proper incident place after at must be retained', 'News Intake bare-place grounding regression');
 requireText(collisionErrorContract, "errcode='P0001'", 'News Intake collision error contract');
 requireText(collisionErrorContract, 'DUPLICATE_REVIEW_REQUIRED', 'News Intake collision error contract');
 requireText(explicitDenyPolicies, 'news_intake_runs_authenticated_deny', 'News Intake run-table deny policy');
@@ -114,6 +117,15 @@ requireText(schemaRequirementGuard, 'trg_guard_sourced_report_schema_requirement
 requireText(schemaRequirementGuard, 'schemaValidation', 'News Intake schema-aware preview');
 requireText(adminLocationRpcHardening, 'revoke execute on function public.admin_get_location_taxonomy()', 'News Intake admin taxonomy anonymous-execute hardening');
 requireText(adminLocationRpcHardening, 'revoke execute on function public.admin_resolve_news_intake_location(text, text)', 'News Intake location resolver anonymous-execute hardening');
+for (const needle of [
+  'normalize_sourced_report_public_language',
+  'trg_normalize_sourced_report_public_language',
+  "v_prefs := v_prefs - 'publicTitleEn' - 'publicSummaryEn'",
+  "v_prefs := v_prefs - 'publicTitleBn' - 'publicSummaryBn'",
+  'newsIntakeReviewRequired',
+]) {
+  requireText(sourceLanguageGroundingCleanup, needle, 'News Intake source-language grounding cleanup');
+}
 requireText(samakalMode, "scan_enabled=false", 'Samakal safe source mode');
 for (const needle of [
   'pg_cron',
