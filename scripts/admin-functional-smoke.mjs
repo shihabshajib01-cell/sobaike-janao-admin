@@ -709,7 +709,7 @@ await check('News Intake automatic review selects only intended reports and keep
   await page.getByRole('button', { name: 'Scan All Sources Now', exact: true }).click();
 
   await expectVisible(
-    page.getByText('2 ready · 0 selected', { exact: true }),
+    page.getByText('2 ready · 0 selected', { exact: true }).first(),
     'automatic review did not expose the two safe feed-ready reports'
   );
 
