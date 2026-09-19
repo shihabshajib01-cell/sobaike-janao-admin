@@ -80,6 +80,33 @@ export interface NewsIntakeTaxonomySubcategory {
   isSensitive: boolean;
 }
 
+
+export interface NewsIntakeLocationDivision {
+  id: string;
+  nameEn: string;
+  nameBn: string;
+}
+
+export interface NewsIntakeLocationDistrict {
+  id: string;
+  divisionId: string;
+  nameEn: string;
+  nameBn: string;
+}
+
+export interface NewsIntakeLocationUpazila {
+  id: string;
+  districtId: string;
+  nameEn: string;
+  nameBn: string;
+}
+
+export interface NewsIntakeLocationTaxonomy {
+  divisions: NewsIntakeLocationDivision[];
+  districts: NewsIntakeLocationDistrict[];
+  upazilas: NewsIntakeLocationUpazila[];
+}
+
 export interface NewsIntakeTaxonomy {
   segments: NewsIntakeTaxonomySegment[];
   subcategories: NewsIntakeTaxonomySubcategory[];
