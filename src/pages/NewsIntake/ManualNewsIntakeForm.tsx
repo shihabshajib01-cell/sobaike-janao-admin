@@ -24,6 +24,7 @@ import {
   NewsIntakeReport,
   NewsIntakeSource,
   NewsIntakeTaxonomy,
+  NewsIntakeLocationTaxonomy,
 } from '@/types/NewsIntake';
 
 const EMPTY_SOURCE: NewsIntakeSource = {
@@ -70,7 +71,7 @@ const EMPTY_REPORT: NewsIntakeReport = {
   intimateWhatHappened: '',
   intimatePlatform: '',
   mobJusticeDetails: null,
-  customFieldAnswers: {},
+  customFieldAnswers: { locationScope: 'specific' },
 };
 
 const AGE_OPTIONS = [
@@ -161,6 +162,15 @@ const optionList = (
 ): Array<{ value: string; label: string }> =>
   options.map(([value, en, bn]) => ({ value, label: isBn ? bn : en }));
 
+const detectSourceLanguage = (value: string): 'bn' | 'en' | 'mixed' | 'unknown' => {
+  const hasBn = /[ঀ-৿]/u.test(value);
+  const hasEn = /[A-Za-z]/.test(value);
+  if (hasBn && hasEn) return 'mixed';
+  if (hasBn) return 'bn';
+  if (hasEn) return 'en';
+  return 'unknown';
+};
+
 export const ManualNewsIntakeForm: React.FC = () => {
   const navigate = useNavigate();
   const { language } = useLanguage();
@@ -171,6 +181,11 @@ export const ManualNewsIntakeForm: React.FC = () => {
   const [taxonomy, setTaxonomy] = useState<NewsIntakeTaxonomy>({
     segments: [],
     subcategories: [],
+  });
+  const [locationTaxonomy, setLocationTaxonomy] = useState<NewsIntakeLocationTaxonomy>({
+    divisions: [],
+    districts: [],
+    upazilas: [],
   });
   const [metadataPreview, setMetadataPreview] = useState('');
   const [preview, setPreview] = useState<NewsIntakePreview | null>(null);
@@ -187,17 +202,22 @@ export const ManualNewsIntakeForm: React.FC = () => {
   useEffect(() => {
     let mounted = true;
     setLoadingTaxonomy(true);
-    newsIntakeApi
-      .getTaxonomy()
-      .then((data) => {
-        if (mounted) setTaxonomy(data);
+
+    Promise.all([
+      newsIntakeApi.getTaxonomy(),
+      newsIntakeApi.getLocationTaxonomy(),
+    ])
+      .then(([nextTaxonomy, nextLocationTaxonomy]) => {
+        if (!mounted) return;
+        setTaxonomy(nextTaxonomy);
+        setLocationTaxonomy(nextLocationTaxonomy);
       })
       .catch((err: unknown) => {
         if (mounted) {
           setError(
             err instanceof Error
               ? err.message
-              : 'Failed to load News Intake categories.'
+              : 'Failed to load News Intake configuration.'
           );
         }
       })
@@ -222,6 +242,30 @@ export const ManualNewsIntakeForm: React.FC = () => {
     (item) => item.id === report.subcategoryId
   );
 
+  const selectedDivision = locationTaxonomy.divisions.find(
+    (item) => item.nameEn === report.division || item.nameBn === report.division || item.id === report.division
+  );
+
+  const availableDistricts = useMemo(
+    () =>
+      selectedDivision
+        ? locationTaxonomy.districts.filter((item) => item.divisionId === selectedDivision.id)
+        : [],
+    [locationTaxonomy.districts, selectedDivision]
+  );
+
+  const selectedDistrict = availableDistricts.find(
+    (item) => item.nameEn === report.district || item.nameBn === report.district || item.id === report.district
+  );
+
+  const availableUpazilas = useMemo(
+    () =>
+      selectedDistrict
+        ? locationTaxonomy.upazilas.filter((item) => item.districtId === selectedDistrict.id)
+        : [],
+    [locationTaxonomy.upazilas, selectedDistrict]
+  );
+
   const invalidatePreview = () => {
     setPreview(null);
     setSuccess(null);
@@ -238,7 +282,20 @@ export const ManualNewsIntakeForm: React.FC = () => {
     invalidatePreview();
   };
 
-  const payload = (): NewsIntakePayload => ({ source, report });
+  const payload = (): NewsIntakePayload => ({
+    source,
+    report: {
+      ...report,
+      customFieldAnswers: {
+        ...report.customFieldAnswers,
+        sourceLanguage: detectSourceLanguage(source.sourceTitle || report.titleBn),
+        locationScope:
+          String(report.customFieldAnswers?.locationScope || 'specific') === 'district_wide'
+            ? 'district_wide'
+            : 'specific',
+      },
+    },
+  });
 
   const validate = (): string | null => {
     if (!source.canonicalUrl.trim()) {
@@ -265,6 +322,22 @@ export const ManualNewsIntakeForm: React.FC = () => {
       return isBn
         ? 'ঘটনার তারিখ, বিভাগ ও জেলা আবশ্যক।'
         : 'Incident date, division, and district are required.';
+    }
+    const locationScope = String(report.customFieldAnswers?.locationScope || 'specific');
+    const hasSpecificLocation = Boolean(
+      report.upazilaOrThana.trim() ||
+      report.area.trim() ||
+      report.road.trim() ||
+      report.landmark.trim() ||
+      (
+        report.formattedAddress.trim() &&
+        report.formattedAddress.trim().toLowerCase() !== report.district.trim().toLowerCase()
+      )
+    );
+    if (locationScope !== 'district_wide' && !hasSpecificLocation) {
+      return isBn
+        ? 'নির্দিষ্ট ঘটনার স্থান দিন, অথবা সংবাদটি সত্যিই জেলা-ব্যাপী হলে “জেলা-ব্যাপী” নির্বাচন করুন।'
+        : 'Add a specific incident location, or choose “District-wide” only when the source genuinely covers the whole district.';
     }
     if (report.segmentId === 'harassment') {
       if (
@@ -717,31 +790,83 @@ export const ManualNewsIntakeForm: React.FC = () => {
           </div>
 
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-            <Input
+            <Select
               label={isBn ? 'বিভাগ *' : 'Division *'}
-              value={report.division}
-              onChange={(event) => updateReport({ division: event.target.value })}
+              value={selectedDivision?.nameEn || ''}
+              onChange={(event) => {
+                const division = locationTaxonomy.divisions.find(
+                  (item) => item.nameEn === event.target.value
+                );
+                updateReport({
+                  division: division?.nameEn || '',
+                  district: '',
+                  upazilaOrThana: '',
+                });
+              }}
+              options={[
+                { value: '', label: isBn ? 'বিভাগ নির্বাচন করুন' : 'Select division', disabled: true },
+                ...locationTaxonomy.divisions.map((item) => ({
+                  value: item.nameEn,
+                  label: isBn ? item.nameBn : item.nameEn,
+                })),
+              ]}
             />
-            <Input
+            <Select
               label={isBn ? 'জেলা *' : 'District *'}
-              value={report.district}
-              onChange={(event) => updateReport({ district: event.target.value })}
+              value={selectedDistrict?.nameEn || ''}
+              onChange={(event) => {
+                const district = availableDistricts.find(
+                  (item) => item.nameEn === event.target.value
+                );
+                updateReport({
+                  district: district?.nameEn || '',
+                  upazilaOrThana: '',
+                });
+              }}
+              options={[
+                { value: '', label: isBn ? 'জেলা নির্বাচন করুন' : 'Select district', disabled: true },
+                ...availableDistricts.map((item) => ({
+                  value: item.nameEn,
+                  label: isBn ? item.nameBn : item.nameEn,
+                })),
+              ]}
             />
-            <Input
+            <Select
               label={isBn ? 'উপজেলা / থানা' : 'Upazila / Thana'}
               value={report.upazilaOrThana}
-              onChange={(event) =>
-                updateReport({ upazilaOrThana: event.target.value })
-              }
+              onChange={(event) => updateReport({ upazilaOrThana: event.target.value })}
+              options={[
+                { value: '', label: isBn ? 'প্রযোজ্য হলে নির্বাচন করুন' : 'Select when applicable' },
+                ...availableUpazilas.map((item) => ({
+                  value: item.nameEn,
+                  label: isBn ? item.nameBn : item.nameEn,
+                })),
+              ]}
             />
+            <Select
+              label={isBn ? 'লোকেশন স্কোপ *' : 'Location scope *'}
+              value={String(report.customFieldAnswers?.locationScope || 'specific')}
+              onChange={(event) =>
+                updateReport({
+                  customFieldAnswers: {
+                    ...report.customFieldAnswers,
+                    locationScope: event.target.value,
+                  },
+                })
+              }
+              options={[
+                { value: 'specific', label: isBn ? 'নির্দিষ্ট স্থান' : 'Specific location' },
+                { value: 'district_wide', label: isBn ? 'জেলা-ব্যাপী' : 'District-wide' },
+              ]}
+            />
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
             <Input
               label={isBn ? 'এলাকা' : 'Area'}
               value={report.area}
               onChange={(event) => updateReport({ area: event.target.value })}
             />
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-3">
             <Input
               label={isBn ? 'রাস্তা' : 'Road'}
               value={report.road}
@@ -753,13 +878,15 @@ export const ManualNewsIntakeForm: React.FC = () => {
               onChange={(event) => updateReport({ landmark: event.target.value })}
             />
             <Input
-              label={isBn ? 'ফরম্যাটেড ঠিকানা' : 'Formatted address'}
+              label={isBn ? 'উৎসে থাকা পূর্ণ ঠিকানা' : 'Source-backed full address'}
               value={report.formattedAddress}
               onChange={(event) =>
                 updateReport({ formattedAddress: event.target.value })
               }
             />
           </div>
+
+
 
           {report.segmentId === 'harassment' && (
             <section className="space-y-4 rounded-lg border border-slate-200 p-4 dark:border-slate-800">
