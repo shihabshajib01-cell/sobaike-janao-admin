@@ -541,6 +541,11 @@ await check('News Intake clear source reaches one-click publication', async () =
     'News Intake page title missing'
   );
 
+  await page.getByRole('button', { name: 'Check Now', exact: true }).click();
+  await expectVisible(
+    page.getByRole('heading', { name: 'News Intake Workspace', exact: true }),
+    'News Intake workspace modal did not open'
+  );
   await page.getByText('Manual intake', { exact: true }).click();
   await page.getByRole('button', { name: 'Open Manual Intake', exact: true }).click();
 
