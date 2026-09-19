@@ -67,10 +67,11 @@ const ARTICLE_RULES: Array<[string, string, number, RegExp[]]> = [
 
 const EXTORTION_RE = /(চাঁদাবাজি|চাঁদা\s*(দাবি|আদায়|আদায়)|চাঁদাবাজ|\bextortion\b)/iu;
 const NON_INCIDENT_THEFT_RE = /(শ্রম\s*চুরি|মজুরি\s*চুরি|মেধা\s*চুরি|আইডিয়া\s*চুরি|আইডিয়া\s*চুরি|কনটেন্ট\s*চুরি|wage\s+theft|labor\s+theft|content\s+theft|idea\s+theft|intellectual\s+property\s+theft)/iu;
+const NON_INCIDENT_GAS_RECOVERY_RE = /(গ্যাস\s*সংকটে\s*স্বস্তি|জাতীয়\s*গ্রিডে\s*যুক্ত\s*হলো|জাতীয়\s*গ্রিডে\s*যুক্ত\s*হলো|গ্যাস\s*সরবরাহ.{0,24}(বাড়ল|বাড়ল|বেড়েছে|বেড়েছে|উন্নতি)|gas\s+shortage.{0,24}(eases|improves)|gas\s+supply.{0,24}(improves|increases|restored))/iu;
 
 export const classifyArticle = (value: unknown): Classification | null => {
   const text = normalizeText(value);
-  if (NON_INCIDENT_THEFT_RE.test(text)) return null;
+  if (NON_INCIDENT_THEFT_RE.test(text) || NON_INCIDENT_GAS_RECOVERY_RE.test(text)) return null;
   for (const [segmentId, subcategoryId, confidence, patterns] of ARTICLE_RULES) {
     if (patterns.some((pattern) => pattern.test(text))) {
       return { segmentId, subcategoryId, confidence };
