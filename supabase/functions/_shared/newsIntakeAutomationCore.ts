@@ -66,9 +66,11 @@ const ARTICLE_RULES: Array<[string, string, number, RegExp[]]> = [
 ];
 
 const EXTORTION_RE = /(চাঁদাবাজি|চাঁদা\s*(দাবি|আদায়|আদায়)|চাঁদাবাজ|\bextortion\b)/iu;
+const NON_INCIDENT_THEFT_RE = /(শ্রম\s*চুরি|মজুরি\s*চুরি|মেধা\s*চুরি|আইডিয়া\s*চুরি|আইডিয়া\s*চুরি|কনটেন্ট\s*চুরি|wage\s+theft|labor\s+theft|content\s+theft|idea\s+theft|intellectual\s+property\s+theft)/iu;
 
 export const classifyArticle = (value: unknown): Classification | null => {
   const text = normalizeText(value);
+  if (NON_INCIDENT_THEFT_RE.test(text)) return null;
   for (const [segmentId, subcategoryId, confidence, patterns] of ARTICLE_RULES) {
     if (patterns.some((pattern) => pattern.test(text))) {
       return { segmentId, subcategoryId, confidence };
