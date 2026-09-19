@@ -15,6 +15,7 @@ export interface BannerContent {
   primaryCtaBn: string;
   primaryCtaEn: string;
   showOnHome: boolean;
+  showHomeCta: boolean;
   isActive: boolean;
   sortOrder: number;
 }
@@ -70,6 +71,8 @@ const normalizeContent = (content: BannerContent): BannerContent => ({
   illustrationSrc: content.illustrationSrc.trim(),
   primaryCtaBn: content.primaryCtaBn.trim(),
   primaryCtaEn: content.primaryCtaEn.trim(),
+  // Home heroes navigate to category pages; the report CTA remains category-page only.
+  showHomeCta: false,
   sortOrder: Math.max(1, Math.min(99, Math.trunc(Number(content.sortOrder) || 1))),
 });
 
@@ -114,8 +117,14 @@ export const bannerApi = {
 
     return ((data || []) as BannerRpcRow[]).map((row) => ({
       categoryKey: row.category_key,
-      draftContent: row.draft_content,
-      publishedContent: row.published_content,
+      draftContent: {
+        ...row.draft_content,
+        showHomeCta: row.draft_content?.showHomeCta === true ? true : false,
+      },
+      publishedContent: {
+        ...row.published_content,
+        showHomeCta: row.published_content?.showHomeCta === true ? true : false,
+      },
       draftUpdatedAt: row.draft_updated_at,
       draftUpdatedBy: row.draft_updated_by,
       publishedAt: row.published_at,
