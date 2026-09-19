@@ -889,7 +889,7 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
   const candidates = preview?.duplicate.candidates || [];
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-6 pb-10 max-sm:[&_[data-button-size=sm]]:min-h-11">
 
 
       <FeedbackNotice tone="info" title={isBn ? 'নিরাপদ প্রকাশ নীতি' : 'Safe publishing policy'}>
@@ -911,7 +911,7 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
             <Button
               variant="secondary"
               size="sm"
-              className="mt-2 max-sm:min-h-11"
+              className="mt-2"
               onClick={() => navigate(`/complaints/${encodeURIComponent(createdReportId)}`)}
               leftIcon={<ExternalLink />}
             >
@@ -1695,7 +1695,6 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
                     <Button
                       variant="secondary"
                       size="sm"
-                      className="max-sm:min-h-11"
                       onClick={() => navigate(`/complaints/${encodeURIComponent(item.complaintId)}`)}
                       leftIcon={<ExternalLink />}
                     >
@@ -1744,7 +1743,6 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
                       <Button
                         variant="secondary"
                         size="sm"
-                      className="max-sm:min-h-11"
                         onClick={() => navigate(`/complaints/${encodeURIComponent(candidate.complaintId)}`)}
                         leftIcon={<ExternalLink />}
                       >
@@ -1753,7 +1751,6 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
                       <Button
                         variant="primary"
                         size="sm"
-                      className="max-sm:min-h-11"
                         onClick={() => handleMerge(candidate.complaintId)}
                         isLoading={mergingId === candidate.complaintId}
                         disabled={mergingId !== null || creating}
