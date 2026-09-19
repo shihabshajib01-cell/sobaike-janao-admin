@@ -23,6 +23,7 @@ const schedulerMigration = read('supabase/migrations/20260918191945_news_intake_
 const schedulerAcknowledgement = read('supabase/migrations/20260919042801_news_intake_scheduler_acknowledgement.sql');
 const publishGroundingGuard = read('supabase/migrations/20260919082837_news_intake_publish_grounding_guard.sql');
 const groundingGuardAlignment = read('supabase/migrations/20260919083754_news_intake_grounding_guard_align_duplicate_gate.sql');
+const adminLocationRpcHardening = read('supabase/migrations/20260919085346_news_intake_admin_location_rpc_hardening.sql');
 const automationCore = read('supabase/functions/_shared/newsIntakeAutomationCore.ts');
 const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
 const edge = read('supabase/functions/news-intake-fetch/index.ts');
@@ -102,6 +103,7 @@ requireText(behaviorAudit, 'classificationCases', 'News Intake behavior audit');
 requireText(behaviorAudit, 'English content must not be duplicated', 'News Intake source-language audit');
 requireText(behaviorAudit, 'Incident-anchored date must win over page publication metadata', 'News Intake incident-date grounding regression');
 requireText(behaviorAudit, 'Incident location must win over later narrative text ending in এলাকা', 'News Intake location grounding regression');
+requireText(behaviorAudit, 'Bangla weekday plus bare সকাল must resolve against same-day publication date', 'News Intake Bangla daypart incident-date regression');
 requireText(behaviorAudit, 'Excerpt/body overlap must not duplicate the same incident sentence', 'News Intake context de-duplication regression');
 requireText(collisionErrorContract, "errcode='P0001'", 'News Intake collision error contract');
 requireText(collisionErrorContract, 'DUPLICATE_REVIEW_REQUIRED', 'News Intake collision error contract');
@@ -110,6 +112,8 @@ requireText(explicitDenyPolicies, 'news_intake_run_items_authenticated_deny', 'N
 requireText(schemaRequirementGuard, 'sourced_report_missing_required_fields_internal', 'News Intake schema requirement validator');
 requireText(schemaRequirementGuard, 'trg_guard_sourced_report_schema_requirements', 'News Intake schema requirement trigger');
 requireText(schemaRequirementGuard, 'schemaValidation', 'News Intake schema-aware preview');
+requireText(adminLocationRpcHardening, 'revoke execute on function public.admin_get_location_taxonomy()', 'News Intake admin taxonomy anonymous-execute hardening');
+requireText(adminLocationRpcHardening, 'revoke execute on function public.admin_resolve_news_intake_location(text, text)', 'News Intake location resolver anonymous-execute hardening');
 requireText(samakalMode, "scan_enabled=false", 'Samakal safe source mode');
 for (const needle of [
   'pg_cron',
@@ -274,6 +278,10 @@ for (const needle of [
   'Publish Selected to Feed',
   'FeedReadyReportPreview',
   'feedDisplayItems.map',
+  'rawFilterCounts',
+  'filteredRawItems',
+  'Scan summary:',
+  'aria-pressed={rawFilter === value}',
   "item.duplicateStatus === 'clear'",
   'reportLoadErrors',
   'reviewItemManually',
