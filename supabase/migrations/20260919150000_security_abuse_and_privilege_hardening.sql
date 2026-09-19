@@ -299,20 +299,36 @@ end;
 $function$;
 revoke all on function private.prune_public_security_events() from public, anon, authenticated;
 
-alter function public.submit_public_complaint(jsonb, text, jsonb)
-  rename to submit_public_complaint_internal;
-alter function public.submit_public_configured_complaint(jsonb, text, jsonb)
-  rename to submit_public_configured_complaint_internal;
-alter function public.submit_public_response(text, text, jsonb)
-  rename to submit_public_response_internal;
-alter function public.record_public_visit_session(
-  text, text, text, numeric, numeric, numeric,
-  text, text, text, text, text, text, text, integer, integer, text
-) rename to record_public_visit_session_internal;
-alter function public.track_public_report_view(text)
-  rename to track_public_report_view_internal;
-alter function public.track_public_report_share(text)
-  rename to track_public_report_share_internal;
+do $rename$
+begin
+  if to_regprocedure('public.submit_public_complaint_internal(jsonb,text,jsonb)') is null then
+    alter function public.submit_public_complaint(jsonb, text, jsonb)
+      rename to submit_public_complaint_internal;
+  end if;
+  if to_regprocedure('public.submit_public_configured_complaint_internal(jsonb,text,jsonb)') is null then
+    alter function public.submit_public_configured_complaint(jsonb, text, jsonb)
+      rename to submit_public_configured_complaint_internal;
+  end if;
+  if to_regprocedure('public.submit_public_response_internal(text,text,jsonb)') is null then
+    alter function public.submit_public_response(text, text, jsonb)
+      rename to submit_public_response_internal;
+  end if;
+  if to_regprocedure('public.record_public_visit_session_internal(text,text,text,numeric,numeric,numeric,text,text,text,text,text,text,text,integer,integer,text)') is null then
+    alter function public.record_public_visit_session(
+      text, text, text, numeric, numeric, numeric,
+      text, text, text, text, text, text, text, integer, integer, text
+    ) rename to record_public_visit_session_internal;
+  end if;
+  if to_regprocedure('public.track_public_report_view_internal(text)') is null then
+    alter function public.track_public_report_view(text)
+      rename to track_public_report_view_internal;
+  end if;
+  if to_regprocedure('public.track_public_report_share_internal(text)') is null then
+    alter function public.track_public_report_share(text)
+      rename to track_public_report_share_internal;
+  end if;
+end
+$rename$;
 
 revoke all on function public.submit_public_complaint_internal(jsonb, text, jsonb) from public, anon, authenticated;
 revoke all on function public.submit_public_configured_complaint_internal(jsonb, text, jsonb) from public, anon, authenticated;
