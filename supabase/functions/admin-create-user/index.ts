@@ -102,10 +102,10 @@ serve(async (req: Request) => {
     }
 
     // Password validation
-    if (!cleanPassword || cleanPassword.length < 6) {
+    if (!cleanPassword || cleanPassword.length < 12) {
       return new Response(
         JSON.stringify({
-          error: "Password must be at least 6 characters long.",
+          error: "Password must be at least 12 characters long.",
           code: "WEAK_PASSWORD",
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
