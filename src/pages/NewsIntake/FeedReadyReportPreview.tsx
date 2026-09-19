@@ -19,6 +19,7 @@ interface FeedReadyReportPreviewProps {
   complaint: Complaint;
   isBn: boolean;
   selected: boolean;
+  publishable?: boolean;
   disabled?: boolean;
   onToggle: () => void;
 }
@@ -139,6 +140,7 @@ export const FeedReadyReportPreview: React.FC<FeedReadyReportPreviewProps> = ({
   complaint,
   isBn,
   selected,
+  publishable = true,
   disabled = false,
   onToggle,
 }) => {
@@ -150,22 +152,43 @@ export const FeedReadyReportPreview: React.FC<FeedReadyReportPreviewProps> = ({
   const location = getPublicLocation(complaint, isBn);
   const shouldShowSummary =
     summary.trim().length > 0 && summary.trim() !== title.trim();
+  const status = String(complaint.status || '');
+  const statusLabel = publishable
+    ? (isBn ? 'ফিড-রেডি' : 'Feed ready')
+    : status === 'published'
+      ? (isBn ? 'প্রকাশিত' : 'Published')
+      : status === 'unpublished'
+        ? (isBn ? 'প্রকাশ বন্ধ' : 'Unpublished')
+        : (isBn ? 'রিভিউ প্রয়োজন' : 'Needs review');
+  const statusTone =
+    publishable || status === 'published'
+      ? 'success'
+      : status === 'submitted'
+        ? 'warning'
+        : 'neutral';
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 dark:border-emerald-900/70 dark:bg-emerald-950/25">
         <div className="min-w-0">
-          <Checkbox
-            label={isBn ? 'প্রকাশের জন্য নির্বাচন করুন' : 'Select for publishing'}
-            checked={selected}
-            onChange={onToggle}
-            disabled={disabled}
-            aria-label={
-              isBn ? `${title} প্রকাশের জন্য নির্বাচন করুন` : `Select ${title} for publishing`
-            }
-          />
+          {publishable ? (
+            <Checkbox
+              id={`news-intake-publish-${complaint.id}`}
+              label={isBn ? 'প্রকাশের জন্য নির্বাচন করুন' : 'Select for publishing'}
+              checked={selected}
+              onChange={onToggle}
+              disabled={disabled}
+              aria-label={
+                isBn ? `${title} প্রকাশের জন্য নির্বাচন করুন` : `Select ${title} for publishing`
+              }
+            />
+          ) : (
+            <p className="type-label font-medium text-slate-700 dark:text-slate-300">
+              {statusLabel}
+            </p>
+          )}
         </div>
-        <Tag tone="success">{isBn ? 'ফিড-রেডি' : 'Feed ready'}</Tag>
+        <Tag tone={statusTone}>{statusLabel}</Tag>
       </div>
 
       <article
