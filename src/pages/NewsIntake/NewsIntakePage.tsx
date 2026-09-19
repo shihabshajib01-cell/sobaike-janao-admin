@@ -42,6 +42,7 @@ const EMPTY_DASHBOARD: NewsIntakeAutomationDashboard = {
 
 type IntakeMode = 'automatic' | 'manual';
 type WorkspaceStep = 1 | 2 | 3;
+type RawNewsFilter = 'all' | 'matched' | 'review' | 'duplicate' | 'not_report' | 'error';
 
 interface PublishOutcome {
   reportId: string;
@@ -76,6 +77,7 @@ export const NewsIntakePage: React.FC = () => {
   const [manualSourceUrl, setManualSourceUrl] = useState('');
   const [selectedReportIds, setSelectedReportIds] = useState<string[]>([]);
   const [rawNewsExpanded, setRawNewsExpanded] = useState(true);
+  const [rawFilter, setRawFilter] = useState<RawNewsFilter>('all');
   const [feedReadyExpanded, setFeedReadyExpanded] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [publishOutcomes, setPublishOutcomes] = useState<PublishOutcome[]>([]);
@@ -231,6 +233,40 @@ export const NewsIntakePage: React.FC = () => {
     }
   };
 
+  const rawFilterCounts = useMemo(() => {
+    const matched = selectedItems.filter((item) => Boolean(item.segmentId || item.subcategoryId)).length;
+    const review = selectedItems.filter((item) => item.action === 'needs_review').length;
+    const duplicate = selectedItems.filter(
+      (item) => item.action === 'skip_duplicate' || item.action === 'merged_source'
+    ).length;
+    const notReport = selectedItems.filter(
+      (item) => item.action === 'discovered' && !item.segmentId && !item.subcategoryId
+    ).length;
+    const error = selectedItems.filter((item) => item.action === 'error').length;
+    return { all: selectedItems.length, matched, review, duplicate, not_report: notReport, error };
+  }, [selectedItems]);
+
+  const filteredRawItems = useMemo(() => {
+    if (rawFilter === 'all') return selectedItems;
+    if (rawFilter === 'matched') {
+      return selectedItems.filter((item) => Boolean(item.segmentId || item.subcategoryId));
+    }
+    if (rawFilter === 'review') {
+      return selectedItems.filter((item) => item.action === 'needs_review');
+    }
+    if (rawFilter === 'duplicate') {
+      return selectedItems.filter(
+        (item) => item.action === 'skip_duplicate' || item.action === 'merged_source'
+      );
+    }
+    if (rawFilter === 'not_report') {
+      return selectedItems.filter(
+        (item) => item.action === 'discovered' && !item.segmentId && !item.subcategoryId
+      );
+    }
+    return selectedItems.filter((item) => item.action === 'error');
+  }, [rawFilter, selectedItems]);
+
   const feedDisplayItems = useMemo(
     () =>
       selectedItems.filter((item) => {
@@ -334,8 +370,17 @@ export const NewsIntakePage: React.FC = () => {
 
   const actionLabel = (item: NewsIntakeAutomationItem) => {
     switch (item.action) {
-      case 'created_draft':
+      case 'created_draft': {
+        const complaint = item.reportId ? reportMap[String(item.reportId)] : null;
+        const reviewRequired =
+          (complaint as Complaint & { customFieldAnswers?: Record<string, unknown> } | null)
+            ?.customFieldAnswers?.newsIntakeReviewRequired === true;
+        if (complaint?.status === 'published') return isBn ? 'প্রকাশিত' : 'Published';
+        if (reviewRequired || item.duplicateStatus !== 'clear') {
+          return isBn ? 'রিভিউ প্রয়োজন' : 'Needs review';
+        }
         return isBn ? 'ফিডের জন্য প্রস্তুত' : 'Feed ready';
+      }
       case 'needs_review':
         return isBn ? 'রিভিউ প্রয়োজন' : 'Needs review';
       case 'skip_duplicate':
@@ -350,7 +395,14 @@ export const NewsIntakePage: React.FC = () => {
   };
 
   const actionTone = (item: NewsIntakeAutomationItem) => {
-    if (item.action === 'created_draft') return 'success' as const;
+    if (item.action === 'created_draft') {
+      const complaint = item.reportId ? reportMap[String(item.reportId)] : null;
+      const reviewRequired =
+        (complaint as Complaint & { customFieldAnswers?: Record<string, unknown> } | null)
+          ?.customFieldAnswers?.newsIntakeReviewRequired === true;
+      if (reviewRequired || item.duplicateStatus !== 'clear') return 'warning' as const;
+      return 'success' as const;
+    }
     if (item.action === 'needs_review') return 'warning' as const;
     if (item.action === 'error') return 'danger' as const;
     if (item.action === 'merged_source') return 'info' as const;
@@ -789,6 +841,17 @@ export const NewsIntakePage: React.FC = () => {
 
               </div>
 
+              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2 dark:border-slate-800 dark:bg-slate-900/50">
+                <p className="type-helper font-medium text-slate-600 dark:text-slate-300">
+                  {isBn ? 'স্ক্যান সারাংশ:' : 'Scan summary:'}
+                </p>
+                <Tag tone="neutral">{selectedItems.length} {isBn ? 'স্ক্যানড' : 'scanned'}</Tag>
+                <Tag tone="info">{selectedRun.classifiedCount} {isBn ? 'ক্যাটাগরি মিল' : 'category matches'}</Tag>
+                <Tag tone="success">{eligibleReportIds.length} {isBn ? 'প্রস্তুত' : 'ready'}</Tag>
+                <Tag tone="warning">{selectedRun.reviewCount} {isBn ? 'রিভিউ' : 'review'}</Tag>
+                <Tag tone="neutral">{selectedRun.duplicateCount} {isBn ? 'ডুপ্লিকেট' : 'duplicates'}</Tag>
+              </div>
+
               <div className="hidden gap-3 px-1 lg:grid lg:grid-cols-2">
                 <div className="flex min-h-10 items-center">
                   <p className="type-label font-semibold text-slate-900 dark:text-slate-100">
@@ -856,10 +919,31 @@ export const NewsIntakePage: React.FC = () => {
                   <div
                     className={
                       (rawNewsExpanded ? 'block' : 'hidden') +
-                      ' space-y-3 lg:block lg:max-h-[calc(94vh-20rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-2 lg:[scrollbar-gutter:stable]'
+                      ' lg:block'
                     }
                   >
-                    {selectedItems.map((item) => (
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                      {([
+                        ['all', isBn ? 'সব' : 'All', rawFilterCounts.all],
+                        ['matched', isBn ? 'ক্যাটাগরি মিল' : 'Category matched', rawFilterCounts.matched],
+                        ['review', isBn ? 'রিভিউ' : 'Needs review', rawFilterCounts.review],
+                        ['duplicate', isBn ? 'ডুপ্লিকেট' : 'Duplicate', rawFilterCounts.duplicate],
+                        ['not_report', isBn ? 'রিপোর্ট নয়' : 'Not a report', rawFilterCounts.not_report],
+                        ['error', isBn ? 'ত্রুটি' : 'Error', rawFilterCounts.error],
+                      ] as Array<[RawNewsFilter, string, number]>).map(([value, label, count]) => (
+                        <Button
+                          key={value}
+                          variant={rawFilter === value ? 'secondary' : 'ghost'}
+                          size="sm"
+                          onClick={() => setRawFilter(value)}
+                          aria-pressed={rawFilter === value}
+                        >
+                          {label} · {count}
+                        </Button>
+                      ))}
+                    </div>
+                    <div className="space-y-3 lg:max-h-[calc(94vh-23rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-2 lg:[scrollbar-gutter:stable]">
+                    {filteredRawItems.map((item) => (
                       <Card key={item.id} padding="sm" className="h-full">
                         <div className="flex h-full flex-col gap-3">
                           <div className="flex flex-wrap items-center gap-2">
@@ -912,6 +996,12 @@ export const NewsIntakePage: React.FC = () => {
                         <p>{isBn ? 'এই রানে কোনো সংবাদ আইটেম পাওয়া যায়নি।' : 'No news items were found in this run.'}</p>
                       </FeedbackNotice>
                     )}
+                    {selectedItems.length > 0 && filteredRawItems.length === 0 && (
+                      <FeedbackNotice tone="neutral">
+                        <p>{isBn ? 'এই ফিল্টারে কোনো সংবাদ নেই।' : 'No news items match this filter.'}</p>
+                      </FeedbackNotice>
+                    )}
+                    </div>
                   </div>
                 </section>
 
