@@ -11,6 +11,7 @@ import {
 import { AdminLayout } from '@/layouts';
 import { LoadingState, AccessDenied } from '@/components/common';
 import { useAuth } from '@/context/AuthContext';
+import { AdminMfaGate } from '@/components/auth/AdminMfaGate';
 import { getFirstAccessibleRoute } from '@/routes/routes.config';
 import {
   LoginPage,
@@ -53,9 +54,11 @@ const ProtectedAdminRoute: React.FC = () => {
   }
 
   return (
-    <AdminLayout>
-      <Outlet />
-    </AdminLayout>
+    <AdminMfaGate>
+      <AdminLayout>
+        <Outlet />
+      </AdminLayout>
+    </AdminMfaGate>
   );
 };
 
