@@ -77,5 +77,5 @@ if (errors.length > 0) {
 }
 
 console.log(
-  'Sourced-report duplicate audit passed: global source uniqueness, conservative incident review, audited overrides, and fail-closed publication are protected.'
+  'Sourced-report duplicate audit passed: global source uniqueness, conservative incident review, audited overrides, and transaction-level final publication rechecks are protected.'
 );

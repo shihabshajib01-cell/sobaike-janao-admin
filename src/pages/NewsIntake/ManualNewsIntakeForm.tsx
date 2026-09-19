@@ -171,12 +171,21 @@ const detectSourceLanguage = (value: string): 'bn' | 'en' | 'mixed' | 'unknown' 
   return 'unknown';
 };
 
-export const ManualNewsIntakeForm: React.FC = () => {
+interface ManualNewsIntakeFormProps {
+  initialSourceUrl?: string;
+}
+
+export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
+  initialSourceUrl = '',
+}) => {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const isBn = language === 'bn';
 
-  const [source, setSource] = useState<NewsIntakeSource>(EMPTY_SOURCE);
+  const [source, setSource] = useState<NewsIntakeSource>({
+    ...EMPTY_SOURCE,
+    canonicalUrl: initialSourceUrl,
+  });
   const [report, setReport] = useState<NewsIntakeReport>(EMPTY_REPORT);
   const [taxonomy, setTaxonomy] = useState<NewsIntakeTaxonomy>({
     segments: [],
@@ -198,6 +207,18 @@ export const ManualNewsIntakeForm: React.FC = () => {
   const [createdReportId, setCreatedReportId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!initialSourceUrl) return;
+    setSource((current) => ({
+      ...current,
+      canonicalUrl: initialSourceUrl,
+    }));
+    setPreview(null);
+    setCreatedReportId(null);
+    setError(null);
+    setSuccess(null);
+  }, [initialSourceUrl]);
 
   useEffect(() => {
     let mounted = true;

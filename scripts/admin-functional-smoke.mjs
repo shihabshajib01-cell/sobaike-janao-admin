@@ -6,6 +6,9 @@ const E2E_SUPABASE_ORIGIN = 'https://admin-e2e.invalid';
 const E2E_SOURCED_REPORT_ID = 'E2E-SOURCED-001';
 const E2E_EXISTING_REPORT_ID = 'E2E-EXISTING-001';
 const E2E_NEWS_INTAKE_REPORT_ID = 'E2E-NEWS-001';
+const E2E_AUTO_RUN_ID = '11111111-2222-4333-8444-555555555555';
+const E2E_AUTO_REPORT_A = 'E2E-AUTO-001';
+const E2E_AUTO_REPORT_B = 'E2E-AUTO-002';
 
 const e2eNewsIntakeComplaint = {
   id: E2E_NEWS_INTAKE_REPORT_ID,
@@ -28,6 +31,131 @@ const e2eNewsIntakeComplaint = {
   area: 'E2E Intake Area',
   created_at: '2026-09-18T12:00:00Z',
   updated_at: '2026-09-18T12:00:00Z',
+};
+
+const autoComplaint = (id, title, status = 'submitted') => ({
+  id,
+  segment_id: 'public_safety',
+  subcategory_id: 'theft',
+  title,
+  title_en: '',
+  description: title + ' সম্পর্কিত বিশ্বস্ত সংবাদ উৎসভিত্তিক পরীক্ষামূলক বিবরণ।',
+  description_en: '',
+  incident_date: '2026-09-18',
+  status,
+  priority: 'medium',
+  origin_type: 'sourced_report',
+  privacy_choice: 'anonymous',
+  publication_preferences: {
+    showDescription: true,
+    showGeneralLocation: true,
+  },
+  custom_field_answers: {
+    sourceLanguage: 'bn',
+    automatedIntake: true,
+    locationScope: 'specific',
+  },
+  division: 'Dhaka',
+  district: 'Dhaka',
+  upazila_or_thana: 'Tejgaon',
+  area: 'E2E Intake Area',
+  formatted_address: 'E2E Intake Area, Tejgaon, Dhaka',
+  created_at: '2026-09-19T07:00:00Z',
+  updated_at: '2026-09-19T07:00:00Z',
+});
+
+const automaticDashboardFixture = {
+  sources: [
+    {
+      hostname: 'www.thedailystar.net',
+      publisherName: 'The Daily Star',
+      homepageUrl: 'https://www.thedailystar.net/',
+      languageHint: 'en',
+      priority: 1,
+      scanEnabled: true,
+      automationNote: null,
+      lastScannedAt: '2026-09-19T07:00:00Z',
+    },
+  ],
+  runs: [
+    {
+      runId: E2E_AUTO_RUN_ID,
+      status: 'completed',
+      triggerType: 'manual',
+      sourceCount: 1,
+      discoveredCount: 3,
+      classifiedCount: 2,
+      duplicateCount: 0,
+      createdCount: 2,
+      mergedCount: 0,
+      reviewCount: 1,
+      skippedCount: 0,
+      errorCount: 0,
+      startedAt: '2026-09-19T07:00:00Z',
+      completedAt: '2026-09-19T07:00:05Z',
+      errorSummary: null,
+      items: [
+        {
+          id: 'auto-item-a',
+          itemKind: 'article',
+          publisherName: 'The Daily Star',
+          sourceHostname: 'www.thedailystar.net',
+          canonicalUrl: 'https://www.thedailystar.net/e2e-auto-a',
+          sourceTitle: 'E2E automatic report A',
+          sourcePublishedDate: '2026-09-19',
+          contentLanguage: 'bn',
+          segmentId: 'public_safety',
+          subcategoryId: 'theft',
+          confidence: 0.94,
+          duplicateStatus: 'clear',
+          action: 'created_draft',
+          reportId: E2E_AUTO_REPORT_A,
+          reason: 'Source-grounded draft created; publication remains a separate admin action.',
+        },
+        {
+          id: 'auto-item-b',
+          itemKind: 'article',
+          publisherName: 'The Daily Star',
+          sourceHostname: 'www.thedailystar.net',
+          canonicalUrl: 'https://www.thedailystar.net/e2e-auto-b',
+          sourceTitle: 'E2E automatic report B',
+          sourcePublishedDate: '2026-09-19',
+          contentLanguage: 'bn',
+          segmentId: 'public_safety',
+          subcategoryId: 'theft',
+          confidence: 0.93,
+          duplicateStatus: 'clear',
+          action: 'created_draft',
+          reportId: E2E_AUTO_REPORT_B,
+          reason: 'Source-grounded draft created; publication remains a separate admin action.',
+        },
+        {
+          id: 'auto-item-review',
+          itemKind: 'article',
+          publisherName: 'The Daily Star',
+          sourceHostname: 'www.thedailystar.net',
+          canonicalUrl: 'https://www.thedailystar.net/e2e-auto-review',
+          sourceTitle: 'E2E source requiring review',
+          sourcePublishedDate: '2026-09-19',
+          contentLanguage: 'en',
+          segmentId: 'public_safety',
+          subcategoryId: 'theft',
+          confidence: 0.88,
+          duplicateStatus: 'review',
+          action: 'needs_review',
+          reportId: null,
+          reason: 'Incident date could not be established safely from the source.',
+        },
+      ],
+    },
+  ],
+  automation: {
+    enabled: true,
+    intervalHours: 36,
+    lastAutoDispatchedAt: '2026-09-18T19:00:00Z',
+    nextAutoDueAt: '2026-09-20T07:00:00Z',
+    running: false,
+  },
 };
 
 const duplicateClearFixture = {
@@ -183,6 +311,8 @@ function attachPageGuards(page, label) {
 }
 
 async function installSupabaseFixtures(page) {
+  const publishedIds = new Set();
+
   await page.route(E2E_SUPABASE_ORIGIN + '/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -195,7 +325,14 @@ async function installSupabaseFixtures(page) {
 
     let body = [];
 
-    if (path.includes('/functions/v1/news-intake-fetch')) {
+    if (path.includes('/functions/v1/news-intake-scan')) {
+      body = {
+        runId: E2E_AUTO_RUN_ID,
+        status: 'completed',
+        triggerType: 'manual',
+        alreadyRunning: false,
+      };
+    } else if (path.includes('/functions/v1/news-intake-fetch')) {
       body = {
         sourceType: 'news',
         publisherName: 'The Daily Star',
@@ -206,6 +343,8 @@ async function installSupabaseFixtures(page) {
         hostname: 'www.thedailystar.net',
         approved: true,
       };
+    } else if (path.includes('/rest/v1/rpc/admin_get_news_intake_automation_dashboard')) {
+      body = automaticDashboardFixture;
     } else if (path.includes('/rest/v1/rpc/admin_get_location_taxonomy')) {
       body = {
         divisions: [
@@ -252,9 +391,12 @@ async function installSupabaseFixtures(page) {
         status: 'published',
       };
     } else if (path.includes('/rest/v1/rpc/admin_publish_complaint')) {
+      const payload = request.postDataJSON?.() || {};
+      const complaintId = String(payload.p_complaint_id || E2E_NEWS_INTAKE_REPORT_ID);
+      publishedIds.add(complaintId);
       body = {
         success: true,
-        complaint_id: E2E_NEWS_INTAKE_REPORT_ID,
+        complaint_id: complaintId,
         status: 'published',
         previous_status: 'submitted',
       };
@@ -342,7 +484,19 @@ async function installSupabaseFixtures(page) {
         ? e2eSourcedComplaint
         : requestedId.includes(E2E_NEWS_INTAKE_REPORT_ID)
           ? e2eNewsIntakeComplaint
-          : [];
+          : requestedId.includes(E2E_AUTO_REPORT_A)
+            ? autoComplaint(
+                E2E_AUTO_REPORT_A,
+                'স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট A',
+                publishedIds.has(E2E_AUTO_REPORT_A) ? 'published' : 'submitted'
+              )
+            : requestedId.includes(E2E_AUTO_REPORT_B)
+              ? autoComplaint(
+                  E2E_AUTO_REPORT_B,
+                  'স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট B',
+                  publishedIds.has(E2E_AUTO_REPORT_B) ? 'published' : 'submitted'
+                )
+              : [];
     } else if (path.includes('/rest/v1/rpc/')) {
       body = [];
     } else if (path.includes('/auth/v1/')) {
@@ -357,7 +511,10 @@ async function installSupabaseFixtures(page) {
       body: request.method() === 'HEAD' ? '' : JSON.stringify(body),
     });
   });
+
+  return { publishedIds };
 }
+
 
 const browser = await chromium.launch({ headless: true });
 
@@ -532,6 +689,97 @@ await check('Sourced report publish is blocked until duplicate review is resolve
 
   if (await publishLive.isDisabled()) {
     throw new Error('Publish Live did not become available after duplicate review cleared');
+  }
+
+  await context.close();
+});
+
+await check('News Intake automatic review selects only intended reports and keeps published history visible', async () => {
+  const context = await browser.newContext({ viewport: { width: 1365, height: 1000 } });
+  const page = await context.newPage();
+  attachPageGuards(page, 'local-news-intake-automatic');
+  const fixtures = await installSupabaseFixtures(page);
+
+  await page.goto(hashUrl(LOCAL_URL, '/news-intake'), {
+    waitUntil: 'domcontentloaded',
+    timeout: 30000,
+  });
+
+  await page.getByRole('button', { name: 'Check Now', exact: true }).click();
+  await page.getByRole('button', { name: 'Scan All Sources Now', exact: true }).click();
+
+  await expectVisible(
+    page.getByText('2 ready · 0 selected', { exact: true }),
+    'automatic review did not expose the two safe feed-ready reports'
+  );
+
+  const reportA = page.getByLabel('Select স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট A for publishing');
+  const reportB = page.getByLabel('Select স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট B for publishing');
+  await expectVisible(reportA, 'first automatic report selector missing');
+  await expectVisible(reportB, 'second automatic report selector missing');
+
+  await reportA.check();
+  await expectVisible(
+    page.getByText('1 selected', { exact: true }),
+    'selection count did not update'
+  );
+  await page.getByRole('button', { name: 'Publish Selected to Feed', exact: true }).click();
+
+  await expectVisible(
+    page.getByText('1 reports published to the feed', { exact: true }),
+    'automatic selected-only publish result missing'
+  );
+  if (!fixtures.publishedIds.has(E2E_AUTO_REPORT_A)) {
+    throw new Error('selected automatic report was not published');
+  }
+  if (fixtures.publishedIds.has(E2E_AUTO_REPORT_B)) {
+    throw new Error('unselected automatic report was published');
+  }
+
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
+  await page.getByRole('button', { name: 'Review', exact: true }).first().click();
+
+  await expectVisible(
+    page.getByText('Published', { exact: true }),
+    'historical run hid the already-published feed-ready report'
+  );
+  await expectVisible(
+    page.getByLabel('Select স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট B for publishing'),
+    'remaining submitted report did not stay selectable in historical review'
+  );
+
+  await context.close();
+});
+
+await check('News Intake mobile raw and feed-ready panels collapse independently', async () => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const page = await context.newPage();
+  attachPageGuards(page, 'local-news-intake-mobile-review');
+  await installSupabaseFixtures(page);
+
+  await page.goto(hashUrl(LOCAL_URL, '/news-intake'), {
+    waitUntil: 'domcontentloaded',
+    timeout: 30000,
+  });
+
+  await page.getByRole('button', { name: 'Review', exact: true }).first().click();
+
+  const rawToggle = page.getByRole('button', { name: /Raw news found/ });
+  const readyToggle = page.getByRole('button', { name: /Feed-ready report/ });
+  await expectVisible(rawToggle, 'mobile raw-news collapse control missing');
+  await expectVisible(readyToggle, 'mobile feed-ready collapse control missing');
+
+  await rawToggle.click();
+  if ((await rawToggle.getAttribute('aria-expanded')) !== 'false') {
+    throw new Error('raw-news panel did not collapse');
+  }
+  if ((await readyToggle.getAttribute('aria-expanded')) !== 'true') {
+    throw new Error('feed-ready panel collapsed when only raw news was toggled');
+  }
+
+  await readyToggle.click();
+  if ((await readyToggle.getAttribute('aria-expanded')) !== 'false') {
+    throw new Error('feed-ready panel did not collapse independently');
   }
 
   await context.close();

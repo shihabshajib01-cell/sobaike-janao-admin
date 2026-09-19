@@ -95,6 +95,23 @@ assert.equal(
   'English weekday with a past-time cue must resolve against publication date'
 );
 
+assert.equal(
+  inferIncidentDate(
+    'প্রকাশ: ১৮ সেপ্টেম্বর ২০২৬। বৃহস্পতিবার (১৭ সেপ্টেম্বর) রাতে বরিশালের গৌরনদী উপজেলায় এ ঘটনা ঘটে।',
+    '2026-09-18'
+  ),
+  '2026-09-17',
+  'Incident-anchored date must win over page publication metadata'
+);
+assert.equal(
+  inferIncidentDate(
+    'ঘটনার ভিডিও আজ শনিবার সকালে সামাজিক যোগাযোগমাধ্যমে ছড়িয়ে পড়েছে। ঘটনাটি ঘটেছে চট্টগ্রামের কোতোয়ালি থানার পেছনের সতীশ বাবু লেনে।',
+    '2026-09-19'
+  ),
+  null,
+  'A circulation-date cue must not be promoted to the incident date'
+);
+
 assert.deepEqual(
   findLocation("Two killed in bus crash in Cox's Bazar"),
   { division: 'Chattogram', district: 'Coxs Bazar' },
@@ -115,6 +132,15 @@ assert.equal(
   inferSpecificLocationPhrase('The incident happened near Shah Ali Market in Dhaka', 'Dhaka'),
   'Shah Ali Market',
   'Specific English market wording should be retained for report location'
+);
+
+assert.equal(
+  inferSpecificLocationPhrase(
+    'ঘটনাটি ঘটেছে চট্টগ্রামের কোতোয়ালি থানার পেছনের সতীশ বাবু লেনে। বিষয়টি জানার পর আমরা এলাকা পরিদর্শন করি।',
+    'Chattogram'
+  ),
+  'চট্টগ্রামের কোতোয়ালি থানার পেছনের সতীশ বাবু লেন',
+  'Incident location must win over later narrative text ending in এলাকা'
 );
 assert.equal(
   inferDistrictWideScope('জেলাজুড়ে বিদ্যুৎ বিভ্রাটের অভিযোগ পাওয়া গেছে'),
@@ -147,6 +173,16 @@ const context = buildIncidentContext({
 });
 assert.ok(context.length > 80, 'Incident context should be fuller than a one-line metadata snippet');
 assert.ok(context.length <= 1800, 'Incident context must respect storage limits');
+
+const repeatedContext = buildIncidentContext({
+  excerpt: 'রাতের আঁধারে বসতঘরে ঢুকে এক গৃহবধূকে ধর্ষণের অভিযোগ পাওয়া গেছে। এ ঘটনায় পুলিশ একজনকে গ্রেপ্তার করেছে।',
+  body: 'রাতের আঁধারে বসতঘরে ঢুকে এক গৃহবধূকে ধর্ষণের অভিযোগ পাওয়া গেছে। এ ঘটনায় পুলিশ একজনকে গ্রেপ্তার করেছে। বৃহস্পতিবার রাতে ঘটনাটি ঘটে।',
+});
+assert.equal(
+  (repeatedContext.match(/রাতের আঁধারে বসতঘরে ঢুকে/g) || []).length,
+  1,
+  'Excerpt/body overlap must not duplicate the same incident sentence'
+);
 
 assert.equal(
   isUnsupportedArticleType('https://example.com/opinion/example', 'A column'),
