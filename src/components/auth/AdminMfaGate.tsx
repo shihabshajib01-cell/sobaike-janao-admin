@@ -187,7 +187,7 @@ export const AdminMfaGate: React.FC<{ children: React.ReactNode }> = ({ children
                 variant="secondary"
                 onClick={() => void logout()}
                 disabled={busy}
-                className="flex items-center justify-center gap-2"
+               
               >
                 <LogOut className="w-4 h-4" aria-hidden="true" />
                 {bn ? 'লগ আউট' : 'Sign out'}
