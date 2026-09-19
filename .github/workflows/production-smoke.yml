@@ -60,6 +60,34 @@ jobs:
 
           echo "Admin site smoke check passed with live bundle asset"
 
+
+      - name: Verify Public-SQL-Admin sync contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_KEY"
+
+          curl --fail-with-body -sS \
+            -X POST "$SUPABASE_URL/rest/v1/rpc/get_platform_sync_contract_version" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{}' > /tmp/platform-sync-contract.json
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          expected = "2026-09-19.1"
+          actual = json.loads(Path('/tmp/platform-sync-contract.json').read_text())
+          if actual != expected:
+              raise SystemExit(
+                  f"ERROR: Public-SQL-Admin sync contract mismatch: expected {expected}, got {actual}"
+              )
+          print(f"Public-SQL-Admin sync contract verified: {actual}")
+          PY
+
       - name: Verify private Admin RPC rejects anonymous access
         shell: bash
         run: |
