@@ -97,13 +97,7 @@ const normalizedDate = (raw: unknown) => {
 
   const monthPattern=Object.keys(DATE_MONTHS)
     .sort((a,b)=>b.length-a.length)
-    .map((name)=>name.replace(/[.*+?^$\{\}()|[\]\\]/g,'\\const normalizedDate = (raw: unknown) => {
-  if(!raw)return null;
-  const match=String(raw).match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if(match)return match[1]+"-"+match[2]+"-"+match[3];
-  const parsed=new Date(String(raw));
-  return Number.isNaN(parsed.getTime())?null:parsed.toISOString().slice(0,10);
-};'))
+    .map((name)=>name.replace(/[-/\\^$*+?.()|[\]{}]/g,'\\$&'))
     .join('|');
   const namedDayFirst=value.match(new RegExp('\\b(\\d{1,2})\\s+('+monthPattern+')\\s*,?\\s*(20\\d{2})\\b','iu'));
   if(namedDayFirst){
