@@ -7,10 +7,14 @@ import { useLanguage } from '@/context/LanguageContext';
 
 type MfaMode = 'loading' | 'enroll' | 'challenge' | 'ready';
 
+const ADMIN_MFA_TEST_MODE =
+  Boolean(typeof import.meta !== 'undefined' && import.meta.env?.DEV) &&
+  import.meta.env?.VITE_ADMIN_E2E_MODE === 'true';
+
 export const AdminMfaGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { logout } = useAuth();
   const { language } = useLanguage();
-  const [mode, setMode] = useState<MfaMode>('loading');
+  const [mode, setMode] = useState<MfaMode>(ADMIN_MFA_TEST_MODE ? 'ready' : 'loading');
   const [factorId, setFactorId] = useState('');
   const [qrCode, setQrCode] = useState('');
   const [secret, setSecret] = useState('');
@@ -21,6 +25,11 @@ export const AdminMfaGate: React.FC<{ children: React.ReactNode }> = ({ children
   const bn = language === 'bn';
 
   const prepareMfa = useCallback(async () => {
+    if (ADMIN_MFA_TEST_MODE) {
+      setMode('ready');
+      return;
+    }
+
     setError('');
     setMode('loading');
 
