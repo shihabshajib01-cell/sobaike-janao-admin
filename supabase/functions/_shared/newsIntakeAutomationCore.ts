@@ -287,7 +287,7 @@ const relativeIncidentDateFromText = (text: string, publishedDate?: string | nul
 };
 
 const INCIDENT_DATE_CUE_RE =
-  /(ঘটনাটি|এ ঘটনা|এই ঘটনা|দুর্ঘটনাটি|হামলাটি|ধর্ষণের ঘটনা|ছিনতাইয়ের ঘটনা|ছিনতাইয়ের ঘটনা|ডাকাতির ঘটনা|চুরির ঘটনা|ঘটেছে|ঘটে|ঘটেছিল|সংঘটিত|incident|accident|attack|rape|robbery|snatching|theft)/iu;
+  /(ঘটনাটি|এ ঘটনা|এই ঘটনা|দুর্ঘটনা(?:টি|য়|য়)?|হামলাটি|ধর্ষণের ঘটনা|ছিনতাইয়ের ঘটনা|ছিনতাইয়ের ঘটনা|ডাকাতির ঘটনা|চুরির ঘটনা|ঘটেছে|ঘটে|ঘটেছিল|সংঘটিত|নিয়ন্ত্রণ হারিয়ে|নিয়ন্ত্রণ হারিয়ে|incident|accident|attack|rape|robbery|snatching|theft|lost control)/iu;
 
 export const inferIncidentDate = (value: unknown, publishedDate?: string | null) => {
   const text = asciiDigits(normalizeText(value));
