@@ -370,25 +370,11 @@ const safeScanFetch = async (
   return {html,finalUrl:current.toString(),domain};
 };
 
-const runAutomatedScan = async (
+const processNewsIntakeRun = async (
   supabase: any,
-  triggerType: 'manual' | 'automatic' = 'manual'
+  runId: string,
+  triggerType: 'manual' | 'automatic'
 ) => {
-  const beginRpc = triggerType === 'automatic'
-    ? 'service_begin_news_intake_run'
-    : 'admin_begin_news_intake_run';
-  const {data:beginData,error:beginError}=await supabase.rpc(beginRpc);
-  if(beginError) throw new Error(beginError.message);
-  const runId=String(beginData?.runId||'');
-  if(!runId) throw new Error('Could not start News Intake run.');
-  if(beginData?.alreadyRunning===true){
-    return {
-      ...beginData,
-      triggerType,
-      alreadyRunning:true,
-    };
-  }
-
   const record=async(item:any)=>{
     const {error}=await supabase.rpc('admin_record_news_intake_item',{
       p_run_id:runId,
@@ -798,6 +784,26 @@ const runAutomatedScan = async (
   }
 };
 
+const runManualScan = async (supabase: any) => {
+  const {data:beginData,error:beginError}=await supabase.rpc(
+    'admin_begin_news_intake_run'
+  );
+  if(beginError) throw new Error(beginError.message);
+
+  const runId=String(beginData?.runId||'');
+  if(!runId) throw new Error('Could not start News Intake run.');
+
+  if(beginData?.alreadyRunning===true){
+    return {
+      ...beginData,
+      triggerType:'manual' as const,
+      alreadyRunning:true,
+    };
+  }
+
+  return processNewsIntakeRun(supabase,runId,'manual');
+};
+
 const SCHEDULER_SECRET_SHA256 =
   "1660831eb1b7f0a85d4e771880111a66d40cbd686fddc22657d055c446562476";
 
@@ -827,11 +833,49 @@ Deno.serve(async (req) => {
     if(scheduledRequest){
       const serviceRoleKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")??"";
       if(!serviceRoleKey) return json({error:"Scheduler configuration error."},500);
+
+      const requestBody=await req.json().catch(()=>({}));
+      const scheduledSlot=String(requestBody?.scheduledSlot||"");
+      if(!scheduledSlot){
+        return json({error:"Scheduled slot is required."},400);
+      }
+
       const serviceClient=createClient(supabaseUrl,serviceRoleKey,{
         auth:{persistSession:false,autoRefreshToken:false},
       });
-      const result=await runAutomatedScan(serviceClient,'automatic');
-      return json(result);
+
+      const {data:beginData,error:beginError}=await serviceClient.rpc(
+        'service_begin_scheduled_news_intake_run',
+        {p_scheduled_slot:scheduledSlot}
+      );
+      if(beginError){
+        return json({error:beginError.message||"Scheduled scan could not be accepted."},503);
+      }
+
+      if(beginData?.accepted!==true){
+        return json({
+          ...beginData,
+          triggerType:'automatic',
+        },202);
+      }
+
+      const runId=String(beginData?.runId||"");
+      if(!runId){
+        return json({error:"Scheduled scan was accepted without a run id."},500);
+      }
+
+      EdgeRuntime.waitUntil(
+        processNewsIntakeRun(serviceClient,runId,'automatic').catch((error)=>{
+          console.error('Scheduled News Intake background task failed.',error);
+        })
+      );
+
+      return json({
+        ...beginData,
+        accepted:true,
+        triggerType:'automatic',
+        background:true,
+      },202);
     }
 
     const authHeader=req.headers.get("Authorization")??"";
@@ -851,7 +895,7 @@ Deno.serve(async (req) => {
     const {error:userError}=await userClient.auth.getUser(token);
     if(userError) return json({error:"Invalid session."},401);
 
-    const result=await runAutomatedScan(userClient,'manual');
+    const result=await runManualScan(userClient);
     return json(result);
   } catch(error) {
     const message=error instanceof Error?error.message:"Automated News Intake failed.";
