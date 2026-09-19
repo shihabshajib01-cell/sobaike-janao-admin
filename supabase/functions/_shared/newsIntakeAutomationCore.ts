@@ -125,33 +125,61 @@ const compactLocationPhrase = (value: string) =>
     .replace(/[“”"'‘’()[\]{}]/g,' ')
     .replace(/\s+/g,' ')
     .trim()
+    .replace(/^(?:ঘটনাটি|ঘটনা|এ ঘটনাটি|এই ঘটনাটি)\s+/u,'')
+    .replace(/^(?:the\s+)?incident\s+(?:happened|occurred|took\s+place)(?:\s+(?:near|at|in|on))?\s+/i,'')
+    .replace(/\b(?:happened|occurred|took\s+place)(?:\s+(?:near|at|in|on))?\s+/i,'')
     .split(/\s+/)
-    .slice(-6)
+    .slice(-7)
     .join(' ')
+    .replace(/(এলাকা|মহল্লা|গ্রাম|বাজার|মার্কেট|থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|সড়ক|সড়ক|রোড|মোড়|মোড়|স্টেশন)(?:য়|য়|তে|ে)$/u,'$1')
     .trim();
+
+const locationCandidateIsUsable = (candidate: string, district?: string | null) => {
+  const normalized=normalizeText(candidate);
+  if (!normalized || normalized.length<4) return false;
+  if (/^(এলাকা|বাজার|মার্কেট|থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|গ্রাম|শহর|নগরী|মহানগরী|area|market|bazaar|thana|upazila|union|village|city)$/iu.test(normalized)) return false;
+  if (/(বিভিন্ন|various|several)\s+(এলাকা|areas?)/iu.test(normalized)) return false;
+  if (district) {
+    const districtNormalized=normalizeText(district);
+    if (normalized===districtNormalized || normalized===`${districtNormalized} district`) return false;
+  }
+  return true;
+};
 
 export const inferSpecificLocationPhrase = (value: unknown, district?: string | null) => {
   const text = String(value ?? '').replace(/\s+/g,' ').trim();
   if (!text) return null;
 
-  const patterns = [
-    /([^।.!?;,\n]{2,90}?(?:থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|বাজার|মার্কেট|এলাকা|মহল্লা|গ্রাম|সড়ক|সড়ক|রোড|মোড়|মোড়|স্টেশন|মহানগরী|মহানগর|নগরী|শহর))(?:তে|য়|য়ে|ে|র|এর)?(?=\s|[।.!?;,]|$)/u,
-    /([^.!?;,\n]{2,100}?(?:police station|thana|upazila|union|market|bazaar|area|neighbourhood|neighborhood|village|road|street|station|metropolitan area|city))(?=\s|[.!?;,]|$)/i,
+  // Prefer source-backed neighborhood / road / market / police-station phrases.
+  // Broader city/metropolitan wording is only a fallback when no more specific
+  // phrase is present in the article text.
+  const specificPatterns = [
+    /([^।.!?;,\n]{2,120}?(?:থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|বাজার|মার্কেট|এলাকা|মহল্লা|গ্রাম|সড়ক|সড়ক|রোড|মোড়|মোড়|স্টেশন)(?:য়|য়|তে|ে)?)(?=\s|[।.!?;,]|$)/gu,
+    /([^.!?;,\n]{2,120}?(?:police station|thana|upazila|union|market|bazaar|area|neighbourhood|neighborhood|village|road|street|station))(?=\s|[.!?;,]|$)/gi,
   ];
 
-  for (const pattern of patterns) {
-    const match=text.match(pattern);
-    if (!match?.[1]) continue;
-    const candidate=compactLocationPhrase(match[1]);
-    const normalized=normalizeText(candidate);
-    if (!normalized || normalized.length<4) continue;
-    if (/^(এলাকা|বাজার|মার্কেট|থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|গ্রাম|শহর|নগরী|মহানগরী|area|market|bazaar|thana|upazila|union|village|city)$/iu.test(normalized)) continue;
-    if (/(বিভিন্ন|various|several)\s+(এলাকা|areas?)/iu.test(normalized)) continue;
-    if (district) {
-      const districtNormalized=normalizeText(district);
-      if (normalized===districtNormalized || normalized===`${districtNormalized} district`) continue;
+  for (const pattern of specificPatterns) {
+    const matches=[...text.matchAll(pattern)];
+    for (let index=matches.length-1;index>=0;index-=1) {
+      const raw=matches[index]?.[1];
+      if (!raw) continue;
+      const candidate=compactLocationPhrase(raw);
+      if (locationCandidateIsUsable(candidate,district)) return candidate;
     }
-    return candidate;
+  }
+
+  const broadPatterns = [
+    /([^।.!?;,\n]{2,90}?(?:মহানগরী|মহানগর|নগরী|শহর))(?:তে|য়|য়ে|ে|র|এর)?(?=\s|[।.!?;,]|$)/gu,
+    /([^.!?;,\n]{2,100}?(?:metropolitan area|city))(?=\s|[.!?;,]|$)/gi,
+  ];
+  for (const pattern of broadPatterns) {
+    const matches=[...text.matchAll(pattern)];
+    for (let index=matches.length-1;index>=0;index-=1) {
+      const raw=matches[index]?.[1];
+      if (!raw) continue;
+      const candidate=compactLocationPhrase(raw);
+      if (locationCandidateIsUsable(candidate,district)) return candidate;
+    }
   }
   return null;
 };
