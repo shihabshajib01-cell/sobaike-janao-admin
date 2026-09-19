@@ -53,10 +53,10 @@ const ARTICLE_RULES: Array<[string, string, number, RegExp[]]> = [
   ['load_shedding','excess-electricity-bill',0.90,[/অতিরিক্ত বিদ্যুৎ বিল/u,/ভুতুড়ে বিল/u,/ভুতুড়ে বিল/u,/excess electricity bill/i,/inflated electricity bill/i]],
   ['extortion','bribe-demanded-service',0.92,[/ঘুষ(?:\s*(?:চাওয়া|চাওয়া|চাই|চেয়েছে|চেয়েছে|দাবি|নেওয়া|নেওয়া|নিয়েছে|নিয়েছে|গ্রহণ)|ের\s*(?:দাবি|অভিযোগ))/u,/\bbribe\b/i,/bribery/i]],
   ['public_safety','mob-justice',0.94,[/গণপিটুনি/u,/মব সহিংসতা/u,/(চুরি|ছিনতাই|ডাকাতি|ছেলেধরা).{0,60}(অভিযোগ|সন্দেহ).{0,100}(পিটিয়ে|পিটুনি).{0,60}(হত্যা|নিহত)/u,/mob violence/i,/lynch/i,/beaten by a mob/i]],
-  ['public_safety','snatching',0.91,[/ছিনতাই/u,/snatching/i,/\bmugging\b/i]],
+  ['public_safety','snatching',0.91,[/ছিনতাই/u,/পকেট.{0,24}(কাট|মার)/u,/snatching/i,/\bmugging\b/i,/pickpocket/i]],
   ['public_safety','robbery',0.90,[/ডাকাতি/u,/dacoity/i,/\brobbery\b/i]],
   ['public_safety','theft',0.88,[/চুরি/u,/\btheft\b/i,/\bstolen\b/i]],
-  ['road_transport','road-accident',0.91,[/সড়ক দুর্ঘটনা/u,/সড়ক দুর্ঘটনা/u,/(ধাক্কায়|ধাক্কায়|চাপায়|চাপায়|চাপা পড়ে|চাপা পড়ে).{0,100}(নিহত|আহত)/u,/(বাস|ট্রাক|পিকআপ|মোটরসাইকেল|অটোরিকশা|গাড়ি|গাড়ি|মাইক্রোবাস).{0,70}(সংঘর্ষ|ধাক্কা|চাপা).{0,120}(নিহত|আহত)/u,/road accident/i,/road crash/i,/(collision|crash|hit by|run over).{0,100}(killed|dead|injured)/i,/সড়কে.{0,40}(নিহত|আহত)/u]],
+  ['road_transport','road-accident',0.91,[/সড়ক দুর্ঘটনা/u,/সড়ক দুর্ঘটনা/u,/(ধাক্কায়|ধাক্কায়|চাপায়|চাপায়|চাপা পড়ে|চাপা পড়ে).{0,100}(নিহত|আহত)/u,/(বাস|ট্রাক|পিকআপ|মোটরসাইকেল|অটোরিকশা|গাড়ি|গাড়ি|মাইক্রোবাস).{0,70}(সংঘর্ষ|ধাক্কা|চাপা).{0,120}(নিহত|আহত)/u,/(নিয়ন্ত্রণ হারিয়ে|নিয়ন্ত্রণ হারিয়ে|lost control).{0,60}(বাস|ট্রাক|পিকআপ|মোটরসাইকেল|অটোরিকশা|গাড়ি|গাড়ি|মাইক্রোবাস|bus|truck|car|vehicle).{0,100}(পুকুর|খাল|খাদ|উল্টে|pond|canal|ditch|overturn).{0,120}(নিহত|আহত|লাশ|মৃত|dead|killed|injured)/iu,/(বাস|ট্রাক|পিকআপ|মোটরসাইকেল|অটোরিকশা|গাড়ি|গাড়ি|মাইক্রোবাস|bus|truck|car|vehicle).{0,80}(নিয়ন্ত্রণ হারিয়ে|নিয়ন্ত্রণ হারিয়ে|lost control).{0,100}(পুকুর|খাল|খাদ|উল্টে|pond|canal|ditch|overturn)/iu,/road accident/i,/road crash/i,/(collision|crash|hit by|run over).{0,100}(killed|dead|injured)/i,/সড়কে.{0,40}(নিহত|আহত)/u]],
   ['road_transport','road-block',0.89,[/সড়ক অবরোধ/u,/সড়ক অবরোধ/u,/road blockade/i,/road blocked/i,/highway.{0,40}blocked/i]],
   ['road_transport','road-repair-delay',0.88,[/রাস্তা মেরামত.{0,40}(বিলম্ব|দেরি|বন্ধ)/u,/road repair.{0,40}(delay|stalled|unfinished)/i]],
   ['illegal_occupation','road-public-space-encroachment',0.90,[/(ফুটপাত|ফুটওভার ব্রিজ|রাস্তা).{0,25}দখল/u,/(footpath|road|public space).{0,35}encroach/i]],
@@ -120,6 +120,47 @@ export const findLocation = (value: unknown) => {
   return best ? { division:best.division, district:best.district } : null;
 };
 
+const compactLocationPhrase = (value: string) =>
+  value
+    .replace(/[“”"'‘’()[\]{}]/g,' ')
+    .replace(/\s+/g,' ')
+    .trim()
+    .split(/\s+/)
+    .slice(-6)
+    .join(' ')
+    .trim();
+
+export const inferSpecificLocationPhrase = (value: unknown, district?: string | null) => {
+  const text = String(value ?? '').replace(/\s+/g,' ').trim();
+  if (!text) return null;
+
+  const patterns = [
+    /([^।.!?;,\n]{2,90}?(?:থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|বাজার|মার্কেট|এলাকা|মহল্লা|গ্রাম|সড়ক|সড়ক|রোড|মোড়|মোড়|স্টেশন|মহানগরী|মহানগর|নগরী|শহর))(?:তে|য়|য়ে|ে|র|এর)?(?=\s|[।.!?;,]|$)/u,
+    /([^.!?;,\n]{2,100}?(?:police station|thana|upazila|union|market|bazaar|area|neighbourhood|neighborhood|village|road|street|station|metropolitan area|city))(?=\s|[.!?;,]|$)/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match=text.match(pattern);
+    if (!match?.[1]) continue;
+    const candidate=compactLocationPhrase(match[1]);
+    const normalized=normalizeText(candidate);
+    if (!normalized || normalized.length<4) continue;
+    if (/^(এলাকা|বাজার|মার্কেট|থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|গ্রাম|শহর|নগরী|মহানগরী|area|market|bazaar|thana|upazila|union|village|city)$/iu.test(normalized)) continue;
+    if (/(বিভিন্ন|various|several)\s+(এলাকা|areas?)/iu.test(normalized)) continue;
+    if (district) {
+      const districtNormalized=normalizeText(district);
+      if (normalized===districtNormalized || normalized===`${districtNormalized} district`) continue;
+    }
+    return candidate;
+  }
+  return null;
+};
+
+export const inferDistrictWideScope = (value: unknown) => {
+  const text = normalizeText(value);
+  return /(জেলাজুড়ে|জেলাজুড়ে|জেলা\s*জুড়ে|জেলা\s*জুড়ে|district[- ]wide|across\s+(?:the\s+)?district|throughout\s+(?:the\s+)?district)/iu.test(text);
+};
+
 const BN_DIGITS: Record<string,string> = {'০':'0','১':'1','২':'2','৩':'3','৪':'4','৫':'5','৬':'6','৭':'7','৮':'8','৯':'9'};
 const asciiDigits = (value: unknown) => String(value ?? '').replace(/[০-৯]/g, (d) => BN_DIGITS[d] || d);
 const MONTHS: Record<string,number> = {
@@ -153,6 +194,31 @@ export const inferIncidentDate = (value: unknown, publishedDate?: string | null)
     const d = new Date(`${publishedDate}T00:00:00Z`);
     d.setUTCDate(d.getUTCDate()-1);
     return d.toISOString().slice(0,10);
+  }
+
+  if (publishedDate) {
+    const weekdayNames: Array<[number, RegExp]> = [
+      [0, /(গত\s*)?রবিবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?sunday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+      [1, /(গত\s*)?সোমবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?monday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+      [2, /(গত\s*)?মঙ্গলবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?tuesday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+      [3, /(গত\s*)?বুধবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?wednesday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+      [4, /(গত\s*)?বৃহস্পতিবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?thursday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+      [5, /(গত\s*)?শুক্রবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?friday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+      [6, /(গত\s*)?শনিবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?saturday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    ];
+    const base=new Date(`${publishedDate}T00:00:00Z`);
+    for (const [weekday,pattern] of weekdayNames) {
+      const match=text.match(pattern);
+      if (!match) continue;
+      const matchedText=match[0];
+      const hasPastCue=/(গত|last|রাতে|সকালে|ভোরে|দুপুরে|বিকেলে|night|morning|afternoon|evening)/iu.test(matchedText);
+      if (!hasPastCue) continue;
+      const d=new Date(base);
+      let delta=(d.getUTCDay()-weekday+7)%7;
+      if (/গত|last/iu.test(matchedText) && delta===0) delta=7;
+      d.setUTCDate(d.getUTCDate()-delta);
+      return d.toISOString().slice(0,10);
+    }
   }
   return null;
 };
