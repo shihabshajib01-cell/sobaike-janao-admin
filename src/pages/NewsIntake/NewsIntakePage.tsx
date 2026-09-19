@@ -220,13 +220,21 @@ export const NewsIntakePage: React.FC = () => {
     }
   };
 
+  const feedReadyItems = useMemo(
+    () =>
+      selectedItems.filter((item) => {
+        if (item.action !== 'created_draft' || !item.reportId) return false;
+        return reportMap[String(item.reportId)]?.status === 'submitted';
+      }),
+    [selectedItems, reportMap]
+  );
+
   const eligibleReportIds = useMemo(
     () =>
-      selectedItems
-        .filter((item) => item.action === 'created_draft' && item.reportId)
+      feedReadyItems
         .map((item) => String(item.reportId))
-        .filter((reportId) => reportMap[reportId]?.status === 'submitted'),
-    [selectedItems, reportMap]
+        .filter(Boolean),
+    [feedReadyItems]
   );
 
   const toggleReport = (reportId: string) => {
@@ -772,20 +780,10 @@ export const NewsIntakePage: React.FC = () => {
                 </div>
               </div>
 
-              {selectedItems.map((item) => {
-                const reportId = item.reportId ? String(item.reportId) : '';
-                const complaint = reportId ? reportMap[reportId] : null;
-                const ready =
-                  item.action === 'created_draft' &&
-                  Boolean(complaint) &&
-                  complaint?.status === 'submitted';
-
-                return (
-                  <div
-                    key={item.id}
-                    className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50/40 p-3 dark:border-slate-800 dark:bg-slate-950/20 lg:grid-cols-2"
-                  >
-                    <Card padding="sm" className="h-full">
+              <div className="grid items-start gap-4 lg:grid-cols-2">
+                <div className="space-y-3">
+                  {selectedItems.map((item) => (
+                    <Card key={item.id} padding="sm" className="h-full">
                       <div className="flex h-full flex-col gap-3">
                         <div className="flex flex-wrap items-center gap-2">
                           <Tag tone="neutral">{item.contentLanguage.toUpperCase()}</Tag>
@@ -816,58 +814,67 @@ export const NewsIntakePage: React.FC = () => {
                         </a>
                       </div>
                     </Card>
+                  ))}
 
-                    <div className="h-full">
-                      {loadingReports && item.action === 'created_draft' ? (
-                        <Card padding="sm" className="h-full">
-                          <div className="flex h-full min-h-32 items-center justify-center">
-                            <p className="type-secondary text-slate-500 dark:text-slate-400">
-                              {isBn ? 'রিপোর্ট প্রস্তুত করা হচ্ছে…' : 'Loading feed preview…'}
-                            </p>
-                          </div>
-                        </Card>
-                      ) : complaint ? (
+                  {selectedItems.length === 0 && (
+                    <FeedbackNotice tone="neutral">
+                      <p>{isBn ? 'এই রানে কোনো সংবাদ আইটেম পাওয়া যায়নি।' : 'No news items were found in this run.'}</p>
+                    </FeedbackNotice>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  {loadingReports && selectedRun.createdCount > 0 ? (
+                    <Card padding="sm">
+                      <div className="flex min-h-40 items-center justify-center">
+                        <p className="type-secondary text-slate-500 dark:text-slate-400">
+                          {isBn ? 'ফিড-রেডি রিপোর্ট প্রস্তুত করা হচ্ছে…' : 'Loading feed-ready reports…'}
+                        </p>
+                      </div>
+                    </Card>
+                  ) : feedReadyItems.length > 0 ? (
+                    feedReadyItems.map((item) => {
+                      const reportId = String(item.reportId);
+                      const complaint = reportMap[reportId];
+                      if (!complaint) return null;
+
+                      return (
                         <FeedReadyReportPreview
+                          key={item.id}
                           complaint={complaint}
                           isBn={isBn}
                           selected={selectedReportIds.includes(reportId)}
                           onToggle={() => toggleReport(reportId)}
-                          disabled={!ready || publishing}
+                          disabled={publishing}
                         />
-                      ) : (
-                        <Card padding="sm" className="h-full">
-                          <div className="flex h-full min-h-32 flex-col items-start justify-center gap-2">
-                            <Tag tone={actionTone(item)}>{actionLabel(item)}</Tag>
-                            <p className="type-secondary text-slate-600 dark:text-slate-300">
-                              {item.action === 'needs_review'
-                                ? isBn
-                                  ? 'এই সংবাদ থেকে নিরাপদে সম্পূর্ণ রিপোর্ট বানাতে আরও যাচাই প্রয়োজন।'
-                                  : 'More verification is required before this story can become a safe feed report.'
-                                : item.action === 'skip_duplicate'
-                                  ? isBn
-                                    ? 'এই উৎস বা ঘটনা ইতিমধ্যে রিপোর্ট ডাটাবেসে আছে।'
-                                    : 'This source or incident already exists in the report database.'
-                                  : item.action === 'merged_source'
-                                    ? isBn
-                                      ? 'সোর্সটি বিদ্যমান একই ঘটনার রিপোর্টে মার্জ হয়েছে।'
-                                      : 'This source was merged into the existing report for the same incident.'
-                                    : isBn
-                                      ? 'এটি আমাদের সমর্থিত রিপোর্ট বিভাগে ফিট করেনি।'
-                                      : 'This story did not fit a supported report category.'}
-                            </p>
-                          </div>
-                        </Card>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-
-              {selectedItems.length === 0 && (
-                <FeedbackNotice tone="neutral">
-                  <p>{isBn ? 'এই রানে কোনো সংবাদ আইটেম পাওয়া যায়নি।' : 'No news items were found in this run.'}</p>
-                </FeedbackNotice>
-              )}
+                      );
+                    })
+                  ) : (
+                    <Card padding="sm">
+                      <div className="flex min-h-52 flex-col items-center justify-center gap-3 px-4 text-center">
+                        <Newspaper className="size-6 text-slate-400" aria-hidden="true" />
+                        <div>
+                          <h3 className="type-card-title text-slate-900 dark:text-slate-100">
+                            {isBn ? 'কোনো ফিড-রেডি রিপোর্ট নেই' : 'No feed-ready reports'}
+                          </h3>
+                          <p className="mt-1 type-secondary text-slate-500 dark:text-slate-400">
+                            {isBn
+                              ? 'এই স্ক্যানে কোনো নতুন নিরাপদ ড্রাফট তৈরি হয়নি। কাঁচা সংবাদগুলো বাম পাশে আছে; রিভিউ বা অসমর্থিত সংবাদ এখানে আলাদা কার্ড হিসেবে দেখানো হবে না।'
+                              : 'This scan did not create any new safe drafts. Raw news stays on the left; review and unsupported items are not repeated in this feed-ready column.'}
+                          </p>
+                        </div>
+                        {selectedRun.reviewCount > 0 && (
+                          <Tag tone="warning">
+                            {isBn
+                              ? `${selectedRun.reviewCount}টি সংবাদ রিভিউ প্রয়োজন`
+                              : `${selectedRun.reviewCount} need review`}
+                          </Tag>
+                        )}
+                      </div>
+                    </Card>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
