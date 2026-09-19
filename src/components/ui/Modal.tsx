@@ -10,7 +10,7 @@ export interface ModalProps {
   description?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
   className?: string;
   closeOnBackdrop?: boolean;
 }
@@ -51,6 +51,7 @@ export const Modal: React.FC<ModalProps> = ({
     md: 'max-w-md',
     lg: 'max-w-lg',
     xl: 'max-w-2xl',
+    full: 'max-w-[calc(100vw-2rem)] sm:max-w-[calc(100vw-3rem)]',
   };
 
   return (
@@ -70,6 +71,7 @@ export const Modal: React.FC<ModalProps> = ({
       <div
         className={cn(
           'relative w-full bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden z-10 transition-all duration-200 animate-in zoom-in-95',
+          size === 'full' && 'h-[94vh] flex flex-col',
           sizeStyles[size],
           className
         )}
@@ -96,7 +98,12 @@ export const Modal: React.FC<ModalProps> = ({
         </div>
 
         {/* Body */}
-        <div className="p-6 type-body text-slate-700 dark:text-slate-300 max-h-[calc(85vh-130px)] overflow-y-auto">
+        <div
+          className={cn(
+            'p-6 type-body text-slate-700 dark:text-slate-300 overflow-y-auto',
+            size === 'full' ? 'flex-1 min-h-0' : 'max-h-[calc(85vh-130px)]'
+          )}
+        >
           {children}
         </div>
 
