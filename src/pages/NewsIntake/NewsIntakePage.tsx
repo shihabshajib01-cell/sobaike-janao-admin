@@ -2,19 +2,16 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CheckCircle2,
   CircleAlert,
-  Clock,
   ExternalLink,
   Newspaper,
   RefreshCw,
   SearchCheck,
   Send,
-  ShieldCheck,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Checkbox } from '@/components/ui/Checkbox';
 import { FeedbackNotice } from '@/components/ui/FeedbackNotice';
 import { Modal } from '@/components/ui/Modal';
 import { Tag } from '@/components/ui/Tag';
@@ -25,8 +22,8 @@ import {
   NewsIntakeAutomationDashboard,
   NewsIntakeAutomationItem,
   NewsIntakeAutomationRun,
-  NewsIntakeTaxonomy,
 } from '@/types/NewsIntake';
+import { FeedReadyReportPreview } from './FeedReadyReportPreview';
 import { ManualNewsIntakeForm } from './ManualNewsIntakeForm';
 
 const EMPTY_DASHBOARD: NewsIntakeAutomationDashboard = {
@@ -41,10 +38,6 @@ const EMPTY_DASHBOARD: NewsIntakeAutomationDashboard = {
   },
 };
 
-const EMPTY_TAXONOMY: NewsIntakeTaxonomy = {
-  segments: [],
-  subcategories: [],
-};
 
 type IntakeMode = 'automatic' | 'manual';
 type WorkspaceStep = 1 | 2 | 3;
@@ -66,7 +59,6 @@ export const NewsIntakePage: React.FC = () => {
 
   const [dashboard, setDashboard] =
     useState<NewsIntakeAutomationDashboard>(EMPTY_DASHBOARD);
-  const [taxonomy, setTaxonomy] = useState<NewsIntakeTaxonomy>(EMPTY_TAXONOMY);
   const [loading, setLoading] = useState(true);
   const [updatingSchedule, setUpdatingSchedule] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
@@ -87,12 +79,8 @@ export const NewsIntakePage: React.FC = () => {
     setLoading(true);
     setPageError(null);
     try {
-      const [nextDashboard, nextTaxonomy] = await Promise.all([
-        newsIntakeApi.getAutomationDashboard(),
-        newsIntakeApi.getTaxonomy(),
-      ]);
+      const nextDashboard = await newsIntakeApi.getAutomationDashboard();
       setDashboard(nextDashboard);
-      setTaxonomy(nextTaxonomy);
       return nextDashboard;
     } catch (error: unknown) {
       setPageError(
@@ -124,24 +112,6 @@ export const NewsIntakePage: React.FC = () => {
       dateStyle: 'medium',
       timeStyle: 'short',
     }).format(date);
-  };
-
-  const categoryLabel = (item: NewsIntakeAutomationItem) => {
-    const segment = taxonomy.segments.find((entry) => entry.id === item.segmentId);
-    const subcategory = taxonomy.subcategories.find(
-      (entry) => entry.id === item.subcategoryId
-    );
-    return [segment, subcategory]
-      .filter(Boolean)
-      .map((entry) =>
-        entry
-          ? isBn
-            ? entry.nameBn
-            : entry.nameEn
-          : ''
-      )
-      .filter(Boolean)
-      .join(' · ');
   };
 
   const loadReportCards = async (run: NewsIntakeAutomationRun) => {
@@ -283,7 +253,10 @@ export const NewsIntakePage: React.FC = () => {
       const title =
         complaint?.titleBn || complaint?.titleEn || reportId;
       try {
-        await complaintApi.publishComplaint(reportId);
+        const result = await complaintApi.publishComplaint(reportId);
+        if (result.complaint.status !== 'published') {
+          throw new Error('The report was not confirmed as published.');
+        }
         outcomes.push({ reportId, title, ok: true });
       } catch (error: unknown) {
         outcomes.push({
@@ -757,33 +730,46 @@ export const NewsIntakePage: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={selectAllEligible}
-                    disabled={eligibleReportIds.length === 0 || loadingReports}
-                  >
-                    {isBn ? 'সব প্রকাশযোগ্য নির্বাচন করুন' : 'Select All Ready'}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedReportIds([])}
-                    disabled={selectedReportIds.length === 0}
-                  >
-                    {isBn ? 'নির্বাচন মুছুন' : 'Clear Selection'}
-                  </Button>
-                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 px-1">
-                <p className="type-label font-semibold text-slate-900 dark:text-slate-100">
-                  {isBn ? 'কাঁচা সংবাদ পাওয়া গেছে' : 'Raw news found'}
-                </p>
-                <p className="type-label font-semibold text-slate-900 dark:text-slate-100">
-                  {isBn ? 'আমাদের ফিড-রেডি রিপোর্ট' : 'Feed-ready report'}
-                </p>
+              <div className="grid gap-3 px-1 lg:grid-cols-2">
+                <div className="flex min-h-10 items-center">
+                  <p className="type-label font-semibold text-slate-900 dark:text-slate-100">
+                    {isBn ? 'কাঁচা সংবাদ পাওয়া গেছে' : 'Raw news found'}
+                  </p>
+                </div>
+
+                <div className="flex min-h-10 flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="type-label font-semibold text-slate-900 dark:text-slate-100">
+                      {isBn ? 'ফিড-রেডি রিপোর্ট' : 'Feed-ready report'}
+                    </p>
+                    <p className="type-helper text-slate-500 dark:text-slate-400">
+                      {isBn
+                        ? `${eligibleReportIds.length}টি প্রস্তুত · ${selectedReportIds.length}টি নির্বাচিত`
+                        : `${eligibleReportIds.length} ready · ${selectedReportIds.length} selected`}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={selectAllEligible}
+                      disabled={eligibleReportIds.length === 0 || loadingReports}
+                    >
+                      {isBn ? 'সব নির্বাচন করুন' : 'Select All'}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedReportIds([])}
+                      disabled={selectedReportIds.length === 0}
+                    >
+                      {isBn ? 'নির্বাচন মুছুন' : 'Clear Selection'}
+                    </Button>
+                  </div>
+                </div>
               </div>
 
               {selectedItems.map((item) => {
@@ -831,82 +817,48 @@ export const NewsIntakePage: React.FC = () => {
                       </div>
                     </Card>
 
-                    <Card
-                      padding="sm"
-                      variant={ready ? 'highlighted' : 'default'}
-                      className="h-full"
-                    >
+                    <div className="h-full">
                       {loadingReports && item.action === 'created_draft' ? (
-                        <div className="flex h-full min-h-32 items-center justify-center">
-                          <p className="type-secondary text-slate-500 dark:text-slate-400">
-                            {isBn ? 'রিপোর্ট প্রস্তুত করা হচ্ছে…' : 'Loading report card…'}
-                          </p>
-                        </div>
-                      ) : complaint ? (
-                        <div className="flex h-full flex-col gap-3">
-                          <div className="flex flex-wrap items-start justify-between gap-2">
-                            <div className="flex flex-wrap gap-2">
-                              <Tag tone={complaint.status === 'submitted' ? 'success' : 'neutral'}>
-                                {complaint.status === 'submitted'
-                                  ? isBn
-                                    ? 'ফিডের জন্য প্রস্তুত'
-                                    : 'Ready for feed'
-                                  : complaint.status}
-                              </Tag>
-                              {categoryLabel(item) && (
-                                <Tag tone="info">{categoryLabel(item)}</Tag>
-                              )}
-                            </div>
-                            <Checkbox
-                              aria-label={
-                                isBn
-                                  ? `${complaint.titleBn || complaint.titleEn} নির্বাচন করুন`
-                                  : `Select ${complaint.titleEn || complaint.titleBn}`
-                              }
-                              checked={selectedReportIds.includes(reportId)}
-                              onChange={() => toggleReport(reportId)}
-                              disabled={!ready || publishing}
-                            />
-                          </div>
-
-                          <div>
-                            <h3 className="type-card-title">
-                              {complaint.titleBn || complaint.titleEn}
-                            </h3>
-                            <p className="mt-2 line-clamp-4 type-secondary text-slate-600 dark:text-slate-300">
-                              {complaint.descriptionBn || complaint.descriptionEn}
+                        <Card padding="sm" className="h-full">
+                          <div className="flex h-full min-h-32 items-center justify-center">
+                            <p className="type-secondary text-slate-500 dark:text-slate-400">
+                              {isBn ? 'রিপোর্ট প্রস্তুত করা হচ্ছে…' : 'Loading feed preview…'}
                             </p>
                           </div>
-
-                          <div className="mt-auto flex flex-wrap gap-x-4 gap-y-1 type-meta text-slate-500 dark:text-slate-400">
-                            {complaint.incidentDate && <p>{complaint.incidentDate}</p>}
-                            {complaint.location?.district && <p>{complaint.location.district}</p>}
-                            <p>{complaint.id}</p>
-                          </div>
-                        </div>
+                        </Card>
+                      ) : complaint ? (
+                        <FeedReadyReportPreview
+                          complaint={complaint}
+                          isBn={isBn}
+                          selected={selectedReportIds.includes(reportId)}
+                          onToggle={() => toggleReport(reportId)}
+                          disabled={!ready || publishing}
+                        />
                       ) : (
-                        <div className="flex h-full min-h-32 flex-col items-start justify-center gap-2">
-                          <Tag tone={actionTone(item)}>{actionLabel(item)}</Tag>
-                          <p className="type-secondary text-slate-600 dark:text-slate-300">
-                            {item.action === 'needs_review'
-                              ? isBn
-                                ? 'এই সংবাদ থেকে নিরাপদে সম্পূর্ণ রিপোর্ট বানাতে আরও যাচাই প্রয়োজন।'
-                                : 'More verification is required before this story can become a safe feed report.'
-                              : item.action === 'skip_duplicate'
+                        <Card padding="sm" className="h-full">
+                          <div className="flex h-full min-h-32 flex-col items-start justify-center gap-2">
+                            <Tag tone={actionTone(item)}>{actionLabel(item)}</Tag>
+                            <p className="type-secondary text-slate-600 dark:text-slate-300">
+                              {item.action === 'needs_review'
                                 ? isBn
-                                  ? 'এই উৎস বা ঘটনা ইতিমধ্যে রিপোর্ট ডাটাবেসে আছে।'
-                                  : 'This source or incident already exists in the report database.'
-                                : item.action === 'merged_source'
+                                  ? 'এই সংবাদ থেকে নিরাপদে সম্পূর্ণ রিপোর্ট বানাতে আরও যাচাই প্রয়োজন।'
+                                  : 'More verification is required before this story can become a safe feed report.'
+                                : item.action === 'skip_duplicate'
                                   ? isBn
-                                    ? 'সোর্সটি বিদ্যমান একই ঘটনার রিপোর্টে মার্জ হয়েছে।'
-                                    : 'This source was merged into the existing report for the same incident.'
-                                  : isBn
-                                    ? 'এটি আমাদের সমর্থিত রিপোর্ট বিভাগে ফিট করেনি।'
-                                    : 'This story did not fit a supported report category.'}
-                          </p>
-                        </div>
+                                    ? 'এই উৎস বা ঘটনা ইতিমধ্যে রিপোর্ট ডাটাবেসে আছে।'
+                                    : 'This source or incident already exists in the report database.'
+                                  : item.action === 'merged_source'
+                                    ? isBn
+                                      ? 'সোর্সটি বিদ্যমান একই ঘটনার রিপোর্টে মার্জ হয়েছে।'
+                                      : 'This source was merged into the existing report for the same incident.'
+                                    : isBn
+                                      ? 'এটি আমাদের সমর্থিত রিপোর্ট বিভাগে ফিট করেনি।'
+                                      : 'This story did not fit a supported report category.'}
+                            </p>
+                          </div>
+                        </Card>
                       )}
-                    </Card>
+                    </div>
                   </div>
                 );
               })}
