@@ -47,6 +47,19 @@ export type Classification = {
   reviewReason?: string;
 };
 
+const CHILD_ABDUCTION_RE = /(?:(?:শিশু|বালক|বালিকা|কিশোর|কিশোরী|নাবালক|নাবালিকা|\\bminor\\b|\\bchild\\b|\\bboy\\b|\\bgirl\\b).{0,100}(?:অপহরণ|অপহৃত|kidnap(?:ped|ping)?|abduct(?:ed|ion)?)|(?:অপহরণ|অপহৃত|kidnap(?:ped|ping)?|abduct(?:ed|ion)?).{0,100}(?:শিশু|বালক|বালিকা|কিশোর|কিশোরী|নাবালক|নাবালিকা|\\bminor\\b|\\bchild\\b|\\bboy\\b|\\bgirl\\b))/iu;
+const CHILD_MURDER_RE = /(?:(?:শিশু|বালক|বালিকা|কিশোর|কিশোরী|নাবালক|নাবালিকা|\\bminor\\b|\\bchild\\b|\\bboy\\b|\\bgirl\\b).{0,100}(?:হত্যা|খুন|murder(?:ed)?|homicide)|(?:হত্যা|খুন|murder(?:ed)?|homicide).{0,100}(?:শিশু|বালক|বালিকা|কিশোর|কিশোরী|নাবালক|নাবালিকা|\\bminor\\b|\\bchild\\b|\\bboy\\b|\\bgirl\\b))/iu;
+
+export const inferChildIncidentType = (value: unknown) => {
+  const text = normalizeText(value);
+  const hasAbduction = CHILD_ABDUCTION_RE.test(text);
+  const hasMurder = CHILD_MURDER_RE.test(text);
+  if (hasAbduction && hasMurder) return 'abduction_and_murder';
+  if (hasAbduction) return 'abduction';
+  if (hasMurder) return 'murder';
+  return 'unknown_not_stated';
+};
+
 const ARTICLE_RULES: Array<[string, string, number, RegExp[]]> = [
   ['harassment','rape-sexual-violence',0.93,[/ধর্ষণ/u,/ধর্ষণের চেষ্টা/u,/\brap(?:e|ed|es|ing)\b/i,/attempted rape/i]],
   ['harassment','sexual-harassment',0.90,[/যৌন হয়রানি/u,/যৌন হয়রানি/u,/ইভ টিজিং/u,/শ্লীলতাহানি/u,/sexual harassment/i,/eve[- ]?teasing/i]],
@@ -58,6 +71,7 @@ const ARTICLE_RULES: Array<[string, string, number, RegExp[]]> = [
   ['load_shedding','excess-electricity-bill',0.90,[/অতিরিক্ত বিদ্যুৎ বিল/u,/ভুতুড়ে বিল/u,/ভুতুড়ে বিল/u,/excess electricity bill/i,/inflated electricity bill/i]],
   ['extortion','bribe-demanded-service',0.92,[/ঘুষ(?:\s*(?:চাওয়া|চাওয়া|চাই|চেয়েছে|চেয়েছে|দাবি|নেওয়া|নেওয়া|নিয়েছে|নিয়েছে|গ্রহণ)|ের\s*(?:দাবি|অভিযোগ))/u,/\bbribe\b/i,/bribery/i]],
   ['public_safety','mob-justice',0.94,[/গণপিটুনি/u,/মব সহিংসতা/u,/(চুরি|ছিনতাই|ডাকাতি|ছেলেধরা).{0,60}(অভিযোগ|সন্দেহ).{0,100}(পিটিয়ে|পিটুনি).{0,60}(হত্যা|নিহত)/u,/mob violence/i,/lynch/i,/beaten by a mob/i]],
+  ['public_safety','child_abduction_murder',0.92,[CHILD_ABDUCTION_RE,CHILD_MURDER_RE]],
   ['public_safety','snatching',0.91,[/ছিনতাই/u,/পকেট.{0,24}(কাট|মার)/u,/(কাটছেন|কাটছে|কেটে|কাটে).{0,36}(রিকশাযাত্রীর|যাত্রীর|পথচারীর).{0,24}পকেট/u,/snatching/i,/\bmugging\b/i,/pickpocket/i]],
   ['public_safety','robbery',0.90,[/ডাকাতি/u,/dacoity/i,/\brobbery\b/i]],
   ['public_safety','theft',0.88,[/চুরি/u,/\btheft\b/i,/\bstolen\b/i]],
