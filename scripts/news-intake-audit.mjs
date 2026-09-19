@@ -277,6 +277,7 @@ for (const needle of [
   "supabase.rpc('admin_create_sourced_report_from_intake'",
   "supabase.rpc('admin_merge_intake_source'",
   "supabase.rpc('admin_get_news_intake_taxonomy'",
+  "supabase.rpc('admin_get_location_taxonomy'",
 ]) {
   requireText(api, needle, 'News Intake API');
 }
@@ -287,6 +288,8 @@ for (const name of [
   'admin_create_sourced_report_from_intake',
   'admin_merge_intake_source',
   'admin_get_news_intake_taxonomy',
+  'admin_get_location_taxonomy',
+  'admin_resolve_news_intake_location',
   'admin_get_news_intake_scan_sources',
   'admin_begin_news_intake_run',
   'admin_get_news_intake_automation_dashboard',
