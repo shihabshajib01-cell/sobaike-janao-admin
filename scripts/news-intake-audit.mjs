@@ -163,7 +163,6 @@ for (const needle of [
   'x-news-intake-scheduler',
   'SUPABASE_SERVICE_ROLE_KEY',
   'SCHEDULER_SECRET_SHA256',
-  'service_begin_news_intake_run',
   'service_begin_scheduled_news_intake_run',
   'EdgeRuntime.waitUntil',
   'background:true',
