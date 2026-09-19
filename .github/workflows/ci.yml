@@ -44,6 +44,12 @@ jobs:
       - name: News Intake audit
         run: npm run audit:news-intake
 
+      - name: News Intake behavior audit
+        run: npm run audit:news-intake-behavior
+
+      - name: Browser smoke syntax check
+        run: node --check scripts/admin-functional-smoke.mjs
+
       - name: Dependency security audit
         run: npm run audit:dependencies
 
