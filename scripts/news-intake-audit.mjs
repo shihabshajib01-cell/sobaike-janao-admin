@@ -178,6 +178,8 @@ for (const needle of [
   'Section, homepage, or non-article URL was excluded',
   'inferSpecificLocationPhrase',
   'inferDistrictWideScope',
+  "location.quality !== 'multiple_locations'",
+  "location.locationScope !== 'multi_location'",
   'verify_jwt',
 ]) {
   if (needle === 'verify_jwt') continue;
