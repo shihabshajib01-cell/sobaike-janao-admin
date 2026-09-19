@@ -262,6 +262,7 @@ Deno.serve(async (req: Request) => {
         },
         signal: AbortSignal.timeout(8000),
       });
+      await assertPublicResolvedHost(current.hostname);
 
       if (response.status >= 300 && response.status < 400) {
         const location = response.headers.get("location");
