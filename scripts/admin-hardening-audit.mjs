@@ -101,6 +101,10 @@ for (const needle of [
   }
 }
 
+if (!mfaGate.includes('await refreshPermissions();')) {
+  fail('Admin MFA gate must refresh AAL2-sensitive permissions after elevation');
+}
+
 const appRoutes = read('src/routes/AppRoutes.tsx');
 if (!appRoutes.includes('AdminMfaGate')) {
   fail('Protected Admin routes are not gated by MFA');
@@ -163,6 +167,22 @@ for (const needle of [
 }
 if (deleteUserEdge.includes('"Access-Control-Allow-Origin": "*"')) {
   fail('Admin user deletion Edge function must not use wildcard CORS');
+}
+
+const newsIntakeFetch = read('supabase/functions/news-intake-fetch/index.ts');
+for (const needle of [
+  'assertPublicResolvedHost',
+  'Deno.resolveDns(host, "A")',
+  'Deno.resolveDns(host, "AAAA")',
+  'isPrivateOrReservedIp',
+  'ALLOWED_ORIGINS',
+]) {
+  if (!newsIntakeFetch.includes(needle)) {
+    fail('News Intake article fetch hardening is missing: ' + needle);
+  }
+}
+if (newsIntakeFetch.includes('"Access-Control-Allow-Origin": "*"')) {
+  fail('News Intake article fetch must not use wildcard CORS');
 }
 
 const newsIntakeScan = read('supabase/functions/news-intake-scan/index.ts');
