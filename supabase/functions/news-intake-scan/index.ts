@@ -732,18 +732,33 @@ const processNewsIntakeRun = async (
         ){
           const specificPhrase=inferSpecificLocationPhrase(locationText,location.district);
           const districtWide=inferDistrictWideScope(locationText);
+          const normalizePlace=(value:unknown)=>String(value||'')
+            .toLowerCase()
+            .replace(/[.,،]/g,' ')
+            .replace(/\s+/g,' ')
+            .trim();
+          const formatted=normalizePlace(location.formattedAddress);
+          const districtName=normalizePlace(location.district);
+          const upazilaName=normalizePlace(location.upazilaOrThana);
+          const canonicalOnly=new Set([
+            districtName,
+            upazilaName,
+            [upazilaName,districtName].filter(Boolean).join(' '),
+          ].filter(Boolean));
+          const hasFineGrainedLocation=Boolean(location.area||location.road||location.landmark);
+          const formattedIsBroad=!formatted||canonicalOnly.has(formatted);
+          const shouldEnrichSpecific=Boolean(
+            specificPhrase
+            && !hasFineGrainedLocation
+            && formattedIsBroad
+          );
           const alreadySpecific=Boolean(
-            location.upazilaOrThana
-            || location.area
-            || location.road
-            || location.landmark
-            || (
-              location.formattedAddress
-              && String(location.formattedAddress).toLowerCase()!==String(location.district||'').toLowerCase()
-            )
+            hasFineGrainedLocation
+            || (formatted && !formattedIsBroad)
+            || location.upazilaOrThana
           );
 
-          if(specificPhrase && !alreadySpecific){
+          if(shouldEnrichSpecific){
             location={
               ...location,
               area:specificPhrase,
