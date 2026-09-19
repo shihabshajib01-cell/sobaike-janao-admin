@@ -712,6 +712,22 @@ await check('News Intake automatic review selects only intended reports and keep
     page.getByText('2 ready · 0 selected', { exact: true }).first(),
     'automatic review did not expose the two safe feed-ready reports'
   );
+  await expectVisible(
+    page.getByText('Scan summary:', { exact: true }),
+    'automatic review scan summary missing'
+  );
+
+  const reviewFilter = page.getByRole('button', { name: 'Needs review · 1', exact: true });
+  await expectVisible(reviewFilter, 'automatic review filter missing');
+  await reviewFilter.click();
+  await expectVisible(
+    page.getByText('E2E source requiring review', { exact: true }),
+    'needs-review filter did not retain the review item'
+  );
+  if (await page.getByText('E2E automatic report A', { exact: true }).isVisible()) {
+    throw new Error('needs-review filter left a feed-ready raw item visible');
+  }
+  await page.getByRole('button', { name: 'All · 3', exact: true }).click();
 
   const reportA = page.getByLabel('Select স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট A for publishing');
   const reportB = page.getByLabel('Select স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট B for publishing');
