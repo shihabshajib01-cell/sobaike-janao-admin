@@ -568,8 +568,8 @@ await check('News Intake clear source reaches one-click publication', async () =
     'বিশ্বস্ত সংবাদ উৎসভিত্তিক পরীক্ষামূলক ঘটনার প্রেক্ষাপট।'
   );
   await page.getByLabel('Incident date *').fill('2026-09-18');
-  await page.getByLabel('Division *').fill('Dhaka');
-  await page.getByLabel('District *').fill('Dhaka');
+  await page.getByLabel('Division *').selectOption({ label: 'Dhaka' });
+  await page.getByLabel('District *').selectOption({ label: 'Dhaka' });
 
   await page
     .getByRole('button', { name: 'Check Source & Duplicates', exact: true })
