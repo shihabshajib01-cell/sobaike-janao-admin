@@ -24,14 +24,14 @@ export type CanonicalPermissionId = (typeof CANONICAL_PERMISSIONS)[number];
 const AUTHORIZATION_TIMEOUT_MS = 8000;
 
 const withTimeout = async <T>(
-  promise: Promise<T>,
+  promise: PromiseLike<T>,
   timeoutMs: number,
   message: string
 ): Promise<T> => {
   let timer: ReturnType<typeof setTimeout> | null = null;
   try {
     return await Promise.race([
-      promise,
+      Promise.resolve(promise),
       new Promise<T>((_, reject) => {
         timer = setTimeout(() => reject(new Error(message)), timeoutMs);
       }),
