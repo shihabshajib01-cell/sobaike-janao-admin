@@ -798,6 +798,7 @@ export const NewsIntakePage: React.FC = () => {
         isOpen={workspaceOpen}
         onClose={requestWorkspaceClose}
         size="full"
+        className="max-sm:[&_[data-button-size=sm]]:min-h-11"
         closeOnBackdrop={false}
         title={isBn ? 'নিউজ ইনটেক ওয়ার্কস্পেস' : 'News Intake Workspace'}
         description={
@@ -988,7 +989,6 @@ export const NewsIntakePage: React.FC = () => {
                     <Button
                       variant="secondary"
                       size="sm"
-                      className="min-h-11 lg:min-h-8"
                       onClick={selectAllEligible}
                       disabled={eligibleReportIds.length === 0 || loadingReports}
                     >
@@ -997,7 +997,6 @@ export const NewsIntakePage: React.FC = () => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="min-h-11 lg:min-h-8"
                       onClick={() => setSelectedReportIds([])}
                       disabled={selectedReportIds.length === 0}
                     >
@@ -1052,8 +1051,7 @@ export const NewsIntakePage: React.FC = () => {
                           key={value}
                           variant={rawFilter === value ? 'secondary' : 'ghost'}
                           size="sm"
-                          className="min-h-11 lg:min-h-8"
-                          onClick={() => setRawFilter(value)}
+                              onClick={() => setRawFilter(value)}
                           aria-pressed={rawFilter === value}
                         >
                           {label} · {count}
@@ -1105,8 +1103,7 @@ export const NewsIntakePage: React.FC = () => {
                               <Button
                                 variant="secondary"
                                 size="sm"
-                                className="min-h-11 lg:min-h-8"
-                                onClick={() => reviewItemManually(item)}
+                                          onClick={() => reviewItemManually(item)}
                                 leftIcon={<Newspaper />}
                               >
                                 {item.reportId
@@ -1168,8 +1165,7 @@ export const NewsIntakePage: React.FC = () => {
                       <Button
                         variant="secondary"
                         size="sm"
-                        className="min-h-11 lg:min-h-8"
-                        onClick={selectAllEligible}
+                          onClick={selectAllEligible}
                         disabled={eligibleReportIds.length === 0 || loadingReports}
                       >
                         {isBn ? 'সব নির্বাচন করুন' : 'Select All'}
@@ -1177,8 +1173,7 @@ export const NewsIntakePage: React.FC = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="min-h-11 lg:min-h-8"
-                        onClick={() => setSelectedReportIds([])}
+                          onClick={() => setSelectedReportIds([])}
                         disabled={selectedReportIds.length === 0}
                       >
                         {isBn ? 'নির্বাচন মুছুন' : 'Clear Selection'}
@@ -1261,8 +1256,7 @@ export const NewsIntakePage: React.FC = () => {
                                 <Button
                                   variant="secondary"
                                   size="sm"
-                                  className="min-h-11 lg:min-h-8"
-                                  onClick={() => {
+                                              onClick={() => {
                                     setRawFilter('review');
                                     setRawNewsExpanded(true);
                                   }}
