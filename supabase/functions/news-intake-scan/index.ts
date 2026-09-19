@@ -185,6 +185,8 @@ const canonicalHostKey = (hostname: string) => hostname.toLowerCase().replace(/^
 
 const isLikelyArticlePath = (url: URL, anchorText: string, baseUrl: string) => {
   const path=url.pathname.toLowerCase();
+  const encodedTemplateUrl=url.toString().toLowerCase();
+  if (/%7b|%7d|\{\{|\}\}/i.test(encodedTemplateUrl)) return false;
   if (!path || path==='/') return false;
   if (canonicalHostKey(url.hostname) !== canonicalHostKey(new URL(baseUrl).hostname)) return false;
   if (/\.(jpg|jpeg|png|gif|webp|svg|pdf|mp4|mp3)$/i.test(path)) return false;
