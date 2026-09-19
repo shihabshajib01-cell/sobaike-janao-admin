@@ -756,7 +756,7 @@ await check('News Intake automatic review selects only intended reports and keep
   await page.getByRole('button', { name: 'Review', exact: true }).first().click();
 
   await expectVisible(
-    page.getByText('Published', { exact: true }),
+    page.getByRole('paragraph').filter({ hasText: /^Published$/ }).first(),
     'historical run hid the already-published feed-ready report'
   );
   await expectVisible(
