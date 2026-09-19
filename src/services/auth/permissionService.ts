@@ -1,5 +1,4 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { authService } from '@/services/auth/authService';
 
 export const CANONICAL_PERMISSIONS = [
   'dashboard.view',
@@ -21,6 +20,26 @@ export const CANONICAL_PERMISSIONS = [
 ] as const;
 
 export type CanonicalPermissionId = (typeof CANONICAL_PERMISSIONS)[number];
+
+const AUTHORIZATION_TIMEOUT_MS = 8000;
+
+const withTimeout = async <T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string
+): Promise<T> => {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
 
 export interface UserAssignedRole {
   id: string;
@@ -54,13 +73,13 @@ export const permissionService = {
       throw new Error('Supabase authorization service is not configured in this environment.');
     }
 
-    const currentUser = await authService.getCurrentUser();
-    if (!currentUser?.id) {
-      throw new Error('No authenticated user found for authorization context resolution.');
-    }
-
-    const { data: contextData, error: rpcError } = await supabase.rpc(
-      'admin_get_my_authorization_context'
+    // The backend RPC is the authoritative authorization check and resolves
+    // auth.uid() from the caller JWT. Avoid a redundant auth.getUser() network
+    // round-trip here because it can block behind a stale browser auth lock.
+    const { data: contextData, error: rpcError } = await withTimeout(
+      supabase.rpc('admin_get_my_authorization_context'),
+      AUTHORIZATION_TIMEOUT_MS,
+      'Authorization context request timed out.'
     );
 
     if (rpcError) {
