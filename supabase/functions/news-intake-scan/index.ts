@@ -439,6 +439,81 @@ const isUnsafeNetworkHostname = (hostname: string) => {
     || a >= 224;
 };
 
+
+const isPrivateOrReservedIp = (raw: string): boolean => {
+  const value = raw.trim().toLowerCase().replace(/^\[|\]$/g, '');
+  if (!value) return true;
+
+  if (value.includes(':')) {
+    if (
+      value === '::' ||
+      value === '::1' ||
+      value.startsWith('fc') ||
+      value.startsWith('fd') ||
+      /^fe[89ab]/.test(value) ||
+      value.startsWith('ff') ||
+      value.startsWith('2001:db8:')
+    ) return true;
+
+    const mapped = value.match(/::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+    if (mapped) return isPrivateOrReservedIp(mapped[1]);
+    return false;
+  }
+
+  const parts = value.split('.').map((part) => Number(part));
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) {
+    return true;
+  }
+  const [a,b] = parts;
+  return (
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 192 && b === 0) ||
+    (a === 192 && b === 2) ||
+    (a === 198 && (b === 18 || b === 19 || b === 51)) ||
+    (a === 203 && b === 0) ||
+    a >= 224
+  );
+};
+
+const assertPublicResolvedHost = async (hostname: string): Promise<void> => {
+  const host = hostname.trim().toLowerCase().replace(/\.$/, '');
+  if (
+    !host ||
+    host === 'localhost' ||
+    host.endsWith('.localhost') ||
+    host.endsWith('.local') ||
+    host.endsWith('.internal')
+  ) {
+    throw new Error('Unsafe source hostname blocked.');
+  }
+
+  if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(host) || host.includes(':')) {
+    if (isPrivateOrReservedIp(host)) throw new Error('Private or reserved source address blocked.');
+    return;
+  }
+
+  const resolved = new Set<string>();
+  try {
+    for (const address of await Deno.resolveDns(host, 'A')) resolved.add(String(address));
+  } catch {}
+  try {
+    for (const address of await Deno.resolveDns(host, 'AAAA')) resolved.add(String(address));
+  } catch {}
+
+  if (resolved.size === 0) throw new Error('Source hostname could not be resolved safely.');
+  for (const address of resolved) {
+    if (isPrivateOrReservedIp(address)) {
+      throw new Error('Source hostname resolves to a private or reserved address.');
+    }
+  }
+};
+
 const safeScanFetch = async (
   initialUrl: string,
   checkDomain: (url:string)=>Promise<any>,
@@ -448,6 +523,7 @@ const safeScanFetch = async (
   if(current.protocol!=='https:'||current.username||current.password||current.port||isUnsafeNetworkHostname(current.hostname)) {
     throw new Error('Unsafe source URL blocked.');
   }
+  await assertPublicResolvedHost(current.hostname);
   let domain=await checkDomain(current.toString());
   if(!domain?.approved) throw new Error(`SOURCE_DOMAIN_NOT_APPROVED:${current.hostname}`);
 
@@ -469,6 +545,7 @@ const safeScanFetch = async (
       if(next.protocol!=='https:'||next.username||next.password||next.port||isUnsafeNetworkHostname(next.hostname)) {
         throw new Error('Unsafe source redirect blocked.');
       }
+      await assertPublicResolvedHost(next.hostname);
       domain=await checkDomain(next.toString());
       if(!domain?.approved) throw new Error(`SOURCE_DOMAIN_NOT_APPROVED:${next.hostname}`);
       current=next;
