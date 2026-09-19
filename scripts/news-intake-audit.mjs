@@ -237,6 +237,8 @@ for (const needle of [
   'Clear Selection',
   'Publish Selected to Feed',
   'FeedReadyReportPreview',
+  'feedReadyItems.map',
+  'No feed-ready reports',
   'ManualNewsIntakeForm',
   'complaintApi.publishComplaint(reportId)',
   "result.complaint.status !== 'published'",
