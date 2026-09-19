@@ -90,6 +90,15 @@ assert.equal(
   '2026-09-18',
   'Bangla weekday with a past-time cue must resolve against publication date'
 );
+
+assert.equal(
+  inferIncidentDate(
+    'শনিবার সকাল সাড়ে ৮টার দিকে সড়কের গড়িয়ারপাড় এলাকায় এ দুর্ঘটনা ঘটে বলে পুলিশ জানিয়েছে।',
+    '2026-09-19'
+  ),
+  '2026-09-19',
+  'Bangla weekday plus bare সকাল must resolve against same-day publication date'
+);
 assert.equal(
   inferIncidentDate('Police said the incident happened Thursday night', '2026-09-19'),
   '2026-09-17',
