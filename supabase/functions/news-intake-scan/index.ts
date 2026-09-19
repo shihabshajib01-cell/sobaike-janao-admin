@@ -9,7 +9,9 @@ import {
   clip,
   detectLanguage,
   findLocation,
+  inferDistrictWideScope,
   inferIncidentDate,
+  inferSpecificLocationPhrase,
   isUnsupportedArticleType,
   scoreDiscoveryLink,
 } from "../_shared/newsIntakeAutomationCore.ts";
@@ -70,11 +72,51 @@ const pageTitle = (html: string) => {
   return match?decodeEntities(match[1]):"";
 };
 
+const DATE_BN_DIGITS: Record<string,string> = {
+  '০':'0','১':'1','২':'2','৩':'3','৪':'4','৫':'5','৬':'6','৭':'7','৮':'8','৯':'9'
+};
+const DATE_MONTHS: Record<string,number> = {
+  january:1,february:2,march:3,april:4,may:5,june:6,july:7,august:8,september:9,october:10,november:11,december:12,
+  'জানুয়ারি':1,'জানুয়ারি':1,'ফেব্রুয়ারি':2,'ফেব্রুয়ারি':2,'মার্চ':3,'এপ্রিল':4,'মে':5,'জুন':6,'জুলাই':7,'আগস্ট':8,'সেপ্টেম্বর':9,'অক্টোবর':10,'নভেম্বর':11,'ডিসেম্বর':12
+};
+const publishedYmd = (year:number,month:number,day:number) => {
+  const value=new Date(Date.UTC(year,month-1,day));
+  if(value.getUTCFullYear()!==year||value.getUTCMonth()!==month-1||value.getUTCDate()!==day)return null;
+  return year+"-"+String(month).padStart(2,'0')+"-"+String(day).padStart(2,'0');
+};
 const normalizedDate = (raw: unknown) => {
+  if(!raw)return null;
+  const value=String(raw)
+    .replace(/[০-৯]/g,(digit)=>DATE_BN_DIGITS[digit]||digit)
+    .replace(/\s+/g,' ')
+    .trim();
+  const iso=value.match(/\b(20\d{2})[-\/.](0?[1-9]|1[0-2])[-\/.]([0-2]?\d|3[01])\b/);
+  if(iso)return publishedYmd(Number(iso[1]),Number(iso[2]),Number(iso[3]));
+  const dmy=value.match(/\b([0-2]?\d|3[01])[-\/.](0?[1-9]|1[0-2])[-\/.](20\d{2})\b/);
+  if(dmy)return publishedYmd(Number(dmy[3]),Number(dmy[2]),Number(dmy[1]));
+
+  const monthPattern=Object.keys(DATE_MONTHS)
+    .sort((a,b)=>b.length-a.length)
+    .map((name)=>name.replace(/[.*+?^$\{\}()|[\]\\]/g,'\\const normalizedDate = (raw: unknown) => {
   if(!raw)return null;
   const match=String(raw).match(/^(\d{4})-(\d{2})-(\d{2})/);
   if(match)return match[1]+"-"+match[2]+"-"+match[3];
   const parsed=new Date(String(raw));
+  return Number.isNaN(parsed.getTime())?null:parsed.toISOString().slice(0,10);
+};'))
+    .join('|');
+  const namedDayFirst=value.match(new RegExp('\\b(\\d{1,2})\\s+('+monthPattern+')\\s*,?\\s*(20\\d{2})\\b','iu'));
+  if(namedDayFirst){
+    const month=DATE_MONTHS[namedDayFirst[2].toLowerCase()]||DATE_MONTHS[namedDayFirst[2]];
+    return publishedYmd(Number(namedDayFirst[3]),month,Number(namedDayFirst[1]));
+  }
+  const namedMonthFirst=value.match(new RegExp('\\b('+monthPattern+')\\s+(\\d{1,2}),?\\s+(20\\d{2})\\b','iu'));
+  if(namedMonthFirst){
+    const month=DATE_MONTHS[namedMonthFirst[1].toLowerCase()]||DATE_MONTHS[namedMonthFirst[1]];
+    return publishedYmd(Number(namedMonthFirst[3]),month,Number(namedMonthFirst[2]));
+  }
+
+  const parsed=new Date(value);
   return Number.isNaN(parsed.getTime())?null:parsed.toISOString().slice(0,10);
 };
 
@@ -117,7 +159,9 @@ const extractJsonLdArticle = (html: string) => {
     if (Array.isArray(value)) return value.forEach(walk);
     if (typeof value === 'object') {
       nodes.push(value);
-      if (value['@graph']) walk(value['@graph']);
+      for (const child of Object.values(value)) {
+        if (child && typeof child === 'object') walk(child);
+      }
     }
   };
   for (const script of scripts.slice(0,10)) {
@@ -129,6 +173,53 @@ const extractJsonLdArticle = (html: string) => {
     const type = Array.isArray(node['@type']) ? node['@type'].join(' ') : String(node['@type'] || '');
     return /NewsArticle|Article|ReportageNewsArticle/i.test(type);
   }) || null;
+};
+
+const extractPublishedDate = (html: string, jsonLd: any) => {
+  const timeTag=[...String(html||'').matchAll(/<time\b[^>]*>/gi)]
+    .map((match)=>attr(match[0],'datetime'))
+    .find(Boolean) || '';
+  const itemPropTag=[...String(html||'').matchAll(/<(?:meta|time)\b[^>]*>/gi)]
+    .find((match)=>/\bitemprop\s*=\s*["']?datepublished["']?/i.test(match[0]))?.[0] || '';
+  const itemPropDate=itemPropTag
+    ? (attr(itemPropTag,'content') || attr(itemPropTag,'datetime'))
+    : '';
+  const scriptDate=String(html||'').match(
+    /["'](?:datePublished|date_published|published_at|publishDate|publicationDate|dateCreated)["']\s*:\s*["']([^"']+)["']/i
+  )?.[1] || '';
+  const visibleHeader=stripTags(String(html||'').slice(0,250000)).slice(0,14000);
+  const visibleDate=visibleHeader.match(
+    /(?:প্রকাশ(?:িত)?|আপডেট|published(?:\s+on)?|publication\s+date)\s*[:\-]?\s*([^|।\n]{4,80})/iu
+  )?.[1] || '';
+
+  const candidates=[
+    jsonLd?.datePublished,
+    jsonLd?.dateCreated,
+    metaContent(html,[
+      'article:published_time',
+      'article:published',
+      'published_time',
+      'datepublished',
+      'date-published',
+      'publishdate',
+      'publish_date',
+      'publication_date',
+      'datecreated',
+      'date_created',
+      'pubdate',
+      'date',
+    ]),
+    itemPropDate,
+    timeTag,
+    scriptDate,
+    visibleDate,
+  ];
+
+  for (const candidate of candidates) {
+    const normalized=normalizedDate(candidate);
+    if(normalized)return normalized;
+  }
+  return null;
 };
 
 const extractArticle = (html: string, finalUrl: string, publisherFallback: string) => {
@@ -153,12 +244,7 @@ const extractArticle = (html: string, finalUrl: string, publisherFallback: strin
   const canonicalRaw = linkHref(html,'canonical') || finalUrl;
   let canonicalUrl = finalUrl;
   try { canonicalUrl = new URL(canonicalRaw,finalUrl).toString(); } catch {}
-  const dateRaw = String(
-    jsonLd?.datePublished ||
-    metaContent(html,['article:published_time','datepublished','date','pubdate','publishdate']) ||
-    ''
-  );
-  const sourcePublishedDate = normalizedDate(dateRaw);
+  const sourcePublishedDate = extractPublishedDate(html,jsonLd);
   let body = String(jsonLd?.articleBody || '').trim();
   if (!body) {
     const articleMatch = html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i);
@@ -193,8 +279,14 @@ const isLikelyArticlePath = (url: URL, anchorText: string, baseUrl: string) => {
   if (/(\/tag\/|\/topic\/|\/category\/|\/author\/|\/search(?:\/|$)|\/videos?(?:\/|$)|\/m\/video(?:\/|$)|\/photo(?:\/|$)|\/epaper|\/archive|\/contact|\/privacy|\/terms|\/careers?(?:\/|$)|\/jobs?(?:\/|$)|\/cdn-cgi(?:\/|$)|\/opinion(?:\/|$)|\/editorials?(?:\/|$)|\/analysis(?:\/|$)|\/features?(?:\/|$)|\/lifestyle(?:\/|$)|\/sports?(?:\/|$)|\/cricket(?:\/|$)|\/entertainment(?:\/|$)|\/multimedia(?:\/|$)|\/star-multimedia(?:\/|$))/i.test(path)) return false;
   const cleanText=stripTags(anchorText);
   if (cleanText.length<16) return false;
-  if (/^(home|latest|latest news|all news|bangladesh|জাতীয়|সর্বশেষ|আরও|আরও দেখুন|more)$/iu.test(cleanText)) return false;
-  return path.split('/').filter(Boolean).length>=2 || /\d{4}|\d{5,}/.test(path);
+  if (/^(home|latest|latest news|all news|news|bangladesh|national|country|crime\s*&\s*justice|crime and justice|politics|business|education|world|জাতীয়|সর্বশেষ|দেশ|রাজনীতি|ব্যবসা|শিক্ষা|আরও|আরও দেখুন|more)$/iu.test(cleanText)) return false;
+
+  const host=canonicalHostKey(url.hostname);
+  const segments=path.split('/').filter(Boolean);
+  if (host.endsWith('thedailystar.net') && /^\/news\/[^/]+\/?$/i.test(path)) return false;
+  if (segments.length<=2 && !/\d{4}|\d{5,}/.test(path) && /^(news|bangladesh|national|country|crime|crime-justice|politics|business|education|world|saradesh|samagrabangladesh)$/i.test(segments[segments.length-1]||'')) return false;
+
+  return segments.length>=2 || /\d{4}|\d{5,}/.test(path);
 };
 
 const extractArticleLinks = (html: string, baseUrl: string) => {
@@ -464,6 +556,30 @@ const processNewsIntakeRun = async (
           return;
         }
 
+        let finalPathLooksLikeArticle=false;
+        try {
+          finalPathLooksLikeArticle=isLikelyArticlePath(
+            new URL(article.canonicalUrl),
+            article.title,
+            String(source.homepageUrl)
+          );
+        } catch {}
+        if(!finalPathLooksLikeArticle){
+          await record({
+            itemKind:'article',
+            sourceHostname:source.hostname,
+            publisherName:article.publisherName,
+            canonicalUrl:article.canonicalUrl,
+            sourceTitle:article.title,
+            sourcePublishedDate:article.sourcePublishedDate||'',
+            contentLanguage:source.languageHint||'unknown',
+            action:'discovered',
+            duplicateStatus:'unavailable',
+            reason:'Section, homepage, or non-article URL was excluded from automated intake.',
+          });
+          return;
+        }
+
         const canonicalCheck=await checkDomain(article.canonicalUrl);
         if(!canonicalCheck?.approved) article.canonicalUrl=fetched.finalUrl;
         const finalDomain=await checkDomain(article.canonicalUrl);
@@ -591,6 +707,58 @@ const processNewsIntakeRun = async (
             : null;
         }
 
+        const fallbackDistrict=
+          location?.district
+            ? {division:location.division,district:location.district}
+            : (
+                findLocation(article.title)
+                || findLocation(article.excerpt)
+                || findLocation(article.body.slice(0,5000))
+              );
+        if(!location && fallbackDistrict){
+          location={
+            ...fallbackDistrict,
+            upazilaOrThana:'',
+            area:'',
+            road:'',
+            landmark:'',
+            formattedAddress:'',
+            locationScope:'district_only',
+            quality:'district_only',
+          };
+        }
+
+        if(location){
+          const specificPhrase=inferSpecificLocationPhrase(locationText,location.district);
+          const districtWide=inferDistrictWideScope(locationText);
+          const alreadySpecific=Boolean(
+            location.upazilaOrThana
+            || location.area
+            || location.road
+            || location.landmark
+            || (
+              location.formattedAddress
+              && String(location.formattedAddress).toLowerCase()!==String(location.district||'').toLowerCase()
+            )
+          );
+
+          if(specificPhrase && !alreadySpecific){
+            location={
+              ...location,
+              area:specificPhrase,
+              formattedAddress:specificPhrase,
+              locationScope:'specific',
+              quality:'specific',
+            };
+          }else if(districtWide && !alreadySpecific){
+            location={
+              ...location,
+              locationScope:'district_wide',
+              quality:'district_only',
+            };
+          }
+        }
+
         const incidentDate=inferIncidentDate(locationText,article.sourcePublishedDate);
         const context=buildIncidentContext(article);
         if(!location||!incidentDate||!context){
@@ -617,7 +785,7 @@ const processNewsIntakeRun = async (
           return;
         }
 
-        if(location.quality !== 'specific'){
+        if(location.quality !== 'specific' && location.locationScope !== 'district_wide'){
           await record({
             itemKind:'article',
             sourceHostname:source.hostname,
