@@ -541,6 +541,9 @@ await check('News Intake clear source reaches one-click publication', async () =
     'News Intake page title missing'
   );
 
+  await page.getByText('Manual intake', { exact: true }).click();
+  await page.getByRole('button', { name: 'Open Manual Intake', exact: true }).click();
+
   await page.locator('#news-intake-source-url').fill(
     'https://www.thedailystar.net/e2e-news-intake'
   );
