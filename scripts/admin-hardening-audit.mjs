@@ -82,4 +82,55 @@ for (const needle of [
   }
 }
 
+
+const supabaseClient = read('src/lib/supabase.ts');
+for (const needle of [
+  "sobaike_admin_persist_session_v1",
+  "window.sessionStorage",
+  "setAdminSessionPersistence",
+]) {
+  if (!supabaseClient.includes(needle)) {
+    fail('Remember-me session persistence hardening is missing: ' + needle);
+  }
+}
+
+const createUserEdge = read('supabase/functions/admin-create-user/index.ts');
+for (const needle of [
+  'npm:@supabase/supabase-js@2.112.4',
+  'cleanPassword.length < 12',
+  'ADMIN_ALLOWED_ORIGINS',
+]) {
+  if (!createUserEdge.includes(needle)) {
+    fail('Admin user creation Edge hardening is missing: ' + needle);
+  }
+}
+if (createUserEdge.includes('"Access-Control-Allow-Origin": "*"')) {
+  fail('Admin user creation Edge function must not use wildcard CORS');
+}
+
+const deleteUserEdge = read('supabase/functions/admin-delete-user/index.ts');
+for (const needle of [
+  'npm:@supabase/supabase-js@2.112.4',
+  'ADMIN_ALLOWED_ORIGINS',
+]) {
+  if (!deleteUserEdge.includes(needle)) {
+    fail('Admin user deletion Edge hardening is missing: ' + needle);
+  }
+}
+if (deleteUserEdge.includes('"Access-Control-Allow-Origin": "*"')) {
+  fail('Admin user deletion Edge function must not use wildcard CORS');
+}
+
+const newsIntakeScan = read('supabase/functions/news-intake-scan/index.ts');
+for (const needle of [
+  'assertPublicResolvedHost',
+  "Deno.resolveDns(host, 'A')",
+  "Deno.resolveDns(host, 'AAAA')",
+  'isPrivateOrReservedIp',
+]) {
+  if (!newsIntakeScan.includes(needle)) {
+    fail('News Intake SSRF hardening is missing: ' + needle);
+  }
+}
+
 console.log('Admin hardening audit passed: E2E bypass is DEV-only, auth bootstrap is bounded and deadlock-safe, production source maps are disabled, bundle cycles are rejected, and browser smoke follows the deployed commit.');
