@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Checkbox } from '@/components/ui/Checkbox';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
@@ -18,6 +19,11 @@ import { FeedbackNotice } from '@/components/ui/FeedbackNotice';
 import { Tag } from '@/components/ui/Tag';
 import { useLanguage } from '@/context/LanguageContext';
 import { complaintApi, newsIntakeApi } from '@/services/api';
+import { reportingFormApi } from '@/services/api/reportingFormApi';
+import {
+  ReportingFormBundle,
+  ReportingFormField,
+} from '@/types/ReportingForm';
 import {
   NewsIntakePayload,
   NewsIntakePreview,
@@ -171,6 +177,90 @@ const detectSourceLanguage = (value: string): 'bn' | 'en' | 'mixed' | 'unknown' 
   return 'unknown';
 };
 
+const SUPPORTED_DYNAMIC_FIELD_TYPES = new Set([
+  'text',
+  'textarea',
+  'number',
+  'currency',
+  'date',
+  'time',
+  'month',
+  'select',
+  'radio',
+  'checkbox',
+  'multiselect',
+  'phone',
+  'email',
+  'url',
+]);
+
+const MANUAL_INTAKE_CORE_STORAGE_KEYS = new Set([
+  'title',
+  'description',
+  'incidentDate',
+  'incidentTime',
+  'utilityEndTime',
+  'frequency',
+  'priority',
+  'relationshipContext',
+  'recentBillMonth',
+  'recentBillAmount',
+  'previousBillMonth',
+  'previousBillAmount',
+  'briberyDepartment',
+  'briberyService',
+  'briberyAmount',
+  'affectedPersonAgeGroup',
+  'allegedAbuserRelationship',
+  'reportingFor',
+  'sexualHarassmentType',
+  'sexualHarassmentContext',
+  'sexualHarassmentInstitution',
+  'intimateWhatHappened',
+  'intimatePlatform',
+  'mobJusticeDetails',
+]);
+
+const MANUAL_INTAKE_SYSTEM_FIELDS = new Set([
+  'location',
+  'mob_justice_details',
+  'mobJusticeDetails',
+]);
+
+const dynamicStorageKey = (field: ReportingFormField) =>
+  field.storageKey?.trim() || field.fieldKey;
+
+const isEmptyDynamicValue = (value: unknown) =>
+  value === null ||
+  value === undefined ||
+  (typeof value === 'string' && value.trim() === '') ||
+  (Array.isArray(value) && value.length === 0) ||
+  (typeof value === 'object' &&
+    !Array.isArray(value) &&
+    Object.keys(value as Record<string, unknown>).length === 0);
+
+const isManualFieldSupported = (field: ReportingFormField) => {
+  const storageKey = dynamicStorageKey(field);
+  if (field.storageMode === 'core_column') {
+    return MANUAL_INTAKE_CORE_STORAGE_KEYS.has(storageKey);
+  }
+  if (field.storageMode === 'system_block') {
+    return (
+      MANUAL_INTAKE_SYSTEM_FIELDS.has(field.fieldKey) ||
+      MANUAL_INTAKE_SYSTEM_FIELDS.has(storageKey)
+    );
+  }
+  if (field.storageMode !== 'custom_json') return false;
+  if (!SUPPORTED_DYNAMIC_FIELD_TYPES.has(field.fieldType)) return false;
+  if (
+    ['select', 'radio', 'multiselect'].includes(field.fieldType) &&
+    (!Array.isArray(field.options) || field.options.length === 0)
+  ) {
+    return false;
+  }
+  return true;
+};
+
 interface ManualNewsIntakeFormProps {
   initialSourceUrl?: string;
 }
@@ -207,6 +297,9 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
   const [createdReportId, setCreatedReportId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [publishedForm, setPublishedForm] = useState<ReportingFormBundle | null>(null);
+  const [loadingPublishedForm, setLoadingPublishedForm] = useState(false);
+  const [publishedFormError, setPublishedFormError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!initialSourceUrl) return;
@@ -251,6 +344,41 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
     };
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+    setPublishedForm(null);
+    setPublishedFormError(null);
+
+    if (!report.subcategoryId) {
+      setLoadingPublishedForm(false);
+      return () => {
+        mounted = false;
+      };
+    }
+
+    setLoadingPublishedForm(true);
+    void reportingFormApi
+      .getPublished(report.subcategoryId)
+      .then((bundle) => {
+        if (mounted) setPublishedForm(bundle);
+      })
+      .catch((err: unknown) => {
+        if (!mounted) return;
+        setPublishedFormError(
+          err instanceof Error
+            ? err.message
+            : 'Failed to load the currently published reporting form.'
+        );
+      })
+      .finally(() => {
+        if (mounted) setLoadingPublishedForm(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [report.subcategoryId]);
+
   const availableSubcategories = useMemo(
     () =>
       taxonomy.subcategories.filter(
@@ -287,6 +415,32 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
     [locationTaxonomy.upazilas, selectedDistrict]
   );
 
+  const publishedSchemaFields = useMemo(
+    () =>
+      publishedForm?.schema?.engineMode === 'schema'
+        ? publishedForm.fields.filter((field) => field.active !== false)
+        : [],
+    [publishedForm]
+  );
+
+  const dynamicCustomFields = useMemo(
+    () =>
+      publishedSchemaFields.filter(
+        (field) =>
+          field.storageMode === 'custom_json' &&
+          isManualFieldSupported(field)
+      ),
+    [publishedSchemaFields]
+  );
+
+  const unsupportedRequiredFields = useMemo(
+    () =>
+      publishedSchemaFields.filter(
+        (field) => field.required && !isManualFieldSupported(field)
+      ),
+    [publishedSchemaFields]
+  );
+
   const invalidatePreview = () => {
     setPreview(null);
     setSuccess(null);
@@ -302,6 +456,19 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
     setReport((current) => ({ ...current, ...patch }));
     invalidatePreview();
   };
+
+  const updateDynamicAnswer = (field: ReportingFormField, value: unknown) => {
+    const key = dynamicStorageKey(field);
+    updateReport({
+      customFieldAnswers: {
+        ...report.customFieldAnswers,
+        [key]: value,
+      },
+    });
+  };
+
+  const dynamicAnswer = (field: ReportingFormField) =>
+    report.customFieldAnswers?.[dynamicStorageKey(field)];
 
   const payload = (): NewsIntakePayload => ({
     source,
@@ -330,6 +497,37 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
     }
     if (!report.segmentId || !report.subcategoryId) {
       return isBn ? 'ক্যাটাগরি ও সাবক্যাটাগরি নির্বাচন করুন।' : 'Select a category and subcategory.';
+    }
+    if (loadingPublishedForm) {
+      return isBn
+        ? 'প্রকাশিত রিপোর্ট ফর্ম লোড হচ্ছে। একটু অপেক্ষা করুন।'
+        : 'The published reporting form is still loading. Please wait.';
+    }
+    if (publishedFormError) {
+      return isBn
+        ? 'বর্তমান প্রকাশিত রিপোর্ট ফর্ম যাচাই করা যায়নি। আবার চেষ্টা করুন।'
+        : 'The current published reporting form could not be verified. Try again.';
+    }
+    if (unsupportedRequiredFields.length > 0) {
+      const labels = unsupportedRequiredFields
+        .map((field) => (isBn ? field.labelBn || field.labelEn : field.labelEn || field.labelBn))
+        .filter(Boolean)
+        .join(', ');
+      return isBn
+        ? `বর্তমান প্রকাশিত ফর্মে এমন আবশ্যক ফিল্ড আছে যা নিউজ ইনটেক এখনো নিরাপদভাবে পূরণ করতে পারে না: ${labels}। রিপোর্টটি সাধারণ রিপোর্ট ফ্লো দিয়ে সম্পন্ন করুন।`
+        : `The current published form contains required fields that News Intake cannot safely populate yet: ${labels}. Complete this report through the standard report workflow.`;
+    }
+    const missingDynamicFields = dynamicCustomFields.filter(
+      (field) => field.required && isEmptyDynamicValue(dynamicAnswer(field))
+    );
+    if (missingDynamicFields.length > 0) {
+      const labels = missingDynamicFields
+        .map((field) => (isBn ? field.labelBn || field.labelEn : field.labelEn || field.labelBn))
+        .filter(Boolean)
+        .join(', ');
+      return isBn
+        ? `প্রকাশিত ফর্মের আবশ্যক তথ্য দিন: ${labels}।`
+        : `Complete the required published-form fields: ${labels}.`;
     }
     if (!report.titleBn.trim() || !report.descriptionBn.trim()) {
       return isBn
@@ -543,6 +741,13 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
   };
 
   const handleMerge = async (complaintId: string) => {
+    const confirmed = window.confirm(
+      isBn
+        ? `এই যাচাইকৃত উৎসটি ${complaintId} রিপোর্টে মার্জ করবেন? এতে বিদ্যমান রিপোর্টের উৎস ইতিহাস পরিবর্তন হবে।`
+        : `Merge this verified source into report ${complaintId}? This changes the existing report's source history.`
+    );
+    if (!confirmed) return;
+
     setMergingId(complaintId);
     setError(null);
     setSuccess(null);
@@ -556,6 +761,128 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
     } finally {
       setMergingId(null);
     }
+  };
+
+  const renderDynamicField = (field: ReportingFormField) => {
+    const key = dynamicStorageKey(field);
+    const labelBase = isBn ? field.labelBn || field.labelEn : field.labelEn || field.labelBn;
+    const label = `${labelBase || field.fieldKey}${field.required ? ' *' : ''}`;
+    const helperText = isBn ? field.helperBn || field.helperEn : field.helperEn || field.helperBn;
+    const value = dynamicAnswer(field);
+
+    if (field.fieldType === 'textarea') {
+      return (
+        <Textarea
+          key={key}
+          label={label}
+          helperText={helperText}
+          value={typeof value === 'string' ? value : ''}
+          onChange={(event) => updateDynamicAnswer(field, event.target.value)}
+        />
+      );
+    }
+
+    if (field.fieldType === 'checkbox') {
+      return (
+        <div key={key} className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
+          <Checkbox
+            id={`news-intake-dynamic-${field.fieldKey}`}
+            label={label}
+            description={helperText}
+            checked={value === true}
+            onChange={(event) => updateDynamicAnswer(field, event.target.checked)}
+          />
+        </div>
+      );
+    }
+
+    if (field.fieldType === 'multiselect') {
+      const selected = Array.isArray(value) ? value.map(String) : [];
+      return (
+        <fieldset
+          key={key}
+          className="space-y-2 rounded-lg border border-slate-200 p-3 dark:border-slate-800"
+        >
+          <legend className="px-1 type-label font-medium text-slate-700 dark:text-slate-300">
+            {label}
+          </legend>
+          {helperText && (
+            <p className="type-helper text-slate-500 dark:text-slate-400">{helperText}</p>
+          )}
+          <div className="grid gap-2 sm:grid-cols-2">
+            {field.options.map((option) => {
+              const optionLabel = isBn
+                ? option.labelBn || option.labelEn
+                : option.labelEn || option.labelBn;
+              return (
+                <Checkbox
+                  key={option.value}
+                  id={`news-intake-dynamic-${field.fieldKey}-${option.value}`}
+                  label={optionLabel || option.value}
+                  checked={selected.includes(option.value)}
+                  onChange={(event) => {
+                    const next = event.target.checked
+                      ? Array.from(new Set([...selected, option.value]))
+                      : selected.filter((item) => item !== option.value);
+                    updateDynamicAnswer(field, next);
+                  }}
+                />
+              );
+            })}
+          </div>
+        </fieldset>
+      );
+    }
+
+    if (field.fieldType === 'select' || field.fieldType === 'radio') {
+      return (
+        <Select
+          key={key}
+          label={label}
+          helperText={helperText}
+          value={typeof value === 'string' ? value : ''}
+          onChange={(event) => updateDynamicAnswer(field, event.target.value)}
+          options={[
+            { value: '', label: isBn ? 'নির্বাচন করুন' : 'Select', disabled: true },
+            ...field.options.map((option) => ({
+              value: option.value,
+              label:
+                (isBn ? option.labelBn || option.labelEn : option.labelEn || option.labelBn) ||
+                option.value,
+            })),
+          ]}
+        />
+      );
+    }
+
+    const inputType =
+      field.fieldType === 'currency' || field.fieldType === 'number'
+        ? 'number'
+        : field.fieldType === 'phone'
+          ? 'tel'
+          : field.fieldType;
+
+    return (
+      <Input
+        key={key}
+        type={inputType}
+        label={label}
+        helperText={helperText}
+        value={
+          typeof value === 'string' || typeof value === 'number'
+            ? String(value)
+            : ''
+        }
+        onChange={(event) =>
+          updateDynamicAnswer(
+            field,
+            field.fieldType === 'number' || field.fieldType === 'currency'
+              ? event.target.value
+              : event.target.value
+          )
+        }
+      />
+    );
   };
 
   const exactDuplicates = preview?.duplicate.exactSourceDuplicates || [];
@@ -584,6 +911,7 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
             <Button
               variant="secondary"
               size="sm"
+                      className="max-sm:min-h-11"
               className="mt-2"
               onClick={() => navigate(`/complaints/${encodeURIComponent(createdReportId)}`)}
               leftIcon={<ExternalLink />}
@@ -1215,6 +1543,80 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
               </div>
             </section>
           )}
+
+          {report.subcategoryId && publishedForm?.schema?.engineMode === 'schema' && (
+            <section className="space-y-4 rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <h3 className="type-card-title">
+                    {isBn ? 'প্রকাশিত ফর্মের অতিরিক্ত তথ্য' : 'Published form fields'}
+                  </h3>
+                  <p className="mt-1 type-helper text-slate-500 dark:text-slate-400">
+                    {isBn
+                      ? 'পাবলিক রিপোর্ট ফর্মে বর্তমানে প্রকাশিত স্কিমার সাথে নিউজ ইনটেক সিঙ্ক করা হয়েছে।'
+                      : 'News Intake is synced with the reporting schema currently published to the public form.'}
+                  </p>
+                </div>
+                <Tag tone="info">
+                  {isBn
+                    ? `প্রকাশিত v${publishedForm.schema.version}`
+                    : `Published v${publishedForm.schema.version}`}
+                </Tag>
+              </div>
+
+              {unsupportedRequiredFields.length > 0 && (
+                <FeedbackNotice
+                  tone="warning"
+                  title={isBn ? 'ম্যানুয়াল রিভিউ প্রয়োজন' : 'Standard workflow required'}
+                >
+                  <p>
+                    {isBn
+                      ? 'এই প্রকাশিত স্কিমায় এমন আবশ্যক সিস্টেম/কোর ফিল্ড আছে যা নিউজ ইনটেক অনুমান করে পূরণ করবে না। সাধারণ রিপোর্ট ফ্লো দিয়ে তথ্য যাচাই করে সম্পন্ন করুন।'
+                      : 'This published schema contains required system/core fields that News Intake will not guess or map unsafely. Complete the report through the standard workflow.'}
+                  </p>
+                  <p className="mt-1 type-helper">
+                    {unsupportedRequiredFields
+                      .map((field) =>
+                        isBn
+                          ? field.labelBn || field.labelEn || field.fieldKey
+                          : field.labelEn || field.labelBn || field.fieldKey
+                      )
+                      .join(', ')}
+                  </p>
+                </FeedbackNotice>
+              )}
+
+              {dynamicCustomFields.length > 0 && (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {dynamicCustomFields.map(renderDynamicField)}
+                </div>
+              )}
+
+              {dynamicCustomFields.length === 0 && unsupportedRequiredFields.length === 0 && (
+                <p className="type-helper text-slate-500 dark:text-slate-400">
+                  {isBn
+                    ? 'এই স্কিমার সব প্রয়োজনীয় ফিল্ড উপরের বিদ্যমান নিউজ ইনটেক কন্ট্রোল দিয়েই পূরণ হচ্ছে।'
+                    : 'All required fields in this schema are already covered by the existing News Intake controls above.'}
+                </p>
+              )}
+            </section>
+          )}
+
+          {loadingPublishedForm && report.subcategoryId && (
+            <FeedbackNotice tone="neutral" compact>
+              <p>{isBn ? 'প্রকাশিত ফর্ম যাচাই করা হচ্ছে…' : 'Checking the published form contract…'}</p>
+            </FeedbackNotice>
+          )}
+
+          {publishedFormError && report.subcategoryId && (
+            <FeedbackNotice tone="error" compact>
+              <p>
+                {isBn
+                  ? 'প্রকাশিত ফর্ম কনফিগারেশন যাচাই করা যায়নি। নিরাপত্তার জন্য Draft/Publish বন্ধ থাকবে যতক্ষণ না এটি আবার লোড হয়।'
+                  : 'The published form configuration could not be verified. Draft/publish stays blocked until it can be loaded safely.'}
+              </p>
+            </FeedbackNotice>
+          )}
         </CardContent>
       </Card>
 
@@ -1294,6 +1696,7 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
                     <Button
                       variant="secondary"
                       size="sm"
+                      className="max-sm:min-h-11"
                       onClick={() => navigate(`/complaints/${encodeURIComponent(item.complaintId)}`)}
                       leftIcon={<ExternalLink />}
                     >
@@ -1342,6 +1745,7 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
                       <Button
                         variant="secondary"
                         size="sm"
+                      className="max-sm:min-h-11"
                         onClick={() => navigate(`/complaints/${encodeURIComponent(candidate.complaintId)}`)}
                         leftIcon={<ExternalLink />}
                       >
@@ -1350,6 +1754,7 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
                       <Button
                         variant="primary"
                         size="sm"
+                      className="max-sm:min-h-11"
                         onClick={() => handleMerge(candidate.complaintId)}
                         isLoading={mergingId === candidate.complaintId}
                         disabled={mergingId !== null || creating}
