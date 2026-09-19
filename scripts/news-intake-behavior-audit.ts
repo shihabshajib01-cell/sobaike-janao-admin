@@ -12,6 +12,7 @@ import {
 
 const classificationCases: Array<[string, string, string]> = [
   ['rape-sexual-violence', 'ধর্ষণের অভিযোগে একজনকে গ্রেপ্তার করেছে পুলিশ', 'harassment'],
+  ['rape-sexual-violence', '20-year-old gang-raped in Kushtia dies at RMCH after 4 days', 'harassment'],
   ['sexual-harassment', 'কর্মস্থলে যৌন হয়রানির অভিযোগ উঠেছে', 'harassment'],
   ['domestic-violence', 'স্ত্রীকে মারধরের অভিযোগে স্বামী আটক', 'harassment'],
   ['blackmail-coercion', 'ছবি ছড়িয়ে দেওয়ার ভয় দেখিয়ে ব্ল্যাকমেইল', 'harassment'],
