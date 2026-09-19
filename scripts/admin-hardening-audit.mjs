@@ -15,6 +15,22 @@ if (!auth.includes('import.meta.env?.DEV') || !auth.includes("VITE_ADMIN_E2E_MOD
   fail('DEV-only E2E authentication guard is missing or not constrained to Vite DEV mode');
 }
 
+for (const needle of [
+  'AUTH_BOOTSTRAP_TIMEOUT_MS',
+  'Session verification timed out.',
+  'Administrator verification timed out.',
+  'registerAuthSubscription',
+  'void initAuth().finally',
+]) {
+  if (!auth.includes(needle)) {
+    fail('Admin authentication bootstrap deadlock protection is missing: ' + needle);
+  }
+}
+
+if (auth.indexOf('void initAuth().finally') > auth.indexOf('registerAuthSubscription();')) {
+  fail('Admin auth listener must be registered only after initial auth bootstrap completes');
+}
+
 if (!vite.includes('sourcemap: false')) {
   fail('production sourcemaps are not disabled');
 }
@@ -39,4 +55,4 @@ if (!workflow.includes('playwright@1.63.0')) {
   fail('Admin browser smoke Playwright runtime is not pinned');
 }
 
-console.log('Admin hardening audit passed: E2E bypass is DEV-only, production source maps are disabled, bundle cycles are rejected, and browser smoke follows the deployed commit.');
+console.log('Admin hardening audit passed: E2E bypass is DEV-only, auth bootstrap is bounded and deadlock-safe, production source maps are disabled, bundle cycles are rejected, and browser smoke follows the deployed commit.');
