@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CheckCircle2,
+  ChevronDown,
   CircleAlert,
   ExternalLink,
   Newspaper,
@@ -72,6 +73,8 @@ export const NewsIntakePage: React.FC = () => {
   const [reportMap, setReportMap] = useState<Record<string, Complaint | null>>({});
   const [loadingReports, setLoadingReports] = useState(false);
   const [selectedReportIds, setSelectedReportIds] = useState<string[]>([]);
+  const [rawNewsExpanded, setRawNewsExpanded] = useState(true);
+  const [feedReadyExpanded, setFeedReadyExpanded] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [publishOutcomes, setPublishOutcomes] = useState<PublishOutcome[]>([]);
 
@@ -740,7 +743,7 @@ export const NewsIntakePage: React.FC = () => {
 
               </div>
 
-              <div className="grid gap-3 px-1 lg:grid-cols-2">
+              <div className="hidden gap-3 px-1 lg:grid lg:grid-cols-2">
                 <div className="flex min-h-10 items-center">
                   <p className="type-label font-semibold text-slate-900 dark:text-slate-100">
                     {isBn ? 'কাঁচা সংবাদ পাওয়া গেছে' : 'Raw news found'}
@@ -781,99 +784,182 @@ export const NewsIntakePage: React.FC = () => {
               </div>
 
               <div className="grid items-start gap-4 lg:grid-cols-2">
-                <div className="space-y-3">
-                  {selectedItems.map((item) => (
-                    <Card key={item.id} padding="sm" className="h-full">
-                      <div className="flex h-full flex-col gap-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Tag tone="neutral">{item.contentLanguage.toUpperCase()}</Tag>
-                          <Tag tone={actionTone(item)}>{actionLabel(item)}</Tag>
-                        </div>
-                        <div>
-                          <h3 className="type-card-title">
-                            {item.sourceTitle || (isBn ? 'শিরোনাম পাওয়া যায়নি' : 'Untitled source')}
-                          </h3>
-                          <p className="mt-1 type-meta text-slate-500 dark:text-slate-400">
-                            {item.publisherName}
-                            {item.sourcePublishedDate ? ` · ${item.sourcePublishedDate}` : ''}
-                          </p>
-                        </div>
-                        {item.reason && (
-                          <p className="type-secondary text-slate-600 dark:text-slate-300">
-                            {item.reason}
-                          </p>
-                        )}
-                        <a
-                          href={item.canonicalUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-auto inline-flex items-center gap-1 type-action-sm text-sky-700 hover:underline dark:text-sky-400"
-                        >
-                          <ExternalLink className="size-3.5" />
-                          {isBn ? 'মূল সংবাদ খুলুন' : 'Open source'}
-                        </a>
-                      </div>
-                    </Card>
-                  ))}
+                <section className="min-w-0">
+                  <button
+                    type="button"
+                    className="mb-2 flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left dark:border-slate-800 dark:bg-slate-900/60 lg:hidden"
+                    aria-expanded={rawNewsExpanded}
+                    onClick={() => setRawNewsExpanded((value) => !value)}
+                  >
+                    <div>
+                      <p className="type-label font-semibold text-slate-900 dark:text-slate-100">
+                        {isBn ? 'কাঁচা সংবাদ পাওয়া গেছে' : 'Raw news found'}
+                      </p>
+                      <p className="type-helper text-slate-500 dark:text-slate-400">
+                        {isBn ? `${selectedItems.length}টি সংবাদ` : `${selectedItems.length} news items`}
+                      </p>
+                    </div>
+                    <ChevronDown
+                      className={
+                        'size-4 shrink-0 text-slate-500 transition-transform dark:text-slate-400 ' +
+                        (rawNewsExpanded ? 'rotate-180' : '')
+                      }
+                      aria-hidden="true"
+                    />
+                  </button>
 
-                  {selectedItems.length === 0 && (
-                    <FeedbackNotice tone="neutral">
-                      <p>{isBn ? 'এই রানে কোনো সংবাদ আইটেম পাওয়া যায়নি।' : 'No news items were found in this run.'}</p>
-                    </FeedbackNotice>
-                  )}
-                </div>
-
-                <div className="space-y-3">
-                  {loadingReports && selectedRun.createdCount > 0 ? (
-                    <Card padding="sm">
-                      <div className="flex min-h-40 items-center justify-center">
-                        <p className="type-secondary text-slate-500 dark:text-slate-400">
-                          {isBn ? 'ফিড-রেডি রিপোর্ট প্রস্তুত করা হচ্ছে…' : 'Loading feed-ready reports…'}
-                        </p>
-                      </div>
-                    </Card>
-                  ) : feedReadyItems.length > 0 ? (
-                    feedReadyItems.map((item) => {
-                      const reportId = String(item.reportId);
-                      const complaint = reportMap[reportId];
-                      if (!complaint) return null;
-
-                      return (
-                        <FeedReadyReportPreview
-                          key={item.id}
-                          complaint={complaint}
-                          isBn={isBn}
-                          selected={selectedReportIds.includes(reportId)}
-                          onToggle={() => toggleReport(reportId)}
-                          disabled={publishing}
-                        />
-                      );
-                    })
-                  ) : (
-                    <Card padding="sm">
-                      <div className="flex min-h-52 flex-col items-center justify-center gap-3 px-4 text-center">
-                        <Newspaper className="size-6 text-slate-400" aria-hidden="true" />
-                        <div>
-                          <h3 className="type-card-title text-slate-900 dark:text-slate-100">
-                            {isBn ? 'কোনো ফিড-রেডি রিপোর্ট নেই' : 'No feed-ready reports'}
-                          </h3>
-                          <p className="mt-1 type-secondary text-slate-500 dark:text-slate-400">
-                            {isBn
-                              ? 'এই স্ক্যানে কোনো নতুন নিরাপদ ড্রাফট তৈরি হয়নি। কাঁচা সংবাদগুলো বাম পাশে আছে; রিভিউ বা অসমর্থিত সংবাদ এখানে আলাদা কার্ড হিসেবে দেখানো হবে না।'
-                              : 'This scan did not create any new safe drafts. Raw news stays on the left; review and unsupported items are not repeated in this feed-ready column.'}
-                          </p>
+                  <div
+                    className={
+                      (rawNewsExpanded ? 'block' : 'hidden') +
+                      ' space-y-3 lg:block lg:max-h-[calc(94vh-20rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-2 lg:[scrollbar-gutter:stable]'
+                    }
+                  >
+                    {selectedItems.map((item) => (
+                      <Card key={item.id} padding="sm" className="h-full">
+                        <div className="flex h-full flex-col gap-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Tag tone="neutral">{item.contentLanguage.toUpperCase()}</Tag>
+                            <Tag tone={actionTone(item)}>{actionLabel(item)}</Tag>
+                          </div>
+                          <div>
+                            <h3 className="type-card-title">
+                              {item.sourceTitle || (isBn ? 'শিরোনাম পাওয়া যায়নি' : 'Untitled source')}
+                            </h3>
+                            <p className="mt-1 type-meta text-slate-500 dark:text-slate-400">
+                              {item.publisherName}
+                              {item.sourcePublishedDate ? ` · ${item.sourcePublishedDate}` : ''}
+                            </p>
+                          </div>
+                          {item.reason && (
+                            <p className="type-secondary text-slate-600 dark:text-slate-300">
+                              {item.reason}
+                            </p>
+                          )}
+                          <a
+                            href={item.canonicalUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-auto inline-flex items-center gap-1 type-action-sm text-sky-700 hover:underline dark:text-sky-400"
+                          >
+                            <ExternalLink className="size-3.5" />
+                            {isBn ? 'মূল সংবাদ খুলুন' : 'Open source'}
+                          </a>
                         </div>
-                        {selectedRun.reviewCount > 0 && (
-                          <Tag tone="warning">
-                            {isBn
-                              ? `${selectedRun.reviewCount}টি সংবাদ রিভিউ প্রয়োজন`
-                              : `${selectedRun.reviewCount} need review`}
-                          </Tag>
-                        )}
-                      </div>
-                    </Card>
-                  )}
-                </div>
+                      </Card>
+                    ))}
+
+                    {selectedItems.length === 0 && (
+                      <FeedbackNotice tone="neutral">
+                        <p>{isBn ? 'এই রানে কোনো সংবাদ আইটেম পাওয়া যায়নি।' : 'No news items were found in this run.'}</p>
+                      </FeedbackNotice>
+                    )}
+                  </div>
+                </section>
+
+                <section className="min-w-0">
+                  <button
+                    type="button"
+                    className="mb-2 flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left dark:border-slate-800 dark:bg-slate-900/60 lg:hidden"
+                    aria-expanded={feedReadyExpanded}
+                    onClick={() => setFeedReadyExpanded((value) => !value)}
+                  >
+                    <div>
+                      <p className="type-label font-semibold text-slate-900 dark:text-slate-100">
+                        {isBn ? 'ফিড-রেডি রিপোর্ট' : 'Feed-ready report'}
+                      </p>
+                      <p className="type-helper text-slate-500 dark:text-slate-400">
+                        {isBn
+                          ? `${eligibleReportIds.length}টি প্রস্তুত · ${selectedReportIds.length}টি নির্বাচিত`
+                          : `${eligibleReportIds.length} ready · ${selectedReportIds.length} selected`}
+                      </p>
+                    </div>
+                    <ChevronDown
+                      className={
+                        'size-4 shrink-0 text-slate-500 transition-transform dark:text-slate-400 ' +
+                        (feedReadyExpanded ? 'rotate-180' : '')
+                      }
+                      aria-hidden="true"
+                    />
+                  </button>
+
+                  <div
+                    className={
+                      (feedReadyExpanded ? 'block' : 'hidden') +
+                      ' lg:block lg:max-h-[calc(94vh-20rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-2 lg:[scrollbar-gutter:stable]'
+                    }
+                  >
+                    <div className="mb-3 flex flex-wrap items-center justify-end gap-2 lg:hidden">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={selectAllEligible}
+                        disabled={eligibleReportIds.length === 0 || loadingReports}
+                      >
+                        {isBn ? 'সব নির্বাচন করুন' : 'Select All'}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedReportIds([])}
+                        disabled={selectedReportIds.length === 0}
+                      >
+                        {isBn ? 'নির্বাচন মুছুন' : 'Clear Selection'}
+                      </Button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {loadingReports && selectedRun.createdCount > 0 ? (
+                        <Card padding="sm">
+                          <div className="flex min-h-40 items-center justify-center">
+                            <p className="type-secondary text-slate-500 dark:text-slate-400">
+                              {isBn ? 'ফিড-রেডি রিপোর্ট প্রস্তুত করা হচ্ছে…' : 'Loading feed-ready reports…'}
+                            </p>
+                          </div>
+                        </Card>
+                      ) : feedReadyItems.length > 0 ? (
+                        feedReadyItems.map((item) => {
+                          const reportId = String(item.reportId);
+                          const complaint = reportMap[reportId];
+                          if (!complaint) return null;
+
+                          return (
+                            <FeedReadyReportPreview
+                              key={item.id}
+                              complaint={complaint}
+                              isBn={isBn}
+                              selected={selectedReportIds.includes(reportId)}
+                              onToggle={() => toggleReport(reportId)}
+                              disabled={publishing}
+                            />
+                          );
+                        })
+                      ) : (
+                        <Card padding="sm">
+                          <div className="flex min-h-52 flex-col items-center justify-center gap-3 px-4 text-center">
+                            <Newspaper className="size-6 text-slate-400" aria-hidden="true" />
+                            <div>
+                              <h3 className="type-card-title text-slate-900 dark:text-slate-100">
+                                {isBn ? 'কোনো ফিড-রেডি রিপোর্ট নেই' : 'No feed-ready reports'}
+                              </h3>
+                              <p className="mt-1 type-secondary text-slate-500 dark:text-slate-400">
+                                {isBn
+                                  ? 'এই স্ক্যানে কোনো নতুন নিরাপদ ড্রাফট তৈরি হয়নি। কাঁচা সংবাদগুলো বাম পাশে আছে; রিভিউ বা অসমর্থিত সংবাদ এখানে আলাদা কার্ড হিসেবে দেখানো হবে না।'
+                                  : 'This scan did not create any new safe drafts. Raw news stays on the left; review and unsupported items are not repeated in this feed-ready column.'}
+                              </p>
+                            </div>
+                            {selectedRun.reviewCount > 0 && (
+                              <Tag tone="warning">
+                                {isBn
+                                  ? `${selectedRun.reviewCount}টি সংবাদ রিভিউ প্রয়োজন`
+                                  : `${selectedRun.reviewCount} need review`}
+                              </Tag>
+                            )}
+                          </div>
+                        </Card>
+                      )}
+                    </div>
+                  </div>
+                </section>
               </div>
             </div>
           )}
