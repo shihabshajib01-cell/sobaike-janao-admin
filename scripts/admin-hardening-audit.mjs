@@ -85,7 +85,7 @@ for (const needle of [
 
 const supabaseClient = read('src/lib/supabase.ts');
 for (const needle of [
-  "sobaike_admin_persist_session_v1",
+  "sobaike_admin_session_persistence_v1",
   "window.sessionStorage",
   "setAdminSessionPersistence",
 ]) {
