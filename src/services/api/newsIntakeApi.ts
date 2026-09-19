@@ -8,6 +8,7 @@ import {
   NewsIntakePayload,
   NewsIntakePreview,
   NewsIntakeTaxonomy,
+  NewsIntakeLocationTaxonomy,
   NewsSourceMetadata,
 } from '@/types/NewsIntake';
 
@@ -115,6 +116,22 @@ export class NewsIntakeApi {
     }
 
     return data as NewsIntakeAutomationScanResult;
+  }
+
+  async getLocationTaxonomy(): Promise<NewsIntakeLocationTaxonomy> {
+    assertConfigured();
+
+    const { data, error } = await supabase.rpc('admin_get_location_taxonomy');
+    if (error) {
+      throw new Error(error.message || 'Failed to load canonical location taxonomy.');
+    }
+
+    const raw = (data || {}) as any;
+    return {
+      divisions: Array.isArray(raw.divisions) ? raw.divisions : [],
+      districts: Array.isArray(raw.districts) ? raw.districts : [],
+      upazilas: Array.isArray(raw.upazilas) ? raw.upazilas : [],
+    };
   }
 
   async getTaxonomy(): Promise<NewsIntakeTaxonomy> {
