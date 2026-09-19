@@ -34,9 +34,9 @@ const corsHeadersFor = (req: Request) => {
   };
 };
 
-const json = (body: unknown, status=200) => new Response(JSON.stringify(body), {
+const json = (req: Request, body: unknown, status=200) => new Response(JSON.stringify(body), {
   status,
-  headers:{...corsHeaders,"Content-Type":"application/json"},
+  headers:{...corsHeadersFor(req),"Content-Type":"application/json"},
 });
 
 const decodeEntities = (value: unknown) => String(value || "")
@@ -1163,11 +1163,11 @@ const sha256Hex = async (value: string) => {
 Deno.serve(async (req) => {
   const corsHeaders = corsHeadersFor(req);
   if(req.method==="OPTIONS") return new Response("ok",{headers:corsHeaders});
-  if(req.method!=="POST") return json({error:"Method not allowed."},405);
+  if(req.method!=="POST") return json(req,{error:"Method not allowed."},405);
 
   try {
     const supabaseUrl=Deno.env.get("SUPABASE_URL")??"";
-    if(!supabaseUrl) return json({error:"Function configuration error."},500);
+    if(!supabaseUrl) return json(req,{error:"Function configuration error."},500);
 
     const schedulerSecret=req.headers.get("x-news-intake-scheduler")??"";
     const scheduledRequest=
@@ -1176,12 +1176,12 @@ Deno.serve(async (req) => {
 
     if(scheduledRequest){
       const serviceRoleKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")??"";
-      if(!serviceRoleKey) return json({error:"Scheduler configuration error."},500);
+      if(!serviceRoleKey) return json(req,{error:"Scheduler configuration error."},500);
 
       const requestBody=await req.json().catch(()=>({}));
       const scheduledSlot=String(requestBody?.scheduledSlot||"");
       if(!scheduledSlot){
-        return json({error:"Scheduled slot is required."},400);
+        return json(req,{error:"Scheduled slot is required."},400);
       }
 
       const serviceClient=createClient(supabaseUrl,serviceRoleKey,{
@@ -1193,11 +1193,11 @@ Deno.serve(async (req) => {
         {p_scheduled_slot:scheduledSlot}
       );
       if(beginError){
-        return json({error:beginError.message||"Scheduled scan could not be accepted."},503);
+        return json(req,{error:beginError.message||"Scheduled scan could not be accepted."},503);
       }
 
       if(beginData?.accepted!==true){
-        return json({
+        return json(req,{
           ...beginData,
           triggerType:'automatic',
         },202);
@@ -1205,7 +1205,7 @@ Deno.serve(async (req) => {
 
       const runId=String(beginData?.runId||"");
       if(!runId){
-        return json({error:"Scheduled scan was accepted without a run id."},500);
+        return json(req,{error:"Scheduled scan was accepted without a run id."},500);
       }
 
       EdgeRuntime.waitUntil(
@@ -1214,7 +1214,7 @@ Deno.serve(async (req) => {
         })
       );
 
-      return json({
+      return json(req,{
         ...beginData,
         accepted:true,
         triggerType:'automatic',
@@ -1224,12 +1224,12 @@ Deno.serve(async (req) => {
 
     const authHeader=req.headers.get("Authorization")??"";
     if(!authHeader.startsWith("Bearer ")) {
-      return json({error:"Authentication required."},401);
+      return json(req,{error:"Authentication required."},401);
     }
 
     const publishableKey=
       req.headers.get("apikey")??Deno.env.get("SUPABASE_ANON_KEY")??"";
-    if(!publishableKey) return json({error:"Function configuration error."},500);
+    if(!publishableKey) return json(req,{error:"Function configuration error."},500);
 
     const userClient=createClient(supabaseUrl,publishableKey,{
       global:{headers:{Authorization:authHeader}},
@@ -1237,12 +1237,12 @@ Deno.serve(async (req) => {
     });
     const token=authHeader.slice("Bearer ".length);
     const {error:userError}=await userClient.auth.getUser(token);
-    if(userError) return json({error:"Invalid session."},401);
+    if(userError) return json(req,{error:"Invalid session."},401);
 
     const result=await runManualScan(userClient);
-    return json(result);
+    return json(req,result);
   } catch(error) {
     const message=error instanceof Error?error.message:"Automated News Intake failed.";
-    return json({error:message},400);
+    return json(req,{error:message},400);
   }
 });
