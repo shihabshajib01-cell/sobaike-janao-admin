@@ -20,6 +20,7 @@ const explicitDenyPolicies = read('supabase/migrations/20260918184743_news_intak
 const schemaRequirementGuard = read('supabase/migrations/20260918185342_news_intake_schema_requirement_guard.sql');
 const samakalMode = read('supabase/migrations/20260918185535_news_intake_samakal_manual_only.sql');
 const schedulerMigration = read('supabase/migrations/20260918191945_news_intake_36h_scheduler.sql');
+const schedulerAcknowledgement = read('supabase/migrations/20260919042801_news_intake_scheduler_acknowledgement.sql');
 const automationCore = read('supabase/functions/_shared/newsIntakeAutomationCore.ts');
 const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
 const edge = read('supabase/functions/news-intake-fetch/index.ts');
@@ -113,6 +114,16 @@ for (const needle of [
 ]) {
   requireText(schedulerMigration, needle, '36-hour News Intake scheduler');
 }
+for (const needle of [
+  'service_begin_scheduled_news_intake_run',
+  "date_trunc('minute'",
+  "v_slot+interval '36 hours'",
+  "'* * * * *'",
+  'timeout_milliseconds:=10000',
+  "'scheduledSlot'",
+]) {
+  requireText(schedulerAcknowledgement, needle, 'acknowledged News Intake scheduler');
+}
 
 for (const needle of [
   'admin_get_news_intake_taxonomy',
@@ -152,6 +163,7 @@ for (const needle of [
   'SUPABASE_SERVICE_ROLE_KEY',
   'SCHEDULER_SECRET_SHA256',
   'service_begin_news_intake_run',
+  'EdgeRuntime.waitUntil',
   'verify_jwt',
 ]) {
   if (needle === 'verify_jwt') continue;
@@ -246,5 +258,5 @@ if (errors.length) {
 }
 
 console.log(
-  'News Intake audit passed: trusted-source modes, secure 36-hour scheduling, manual Check Now, overlap prevention, source-language handling, cross-language duplicate safety, run history, draft-first creation, source merge, existing publish gate, and security checks are protected.'
+  'News Intake audit passed: trusted-source modes, acknowledged 36-hour scheduling, retry-safe dispatch, manual Check Now, overlap prevention, source-language handling, cross-language duplicate safety, run history, draft-first creation, source merge, existing publish gate, and security checks are protected.'
 );
