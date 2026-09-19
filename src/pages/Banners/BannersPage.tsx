@@ -124,12 +124,14 @@ export const BannersPage: React.FC = () => {
   const descriptionLengthErrors = useMemo(() => {
     if (!form) return null;
 
-    const getError = (value: string, target: number) =>
-      value.length === target
+    const getError = (value: string, target: number) => {
+      const length = value.trim().length;
+      return length === target
         ? undefined
         : isBn
-          ? `ঠিক ${target} অক্ষর হতে হবে। বর্তমানে ${value.length} অক্ষর।`
-          : `Must be exactly ${target} characters. Current: ${value.length}.`;
+          ? `ঠিক ${target} অক্ষর হতে হবে। বর্তমানে ${length} অক্ষর।`
+          : `Must be exactly ${target} characters. Current: ${length}.`;
+    };
 
     return {
       mobileDescriptionBn: getError(form.mobileDescriptionBn, BANNER_DESCRIPTION_LENGTH.bn),
@@ -480,7 +482,7 @@ export const BannersPage: React.FC = () => {
                 onChange={(e) => updateField('mobileDescriptionBn', e.target.value)}
                 rows={2}
                 maxLength={BANNER_DESCRIPTION_LENGTH.bn}
-                charCount={form.mobileDescriptionBn.length}
+                charCount={form.mobileDescriptionBn.trim().length}
                 maxCharCount={BANNER_DESCRIPTION_LENGTH.bn}
                 error={descriptionLengthErrors?.mobileDescriptionBn}
                 required
@@ -491,7 +493,7 @@ export const BannersPage: React.FC = () => {
                 onChange={(e) => updateField('tabletDescriptionBn', e.target.value)}
                 rows={2}
                 maxLength={BANNER_DESCRIPTION_LENGTH.bn}
-                charCount={form.tabletDescriptionBn.length}
+                charCount={form.tabletDescriptionBn.trim().length}
                 maxCharCount={BANNER_DESCRIPTION_LENGTH.bn}
                 error={descriptionLengthErrors?.tabletDescriptionBn}
                 required
@@ -502,7 +504,7 @@ export const BannersPage: React.FC = () => {
                 onChange={(e) => updateField('desktopDescriptionBn', e.target.value)}
                 rows={3}
                 maxLength={BANNER_DESCRIPTION_LENGTH.bn}
-                charCount={form.desktopDescriptionBn.length}
+                charCount={form.desktopDescriptionBn.trim().length}
                 maxCharCount={BANNER_DESCRIPTION_LENGTH.bn}
                 error={descriptionLengthErrors?.desktopDescriptionBn}
                 required
@@ -528,7 +530,7 @@ export const BannersPage: React.FC = () => {
                 onChange={(e) => updateField('mobileDescriptionEn', e.target.value)}
                 rows={2}
                 maxLength={BANNER_DESCRIPTION_LENGTH.en}
-                charCount={form.mobileDescriptionEn.length}
+                charCount={form.mobileDescriptionEn.trim().length}
                 maxCharCount={BANNER_DESCRIPTION_LENGTH.en}
                 error={descriptionLengthErrors?.mobileDescriptionEn}
                 required
@@ -539,7 +541,7 @@ export const BannersPage: React.FC = () => {
                 onChange={(e) => updateField('tabletDescriptionEn', e.target.value)}
                 rows={2}
                 maxLength={BANNER_DESCRIPTION_LENGTH.en}
-                charCount={form.tabletDescriptionEn.length}
+                charCount={form.tabletDescriptionEn.trim().length}
                 maxCharCount={BANNER_DESCRIPTION_LENGTH.en}
                 error={descriptionLengthErrors?.tabletDescriptionEn}
                 required
@@ -550,7 +552,7 @@ export const BannersPage: React.FC = () => {
                 onChange={(e) => updateField('desktopDescriptionEn', e.target.value)}
                 rows={3}
                 maxLength={BANNER_DESCRIPTION_LENGTH.en}
-                charCount={form.desktopDescriptionEn.length}
+                charCount={form.desktopDescriptionEn.trim().length}
                 maxCharCount={BANNER_DESCRIPTION_LENGTH.en}
                 error={descriptionLengthErrors?.desktopDescriptionEn}
                 required
