@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://ahiaymyqfmyyrjkwgvhi.supabase.co; connect-src 'self' https://ahiaymyqfmyyrjkwgvhi.supabase.co wss://ahiaymyqfmyyrjkwgvhi.supabase.co https://nominatim.openstreetmap.org; worker-src 'self' blob:; frame-src 'none'; media-src 'self' blob: https://ahiaymyqfmyyrjkwgvhi.supabase.co" />
+    <meta name="referrer" content="no-referrer" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
@@ -36,37 +38,7 @@
       <style>@keyframes sobaike-boot-spin{to{transform:rotate(360deg)}}</style>
     </div>
     <script type="module" src="./src/entry.js"></script>
-    <script>
-      window.setTimeout(function () {
-        var fallback = document.getElementById('admin-boot-fallback');
-        if (!fallback) return;
-
-        var storageKey = 'sobaike-admin-boot-retries';
-        var retries = Number(window.sessionStorage.getItem(storageKey) || '0');
-
-        if (retries < 2) {
-          window.sessionStorage.setItem(storageKey, String(retries + 1));
-          var nextUrl = new URL(window.location.href);
-          nextUrl.searchParams.set('__boot_refresh', Date.now().toString());
-          window.location.replace(nextUrl.toString());
-          return;
-        }
-
-        window.sessionStorage.removeItem(storageKey);
-        fallback.innerHTML =
-          '<section style="width:min(440px,100%);text-align:center">' +
-          '<h1 style="margin:0 0 8px;font-size:20px;line-height:1.4">Admin panel did not finish loading</h1>' +
-          '<p style="margin:0 0 16px;color:#64748b;font-size:14px;line-height:1.6">A cached deployment may still be open in this tab.</p>' +
-          '<button type="button" onclick="window.location.reload()" style="min-height:40px;padding:0 16px;border:0;border-radius:6px;background:#0284c7;color:#fff;font:600 14px system-ui;cursor:pointer">Reload</button>' +
-          '</section>';
-      }, 4000);
-
-      window.addEventListener('load', function () {
-        if (!document.getElementById('admin-boot-fallback')) {
-          window.sessionStorage.removeItem('sobaike-admin-boot-retries');
-        }
-      });
-    </script>
+    <script src="%BASE_URL%admin-boot.js"></script>
   </body>
 </html>
 

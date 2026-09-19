@@ -1,10 +1,37 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.8";
+import { createClient } from "npm:@supabase/supabase-js@2.112.4";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+const ADMIN_ORIGINS = new Set([
+  "https://admin.shobaikejanao.com",
+  "https://shihabshajib01-cell.github.io",
+]);
+
+const isAllowedOrigin = (origin: string | null): boolean => {
+  if (!origin) return true;
+  if (ADMIN_ORIGINS.has(origin)) return true;
+  return /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+};
+
+const getCorsHeaders = (req: Request): Record<string, string> => {
+  const origin = req.headers.get("Origin");
+  return {
+    ...(origin && isAllowedOrigin(origin) ? { "Access-Control-Allow-Origin": origin } : {}),
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+};
+
+const getNamedKey = (pluralEnv: string, legacyEnv: string): string => {
+  const raw = Deno.env.get(pluralEnv);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (typeof parsed?.default === "string" && parsed.default) return parsed.default;
+    } catch {
+      // Fall back to the legacy environment variable during key migration.
+    }
+  }
+  return Deno.env.get(legacyEnv) ?? "";
 };
 
 interface CreateUserRequestBody {
@@ -15,7 +42,15 @@ interface CreateUserRequestBody {
   active?: boolean;
 }
 
-serve(async (req: Request) => {
+Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req);
+  const requestOrigin = req.headers.get("Origin");
+  if (requestOrigin && !isAllowedOrigin(requestOrigin)) {
+    return new Response(JSON.stringify({ error: "Origin not allowed.", code: "ORIGIN_FORBIDDEN" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
   // 1. Handle CORS Preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -31,8 +66,8 @@ serve(async (req: Request) => {
 
     // 2. Validate environment configuration
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabaseAnonKey = getNamedKey("SUPABASE_PUBLISHABLE_KEYS", "SUPABASE_ANON_KEY");
+    const supabaseServiceRoleKey = getNamedKey("SUPABASE_SECRET_KEYS", "SUPABASE_SERVICE_ROLE_KEY");
 
     if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
       console.error("Missing Supabase environment variables in Edge Function.");
@@ -102,10 +137,10 @@ serve(async (req: Request) => {
     }
 
     // Password validation
-    if (!cleanPassword || cleanPassword.length < 6) {
+    if (!cleanPassword || cleanPassword.length < 12 || cleanPassword.length > 128) {
       return new Response(
         JSON.stringify({
-          error: "Password must be at least 6 characters long.",
+          error: "Password must be between 12 and 128 characters long.",
           code: "WEAK_PASSWORD",
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }

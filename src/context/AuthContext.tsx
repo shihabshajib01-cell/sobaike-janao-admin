@@ -24,6 +24,7 @@ export interface AuthContextType {
   refreshPermissions: () => Promise<string[]>;
   // Auth Operations
   login: (credentials: LoginCredentials) => Promise<LoginResponse>;
+  verifyMfa: (factorId: string, challengeId: string, code: string) => Promise<LoginResponse>;
   logout: () => Promise<void>;
   refreshAdminStatus: () => Promise<boolean>;
 }
@@ -220,6 +221,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!isMountedRef.current) return;
 
         if (initialSession?.user) {
+          const aal2 = await withTimeout(
+            authService.isCurrentSessionAal2(),
+            AUTH_BOOTSTRAP_TIMEOUT_MS,
+            'MFA verification check timed out.'
+          );
+          if (!isMountedRef.current) return;
+
+          if (!aal2) {
+            resetAuthState();
+            await authService.logout().catch(() => {});
+            return;
+          }
+
           const active = await withTimeout(
             checkAdminStatus(initialSession.user.id),
             AUTH_BOOTSTRAP_TIMEOUT_MS,
@@ -304,19 +318,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        // Check if already authenticated and verified as admin for the same user
-        if (userRef.current?.id === newSession.user.id && isAdminRef.current) {
-          setSession(newSession);
-          setUser(newSession.user);
-          userRef.current = newSession.user;
-          setIsLoading(false);
-          return;
-        }
-
-        // Defer admin verification safely outside the synchronous callback.
+        // Defer assurance/admin verification safely outside the synchronous callback.
+        // Password-only (AAL1) sessions must never promote the Admin shell while
+        // the mandatory TOTP challenge is still in progress.
         setTimeout(async () => {
           if (!isMountedRef.current) return;
           try {
+            const aal2 = await withTimeout(
+              authService.isCurrentSessionAal2(),
+              AUTH_BOOTSTRAP_TIMEOUT_MS,
+              'MFA verification check timed out.'
+            );
+            if (!isMountedRef.current) return;
+            if (!aal2) {
+              setIsLoading(false);
+              return;
+            }
+
+            if (userRef.current?.id === newSession.user.id && isAdminRef.current) {
+              setSession(newSession);
+              setUser(newSession.user);
+              userRef.current = newSession.user;
+              setIsLoading(false);
+              return;
+            }
+
             const active = await withTimeout(
               checkAdminStatus(newSession.user.id),
               AUTH_BOOTSTRAP_TIMEOUT_MS,
@@ -372,6 +398,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem('sobaike_explicit_signout');
     }
     const result = await authService.login(credentials);
+    if (result.requiresMfa) {
+      resetAuthState();
+      return result;
+    }
+
     if (result.success && result.session && result.user) {
       setSession(result.session);
       setUser(result.user);
@@ -390,6 +421,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       resetAuthState();
     }
+    return result;
+  };
+
+  const verifyMfa = async (
+    factorId: string,
+    challengeId: string,
+    code: string
+  ): Promise<LoginResponse> => {
+    const result = await authService.verifyMfa(factorId, challengeId, code);
+
+    if (result.success && result.session && result.user) {
+      setSession(result.session);
+      setUser(result.user);
+      userRef.current = result.user;
+
+      await loadUserPermissions();
+
+      if (!isAdminRef.current) {
+        resetAuthState();
+        await authService.logout().catch(() => {});
+        return {
+          success: false,
+          isUnauthorizedAdmin: true,
+          error: 'Unauthorized: Your account does not have active administrative privileges.',
+        };
+      }
+    }
+
     return result;
   };
 
@@ -474,6 +533,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         hasAllPermissions,
         refreshPermissions,
         login,
+        verifyMfa,
         logout,
         refreshAdminStatus,
       }}
