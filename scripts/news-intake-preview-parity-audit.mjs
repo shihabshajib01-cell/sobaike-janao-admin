@@ -35,8 +35,20 @@ for (const [needle, label] of [
   ['Share2', 'feed share affordance'],
   ['news-intake-publish-', 'per-card publish checkbox id'],
   ['publishable', 'publishability gating'],
+  ['DEFAULT_CATEGORY_STYLE', 'neutral unknown-category fallback'],
+  ['categoryLabelBn', 'taxonomy-driven Bangla category label'],
+  ['categoryLabelEn', 'taxonomy-driven English category label'],
+  ['type-h3', 'public responsive title typography'],
 ]) {
   requireText(needle, label);
+}
+
+if (preview.includes('CATEGORY_STYLES[complaint.categoryId] || CATEGORY_STYLES.public_safety')) {
+  errors.push('unknown categories must not masquerade as Public Safety');
+}
+
+if (preview.includes('text-xl font-semibold leading-[30px]')) {
+  errors.push('preview title must use the shared responsive public type-h3 contract');
 }
 
 if (errors.length) {
@@ -46,5 +58,5 @@ if (errors.length) {
 }
 
 console.log(
-  'News Intake preview parity audit passed: public-card structure, category visuals, language-safe location handling, dark mode, category-specific fields, and publish controls are protected.'
+  'News Intake preview parity audit passed: public-card structure, taxonomy-safe category labels, neutral unknown-category handling, responsive title typography, language-safe location handling, dark mode, category-specific fields, and publish controls are protected.'
 );
