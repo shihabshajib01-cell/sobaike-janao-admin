@@ -30,6 +30,9 @@ const classificationCases: Array<[string, string, string]> = [
   ['robbery', 'রাতে বাড়িতে ডাকাতির ঘটনা', 'public_safety'],
   ['snatching', 'রাস্তা থেকে মোবাইল ছিনতাই', 'public_safety'],
   ['mob-justice', 'চুরির সন্দেহে গণপিটুনিতে একজন নিহত', 'public_safety'],
+  ['child_abduction_murder', 'ঢাকায় ৮ বছরের শিশু অপহরণের অভিযোগ, তদন্তে পুলিশ', 'public_safety'],
+  ['child_abduction_murder', 'কিশোরীকে অপহরণের পর হত্যা, মরদেহ উদ্ধার', 'public_safety'],
+  ['child_abduction_murder', 'Child abducted from home; police begin investigation', 'public_safety'],
   ['road-repair-delay', 'রাস্তা মেরামত কাজ দীর্ঘদিন ধরে বিলম্বিত', 'road_transport'],
   ['road-accident', 'বাস ও ট্রাকের সংঘর্ষে দুইজন নিহত', 'road_transport'],
   ['road-accident', 'বরিশালে নিয়ন্ত্রণ হারিয়ে বাস পুকুরে, একজনের লাশ উদ্ধার', 'road_transport'],
@@ -106,6 +109,18 @@ assert.equal(
   classifyArticle('ছিনতাই: একজনের হাতে ছুরি, আরেকজন রিকশাযাত্রীর পকেট কাটল')?.subcategoryId,
   'snatching',
   'Real property-snatching headlines must remain classified as snatching'
+);
+
+assert.equal(
+  classifyArticle('শিশু অপহরণের অভিযোগে গণপিটুনিতে একজন নিহত')?.subcategoryId,
+  'mob-justice',
+  'Mob violence triggered by a child-abduction allegation must remain mob-justice'
+);
+
+assert.equal(
+  classifyArticle('School bus crash kills a 10-year-old child')?.subcategoryId,
+  'road-accident',
+  'Child fatality in a road crash must remain a road-accident report'
 );
 
 assert.equal(
