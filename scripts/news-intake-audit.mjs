@@ -91,8 +91,6 @@ for (const needle of [
   'inferIncidentDate',
   'inferSpecificLocationPhrase',
   'inferDistrictWideScope',
-  "location.quality !== 'multiple_locations'",
-  "location.locationScope !== 'multi_location'",
   'buildSourceLanguageFields',
   'scoreDiscoveryLink',
   'MAX_ARTICLE_AGE_DAYS',
@@ -156,8 +154,6 @@ if (groundingGuardAlignment.includes('evaluate_sourced_report_duplicate_internal
 
 for (const needle of [
   'admin_get_news_intake_taxonomy',
-  'admin_get_location_taxonomy',
-  'admin_resolve_news_intake_location',
   "public.has_permission('complaints.publish')",
   "config_status='published'",
 ]) {
@@ -204,6 +200,8 @@ for (const needle of [
   'Section, homepage, or non-article URL was excluded',
   'inferSpecificLocationPhrase',
   'inferDistrictWideScope',
+  "location.quality !== 'multiple_locations'",
+  "location.locationScope !== 'multi_location'",
   'createdCanPublish',
   'createdDuplicateStatus',
   'Draft created, but the final server duplicate evaluation requires review before publication.',
@@ -323,6 +321,8 @@ for (const name of [
   'admin_create_sourced_report_from_intake',
   'admin_merge_intake_source',
   'admin_get_news_intake_taxonomy',
+  'admin_get_location_taxonomy',
+  'admin_resolve_news_intake_location',
   'admin_get_news_intake_scan_sources',
   'admin_begin_news_intake_run',
   'admin_get_news_intake_automation_dashboard',
