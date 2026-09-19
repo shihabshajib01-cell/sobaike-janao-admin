@@ -206,6 +206,18 @@ async function installSupabaseFixtures(page) {
         hostname: 'www.thedailystar.net',
         approved: true,
       };
+    } else if (path.includes('/rest/v1/rpc/admin_get_location_taxonomy')) {
+      body = {
+        divisions: [
+          { id: 'dhaka-division', nameEn: 'Dhaka', nameBn: 'ঢাকা' },
+        ],
+        districts: [
+          { id: 'dhaka-district', divisionId: 'dhaka-division', nameEn: 'Dhaka', nameBn: 'ঢাকা' },
+        ],
+        upazilas: [
+          { id: 'tejgaon-thana', districtId: 'dhaka-district', nameEn: 'Tejgaon', nameBn: 'তেজগাঁও' },
+        ],
+      };
     } else if (path.includes('/rest/v1/rpc/admin_get_news_intake_taxonomy')) {
       body = {
         segments: [
@@ -570,6 +582,7 @@ await check('News Intake clear source reaches one-click publication', async () =
   await page.getByLabel('Incident date *').fill('2026-09-18');
   await page.getByLabel('Division *').selectOption({ label: 'Dhaka' });
   await page.getByLabel('District *').selectOption({ label: 'Dhaka' });
+  await page.getByLabel('Area', { exact: true }).fill('E2E Intake Area');
 
   await page
     .getByRole('button', { name: 'Check Source & Duplicates', exact: true })
