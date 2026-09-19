@@ -308,6 +308,36 @@ export const inferIncidentDate = (value: unknown, publishedDate?: string | null)
   return null;
 };
 
+const incidentContextTokens = (value: string) =>
+  normalizeText(value)
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .split(/\s+/)
+    .filter((token) => token.length >= 2);
+
+const isNearDuplicateIncidentSentence = (candidate: string, existing: string) => {
+  const candidateKey = normalizeText(candidate);
+  const existingKey = normalizeText(existing);
+  if (!candidateKey || !existingKey) return false;
+  if (candidateKey === existingKey || candidateKey.includes(existingKey) || existingKey.includes(candidateKey)) {
+    return true;
+  }
+
+  const candidateTokens = new Set(incidentContextTokens(candidate));
+  const existingTokens = new Set(incidentContextTokens(existing));
+  const smaller = Math.min(candidateTokens.size, existingTokens.size);
+  if (smaller < 7) return false;
+
+  let shared = 0;
+  for (const token of candidateTokens) {
+    if (existingTokens.has(token)) shared += 1;
+  }
+
+  // Excerpt/body copies from publishers often differ by only a preposition,
+  // punctuation mark, or one rewritten word. Suppress those near-duplicates
+  // without collapsing genuinely different incident facts.
+  return shared / smaller >= 0.84;
+};
+
 export const buildIncidentContext = (article: { excerpt?: string | null; body?: string | null }) => {
   const excerpt = String(article.excerpt || '').trim();
   const body = String(article.body || '').trim();
@@ -322,15 +352,10 @@ export const buildIncidentContext = (article: { excerpt?: string | null; body?: 
     ...toSentences(body),
   ];
 
-  const seen = new Set<string>();
   const selected: string[] = [];
   for (const candidate of sentenceCandidates) {
     if (!candidate) continue;
-    const key = normalizeText(candidate);
-    if (!key || seen.has(key)) continue;
-    const alreadyCovered=[...seen].some((existing)=>existing.includes(key) || key.includes(existing));
-    if (alreadyCovered) continue;
-    seen.add(key);
+    if (selected.some((existing)=>isNearDuplicateIncidentSentence(candidate,existing))) continue;
     selected.push(candidate);
     if (selected.join(' ').length >= 1400 || selected.length >= 5) break;
   }
