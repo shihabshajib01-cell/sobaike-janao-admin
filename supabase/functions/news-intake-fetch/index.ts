@@ -1,16 +1,28 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.112.4";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+const ALLOWED_ORIGINS = new Set([
+  "https://shihabshajib01-cell.github.io",
+  "https://admin.shobaikejanao.com",
+  "https://shobaikejanao.com",
+  "http://localhost:5173",
+  "http://localhost:3000",
+]);
+
+const corsHeadersFor = (req: Request) => {
+  const origin = req.headers.get("Origin") || "";
+  return {
+    ...(ALLOWED_ORIGINS.has(origin) ? { "Access-Control-Allow-Origin": origin } : {}),
+    "Vary": "Origin",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  };
 };
 
-const json = (body: unknown, status = 200) =>
+const json = (req: Request, body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeadersFor(req), "Content-Type": "application/json" },
   });
 
 const decodeEntities = (value: string) =>
@@ -73,6 +85,79 @@ const normalizedDate = (raw: string) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().slice(0, 10);
 };
 
+
+const isPrivateOrReservedIp = (raw: string): boolean => {
+  const value = raw.trim().toLowerCase().replace(/^\[|\]$/g, "");
+  if (!value) return true;
+
+  if (value.includes(":")) {
+    if (
+      value === "::" ||
+      value === "::1" ||
+      value.startsWith("fc") ||
+      value.startsWith("fd") ||
+      /^fe[89ab]/.test(value) ||
+      value.startsWith("ff") ||
+      value.startsWith("2001:db8:")
+    ) return true;
+
+    const mapped = value.match(/::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+    if (mapped) return isPrivateOrReservedIp(mapped[1]);
+    return false;
+  }
+
+  const parts = value.split(".").map((part) => Number(part));
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return true;
+  const [a,b] = parts;
+  return (
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 192 && b === 0) ||
+    (a === 192 && b === 2) ||
+    (a === 198 && (b === 18 || b === 19 || b === 51)) ||
+    (a === 203 && b === 0) ||
+    a >= 224
+  );
+};
+
+const assertPublicResolvedHost = async (hostname: string): Promise<void> => {
+  const host = hostname.trim().toLowerCase().replace(/\.$/, "");
+  if (
+    !host ||
+    host === "localhost" ||
+    host.endsWith(".localhost") ||
+    host.endsWith(".local") ||
+    host.endsWith(".internal")
+  ) {
+    throw new Error("Unsafe source hostname blocked.");
+  }
+
+  if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(host) || host.includes(":")) {
+    if (isPrivateOrReservedIp(host)) throw new Error("Private or reserved source address blocked.");
+    return;
+  }
+
+  const resolved = new Set<string>();
+  try {
+    for (const address of await Deno.resolveDns(host, "A")) resolved.add(String(address));
+  } catch {}
+  try {
+    for (const address of await Deno.resolveDns(host, "AAAA")) resolved.add(String(address));
+  } catch {}
+
+  if (resolved.size === 0) throw new Error("Source hostname could not be resolved safely.");
+  for (const address of resolved) {
+    if (isPrivateOrReservedIp(address)) {
+      throw new Error("Source hostname resolves to a private or reserved address.");
+    }
+  }
+};
+
 async function readLimited(response: Response, limit = 768 * 1024) {
   const reader = response.body?.getReader();
   if (!reader) return "";
@@ -97,23 +182,27 @@ async function readLimited(response: Response, limit = 768 * 1024) {
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    const origin = req.headers.get("Origin") || "";
+    if (origin && !ALLOWED_ORIGINS.has(origin)) {
+      return new Response("Forbidden", { status: 403, headers: corsHeadersFor(req) });
+    }
+    return new Response("ok", { headers: corsHeadersFor(req) });
   }
   if (req.method !== "POST") {
-    return json({ error: "Method not allowed." }, 405);
+    return json(req, { error: "Method not allowed." }, 405);
   }
 
   try {
     const authHeader = req.headers.get("Authorization") ?? "";
     if (!authHeader.startsWith("Bearer ")) {
-      return json({ error: "Authentication required." }, 401);
+      return json(req, { error: "Authentication required." }, 401);
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const publishableKey =
       req.headers.get("apikey") ?? Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     if (!supabaseUrl || !publishableKey) {
-      return json({ error: "Function configuration error." }, 500);
+      return json(req, { error: "Function configuration error." }, 500);
     }
 
     const supabase = createClient(supabaseUrl, publishableKey, {
@@ -123,7 +212,7 @@ Deno.serve(async (req: Request) => {
 
     const token = authHeader.slice("Bearer ".length);
     const { error: userError } = await supabase.auth.getUser(token);
-    if (userError) return json({ error: "Invalid session." }, 401);
+    if (userError) return json(req, { error: "Invalid session." }, 401);
 
     const body = await req.json().catch(() => ({}));
     const input = String(body?.url ?? "").trim();
@@ -135,7 +224,7 @@ Deno.serve(async (req: Request) => {
       current.password ||
       current.port
     ) {
-      return json({ error: "Only standard HTTPS article URLs are allowed." }, 400);
+      return json(req, { error: "Only standard HTTPS article URLs are allowed." }, 400);
     }
 
     const checkDomain = async (url: string) => {
@@ -150,9 +239,10 @@ Deno.serve(async (req: Request) => {
       };
     };
 
+    await assertPublicResolvedHost(current.hostname);
     let domain = await checkDomain(current.toString());
     if (!domain?.approved) {
-      return json(
+      return json(req, 
         {
           error: "SOURCE_DOMAIN_NOT_APPROVED",
           hostname: domain?.hostname ?? current.hostname.toLowerCase(),
@@ -176,7 +266,7 @@ Deno.serve(async (req: Request) => {
       if (response.status >= 300 && response.status < 400) {
         const location = response.headers.get("location");
         if (!location || redirectCount === 3) {
-          return json({ error: "Source redirect could not be resolved." }, 422);
+          return json(req, { error: "Source redirect could not be resolved." }, 422);
         }
 
         const next = new URL(location, current);
@@ -186,12 +276,13 @@ Deno.serve(async (req: Request) => {
           next.password ||
           next.port
         ) {
-          return json({ error: "Unsafe source redirect blocked." }, 422);
+          return json(req, { error: "Unsafe source redirect blocked." }, 422);
         }
 
+        await assertPublicResolvedHost(next.hostname);
         const nextDomain = await checkDomain(next.toString());
         if (!nextDomain?.approved) {
-          return json(
+          return json(req, 
             {
               error: "Redirected source domain is not approved.",
               hostname: nextDomain?.hostname ?? next.hostname,
@@ -208,7 +299,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!response || !response.ok) {
-      return json({ error: `Source returned HTTP ${response?.status ?? 0}.` }, 422);
+      return json(req, { error: `Source returned HTTP ${response?.status ?? 0}.` }, 422);
     }
 
     const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
@@ -216,17 +307,17 @@ Deno.serve(async (req: Request) => {
       !contentType.includes("text/html") &&
       !contentType.includes("application/xhtml+xml")
     ) {
-      return json({ error: "The source URL is not an HTML article page." }, 422);
+      return json(req, { error: "The source URL is not an HTML article page." }, 422);
     }
 
     const declaredLength = Number(response.headers.get("content-length") || 0);
     if (declaredLength > 2 * 1024 * 1024) {
-      return json({ error: "Article page is too large to inspect safely." }, 422);
+      return json(req, { error: "Article page is too large to inspect safely." }, 422);
     }
 
     const html = await readLimited(response);
     if (!html) {
-      return json({ error: "No readable article metadata was returned." }, 422);
+      return json(req, { error: "No readable article metadata was returned." }, 422);
     }
 
     const canonicalRaw = linkHref(html, "canonical") || current.toString();
@@ -272,7 +363,7 @@ Deno.serve(async (req: Request) => {
       ])
     );
 
-    return json({
+    return json(req, {
       sourceType: "news",
       publisherName: String(publisherName).slice(0, 160),
       sourceTitle: String(sourceTitle).slice(0, 300),
@@ -285,6 +376,6 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to inspect article metadata.";
-    return json({ error: message }, 400);
+    return json(req, { error: message }, 400);
   }
 });
