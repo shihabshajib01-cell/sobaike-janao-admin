@@ -291,11 +291,11 @@ const buildReportPayload = (
       priority:'medium',
       division:location.division,
       district:location.district,
-      upazilaOrThana:'',
-      area:'',
-      road:'',
-      landmark:'',
-      formattedAddress:location.district,
+      upazilaOrThana:location.upazilaOrThana || '',
+      area:location.area || '',
+      road:location.road || '',
+      landmark:location.landmark || '',
+      formattedAddress:location.formattedAddress || '',
       relationshipContext:'',
       recentBillMonth:'',
       recentBillAmount:'',
@@ -318,6 +318,7 @@ const buildReportPayload = (
       customFieldAnswers:{
         sourceLanguage:fields.sourceLanguage,
         automatedIntake:true,
+        locationScope:location.locationScope === 'district_wide' ? 'district_wide' : 'specific',
       },
     },
   };
@@ -562,14 +563,35 @@ const processNewsIntakeRun = async (
           return;
         }
 
-        const location=
-          findLocation(article.title)
-          || findLocation(article.excerpt)
-          || findLocation(article.body.slice(0,3500));
-        const incidentDate=inferIncidentDate(
-          `${article.title} ${article.excerpt} ${article.body.slice(0,6000)}`,
-          article.sourcePublishedDate
-        );
+        const locationText=`${article.title} ${article.excerpt} ${article.body.slice(0,6000)}`;
+        let location:any=null;
+        try{
+          const {data:resolvedLocation,error:locationError}=await supabase.rpc(
+            'admin_resolve_news_intake_location',
+            {p_text:locationText,p_language:language}
+          );
+          if(locationError) throw new Error(locationError.message);
+          location=resolvedLocation;
+        }catch{
+          const districtOnly=
+            findLocation(article.title)
+            || findLocation(article.excerpt)
+            || findLocation(article.body.slice(0,3500));
+          location=districtOnly
+            ? {
+                ...districtOnly,
+                upazilaOrThana:'',
+                area:'',
+                road:'',
+                landmark:'',
+                formattedAddress:'',
+                locationScope:'district_only',
+                quality:'district_only',
+              }
+            : null;
+        }
+
+        const incidentDate=inferIncidentDate(locationText,article.sourcePublishedDate);
         const context=buildIncidentContext(article);
         if(!location||!incidentDate||!context){
           const missing=[
@@ -591,6 +613,25 @@ const processNewsIntakeRun = async (
             action:'needs_review',
             duplicateStatus:'unavailable',
             reason:`Category detected, but ${missing} could not be established safely from the source.`,
+          });
+          return;
+        }
+
+        if(location.quality !== 'specific'){
+          await record({
+            itemKind:'article',
+            sourceHostname:source.hostname,
+            publisherName:article.publisherName,
+            canonicalUrl:article.canonicalUrl,
+            sourceTitle:article.title,
+            sourcePublishedDate:article.sourcePublishedDate||'',
+            contentLanguage:language,
+            segmentId:classification.segmentId,
+            subcategoryId:classification.subcategoryId,
+            confidence:classification.confidence,
+            action:'needs_review',
+            duplicateStatus:'unavailable',
+            reason:'Category and district were detected, but a specific source-backed upazila/thana could not be established. Review the location before creating a feed-ready report.',
           });
           return;
         }
