@@ -87,6 +87,8 @@ for (const needle of [
 }
 for (const needle of [
   'inferIncidentDate',
+  'inferSpecificLocationPhrase',
+  'inferDistrictWideScope',
   'buildSourceLanguageFields',
   'scoreDiscoveryLink',
   'MAX_ARTICLE_AGE_DAYS',
@@ -170,6 +172,12 @@ for (const needle of [
   'background:true',
   'runManualScan',
   'encodedTemplateUrl',
+  'extractPublishedDate',
+  'datePublished',
+  'finalPathLooksLikeArticle',
+  'Section, homepage, or non-article URL was excluded',
+  'inferSpecificLocationPhrase',
+  'inferDistrictWideScope',
   'verify_jwt',
 ]) {
   if (needle === 'verify_jwt') continue;
@@ -239,6 +247,10 @@ for (const needle of [
   'FeedReadyReportPreview',
   'feedReadyItems.map',
   'No feed-ready reports',
+  'rawNewsExpanded',
+  'feedReadyExpanded',
+  'scrollbar-gutter:stable',
+  'aria-expanded',
   'ManualNewsIntakeForm',
   'complaintApi.publishComplaint(reportId)',
   "result.complaint.status !== 'published'",
