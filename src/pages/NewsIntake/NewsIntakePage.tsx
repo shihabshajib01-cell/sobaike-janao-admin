@@ -1067,6 +1067,15 @@ export const NewsIntakePage: React.FC = () => {
                           <div className="flex flex-wrap items-center gap-2">
                             <Tag tone="neutral">{item.contentLanguage.toUpperCase()}</Tag>
                             <Tag tone={actionTone(item)}>{actionLabel(item)}</Tag>
+                            {item.segmentId && (
+                              <Tag tone="info">{segmentLabel(item.segmentId)}</Tag>
+                            )}
+                            {item.subcategoryId && (
+                              <Tag tone="neutral">{subcategoryLabel(item.subcategoryId)}</Tag>
+                            )}
+                            {confidenceLabel(item.confidence) && (
+                              <Tag tone="neutral">{confidenceLabel(item.confidence)}</Tag>
+                            )}
                           </div>
                           <div>
                             <h3 className="type-card-title">
@@ -1079,7 +1088,7 @@ export const NewsIntakePage: React.FC = () => {
                           </div>
                           {item.reason && (
                             <p className="type-secondary text-slate-600 dark:text-slate-300">
-                              {item.reason}
+                              {reasonLabel(item.reason)}
                             </p>
                           )}
                           <div className="mt-auto flex flex-wrap items-center gap-2">
@@ -1096,6 +1105,7 @@ export const NewsIntakePage: React.FC = () => {
                               <Button
                                 variant="secondary"
                                 size="sm"
+                                className="min-h-11 lg:min-h-8"
                                 onClick={() => reviewItemManually(item)}
                                 leftIcon={<Newspaper />}
                               >
