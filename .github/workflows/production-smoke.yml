@@ -168,6 +168,8 @@ jobs:
           check_denied "admin_create_sourced_report_from_intake"             '{"p_payload":{"source":{"canonicalUrl":"https://www.thedailystar.net/__anonymous_news_intake_smoke__"},"report":{}}}'
           check_denied "admin_merge_intake_source"             '{"p_complaint_id":"__anonymous_news_intake_smoke__","p_source":{"canonicalUrl":"https://www.thedailystar.net/__anonymous_news_intake_smoke__"}}'
           check_denied "admin_get_news_intake_taxonomy" '{}'
+          check_denied "admin_get_location_taxonomy" '{}'
+          check_denied "admin_resolve_news_intake_location" '{"p_text":"Dhaka","p_language":"en"}'
           check_denied "admin_get_news_intake_scan_sources" '{}'
           check_denied "admin_begin_news_intake_run" '{}'
           check_denied "admin_get_news_intake_automation_dashboard" '{}'
