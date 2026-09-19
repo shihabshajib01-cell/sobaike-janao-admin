@@ -481,7 +481,7 @@ const isPrivateOrReservedIp = (raw: string): boolean => {
   );
 };
 
-const assertPublicResolvedHost = async (hostname: string): Promise<void> => {
+const resolvePublicHost = async (hostname: string): Promise<Set<string>> => {
   const host = hostname.trim().toLowerCase().replace(/\.$/, '');
   if (
     !host ||
@@ -495,7 +495,7 @@ const assertPublicResolvedHost = async (hostname: string): Promise<void> => {
 
   if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(host) || host.includes(':')) {
     if (isPrivateOrReservedIp(host)) throw new Error('Private or reserved source address blocked.');
-    return;
+    return new Set([host]);
   }
 
   const resolved = new Set<string>();
@@ -512,6 +512,23 @@ const assertPublicResolvedHost = async (hostname: string): Promise<void> => {
       throw new Error('Source hostname resolves to a private or reserved address.');
     }
   }
+  return resolved;
+};
+
+const addressSetsOverlap = (left: Set<string>, right: Set<string>): boolean => {
+  for (const address of left) {
+    if (right.has(address)) return true;
+  }
+  return false;
+};
+
+const assertStablePublicResolution = async (hostname: string): Promise<Set<string>> => {
+  const first = await resolvePublicHost(hostname);
+  const second = await resolvePublicHost(hostname);
+  if (!addressSetsOverlap(first, second)) {
+    throw new Error('Source DNS changed during validation; request blocked.');
+  }
+  return new Set([...first, ...second]);
 };
 
 const safeScanFetch = async (
@@ -523,7 +540,7 @@ const safeScanFetch = async (
   if(current.protocol!=='https:'||current.username||current.password||current.port||isUnsafeNetworkHostname(current.hostname)) {
     throw new Error('Unsafe source URL blocked.');
   }
-  await assertPublicResolvedHost(current.hostname);
+  let validatedAddresses=await assertStablePublicResolution(current.hostname);
   let domain=await checkDomain(current.toString());
   if(!domain?.approved) throw new Error(`SOURCE_DOMAIN_NOT_APPROVED:${current.hostname}`);
 
@@ -538,6 +555,12 @@ const safeScanFetch = async (
       },
       signal:AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
+
+    const postFetchAddresses=await resolvePublicHost(current.hostname);
+    if(!addressSetsOverlap(validatedAddresses,postFetchAddresses)){
+      throw new Error('Source DNS changed during fetch; response blocked.');
+    }
+
     if(response.status>=300&&response.status<400){
       const location=response.headers.get('location');
       if(!location||redirectCount===3) throw new Error('Source redirect could not be resolved.');
@@ -545,7 +568,7 @@ const safeScanFetch = async (
       if(next.protocol!=='https:'||next.username||next.password||next.port||isUnsafeNetworkHostname(next.hostname)) {
         throw new Error('Unsafe source redirect blocked.');
       }
-      await assertPublicResolvedHost(next.hostname);
+      validatedAddresses=await assertStablePublicResolution(next.hostname);
       domain=await checkDomain(next.toString());
       if(!domain?.approved) throw new Error(`SOURCE_DOMAIN_NOT_APPROVED:${next.hostname}`);
       current=next;
