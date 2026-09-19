@@ -125,41 +125,45 @@ const compactLocationPhrase = (value: string) =>
     .replace(/[“”"'‘’()[\]{}]/g,' ')
     .replace(/\s+/g,' ')
     .trim()
-    .replace(/^(?:ঘটনাটি|ঘটনা|এ ঘটনাটি|এই ঘটনাটি)\s+/u,'')
-    .replace(/^(?:the\s+)?incident\s+(?:happened|occurred|took\s+place)(?:\s+(?:near|at|in|on))?\s+/i,'')
+    .replace(/^(?:ঘটনাটি|ঘটনা|এ ঘটনা|এ ঘটনাটি|এই ঘটনা|এই ঘটনাটি|দুর্ঘটনাটি|হামলাটি)\s*(?:ঘটেছে|ঘটে|ঘটেছিল|সংঘটিত হয়েছে|সংঘটিত হয়েছিল)?\s*/u,'')
+    .replace(/^(?:the\s+)?(?:incident|accident|attack)\s+(?:happened|occurred|took\s+place)(?:\s+(?:near|at|in|on))?\s+/i,'')
     .replace(/\b(?:happened|occurred|took\s+place)(?:\s+(?:near|at|in|on))?\s+/i,'')
     .split(/\s+/)
-    .slice(-7)
+    .slice(-10)
     .join(' ')
-    .replace(/(এলাকা|মহল্লা|গ্রাম|বাজার|মার্কেট|থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|সড়ক|সড়ক|রোড|মোড়|মোড়|স্টেশন)(?:য়|য়|তে|ে)$/u,'$1')
+    .replace(/(এলাকা|মহল্লা|গ্রাম|বাজার|মার্কেট|থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|সড়ক|সড়ক|রোড|লেন|গলি|মোড়|মোড়|স্টেশন)(?:য়|য়|তে|ে)$/u,'$1')
     .trim();
 
 const locationCandidateIsUsable = (candidate: string, district?: string | null) => {
   const normalized=normalizeText(candidate);
   if (!normalized || normalized.length<4) return false;
-  if (/^(এলাকা|বাজার|মার্কেট|থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|গ্রাম|শহর|নগরী|মহানগরী|area|market|bazaar|thana|upazila|union|village|city)$/iu.test(normalized)) return false;
+  if (/^(এলাকা|বাজার|মার্কেট|থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|গ্রাম|শহর|নগরী|মহানগরী|রোড|লেন|গলি|area|market|bazaar|thana|upazila|union|village|city|road|street|lane)$/iu.test(normalized)) return false;
   if (/(বিভিন্ন|various|several)\s+(এলাকা|areas?)/iu.test(normalized)) return false;
+  if (/(বিষয়টি|বিষয়টি|জানার পর|জানতে পেরে|আমরা|তিনি|তারা|পুলিশ জানায়|পুলিশ জানায়|কর্তৃপক্ষ|we learned|we found|police said|officials said)/iu.test(normalized)) return false;
   if (district) {
     const districtNormalized=normalizeText(district);
-    if (normalized===districtNormalized || normalized===`${districtNormalized} district`) return false;
+    if (normalized===districtNormalized || normalized===districtNormalized + ' district') return false;
   }
   return true;
 };
 
-export const inferSpecificLocationPhrase = (value: unknown, district?: string | null) => {
-  const text = String(value ?? '').replace(/\s+/g,' ').trim();
-  if (!text) return null;
+const SPECIFIC_LOCATION_PATTERNS = [
+  /([^।.!?;,\n]{2,150}(?:থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|বাজার|মার্কেট|এলাকা|মহল্লা|গ্রাম|সড়ক|সড়ক|রোড|লেন|গলি|মোড়|মোড়|স্টেশন)(?:য়|য়|তে|ে)?)(?=\s|[।.!?;,]|$)/gu,
+  /([^.!?;,\n]{2,150}(?:police station|thana|upazila|union|market|bazaar|area|neighbourhood|neighborhood|village|road|street|lane|avenue|station))(?=\s|[.!?;,]|$)/gi,
+];
 
-  // Prefer source-backed neighborhood / road / market / police-station phrases.
-  // Broader city/metropolitan wording is only a fallback when no more specific
-  // phrase is present in the article text.
-  const specificPatterns = [
-    /([^।.!?;,\n]{2,120}?(?:থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|বাজার|মার্কেট|এলাকা|মহল্লা|গ্রাম|সড়ক|সড়ক|রোড|মোড়|মোড়|স্টেশন)(?:য়|য়|তে|ে)?)(?=\s|[।.!?;,]|$)/gu,
-    /([^.!?;,\n]{2,120}?(?:police station|thana|upazila|union|market|bazaar|area|neighbourhood|neighborhood|village|road|street|station))(?=\s|[.!?;,]|$)/gi,
-  ];
+const incidentLocationScopes = (text: string) =>
+  text
+    .split(/(?<=[.!?।])\s+/)
+    .map((item)=>item.trim())
+    .filter(Boolean)
+    .filter((item)=>
+      /(ঘটনাটি|এ ঘটনা|এই ঘটনা|দুর্ঘটনাটি|হামলাটি|ঘটেছে|ঘটে|ঘটেছিল|সংঘটিত|incident|accident|attack|happened|occurred|took\s+place)/iu.test(item)
+    );
 
-  for (const pattern of specificPatterns) {
-    const matches=[...text.matchAll(pattern)];
+const locationFromScope = (scope: string, district?: string | null) => {
+  for (const pattern of SPECIFIC_LOCATION_PATTERNS) {
+    const matches=[...scope.matchAll(pattern)];
     for (let index=matches.length-1;index>=0;index-=1) {
       const raw=matches[index]?.[1];
       if (!raw) continue;
@@ -167,6 +171,22 @@ export const inferSpecificLocationPhrase = (value: unknown, district?: string | 
       if (locationCandidateIsUsable(candidate,district)) return candidate;
     }
   }
+  return null;
+};
+
+export const inferSpecificLocationPhrase = (value: unknown, district?: string | null) => {
+  const text = String(value ?? '').replace(/\s+/g,' ').trim();
+  if (!text) return null;
+
+  // Prefer the sentence that explicitly describes where the incident happened.
+  for (const scope of incidentLocationScopes(text)) {
+    const candidate=locationFromScope(scope,district);
+    if (candidate) return candidate;
+  }
+
+  // Only then consider the full article, with narrative fragments rejected.
+  const fallback=locationFromScope(text,district);
+  if (fallback) return fallback;
 
   const broadPatterns = [
     /([^।.!?;,\n]{2,90}?(?:মহানগরী|মহানগর|নগরী|শহর))(?:তে|য়|য়ে|ে|র|এর)?(?=\s|[।.!?;,]|$)/gu,
@@ -201,70 +221,115 @@ const ymd = (year: number, month: number, day: number) => {
   return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
 };
 
-export const inferIncidentDate = (value: unknown, publishedDate?: string | null) => {
-  const text = asciiDigits(normalizeText(value));
+const namedDateFromText = (text: string, publishedDate?: string | null) => {
+  const monthPattern = Object.keys(MONTHS)
+    .sort((a,b)=>b.length-a.length)
+    .map((m)=>m.replace(/[.*+?^$()|[\]{}\\]/g,'\\$&'))
+    .join('|');
+  const named = text.match(new RegExp('(?:^|[\\s(])(\\d{1,2})\\s+(' + monthPattern + ')(?:\\s*,?\\s*(20\\d{2}))?','iu'));
+  if (!named) return null;
+  const baseYear = publishedDate ? Number(publishedDate.slice(0,4)) : new Date().getUTCFullYear();
+  return ymd(Number(named[3] || baseYear),MONTHS[named[2].toLowerCase()] || MONTHS[named[2]],Number(named[1]));
+};
+
+const numericDateFromText = (text: string) => {
   const explicitIso = text.match(/\b(20\d{2})[-\/.](0?[1-9]|1[0-2])[-\/.]([0-2]?\d|3[01])\b/);
   if (explicitIso) return ymd(Number(explicitIso[1]),Number(explicitIso[2]),Number(explicitIso[3]));
   const explicitDmy = text.match(/\b([0-2]?\d|3[01])[-\/.](0?[1-9]|1[0-2])[-\/.](20\d{2})\b/);
   if (explicitDmy) return ymd(Number(explicitDmy[3]),Number(explicitDmy[2]),Number(explicitDmy[1]));
+  return null;
+};
 
-  const monthPattern = Object.keys(MONTHS)
-    .sort((a,b)=>b.length-a.length)
-    .map((m)=>m.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))
-    .join('|');
-  const named = text.match(new RegExp(`(?:^|\\s)(\\d{1,2})\\s+(${monthPattern})(?:\\s*,?\\s*(20\\d{2}))?`,'iu'));
-  if (named) {
-    const baseYear = publishedDate ? Number(publishedDate.slice(0,4)) : new Date().getUTCFullYear();
-    return ymd(Number(named[3] || baseYear),MONTHS[named[2].toLowerCase()] || MONTHS[named[2]],Number(named[1]));
-  }
-  if (publishedDate && /(আজ|today)/iu.test(text)) return publishedDate;
-  if (publishedDate && /(গতকাল|yesterday)/iu.test(text)) {
-    const d = new Date(`${publishedDate}T00:00:00Z`);
+const relativeIncidentDateFromText = (text: string, publishedDate?: string | null) => {
+  if (!publishedDate) return null;
+  if (/(আজ|today)/iu.test(text)) return publishedDate;
+  if (/(গতকাল|yesterday)/iu.test(text)) {
+    const d = new Date(publishedDate + 'T00:00:00Z');
     d.setUTCDate(d.getUTCDate()-1);
     return d.toISOString().slice(0,10);
   }
 
-  if (publishedDate) {
-    const weekdayNames: Array<[number, RegExp]> = [
-      [0, /(গত\s*)?রবিবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?sunday(?:\s+(?:night|morning|afternoon|evening))?/iu],
-      [1, /(গত\s*)?সোমবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?monday(?:\s+(?:night|morning|afternoon|evening))?/iu],
-      [2, /(গত\s*)?মঙ্গলবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?tuesday(?:\s+(?:night|morning|afternoon|evening))?/iu],
-      [3, /(গত\s*)?বুধবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?wednesday(?:\s+(?:night|morning|afternoon|evening))?/iu],
-      [4, /(গত\s*)?বৃহস্পতিবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?thursday(?:\s+(?:night|morning|afternoon|evening))?/iu],
-      [5, /(গত\s*)?শুক্রবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?friday(?:\s+(?:night|morning|afternoon|evening))?/iu],
-      [6, /(গত\s*)?শনিবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?saturday(?:\s+(?:night|morning|afternoon|evening))?/iu],
-    ];
-    const base=new Date(`${publishedDate}T00:00:00Z`);
-    for (const [weekday,pattern] of weekdayNames) {
-      const match=text.match(pattern);
-      if (!match) continue;
-      const matchedText=match[0];
-      const hasPastCue=/(গত|last|রাতে|সকালে|ভোরে|দুপুরে|বিকেলে|night|morning|afternoon|evening)/iu.test(matchedText);
-      if (!hasPastCue) continue;
-      const d=new Date(base);
-      let delta=(d.getUTCDay()-weekday+7)%7;
-      if (/গত|last/iu.test(matchedText) && delta===0) delta=7;
-      d.setUTCDate(d.getUTCDate()-delta);
-      return d.toISOString().slice(0,10);
-    }
+  const weekdayNames: Array<[number, RegExp]> = [
+    [0, /(গত\s*)?রবিবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?sunday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [1, /(গত\s*)?সোমবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?monday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [2, /(গত\s*)?মঙ্গলবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?tuesday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [3, /(গত\s*)?বুধবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?wednesday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [4, /(গত\s*)?বৃহস্পতিবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?thursday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [5, /(গত\s*)?শুক্রবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?friday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [6, /(গত\s*)?শনিবার(?:\s*(?:রাতে|সকালে|ভোরে|দুপুরে|বিকেলে))?|(?:last\s+)?saturday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+  ];
+  const base=new Date(publishedDate + 'T00:00:00Z');
+  for (const [weekday,pattern] of weekdayNames) {
+    const match=text.match(pattern);
+    if (!match) continue;
+    const matchedText=match[0];
+    const hasPastCue=/(গত|last|রাতে|সকালে|ভোরে|দুপুরে|বিকেলে|night|morning|afternoon|evening)/iu.test(matchedText);
+    if (!hasPastCue) continue;
+    const d=new Date(base);
+    let delta=(d.getUTCDay()-weekday+7)%7;
+    if (/গত|last/iu.test(matchedText) && delta===0) delta=7;
+    d.setUTCDate(d.getUTCDate()-delta);
+    return d.toISOString().slice(0,10);
   }
+  return null;
+};
+
+const INCIDENT_DATE_CUE_RE =
+  /(ঘটনাটি|এ ঘটনা|এই ঘটনা|দুর্ঘটনাটি|হামলাটি|ধর্ষণের ঘটনা|ছিনতাইয়ের ঘটনা|ছিনতাইয়ের ঘটনা|ডাকাতির ঘটনা|চুরির ঘটনা|ঘটেছে|ঘটে|ঘটেছিল|সংঘটিত|incident|accident|attack|rape|robbery|snatching|theft)/iu;
+
+export const inferIncidentDate = (value: unknown, publishedDate?: string | null) => {
+  const text = asciiDigits(normalizeText(value));
+  if (!text) return null;
+
+  const incidentScopes=text
+    .split(/(?<=[.!?।])\s+/)
+    .map((item)=>item.trim())
+    .filter(Boolean)
+    .filter((item)=>INCIDENT_DATE_CUE_RE.test(item));
+
+  for (const scope of incidentScopes) {
+    const named=namedDateFromText(scope,publishedDate);
+    if (named) return named;
+    const numeric=numericDateFromText(scope);
+    if (numeric) return numeric;
+    const relative=relativeIncidentDateFromText(scope,publishedDate);
+    if (relative) return relative;
+  }
+
+  // Avoid treating page-level publication/update dates or unrelated "today"
+  // wording as the incident date. Only a different absolute date is accepted
+  // as a conservative fallback when there is no incident-anchored sentence.
+  const namedFallback=namedDateFromText(text,publishedDate);
+  if (namedFallback && (!publishedDate || namedFallback!==publishedDate)) return namedFallback;
+
+  const numericFallback=numericDateFromText(text);
+  if (numericFallback && (!publishedDate || numericFallback!==publishedDate)) return numericFallback;
+
   return null;
 };
 
 export const buildIncidentContext = (article: { excerpt?: string | null; body?: string | null }) => {
   const excerpt = String(article.excerpt || '').trim();
   const body = String(article.body || '').trim();
-  const sentenceCandidates = body
-    .split(/(?<=[.!?।])\s+/)
-    .map((item) => item.trim())
-    .filter((item) => item.length >= 25);
+  const toSentences=(value:string)=>
+    value
+      .split(/(?<=[.!?।])\s+/)
+      .map((item)=>item.trim())
+      .filter((item)=>item.length >= 25);
+
+  const sentenceCandidates = [
+    ...toSentences(excerpt),
+    ...toSentences(body),
+  ];
 
   const seen = new Set<string>();
   const selected: string[] = [];
-  for (const candidate of [excerpt, ...sentenceCandidates]) {
+  for (const candidate of sentenceCandidates) {
     if (!candidate) continue;
     const key = normalizeText(candidate);
     if (!key || seen.has(key)) continue;
+    const alreadyCovered=[...seen].some((existing)=>existing.includes(key) || key.includes(existing));
+    if (alreadyCovered) continue;
     seen.add(key);
     selected.push(candidate);
     if (selected.join(' ').length >= 1400 || selected.length >= 5) break;
