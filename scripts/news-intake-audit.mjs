@@ -88,6 +88,7 @@ for (const needle of [
   'buildSourceLanguageFields',
   'scoreDiscoveryLink',
   'MAX_ARTICLE_AGE_DAYS',
+  'NON_INCIDENT_THEFT_RE',
 ]) {
   requireText(automationCore, needle, 'News Intake automation core');
 }
@@ -167,6 +168,7 @@ for (const needle of [
   'EdgeRuntime.waitUntil',
   'background:true',
   'runManualScan',
+  'encodedTemplateUrl',
   'verify_jwt',
 ]) {
   if (needle === 'verify_jwt') continue;
