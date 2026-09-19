@@ -1,5 +1,10 @@
 import { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import {
+  supabase,
+  isSupabaseConfigured,
+  setAdminSessionPersistence,
+  clearAdminSessionPersistence,
+} from '@/lib/supabase';
 
 export interface LoginCredentials {
   email: string;
@@ -138,6 +143,7 @@ export const authService = {
 
     if (isSupabaseConfigured) {
       try {
+        setAdminSessionPersistence(isRemembered);
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -197,13 +203,17 @@ export const authService = {
   },
 
   async logout(): Promise<void> {
-
-    if (!isSupabaseConfigured) return;
+    if (!isSupabaseConfigured) {
+      clearAdminSessionPersistence();
+      return;
+    }
 
     try {
       await supabase.auth.signOut();
     } catch (err) {
       console.error('Error during Supabase sign-out:', err);
+    } finally {
+      clearAdminSessionPersistence();
     }
   },
 
