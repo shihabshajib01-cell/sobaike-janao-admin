@@ -13,6 +13,11 @@ const cloneContent = (value: BannerContent): BannerContent => ({ ...value });
 const hasDraftChanges = (banner: ManagedBanner) =>
   JSON.stringify(banner.draftContent) !== JSON.stringify(banner.publishedContent);
 
+const BANNER_DESCRIPTION_LENGTH = {
+  bn: 60,
+  en: 62,
+} as const;
+
 const PUBLIC_BANNER_ASSET_PREFIX =
   'https://shihabshajib01-cell.github.io/sobaike-janao/illustrations/services/';
 const IMMUTABLE_BANNER_ASSET_PREFIX =
@@ -116,6 +121,31 @@ export const BannersPage: React.FC = () => {
     [banners]
   );
 
+  const descriptionLengthErrors = useMemo(() => {
+    if (!form) return null;
+
+    const getError = (value: string, target: number) =>
+      value.length === target
+        ? undefined
+        : isBn
+          ? `ঠিক ${target} অক্ষর হতে হবে। বর্তমানে ${value.length} অক্ষর।`
+          : `Must be exactly ${target} characters. Current: ${value.length}.`;
+
+    return {
+      mobileDescriptionBn: getError(form.mobileDescriptionBn, BANNER_DESCRIPTION_LENGTH.bn),
+      tabletDescriptionBn: getError(form.tabletDescriptionBn, BANNER_DESCRIPTION_LENGTH.bn),
+      desktopDescriptionBn: getError(form.desktopDescriptionBn, BANNER_DESCRIPTION_LENGTH.bn),
+      mobileDescriptionEn: getError(form.mobileDescriptionEn, BANNER_DESCRIPTION_LENGTH.en),
+      tabletDescriptionEn: getError(form.tabletDescriptionEn, BANNER_DESCRIPTION_LENGTH.en),
+      desktopDescriptionEn: getError(form.desktopDescriptionEn, BANNER_DESCRIPTION_LENGTH.en),
+    };
+  }, [form, isBn]);
+
+  const hasInvalidDescriptionLengths = Boolean(
+    descriptionLengthErrors &&
+      Object.values(descriptionLengthErrors).some((error) => Boolean(error))
+  );
+
   const openEditor = (banner: ManagedBanner) => {
     if (imagePreview?.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
     setSelected(banner);
@@ -173,6 +203,14 @@ export const BannersPage: React.FC = () => {
 
   const publishChanges = async () => {
     if (!selected || !form) return;
+    if (hasInvalidDescriptionLengths) {
+      setActionError(
+        isBn
+          ? 'প্রকাশের আগে সব বাংলা বর্ণনা ৬০ এবং সব ইংরেজি বর্ণনা ৬২ অক্ষরের করুন।'
+          : 'Before publishing, make every Bengali description 60 characters and every English description 62 characters.'
+      );
+      return;
+    }
     setPublishing(true);
     setActionError(null);
     setNotice(null);
@@ -330,7 +368,12 @@ export const BannersPage: React.FC = () => {
             <Button variant="secondary" onClick={() => void saveDraft()} isLoading={saving} disabled={publishing}>
               {isBn ? 'খসড়া সংরক্ষণ' : 'Save Draft'}
             </Button>
-            <Button variant="success" onClick={() => void publishChanges()} isLoading={publishing} disabled={saving}>
+            <Button
+              variant="success"
+              onClick={() => void publishChanges()}
+              isLoading={publishing}
+              disabled={saving || hasInvalidDescriptionLengths}
+            >
               {isBn ? 'সংরক্ষণ ও প্রকাশ' : 'Save & Publish'}
             </Button>
           </>
@@ -420,24 +463,98 @@ export const BannersPage: React.FC = () => {
             </section>
 
             <section className="space-y-4">
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                {isBn ? 'বাংলা কনটেন্ট' : 'Bengali Content'}
-              </h2>
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  {isBn ? 'বাংলা কনটেন্ট' : 'Bengali Content'}
+                </h2>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  {isBn
+                    ? 'সব ব্যানারের প্রতিটি বাংলা বর্ণনা ঠিক ৬০ অক্ষরের হতে হবে।'
+                    : 'Every Bengali banner description must be exactly 60 characters.'}
+                </p>
+              </div>
               <Input label="শিরোনাম" value={form.titleBn} onChange={(e) => updateField('titleBn', e.target.value)} required />
-              <Textarea label="মোবাইল বর্ণনা" value={form.mobileDescriptionBn} onChange={(e) => updateField('mobileDescriptionBn', e.target.value)} rows={2} required />
-              <Textarea label="ট্যাবলেট বর্ণনা" value={form.tabletDescriptionBn} onChange={(e) => updateField('tabletDescriptionBn', e.target.value)} rows={2} required />
-              <Textarea label="ডেস্কটপ বর্ণনা" value={form.desktopDescriptionBn} onChange={(e) => updateField('desktopDescriptionBn', e.target.value)} rows={3} required />
+              <Textarea
+                label="মোবাইল বর্ণনা"
+                value={form.mobileDescriptionBn}
+                onChange={(e) => updateField('mobileDescriptionBn', e.target.value)}
+                rows={2}
+                maxLength={BANNER_DESCRIPTION_LENGTH.bn}
+                charCount={form.mobileDescriptionBn.length}
+                maxCharCount={BANNER_DESCRIPTION_LENGTH.bn}
+                error={descriptionLengthErrors?.mobileDescriptionBn}
+                required
+              />
+              <Textarea
+                label="ট্যাবলেট বর্ণনা"
+                value={form.tabletDescriptionBn}
+                onChange={(e) => updateField('tabletDescriptionBn', e.target.value)}
+                rows={2}
+                maxLength={BANNER_DESCRIPTION_LENGTH.bn}
+                charCount={form.tabletDescriptionBn.length}
+                maxCharCount={BANNER_DESCRIPTION_LENGTH.bn}
+                error={descriptionLengthErrors?.tabletDescriptionBn}
+                required
+              />
+              <Textarea
+                label="ডেস্কটপ বর্ণনা"
+                value={form.desktopDescriptionBn}
+                onChange={(e) => updateField('desktopDescriptionBn', e.target.value)}
+                rows={3}
+                maxLength={BANNER_DESCRIPTION_LENGTH.bn}
+                charCount={form.desktopDescriptionBn.length}
+                maxCharCount={BANNER_DESCRIPTION_LENGTH.bn}
+                error={descriptionLengthErrors?.desktopDescriptionBn}
+                required
+              />
               <Input label="CTA লেবেল" value={form.primaryCtaBn} onChange={(e) => updateField('primaryCtaBn', e.target.value)} required />
             </section>
 
             <section className="space-y-4 border-t border-slate-200 pt-5 dark:border-slate-800">
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                {isBn ? 'ইংরেজি কনটেন্ট' : 'English Content'}
-              </h2>
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  {isBn ? 'ইংরেজি কনটেন্ট' : 'English Content'}
+                </h2>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  {isBn
+                    ? 'সব ব্যানারের প্রতিটি ইংরেজি বর্ণনা ঠিক ৬২ অক্ষরের হতে হবে।'
+                    : 'Every English banner description must be exactly 62 characters.'}
+                </p>
+              </div>
               <Input label="Title" value={form.titleEn} onChange={(e) => updateField('titleEn', e.target.value)} required />
-              <Textarea label="Mobile description" value={form.mobileDescriptionEn} onChange={(e) => updateField('mobileDescriptionEn', e.target.value)} rows={2} required />
-              <Textarea label="Tablet description" value={form.tabletDescriptionEn} onChange={(e) => updateField('tabletDescriptionEn', e.target.value)} rows={2} required />
-              <Textarea label="Desktop description" value={form.desktopDescriptionEn} onChange={(e) => updateField('desktopDescriptionEn', e.target.value)} rows={3} required />
+              <Textarea
+                label="Mobile description"
+                value={form.mobileDescriptionEn}
+                onChange={(e) => updateField('mobileDescriptionEn', e.target.value)}
+                rows={2}
+                maxLength={BANNER_DESCRIPTION_LENGTH.en}
+                charCount={form.mobileDescriptionEn.length}
+                maxCharCount={BANNER_DESCRIPTION_LENGTH.en}
+                error={descriptionLengthErrors?.mobileDescriptionEn}
+                required
+              />
+              <Textarea
+                label="Tablet description"
+                value={form.tabletDescriptionEn}
+                onChange={(e) => updateField('tabletDescriptionEn', e.target.value)}
+                rows={2}
+                maxLength={BANNER_DESCRIPTION_LENGTH.en}
+                charCount={form.tabletDescriptionEn.length}
+                maxCharCount={BANNER_DESCRIPTION_LENGTH.en}
+                error={descriptionLengthErrors?.tabletDescriptionEn}
+                required
+              />
+              <Textarea
+                label="Desktop description"
+                value={form.desktopDescriptionEn}
+                onChange={(e) => updateField('desktopDescriptionEn', e.target.value)}
+                rows={3}
+                maxLength={BANNER_DESCRIPTION_LENGTH.en}
+                charCount={form.desktopDescriptionEn.length}
+                maxCharCount={BANNER_DESCRIPTION_LENGTH.en}
+                error={descriptionLengthErrors?.desktopDescriptionEn}
+                required
+              />
               <Input label="CTA label" value={form.primaryCtaEn} onChange={(e) => updateField('primaryCtaEn', e.target.value)} required />
             </section>
 
