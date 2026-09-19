@@ -511,9 +511,9 @@ async function installSupabaseFixtures(page) {
       body: request.method() === 'HEAD' ? '' : JSON.stringify(body),
     });
   });
-}
 
   return { publishedIds };
+}
 
 
 const browser = await chromium.launch({ headless: true });
