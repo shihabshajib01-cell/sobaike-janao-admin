@@ -1,5 +1,5 @@
 import { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured, setAdminSessionPersistence } from '@/lib/supabase';
 
 export interface LoginCredentials {
   email: string;
@@ -138,6 +138,7 @@ export const authService = {
 
     if (isSupabaseConfigured) {
       try {
+        setAdminSessionPersistence(isRemembered);
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
