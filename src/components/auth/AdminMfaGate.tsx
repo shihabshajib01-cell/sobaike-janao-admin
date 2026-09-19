@@ -180,7 +180,7 @@ export const AdminMfaGate: React.FC<{ children: React.ReactNode }> = ({ children
             />
 
             <div className="flex flex-col sm:flex-row gap-3">
-              <Button onClick={verify} disabled={busy || mode === 'loading'} className="flex-1">
+              <Button onClick={verify} disabled={busy} className="flex-1">
                 {busy ? (bn ? 'যাচাই হচ্ছে…' : 'Verifying…') : (bn ? 'যাচাই করুন' : 'Verify')}
               </Button>
               <Button
