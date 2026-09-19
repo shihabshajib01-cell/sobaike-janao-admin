@@ -162,6 +162,17 @@ const incidentLocationScopes = (text: string) =>
     );
 
 const locationFromScope = (scope: string, district?: string | null) => {
+  // Incident sentences often use a bare proper place after "at/near" without
+  // adding words such as area, road, market, or village. Prefer the first
+  // source-backed proper place so later home/hospital references do not win.
+  const englishIncidentPlace = scope.match(
+    /\b(?:at|near)\s+([A-Z][A-Za-z0-9.'’\-]*(?:\s+[A-Z][A-Za-z0-9.'’\-]*){0,5})(?=\s+(?:around|about|at|on|when|where|while|after|before|and|but)|[,.!?]|$)/u
+  )?.[1];
+  if (englishIncidentPlace) {
+    const candidate=compactLocationPhrase(englishIncidentPlace);
+    if (locationCandidateIsUsable(candidate,district)) return candidate;
+  }
+
   for (const pattern of SPECIFIC_LOCATION_PATTERNS) {
     const matches=[...scope.matchAll(pattern)];
     for (let index=matches.length-1;index>=0;index-=1) {
