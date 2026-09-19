@@ -21,6 +21,7 @@ const schemaRequirementGuard = read('supabase/migrations/20260918185342_news_int
 const samakalMode = read('supabase/migrations/20260918185535_news_intake_samakal_manual_only.sql');
 const schedulerMigration = read('supabase/migrations/20260918191945_news_intake_36h_scheduler.sql');
 const schedulerAcknowledgement = read('supabase/migrations/20260919042801_news_intake_scheduler_acknowledgement.sql');
+const publishGroundingGuard = read('supabase/migrations/20260919082837_news_intake_publish_grounding_guard.sql');
 const automationCore = read('supabase/functions/_shared/newsIntakeAutomationCore.ts');
 const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
 const edge = read('supabase/functions/news-intake-fetch/index.ts');
@@ -98,6 +99,9 @@ for (const needle of [
 }
 requireText(behaviorAudit, 'classificationCases', 'News Intake behavior audit');
 requireText(behaviorAudit, 'English content must not be duplicated', 'News Intake source-language audit');
+requireText(behaviorAudit, 'Incident-anchored date must win over page publication metadata', 'News Intake incident-date grounding regression');
+requireText(behaviorAudit, 'Incident location must win over later narrative text ending in এলাকা', 'News Intake location grounding regression');
+requireText(behaviorAudit, 'Excerpt/body overlap must not duplicate the same incident sentence', 'News Intake context de-duplication regression');
 requireText(collisionErrorContract, "errcode='P0001'", 'News Intake collision error contract');
 requireText(collisionErrorContract, 'DUPLICATE_REVIEW_REQUIRED', 'News Intake collision error contract');
 requireText(explicitDenyPolicies, 'news_intake_runs_authenticated_deny', 'News Intake run-table deny policy');
@@ -128,6 +132,16 @@ for (const needle of [
   "'scheduledSlot'",
 ]) {
   requireText(schedulerAcknowledgement, needle, 'acknowledged News Intake scheduler');
+}
+
+for (const needle of [
+  'guard_sourced_report_publish_readiness',
+  'trg_guard_sourced_report_publish_readiness',
+  'SOURCE_GROUNDING_REVIEW_REQUIRED',
+  'SOURCE_DUPLICATE_REVIEW_REQUIRED',
+  'evaluate_sourced_report_duplicate_internal',
+]) {
+  requireText(publishGroundingGuard, needle, 'News Intake final publish guard');
 }
 
 for (const needle of [
@@ -178,6 +192,9 @@ for (const needle of [
   'Section, homepage, or non-article URL was excluded',
   'inferSpecificLocationPhrase',
   'inferDistrictWideScope',
+  'createdCanPublish',
+  'createdDuplicateStatus',
+  'Draft created, but the final server duplicate evaluation requires review before publication.',
   'verify_jwt',
 ]) {
   if (needle === 'verify_jwt') continue;
@@ -232,6 +249,7 @@ for (const needle of [
   'if (!preview)',
   'if (!preview.canCreateDraft)',
   'if (publishAfterCreate && !preview.canPublishImmediately)',
+  'initialSourceUrl',
 ]) {
   requireText(manualForm, needle, 'Manual News Intake UI safety flow');
 }
@@ -245,7 +263,12 @@ for (const needle of [
   'Clear Selection',
   'Publish Selected to Feed',
   'FeedReadyReportPreview',
-  'feedReadyItems.map',
+  'feedDisplayItems.map',
+  "item.duplicateStatus === 'clear'",
+  'reportLoadErrors',
+  'reviewItemManually',
+  'requestWorkspaceClose',
+  'publishable={eligibleReportIds.includes(reportId)}',
   'No feed-ready reports',
   'rawNewsExpanded',
   'feedReadyExpanded',
@@ -265,6 +288,8 @@ for (const needle of [
   'Eye',
   'Share2',
   'publicationPreferences',
+  'news-intake-publish-',
+  'publishable',
 ]) {
   requireText(feedReadyPreview, needle, 'Feed-ready public preview');
 }
@@ -305,5 +330,5 @@ if (errors.length) {
 }
 
 console.log(
-  'News Intake audit passed: trusted-source modes, acknowledged 36-hour scheduling, retry-safe dispatch, manual Check Now, overlap prevention, source-language handling, cross-language duplicate safety, run history, draft-first creation, source merge, existing publish gate, and security checks are protected.'
+  'News Intake audit passed: trusted-source modes, source-grounded date/location extraction, acknowledged 36-hour scheduling, retry-safe dispatch, manual Check Now, overlap prevention, source-language handling, final server duplicate clearance, run-history visibility, mobile review controls, draft-first creation, source merge, and security checks are protected.'
 );
