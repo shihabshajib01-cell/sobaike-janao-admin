@@ -8,6 +8,55 @@ const FALLBACK_SUPABASE_PUBLISHABLE_KEY =
 
 const metaEnv = typeof import.meta !== 'undefined' ? import.meta.env : undefined;
 
+const ADMIN_SESSION_PERSISTENCE_KEY = 'sobaike_admin_session_persistence_v1';
+
+const browserAuthStorage = typeof window === 'undefined' ? undefined : {
+  getItem(key: string): string | null {
+    try {
+      const mode = window.localStorage.getItem(ADMIN_SESSION_PERSISTENCE_KEY);
+      return mode === 'local'
+        ? window.localStorage.getItem(key)
+        : window.sessionStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  setItem(key: string, value: string): void {
+    try {
+      const mode = window.localStorage.getItem(ADMIN_SESSION_PERSISTENCE_KEY);
+      if (mode === 'local') {
+        window.localStorage.setItem(key, value);
+        window.sessionStorage.removeItem(key);
+      } else {
+        window.sessionStorage.setItem(key, value);
+        window.localStorage.removeItem(key);
+      }
+    } catch {
+      // Fail closed to in-memory Supabase state if browser storage is unavailable.
+    }
+  },
+  removeItem(key: string): void {
+    try {
+      window.localStorage.removeItem(key);
+      window.sessionStorage.removeItem(key);
+    } catch {
+      // Ignore storage cleanup failures.
+    }
+  },
+};
+
+export const setAdminSessionPersistence = (remember: boolean): void => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(
+      ADMIN_SESSION_PERSISTENCE_KEY,
+      remember ? 'local' : 'session'
+    );
+  } catch {
+    // Ignore and default to non-persistent browser session storage.
+  }
+};
+
 const supabaseUrl =
   metaEnv?.VITE_SUPABASE_URL ||
   FALLBACK_SUPABASE_URL;
@@ -34,7 +83,7 @@ export const supabase: SupabaseClient = createClient(
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+      storage: browserAuthStorage,
     },
   }
 );
