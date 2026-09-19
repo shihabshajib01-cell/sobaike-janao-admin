@@ -83,6 +83,44 @@ for (const needle of [
 }
 
 
+
+const mfaGate = read('src/components/auth/AdminMfaGate.tsx');
+for (const needle of [
+  'getAuthenticatorAssuranceLevel',
+  "factorType: 'totp'",
+  "currentLevel === 'aal2'",
+  'ADMIN_MFA_TEST_MODE',
+  'import.meta.env?.DEV',
+  "VITE_ADMIN_E2E_MODE === 'true'",
+]) {
+  if (!mfaGate.includes(needle)) {
+    fail('Admin MFA gate hardening is missing: ' + needle);
+  }
+}
+
+const appRoutes = read('src/routes/AppRoutes.tsx');
+if (!appRoutes.includes('AdminMfaGate')) {
+  fail('Protected Admin routes are not gated by MFA');
+}
+
+const aal2MigrationFile = 'supabase/migrations/20260919151454_admin_sensitive_actions_require_aal2.sql';
+if (!fs.existsSync(aal2MigrationFile)) {
+  fail('missing canonical AAL2 permission hardening migration');
+}
+const aal2Migration = read(aal2MigrationFile);
+for (const needle of [
+  "auth.jwt()->>'aal'",
+  "'aal2'",
+  "'admin_users.manage'",
+  "'roles.manage'",
+  "'complaints.publish'",
+  "'responses.publish'",
+]) {
+  if (!aal2Migration.includes(needle)) {
+    fail('AAL2 permission migration is missing hardening marker: ' + needle);
+  }
+}
+
 const supabaseClient = read('src/lib/supabase.ts');
 for (const needle of [
   "sobaike_admin_session_persistence_v1",
@@ -133,4 +171,4 @@ for (const needle of [
   }
 }
 
-console.log('Admin hardening audit passed: E2E bypass is DEV-only, auth bootstrap is bounded and deadlock-safe, production source maps are disabled, bundle cycles are rejected, and browser smoke follows the deployed commit.');
+console.log('Admin hardening audit passed: E2E test mode is DEV-only, auth bootstrap is bounded, MFA/AAL2 guards are present, privileged Edge CORS is restricted, News Intake resolves and blocks private addresses, production source maps are disabled, and browser smoke follows the deployed commit.');
