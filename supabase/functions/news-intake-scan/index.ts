@@ -10,6 +10,7 @@ import {
   detectLanguage,
   findLocation,
   inferDistrictWideScope,
+  inferChildIncidentType,
   inferIncidentDate,
   inferSpecificLocationPhrase,
   isUnsupportedArticleType,
@@ -376,6 +377,10 @@ const buildReportPayload = (
         : /(যৌন|sexual)/iu.test(text)
           ? 'sexual_offence_allegation'
           : 'unknown';
+  const childIncidentType =
+    classification.subcategoryId === 'child_abduction_murder'
+      ? inferChildIncidentType(text)
+      : null;
 
   const fields=buildSourceLanguageFields(
     article.title,
@@ -429,6 +434,12 @@ const buildReportPayload = (
         sourceLanguage:fields.sourceLanguage,
         automatedIntake:true,
         locationScope:location.locationScope === 'district_wide' ? 'district_wide' : 'specific',
+        ...(classification.subcategoryId === 'child_abduction_murder'
+          ? {
+              childIncidentType:childIncidentType || 'unknown_not_stated',
+              childAgeGroup:'unknown_not_stated',
+            }
+          : {}),
       },
     },
   };
