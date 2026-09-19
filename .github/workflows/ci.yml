@@ -47,6 +47,12 @@ jobs:
       - name: News Intake behavior audit
         run: npm run audit:news-intake-behavior
 
+      - name: News Intake publisher fixture audit
+        run: npm run audit:news-intake-publisher-fixtures
+
+      - name: News Intake preview parity audit
+        run: npm run audit:news-intake-preview-parity
+
       - name: Bundle-check News Intake Edge Function
         run: npx --no-install esbuild supabase/functions/news-intake-scan/index.ts --bundle --platform=neutral --format=esm --external:jsr:* --external:npm:* --outfile=/tmp/news-intake-scan.mjs
 
