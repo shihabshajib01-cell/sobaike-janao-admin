@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 
 const fail = (message) => {
   console.error('Admin hardening audit failed: ' + message);
@@ -92,6 +93,8 @@ for (const needle of [
   'ADMIN_MFA_TEST_MODE',
   'import.meta.env?.DEV',
   "VITE_ADMIN_E2E_MODE === 'true'",
+  'refreshPermissions',
+  'refreshResult.error',
 ]) {
   if (!mfaGate.includes(needle)) {
     fail('Admin MFA gate hardening is missing: ' + needle);
@@ -176,6 +179,60 @@ for (const needle of [
 }
 
 
+
+const adminIndex = read('index.html');
+const csp = adminIndex.match(/<meta\s+http-equiv="Content-Security-Policy"\s+content="([^"]+)"/i)?.[1] || '';
+if (!csp) {
+  fail('Admin Content Security Policy meta is missing');
+}
+const scriptSrc = csp.match(/(?:^|;\s*)script-src\s+([^;]+)/i)?.[1] || '';
+if (!scriptSrc || scriptSrc.includes("'unsafe-inline'")) {
+  fail("Admin script-src must exist and must not allow 'unsafe-inline'");
+}
+if (!/(?:^|;\s*)script-src-attr\s+'none'(?:;|$)/i.test(csp)) {
+  fail("Admin script-src-attr must be 'none'");
+}
+const connectSrc = csp.match(/(?:^|;\s*)connect-src\s+([^;]+)/i)?.[1] || '';
+const connectTokens = connectSrc.trim().split(/\s+/);
+if (connectTokens.includes('https:') || connectTokens.includes('wss:')) {
+  fail('Admin connect-src must not allow every HTTPS/WSS origin');
+}
+for (const match of adminIndex.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)) {
+  const hash = 'sha256-' + crypto.createHash('sha256').update(match[1], 'utf8').digest('base64');
+  if (!scriptSrc.includes("'" + hash + "'")) {
+    fail('Admin inline script is missing an exact CSP hash: ' + hash);
+  }
+}
+if (/\son[a-z]+\s*=/i.test(adminIndex)) {
+  fail('Admin index contains an inline event handler');
+}
+if (adminIndex.includes('fallback.innerHTML')) {
+  fail('Admin boot fallback must not use innerHTML');
+}
+
+const finalPublicSecurityMigrationFile =
+  'supabase/migrations/20260919155020_close_legacy_engagement_and_persist_ip_location_limit.sql';
+if (!fs.existsSync(finalPublicSecurityMigrationFile)) {
+  fail('missing final public security migration mirror');
+}
+const finalPublicSecurityMigration = read(finalPublicSecurityMigrationFile);
+for (const needle of [
+  'track_public_report_view_v2',
+  'track_public_report_share_v2',
+  'from public, anon, authenticated',
+  "'ip_location'",
+]) {
+  if (!finalPublicSecurityMigration.includes(needle)) {
+    fail('final public security migration is missing: ' + needle);
+  }
+}
+
+const pgNetMigration =
+  'supabase/migrations/20260919155106_reinstall_pg_net_and_restrict_client_privileges.sql';
+if (!fs.existsSync(pgNetMigration) || !read(pgNetMigration).includes('create extension pg_net with schema extensions')) {
+  fail('pg_net extension-schema hardening migration is missing');
+}
+
 const formPrepublicationRestoreFile = 'supabase/migrations/20260919154219_restore_reporting_form_prepublication_contract.sql';
 if (!fs.existsSync(formPrepublicationRestoreFile)) {
   fail('missing reporting-form prepublication contract correction');
@@ -201,4 +258,4 @@ for (const needle of [
   }
 }
 
-console.log('Admin hardening audit passed: E2E test mode is DEV-only, auth bootstrap is bounded, MFA/AAL2 guards are present, privileged Edge CORS is restricted, News Intake resolves and blocks private addresses, production source maps are disabled, and browser smoke follows the deployed commit.');
+console.log('Admin hardening audit passed: E2E test mode is DEV-only, MFA/AAL2 and post-elevation permission refresh are enforced, CSP inline scripts are hash-locked, privileged Edge CORS is restricted, News Intake has DNS-rebinding guards, final public security migrations are mirrored, production source maps are disabled, and browser smoke follows the deployed commit.');
