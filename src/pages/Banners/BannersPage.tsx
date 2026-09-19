@@ -430,10 +430,15 @@ export const BannersPage: React.FC = () => {
                 </h2>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                   {isBn
-                    ? 'হোম পেজে এই ব্যানার দেখানো হবে কি না এবং ব্যানারের ক্রম নিয়ন্ত্রণ করুন। ক্যাটাগরি পেজের ব্যানার অপরিবর্তিত থাকবে।'
-                    : 'Control whether this banner appears on Home and where it appears in the carousel. The category-page banner remains available.'}
+                    ? 'হোম পেজে ব্যানার দেখানো ও ক্রম নিয়ন্ত্রণ করুন। হোম ব্যানারে রিপোর্ট বাটন নেই—ব্যানারে ক্লিক করলে সংশ্লিষ্ট ক্যাটাগরি পেজ খুলবে। ক্যাটাগরি পেজের রিপোর্ট বাটন অপরিবর্তিত থাকবে।'
+                    : 'Control Home visibility and carousel order. Home banners do not show the report button—clicking the banner opens its category page. The category-page report button remains unchanged.'}
                 </p>
               </div>
+              <FeedbackNotice tone="info" compact>
+                {isBn
+                  ? 'হোমে CTA লুকানো থাকবে। নিচের CTA লেবেল শুধু ক্যাটাগরি পেজের ব্যানারে ব্যবহৃত হবে।'
+                  : 'The Home CTA stays hidden. The CTA labels below are used only by the category-page banner.'}
+              </FeedbackNotice>
               <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_9rem] sm:items-start">
                 <Switch
                   checked={form.showOnHome}
@@ -562,7 +567,7 @@ export const BannersPage: React.FC = () => {
 
             <section className="border-t border-slate-200 pt-5 dark:border-slate-800">
               <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                {isBn ? 'প্রিভিউ' : 'Preview'}
+                {isBn ? 'ক্যাটাগরি ব্যানার প্রিভিউ' : 'Category Banner Preview'}
               </h2>
               <div className="mt-3 overflow-hidden rounded-lg border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950">
                 <BannerImage
