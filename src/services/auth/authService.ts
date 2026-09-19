@@ -198,6 +198,7 @@ export const authService = {
   },
 
   async logout(): Promise<void> {
+    setAdminSessionPersistence(false);
 
     if (!isSupabaseConfigured) return;
 
