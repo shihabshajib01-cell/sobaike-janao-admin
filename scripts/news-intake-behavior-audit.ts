@@ -194,6 +194,16 @@ assert.equal(
   'Excerpt/body overlap must not duplicate the same incident sentence'
 );
 
+const nearDuplicateContext = buildIncidentContext({
+  excerpt: 'According to the complaint, a motorcycle waylaid Toma at Gopalnagar around 9pm on Thursday and picked her up at an abandoned place when she was returning to her home in Fakirabad Bakshipara.',
+  body: 'A 20-year-old girl who was reportedly raped by four people on Thursday (17 September). According to the complaint, a motorcycle waylaid Toma at Gopalnagar around 9pm on Thursday and picked her up to an abandoned place when she was returning to her home in Fakirabad Bakshipara.',
+});
+assert.equal(
+  (nearDuplicateContext.match(/motorcycle waylaid Toma/g) || []).length,
+  1,
+  'Near-identical excerpt/body incident sentences must not be repeated'
+);
+
 assert.equal(
   isUnsupportedArticleType('https://example.com/opinion/example', 'A column'),
   true,
