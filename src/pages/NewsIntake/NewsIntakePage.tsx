@@ -43,7 +43,7 @@ const EMPTY_DASHBOARD: NewsIntakeAutomationDashboard = {
 
 type IntakeMode = 'automatic' | 'manual';
 type WorkspaceStep = 1 | 2 | 3;
-type RawNewsFilter = 'all' | 'matched' | 'review' | 'duplicate' | 'excluded' | 'not_report' | 'error';
+type RawNewsFilter = 'all' | 'matched' | 'ready' | 'review' | 'duplicate' | 'excluded' | 'not_report' | 'error';
 
 interface PublishOutcome {
   reportId: string;
@@ -54,6 +54,9 @@ interface PublishOutcome {
 
 const articleItems = (run: NewsIntakeAutomationRun | null) =>
   (run?.items || []).filter((item) => item.itemKind !== 'source');
+
+const isExcludedItem = (item: NewsIntakeAutomationItem) =>
+  item.action === 'discovered' && Boolean(item.segmentId || item.subcategoryId);
 
 export const NewsIntakePage: React.FC = () => {
   const navigate = useNavigate();
@@ -128,8 +131,6 @@ export const NewsIntakePage: React.FC = () => {
   const selectedRun =
     dashboard.runs.find((run) => run.runId === selectedRunId) || latestRun;
   const selectedItems = articleItems(selectedRun || null);
-  const isExcludedItem = (item: NewsIntakeAutomationItem) =>
-    item.action === 'discovered' && Boolean(item.segmentId || item.subcategoryId);
 
   const automatedSources = dashboard.sources.filter((source) => source.scanEnabled);
   const manualSources = dashboard.sources.filter((source) => !source.scanEnabled);
@@ -258,6 +259,7 @@ export const NewsIntakePage: React.FC = () => {
 
   const rawFilterCounts = useMemo(() => {
     const matched = selectedItems.filter((item) => Boolean(item.segmentId || item.subcategoryId)).length;
+    const ready = selectedItems.filter((item) => item.action === 'created_draft').length;
     const review = selectedItems.filter((item) => item.action === 'needs_review').length;
     const duplicate = selectedItems.filter(
       (item) => item.action === 'skip_duplicate' || item.action === 'merged_source'
@@ -270,6 +272,7 @@ export const NewsIntakePage: React.FC = () => {
     return {
       all: selectedItems.length,
       matched,
+      ready,
       review,
       duplicate,
       excluded,
@@ -282,6 +285,9 @@ export const NewsIntakePage: React.FC = () => {
     if (rawFilter === 'all') return selectedItems;
     if (rawFilter === 'matched') {
       return selectedItems.filter((item) => Boolean(item.segmentId || item.subcategoryId));
+    }
+    if (rawFilter === 'ready') {
+      return selectedItems.filter((item) => item.action === 'created_draft');
     }
     if (rawFilter === 'review') {
       return selectedItems.filter((item) => item.action === 'needs_review');
@@ -949,9 +955,14 @@ export const NewsIntakePage: React.FC = () => {
                 </p>
                 <Tag tone="neutral">{selectedItems.length} {isBn ? 'স্ক্যানড' : 'scanned'}</Tag>
                 <Tag tone="info">{selectedRun.classifiedCount} {isBn ? 'ক্যাটাগরি মিল' : 'category matches'}</Tag>
-                <Tag tone="success">{eligibleReportIds.length} {isBn ? 'প্রস্তুত' : 'ready'}</Tag>
-                <Tag tone="warning">{selectedRun.reviewCount} {isBn ? 'রিভিউ' : 'review'}</Tag>
-                <Tag tone="neutral">{selectedRun.duplicateCount} {isBn ? 'ডুপ্লিকেট' : 'duplicates'}</Tag>
+                <Tag tone="success">{rawFilterCounts.ready} {isBn ? 'ফিড-রেডি' : 'feed ready'}</Tag>
+                <Tag tone="warning">{rawFilterCounts.review} {isBn ? 'রিভিউ' : 'review'}</Tag>
+                <Tag tone="neutral">{rawFilterCounts.duplicate} {isBn ? 'ডুপ্লিকেট' : 'duplicates'}</Tag>
+                <Tag tone="neutral">{rawFilterCounts.excluded} {isBn ? 'বাদ দেওয়া' : 'excluded'}</Tag>
+                <Tag tone="neutral">{rawFilterCounts.not_report} {isBn ? 'রিপোর্ট নয়' : 'not reports'}</Tag>
+                {rawFilterCounts.error > 0 && (
+                  <Tag tone="danger">{rawFilterCounts.error} {isBn ? 'ত্রুটি' : 'errors'}</Tag>
+                )}
               </div>
 
               <div className="hidden gap-3 px-1 lg:grid lg:grid-cols-2">
@@ -977,6 +988,7 @@ export const NewsIntakePage: React.FC = () => {
                     <Button
                       variant="secondary"
                       size="sm"
+                      className="min-h-11 lg:min-h-8"
                       onClick={selectAllEligible}
                       disabled={eligibleReportIds.length === 0 || loadingReports}
                     >
@@ -985,6 +997,7 @@ export const NewsIntakePage: React.FC = () => {
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="min-h-11 lg:min-h-8"
                       onClick={() => setSelectedReportIds([])}
                       disabled={selectedReportIds.length === 0}
                     >
@@ -1028,6 +1041,7 @@ export const NewsIntakePage: React.FC = () => {
                       {([
                         ['all', isBn ? 'সব' : 'All', rawFilterCounts.all],
                         ['matched', isBn ? 'ক্যাটাগরি মিল' : 'Category matched', rawFilterCounts.matched],
+                        ['ready', isBn ? 'ফিড-রেডি' : 'Feed ready', rawFilterCounts.ready],
                         ['review', isBn ? 'রিভিউ' : 'Needs review', rawFilterCounts.review],
                         ['duplicate', isBn ? 'ডুপ্লিকেট' : 'Duplicate', rawFilterCounts.duplicate],
                         ['excluded', isBn ? 'বাদ দেওয়া' : 'Excluded', rawFilterCounts.excluded],
