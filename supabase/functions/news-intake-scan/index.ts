@@ -28,7 +28,7 @@ const json = (body: unknown, status=200) => new Response(JSON.stringify(body), {
 });
 
 const decodeEntities = (value: unknown) => String(value || "")
-  .replace(/&amp;/gi,"&")
+  .replace(/&nbsp;|&#160;/gi," ")\n  .replace(/&amp;/gi,"&")
   .replace(/&quot;/gi,'"')
   .replace(/&#39;|&apos;/gi,"'")
   .replace(/&lt;/gi,"<")
@@ -937,6 +937,11 @@ const processNewsIntakeRun = async (
           {p_payload:payload}
         );
         if(createError)throw new Error(createError.message);
+
+        const createdDuplicateStatus=String(created?.duplicate?.status||'unavailable');
+        const createdCanPublish=
+          created?.canPublishImmediately===true && createdDuplicateStatus==='clear';
+
         await record({
           itemKind:'article',
           sourceHostname:source.hostname,
@@ -948,10 +953,12 @@ const processNewsIntakeRun = async (
           segmentId:classification.segmentId,
           subcategoryId:classification.subcategoryId,
           confidence:classification.confidence,
-          action:'created_draft',
-          duplicateStatus:String(created?.duplicate?.status||'clear'),
+          action:createdCanPublish?'created_draft':'needs_review',
+          duplicateStatus:createdDuplicateStatus,
           reportId:String(created?.reportId||''),
-          reason:'Source-grounded draft created; publication remains a separate admin action.',
+          reason:createdCanPublish
+            ? 'Source-grounded draft created; publication remains a separate admin action.'
+            : 'Draft created, but the final server duplicate evaluation requires review before publication.',
         });
       } catch(error) {
         processingErrors+=1;
