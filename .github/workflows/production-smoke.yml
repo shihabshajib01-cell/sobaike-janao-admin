@@ -88,6 +88,70 @@ jobs:
           print(f"Public-SQL-Admin sync contract verified: {actual}")
           PY
 
+
+      - name: Verify public reporting configuration exposure contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_KEY"
+
+          curl --fail-with-body -sS \
+            -X POST "$SUPABASE_URL/rest/v1/rpc/get_public_reporting_configuration" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{}' > /tmp/public-reporting-config.json
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          data = json.loads(Path('/tmp/public-reporting-config.json').read_text())
+          segments = data.get('segments')
+          subcategories = data.get('subcategories')
+          forms = data.get('forms')
+
+          if not isinstance(segments, list) or not isinstance(subcategories, list) or not isinstance(forms, list):
+              raise SystemExit('ERROR: public reporting configuration shape changed')
+
+          subcategory_ids = {
+              item.get('id') for item in subcategories
+              if isinstance(item, dict) and item.get('id')
+          }
+          form_subcategory_ids_list = [
+              item.get('subcategoryId') for item in forms
+              if isinstance(item, dict) and item.get('subcategoryId')
+          ]
+          form_subcategory_ids = set(form_subcategory_ids_list)
+
+          leaked_forms = sorted(form_subcategory_ids - subcategory_ids)
+          missing_forms = sorted(subcategory_ids - form_subcategory_ids)
+          duplicate_form_ids = sorted({
+              item_id
+              for item_id in form_subcategory_ids
+              if form_subcategory_ids_list.count(item_id) > 1
+          })
+
+          if leaked_forms:
+              raise SystemExit(
+                  f'ERROR: forms exposed for inactive/unavailable subcategories: {leaked_forms}'
+              )
+          if missing_forms:
+              raise SystemExit(
+                  f'ERROR: public subcategories missing reporting forms: {missing_forms}'
+              )
+          if duplicate_form_ids:
+              raise SystemExit(
+                  f'ERROR: duplicate public reporting forms: {duplicate_form_ids}'
+              )
+
+          print(
+              'Public reporting configuration exposure contract passed: '
+              f'{len(subcategory_ids)} subcategories / {len(form_subcategory_ids)} forms'
+          )
+          PY
+
       - name: Verify private Admin RPC rejects anonymous access
         shell: bash
         run: |
