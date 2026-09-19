@@ -734,7 +734,7 @@ await check('News Intake automatic review selects only intended reports and keep
   await expectVisible(reportA, 'first automatic report selector missing');
   await expectVisible(reportB, 'second automatic report selector missing');
 
-  await reportA.check();
+  await reportA.check({ force: true });
   await expectVisible(
     page.getByText('1 selected', { exact: true }),
     'selection count did not update'
