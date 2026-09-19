@@ -286,7 +286,7 @@ for (const needle of [
   'if (!preview.canCreateDraft)',
   'if (publishAfterCreate && !preview.canPublishImmediately)',
   'initialSourceUrl',
-  'reportingFormApi.getPublished',
+  '.getPublished(report.subcategoryId)',
   'dynamicCustomFields',
   'unsupportedRequiredFields',
   'Published form fields',
