@@ -28,8 +28,13 @@ export const Modal: React.FC<ModalProps> = ({
 }) => {
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
   const titleId = useId();
   const descriptionId = useId();
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     const getFocusable = () =>
@@ -43,7 +48,7 @@ export const Modal: React.FC<ModalProps> = ({
       if (!isOpen) return;
       if (e.key === 'Escape') {
         e.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key !== 'Tab') return;
@@ -68,6 +73,8 @@ export const Modal: React.FC<ModalProps> = ({
       }
     };
 
+    const previousOverflow = document.body.style.overflow;
+
     if (isOpen) {
       previousFocusRef.current =
         document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -80,12 +87,12 @@ export const Modal: React.FC<ModalProps> = ({
     }
 
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', handleKeyDown);
       previousFocusRef.current?.focus();
       previousFocusRef.current = null;
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
