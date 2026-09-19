@@ -981,7 +981,10 @@ await check('News Intake manual form follows the published dynamic schema and fa
     'published-schema field completion did not unblock the safe intake preview'
   );
 
-  const smallAction = page.locator('[data-button-size="sm"]').first();
+  const smallAction = page
+    .getByRole('dialog')
+    .locator('[data-button-size="sm"]')
+    .first();
   const smallActionBox = await smallAction.boundingBox();
   if (!smallActionBox || smallActionBox.height < 44) {
     throw new Error(
