@@ -722,7 +722,13 @@ const processNewsIntakeRun = async (
           };
         }
 
-        if(location){
+        // A canonical multi-location result is authoritative. Never downgrade it
+        // to one inferred phrase; those articles must stay in manual review.
+        if(
+          location
+          && location.quality !== 'multiple_locations'
+          && location.locationScope !== 'multi_location'
+        ){
           const specificPhrase=inferSpecificLocationPhrase(locationText,location.district);
           const districtWide=inferDistrictWideScope(locationText);
           const alreadySpecific=Boolean(
