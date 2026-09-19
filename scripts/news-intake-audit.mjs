@@ -25,6 +25,7 @@ const publishGroundingGuard = read('supabase/migrations/20260919082837_news_inta
 const groundingGuardAlignment = read('supabase/migrations/20260919083754_news_intake_grounding_guard_align_duplicate_gate.sql');
 const adminLocationRpcHardening = read('supabase/migrations/20260919085346_news_intake_admin_location_rpc_hardening.sql');
 const sourceLanguageGroundingCleanup = read('supabase/migrations/20260919093100_news_intake_source_language_grounding_cleanup.sql');
+const misclassifiedReportQuarantine = read('supabase/migrations/20260919184200_quarantine_misclassified_automated_news_report.sql');
 const automationCore = read('supabase/functions/_shared/newsIntakeAutomationCore.ts');
 const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
 const edge = read('supabase/functions/news-intake-fetch/index.ts');
@@ -132,6 +133,19 @@ for (const needle of [
   'newsIntakeReviewRequired',
 ]) {
   requireText(sourceLanguageGroundingCleanup, needle, 'News Intake source-language grounding cleanup');
+}
+for (const needle of [
+  "id = 'SJ-2026-240019'",
+  "status = 'submitted'",
+  "'newsIntakeReviewRequired', true",
+  "subcategory_id = 'theft'",
+  "origin_type = 'sourced_report'",
+]) {
+  requireText(
+    misclassifiedReportQuarantine,
+    needle,
+    'known misclassified automated report quarantine'
+  );
 }
 requireText(samakalMode, "scan_enabled=false", 'Samakal safe source mode');
 for (const needle of [
