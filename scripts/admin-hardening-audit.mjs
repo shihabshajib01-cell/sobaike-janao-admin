@@ -140,6 +140,9 @@ for (const needle of [
   'npm:@supabase/supabase-js@2.112.4',
   'cleanPassword.length < 12',
   'ALLOWED_ORIGINS',
+  'api.pwnedpasswords.com/range/',
+  '"Add-Padding": "true"',
+  'COMPROMISED_PASSWORD',
 ]) {
   if (!createUserEdge.includes(needle)) {
     fail('Admin user creation Edge hardening is missing: ' + needle);
