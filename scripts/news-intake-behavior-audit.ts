@@ -152,6 +152,15 @@ assert.equal(
   'চট্টগ্রামের কোতোয়ালি থানার পেছনের সতীশ বাবু লেন',
   'Incident location must win over later narrative text ending in এলাকা'
 );
+
+assert.equal(
+  inferSpecificLocationPhrase(
+    'According to the complaint, a motorcycle waylaid Toma at Gopalnagar around 9pm on Thursday and picked her up at an abandoned place when she was returning home.',
+    'Kushtia'
+  ),
+  'Gopalnagar',
+  'Bare proper incident place after at must be retained'
+);
 assert.equal(
   inferDistrictWideScope('জেলাজুড়ে বিদ্যুৎ বিভ্রাটের অভিযোগ পাওয়া গেছে'),
   true,
