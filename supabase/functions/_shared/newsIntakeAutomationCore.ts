@@ -43,7 +43,7 @@ export type Classification = {
 };
 
 const ARTICLE_RULES: Array<[string, string, number, RegExp[]]> = [
-  ['harassment','rape-sexual-violence',0.93,[/ধর্ষণ/u,/ধর্ষণের চেষ্টা/u,/\brape\b/i,/attempted rape/i]],
+  ['harassment','rape-sexual-violence',0.93,[/ধর্ষণ/u,/ধর্ষণের চেষ্টা/u,/\brap(?:e|ed|es|ing)\b/i,/attempted rape/i]],
   ['harassment','sexual-harassment',0.90,[/যৌন হয়রানি/u,/যৌন হয়রানি/u,/ইভ টিজিং/u,/শ্লীলতাহানি/u,/sexual harassment/i,/eve[- ]?teasing/i]],
   ['harassment','domestic-violence',0.88,[/পারিবারিক সহিংসতা/u,/গৃহবধূ.{0,30}(নির্যাতন|মারধর)/u,/স্ত্রীকে.{0,30}(মারধর|পিটিয়ে|পিটিয়ে|কুপিয়ে|কুপিয়ে)/u,/domestic violence/i,/wife.{0,40}(assault|beat|attack)/i]],
   ['harassment','blackmail-coercion',0.88,[/ব্ল্যাকমেইল/u,/জবরদস্তি.{0,30}(টাকা|অর্থ)/u,/blackmail/i,/\bcoercion\b/i]],
