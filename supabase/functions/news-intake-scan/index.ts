@@ -16,10 +16,22 @@ import {
   scoreDiscoveryLink,
 } from "../_shared/newsIntakeAutomationCore.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-news-intake-scheduler",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+const ALLOWED_ORIGINS = new Set([
+  "https://shihabshajib01-cell.github.io",
+  "https://admin.shobaikejanao.com",
+  "https://shobaikejanao.com",
+  "http://localhost:5173",
+  "http://localhost:3000",
+]);
+
+const corsHeadersFor = (req: Request) => {
+  const origin = req.headers.get("Origin") || "";
+  return {
+    ...(ALLOWED_ORIGINS.has(origin) ? { "Access-Control-Allow-Origin": origin } : {}),
+    "Vary": "Origin",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-news-intake-scheduler",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  };
 };
 
 const json = (body: unknown, status=200) => new Response(JSON.stringify(body), {
@@ -411,13 +423,29 @@ const buildReportPayload = (
   };
 };
 
+const isUnsafeNetworkHostname = (hostname: string) => {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (host === "localhost" || host === "::1" || host.endsWith(".localhost") || host.endsWith(".local")) return true;
+  const parts = host.split(".").map((part) => Number(part));
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
+  const [a,b] = parts;
+  return a === 10
+    || a === 127
+    || a === 0
+    || (a === 169 && b === 254)
+    || (a === 172 && b >= 16 && b <= 31)
+    || (a === 192 && b === 168)
+    || (a === 100 && b >= 64 && b <= 127)
+    || a >= 224;
+};
+
 const safeScanFetch = async (
   initialUrl: string,
   checkDomain: (url:string)=>Promise<any>,
   accept='text/html,application/xhtml+xml'
 ) => {
   let current=new URL(initialUrl);
-  if(current.protocol!=='https:'||current.username||current.password||current.port) {
+  if(current.protocol!=='https:'||current.username||current.password||current.port||isUnsafeNetworkHostname(current.hostname)) {
     throw new Error('Unsafe source URL blocked.');
   }
   let domain=await checkDomain(current.toString());
@@ -438,7 +466,7 @@ const safeScanFetch = async (
       const location=response.headers.get('location');
       if(!location||redirectCount===3) throw new Error('Source redirect could not be resolved.');
       const next=new URL(location,current);
-      if(next.protocol!=='https:'||next.username||next.password||next.port) {
+      if(next.protocol!=='https:'||next.username||next.password||next.port||isUnsafeNetworkHostname(next.hostname)) {
         throw new Error('Unsafe source redirect blocked.');
       }
       domain=await checkDomain(next.toString());
@@ -1056,6 +1084,7 @@ const sha256Hex = async (value: string) => {
 };
 
 Deno.serve(async (req) => {
+  const corsHeaders = corsHeadersFor(req);
   if(req.method==="OPTIONS") return new Response("ok",{headers:corsHeaders});
   if(req.method!=="POST") return json({error:"Method not allowed."},405);
 
