@@ -1,473 +1,386 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  CheckCircle2,
+  CircleAlert,
+  Clock,
   ExternalLink,
-  FilePlus2,
-  Link2,
   Newspaper,
   RefreshCw,
   SearchCheck,
   Send,
+  ShieldCheck,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { NewsAutomationPanel } from './NewsAutomationPanel';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { Textarea } from '@/components/ui/Textarea';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Checkbox } from '@/components/ui/Checkbox';
 import { FeedbackNotice } from '@/components/ui/FeedbackNotice';
+import { Modal } from '@/components/ui/Modal';
 import { Tag } from '@/components/ui/Tag';
 import { useLanguage } from '@/context/LanguageContext';
 import { complaintApi, newsIntakeApi } from '@/services/api';
+import { Complaint } from '@/types/Complaint';
 import {
-  NewsIntakePayload,
-  NewsIntakePreview,
-  NewsIntakeReport,
-  NewsIntakeSource,
+  NewsIntakeAutomationDashboard,
+  NewsIntakeAutomationItem,
+  NewsIntakeAutomationRun,
   NewsIntakeTaxonomy,
 } from '@/types/NewsIntake';
+import { ManualNewsIntakeForm } from './ManualNewsIntakeForm';
 
-const EMPTY_SOURCE: NewsIntakeSource = {
-  sourceType: 'news',
-  publisherName: '',
-  sourceTitle: '',
-  canonicalUrl: '',
-  sourcePublishedDate: '',
+const EMPTY_DASHBOARD: NewsIntakeAutomationDashboard = {
+  sources: [],
+  runs: [],
+  automation: {
+    enabled: false,
+    intervalHours: 36,
+    lastAutoDispatchedAt: null,
+    nextAutoDueAt: null,
+    running: false,
+  },
 };
 
-const EMPTY_REPORT: NewsIntakeReport = {
-  segmentId: '',
-  subcategoryId: '',
-  titleBn: '',
-  titleEn: '',
-  descriptionBn: '',
-  descriptionEn: '',
-  incidentDate: '',
-  incidentTime: '',
-  utilityEndTime: '',
-  frequency: 'one-time',
-  priority: 'medium',
-  division: '',
-  district: '',
-  upazilaOrThana: '',
-  area: '',
-  road: '',
-  landmark: '',
-  formattedAddress: '',
-  relationshipContext: '',
-  recentBillMonth: '',
-  recentBillAmount: '',
-  previousBillMonth: '',
-  previousBillAmount: '',
-  briberyDepartment: '',
-  briberyService: '',
-  briberyAmount: '',
-  affectedPersonAgeGroup: '',
-  allegedAbuserRelationship: '',
-  reportingFor: '',
-  sexualHarassmentType: '',
-  sexualHarassmentContext: '',
-  sexualHarassmentInstitution: '',
-  intimateWhatHappened: '',
-  intimatePlatform: '',
-  mobJusticeDetails: null,
-  customFieldAnswers: {},
+const EMPTY_TAXONOMY: NewsIntakeTaxonomy = {
+  segments: [],
+  subcategories: [],
 };
 
-const AGE_OPTIONS = [
-  ['under_18', 'Under 18', '১৮ বছরের কম'],
-  ['18_29', '18–29', '১৮–২৯'],
-  ['30_59', '30–59', '৩০–৫৯'],
-  ['60_plus', '60+', '৬০+'],
-  ['prefer_not_to_say', 'Prefer not to say', 'বলতে অনিচ্ছুক'],
-  ['unknown_not_stated', 'Unknown / not stated', 'জানা নেই / উল্লেখ নেই'],
-];
+type IntakeMode = 'automatic' | 'manual';
+type WorkspaceStep = 1 | 2 | 3;
 
-const RELATIONSHIP_OPTIONS = [
-  ['intimate_partner', 'Current / former intimate partner or spouse', 'বর্তমান / সাবেক ঘনিষ্ঠ সঙ্গী বা স্বামী/স্ত্রী'],
-  ['household_family', 'Immediate family / household member', 'নিকট পরিবারের / একই পরিবারের সদস্য'],
-  ['other_relative', 'Other relative', 'অন্যান্য আত্মীয়'],
-  ['friend_acquaintance', 'Friend / acquaintance', 'বন্ধু / পরিচিত ব্যক্তি'],
-  ['coworker_classmate', 'Co-worker / classmate', 'সহকর্মী / সহপাঠী'],
-  ['authority_caregiver_service_provider', 'Authority / caregiver / service provider', 'কর্তৃপক্ষ / পরিচর্যাকারী / সেবাদানকারী'],
-  ['stranger', 'Stranger', 'অপরিচিত ব্যক্তি'],
-  ['neighbor', 'Neighbor', 'প্রতিবেশী'],
-  ['teacher_tutor', 'Teacher / tutor', 'শিক্ষক / টিউটর'],
-  ['supervisor_employer', 'Supervisor / employer', 'সুপারভাইজার / নিয়োগকর্তা'],
-  ['service_health_worker', 'Service provider / healthcare worker', 'সেবাদানকারী / স্বাস্থ্যকর্মী'],
-  ['transport_worker', 'Transport worker', 'পরিবহন কর্মী'],
-  ['law_enforcement_authority', 'Law enforcement / authority', 'আইনশৃঙ্খলা / কর্তৃপক্ষ'],
-  ['multiple_people', 'Multiple people', 'একাধিক ব্যক্তি'],
-  ['other', 'Other', 'অন্যান্য'],
-  ['unknown_not_stated', 'Unknown / not stated', 'জানা নেই / উল্লেখ নেই'],
-];
+interface PublishOutcome {
+  reportId: string;
+  title: string;
+  ok: boolean;
+  error?: string;
+}
 
-const REPORTING_FOR_OPTIONS = [
-  ['self', 'Self', 'নিজের জন্য'],
-  ['someone_else', 'Someone else', 'অন্য কারও জন্য'],
-];
-
-const SEXUAL_HARASSMENT_TYPE_OPTIONS = [
-  ['eve_teasing', 'Eve teasing', 'ইভ টিজিং'],
-  ['unwanted_physical_contact', 'Unwanted physical contact', 'অনিচ্ছাকৃত শারীরিক স্পর্শ'],
-  ['sexual_comments_gestures_proposition', 'Sexual comments / gestures / proposition', 'যৌন মন্তব্য / অঙ্গভঙ্গি / প্রস্তাব'],
-  ['workplace_harassment', 'Workplace harassment', 'কর্মক্ষেত্রে হয়রানি'],
-  ['abuse_of_power', 'Abuse of power', 'ক্ষমতার অপব্যবহার'],
-  ['stalking', 'Stalking', 'অনুসরণ / স্টকিং'],
-  ['online_digital_harassment', 'Online / digital harassment', 'অনলাইন / ডিজিটাল হয়রানি'],
-  ['other', 'Other', 'অন্যান্য'],
-  ['unknown_not_stated', 'Unknown / not stated', 'জানা নেই / উল্লেখ নেই'],
-];
-
-const SEXUAL_CONTEXT_OPTIONS = [
-  ['workplace', 'Workplace', 'কর্মক্ষেত্র'],
-  ['educational_institution', 'Educational institution', 'শিক্ষাপ্রতিষ্ঠান'],
-  ['healthcare', 'Healthcare', 'স্বাস্থ্যসেবা'],
-  ['public_transport', 'Public transport', 'গণপরিবহন'],
-  ['road_public_space', 'Road / public space', 'রাস্তা / জনসমাগমস্থল'],
-  ['home_private_space', 'Home / private space', 'বাড়ি / ব্যক্তিগত স্থান'],
-  ['online_social_media', 'Online / social media', 'অনলাইন / সামাজিক যোগাযোগমাধ্যম'],
-  ['government_service', 'Government service', 'সরকারি সেবা'],
-  ['other', 'Other', 'অন্যান্য'],
-  ['unknown_not_stated', 'Unknown / not stated', 'জানা নেই / উল্লেখ নেই'],
-];
-
-const MOB_TRIGGER_OPTIONS = [
-  ['suspected_theft_robbery', 'Suspected theft / robbery', 'চুরি / ডাকাতির সন্দেহ'],
-  ['snatching_allegation', 'Snatching allegation', 'ছিনতাইয়ের অভিযোগ'],
-  ['kidnapping_allegation', 'Kidnapping allegation', 'অপহরণের অভিযোগ'],
-  ['sexual_offence_allegation', 'Sexual offence allegation', 'যৌন অপরাধের অভিযোগ'],
-  ['religious_sentiment_allegation', 'Religious sentiment allegation', 'ধর্মীয় অনুভূতিতে আঘাতের অভিযোগ'],
-  ['personal_local_dispute', 'Personal / local dispute', 'ব্যক্তিগত / স্থানীয় বিরোধ'],
-  ['informal_punishment', 'Informal punishment', 'অনানুষ্ঠানিক শাস্তি'],
-  ['other_accusation_dispute', 'Other accusation / dispute', 'অন্যান্য অভিযোগ / বিরোধ'],
-  ['unknown', 'Unknown', 'জানা নেই'],
-];
-
-const MOB_OUTCOME_OPTIONS = [
-  ['threatened_harassed', 'Threatened / harassed', 'হুমকি / হয়রানি'],
-  ['restrained_surrounded', 'Restrained / surrounded', 'আটকে রাখা / ঘেরাও'],
-  ['physically_assaulted', 'Physically assaulted', 'শারীরিক হামলা'],
-  ['seriously_injured', 'Seriously injured', 'গুরুতর আহত'],
-  ['death_reported', 'Death reported', 'মৃত্যুর খবর'],
-  ['property_damaged', 'Property damaged', 'সম্পত্তির ক্ষতি'],
-  ['rescued_intervention', 'Rescued / intervention', 'উদ্ধার / হস্তক্ষেপ'],
-  ['ongoing', 'Ongoing', 'চলমান'],
-  ['unknown', 'Unknown', 'জানা নেই'],
-];
-
-const optionList = (
-  options: string[][],
-  isBn: boolean
-): Array<{ value: string; label: string }> =>
-  options.map(([value, en, bn]) => ({ value, label: isBn ? bn : en }));
+const articleItems = (run: NewsIntakeAutomationRun | null) =>
+  (run?.items || []).filter((item) => item.itemKind !== 'source');
 
 export const NewsIntakePage: React.FC = () => {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const isBn = language === 'bn';
 
-  const [source, setSource] = useState<NewsIntakeSource>(EMPTY_SOURCE);
-  const [report, setReport] = useState<NewsIntakeReport>(EMPTY_REPORT);
-  const [taxonomy, setTaxonomy] = useState<NewsIntakeTaxonomy>({
-    segments: [],
-    subcategories: [],
-  });
-  const [metadataPreview, setMetadataPreview] = useState('');
-  const [preview, setPreview] = useState<NewsIntakePreview | null>(null);
-  const [loadingTaxonomy, setLoadingTaxonomy] = useState(true);
-  const [fetchingSource, setFetchingSource] = useState(false);
-  const [checking, setChecking] = useState(false);
-  const [creating, setCreating] = useState(false);
+  const [dashboard, setDashboard] =
+    useState<NewsIntakeAutomationDashboard>(EMPTY_DASHBOARD);
+  const [taxonomy, setTaxonomy] = useState<NewsIntakeTaxonomy>(EMPTY_TAXONOMY);
+  const [loading, setLoading] = useState(true);
+  const [updatingSchedule, setUpdatingSchedule] = useState(false);
+  const [pageError, setPageError] = useState<string | null>(null);
+
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const [mode, setMode] = useState<IntakeMode>('automatic');
+  const [step, setStep] = useState<WorkspaceStep>(1);
+  const [scanning, setScanning] = useState(false);
+  const [workspaceError, setWorkspaceError] = useState<string | null>(null);
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [reportMap, setReportMap] = useState<Record<string, Complaint | null>>({});
+  const [loadingReports, setLoadingReports] = useState(false);
+  const [selectedReportIds, setSelectedReportIds] = useState<string[]>([]);
   const [publishing, setPublishing] = useState(false);
-  const [mergingId, setMergingId] = useState<string | null>(null);
-  const [createdReportId, setCreatedReportId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [publishOutcomes, setPublishOutcomes] = useState<PublishOutcome[]>([]);
 
-  useEffect(() => {
-    let mounted = true;
-    setLoadingTaxonomy(true);
-    newsIntakeApi
-      .getTaxonomy()
-      .then((data) => {
-        if (mounted) setTaxonomy(data);
-      })
-      .catch((err: unknown) => {
-        if (mounted) {
-          setError(
-            err instanceof Error
-              ? err.message
-              : 'Failed to load News Intake categories.'
-          );
-        }
-      })
-      .finally(() => {
-        if (mounted) setLoadingTaxonomy(false);
-      });
-
-    return () => {
-      mounted = false;
-    };
+  const loadDashboard = useCallback(async () => {
+    setLoading(true);
+    setPageError(null);
+    try {
+      const [nextDashboard, nextTaxonomy] = await Promise.all([
+        newsIntakeApi.getAutomationDashboard(),
+        newsIntakeApi.getTaxonomy(),
+      ]);
+      setDashboard(nextDashboard);
+      setTaxonomy(nextTaxonomy);
+      return nextDashboard;
+    } catch (error: unknown) {
+      setPageError(
+        error instanceof Error ? error.message : 'Failed to load News Intake dashboard.'
+      );
+      return null;
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const availableSubcategories = useMemo(
+  useEffect(() => {
+    void loadDashboard();
+  }, [loadDashboard]);
+
+  const latestRun = dashboard.runs[0] || null;
+  const selectedRun =
+    dashboard.runs.find((run) => run.runId === selectedRunId) || latestRun;
+  const selectedItems = articleItems(selectedRun || null);
+
+  const automatedSources = dashboard.sources.filter((source) => source.scanEnabled);
+  const manualSources = dashboard.sources.filter((source) => !source.scanEnabled);
+
+  const formatDateTime = (value?: string | null) => {
+    if (!value) return isBn ? 'এখনও নেই' : 'Not available';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat(isBn ? 'bn-BD' : 'en-BD', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(date);
+  };
+
+  const categoryLabel = (item: NewsIntakeAutomationItem) => {
+    const segment = taxonomy.segments.find((entry) => entry.id === item.segmentId);
+    const subcategory = taxonomy.subcategories.find(
+      (entry) => entry.id === item.subcategoryId
+    );
+    return [segment, subcategory]
+      .filter(Boolean)
+      .map((entry) =>
+        entry
+          ? isBn
+            ? entry.nameBn
+            : entry.nameEn
+          : ''
+      )
+      .filter(Boolean)
+      .join(' · ');
+  };
+
+  const loadReportCards = async (run: NewsIntakeAutomationRun) => {
+    const reportIds = Array.from(
+      new Set(
+        run.items
+          .filter((item) => item.action === 'created_draft' && item.reportId)
+          .map((item) => String(item.reportId))
+      )
+    );
+
+    setSelectedReportIds([]);
+    setReportMap({});
+    if (reportIds.length === 0) return;
+
+    setLoadingReports(true);
+    try {
+      const entries = await Promise.all(
+        reportIds.map(async (reportId) => {
+          try {
+            return [reportId, await complaintApi.getComplaintById(reportId)] as const;
+          } catch {
+            return [reportId, null] as const;
+          }
+        })
+      );
+      setReportMap(Object.fromEntries(entries));
+    } finally {
+      setLoadingReports(false);
+    }
+  };
+
+  const openWorkspace = () => {
+    setMode('automatic');
+    setStep(1);
+    setSelectedRunId(null);
+    setSelectedReportIds([]);
+    setReportMap({});
+    setPublishOutcomes([]);
+    setWorkspaceError(null);
+    setWorkspaceOpen(true);
+  };
+
+  const openRunForReview = async (run: NewsIntakeAutomationRun) => {
+    setMode('automatic');
+    setStep(2);
+    setSelectedRunId(run.runId);
+    setPublishOutcomes([]);
+    setWorkspaceError(null);
+    setWorkspaceOpen(true);
+    await loadReportCards(run);
+  };
+
+  const handleScan = async () => {
+    setScanning(true);
+    setWorkspaceError(null);
+    try {
+      const result = await newsIntakeApi.scanSources();
+      if (result.alreadyRunning) {
+        setWorkspaceError(
+          isBn
+            ? 'আরেকটি নিউজ স্ক্যান ইতিমধ্যে চলছে। এটি শেষ হলে আবার চেষ্টা করুন।'
+            : 'Another News Intake scan is already running. Try again after it finishes.'
+        );
+        return;
+      }
+
+      const nextDashboard = await loadDashboard();
+      const run =
+        nextDashboard?.runs.find((entry) => entry.runId === result.runId) ||
+        nextDashboard?.runs[0];
+
+      if (!run) {
+        setWorkspaceError(
+          isBn
+            ? 'স্ক্যান শেষ হয়েছে, কিন্তু রান ফলাফল পাওয়া যায়নি।'
+            : 'The scan finished, but its run results could not be loaded.'
+        );
+        return;
+      }
+
+      setSelectedRunId(run.runId);
+      await loadReportCards(run);
+      setStep(2);
+    } catch (error: unknown) {
+      setWorkspaceError(
+        error instanceof Error ? error.message : 'News sources could not be checked.'
+      );
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const handleAutoUpdate = async () => {
+    setUpdatingSchedule(true);
+    setPageError(null);
+    try {
+      await newsIntakeApi.setAutoUpdate(!dashboard.automation.enabled);
+      await loadDashboard();
+    } catch (error: unknown) {
+      setPageError(
+        error instanceof Error ? error.message : 'Auto Update could not be changed.'
+      );
+    } finally {
+      setUpdatingSchedule(false);
+    }
+  };
+
+  const eligibleReportIds = useMemo(
     () =>
-      taxonomy.subcategories.filter(
-        (subcategory) => subcategory.segmentId === report.segmentId
-      ),
-    [taxonomy.subcategories, report.segmentId]
+      selectedItems
+        .filter((item) => item.action === 'created_draft' && item.reportId)
+        .map((item) => String(item.reportId))
+        .filter((reportId) => reportMap[reportId]?.status === 'submitted'),
+    [selectedItems, reportMap]
   );
 
-  const selectedSubcategory = taxonomy.subcategories.find(
-    (item) => item.id === report.subcategoryId
-  );
-
-  const invalidatePreview = () => {
-    setPreview(null);
-    setSuccess(null);
-    setCreatedReportId(null);
+  const toggleReport = (reportId: string) => {
+    setSelectedReportIds((current) =>
+      current.includes(reportId)
+        ? current.filter((id) => id !== reportId)
+        : [...current, reportId]
+    );
   };
 
-  const updateSource = (patch: Partial<NewsIntakeSource>) => {
-    setSource((current) => ({ ...current, ...patch }));
-    invalidatePreview();
+  const selectAllEligible = () => {
+    setSelectedReportIds(eligibleReportIds);
   };
 
-  const updateReport = (patch: Partial<NewsIntakeReport>) => {
-    setReport((current) => ({ ...current, ...patch }));
-    invalidatePreview();
-  };
+  const handlePublishSelected = async () => {
+    if (selectedReportIds.length === 0) return;
 
-  const payload = (): NewsIntakePayload => ({ source, report });
+    setPublishing(true);
+    setWorkspaceError(null);
+    const outcomes: PublishOutcome[] = [];
 
-  const validate = (): string | null => {
-    if (!source.canonicalUrl.trim()) {
-      return isBn ? 'উৎসের URL দিন।' : 'Enter the source URL.';
-    }
-    if (!source.publisherName.trim()) {
-      return isBn ? 'উৎস প্রকাশকের নাম দিন।' : 'Enter the source publisher.';
-    }
-    if (!source.sourceTitle.trim()) {
-      return isBn ? 'উৎস প্রতিবেদনের শিরোনাম দিন।' : 'Enter the source article title.';
-    }
-    if (!report.segmentId || !report.subcategoryId) {
-      return isBn ? 'ক্যাটাগরি ও সাবক্যাটাগরি নির্বাচন করুন।' : 'Select a category and subcategory.';
-    }
-    if (!report.titleBn.trim() || !report.descriptionBn.trim()) {
-      return isBn
-        ? 'উৎসের ভাষায় রিপোর্টের শিরোনাম ও ঘটনার প্রেক্ষাপট দিন।'
-        : 'Enter the report title and incident context in the source language.';
-    }
-    if (report.titleBn.trim().length > 100 || report.titleEn.trim().length > 100) {
-      return isBn ? 'রিপোর্ট শিরোনাম সর্বোচ্চ ১০০ অক্ষর।' : 'Report titles can contain at most 100 characters.';
-    }
-    if (!report.incidentDate || !report.division.trim() || !report.district.trim()) {
-      return isBn
-        ? 'ঘটনার তারিখ, বিভাগ ও জেলা আবশ্যক।'
-        : 'Incident date, division, and district are required.';
-    }
-    if (report.segmentId === 'harassment') {
-      if (
-        !report.affectedPersonAgeGroup ||
-        !report.allegedAbuserRelationship ||
-        !report.reportingFor
-      ) {
-        return isBn
-          ? 'হয়রানি/নির্যাতন রিপোর্টে বয়সের গ্রুপ, অভিযুক্তের সম্পর্ক এবং কার পক্ষে রিপোর্ট—সবগুলো দিন।'
-          : 'Harassment reports require age group, alleged-abuser relationship, and reporting-for.';
-      }
-    }
-    if (
-      report.subcategoryId === 'bribe-demanded-service' &&
-      (!report.briberyDepartment.trim() || !report.briberyService.trim())
-    ) {
-      return isBn
-        ? 'ঘুষের রিপোর্টে সংশ্লিষ্ট বিভাগ ও সেবার নাম দিন।'
-        : 'Bribery reports require department and service.';
-    }
-    if (report.subcategoryId === 'mob-justice') {
-      const mob = report.mobJusticeDetails;
-      if (!mob?.trigger || !mob?.outcome || !mob?.ongoingStatus) {
-        return isBn
-          ? 'মব জাস্টিস রিপোর্টে কারণ, ফলাফল ও চলমান অবস্থার তথ্য দিন।'
-          : 'Mob-justice reports require trigger, outcome, and ongoing status.';
-      }
-    }
-    return null;
-  };
-
-  const handleFetchMetadata = async () => {
-    if (!source.canonicalUrl.trim()) {
-      setError(isBn ? 'প্রথমে উৎসের URL দিন।' : 'Enter a source URL first.');
-      return;
-    }
-
-    setFetchingSource(true);
-    setError(null);
-    setSuccess(null);
-    try {
-      const metadata = await newsIntakeApi.fetchSourceMetadata(source.canonicalUrl);
-      setSource((current) => ({
-        ...current,
-        sourceType: metadata.sourceType,
-        publisherName: metadata.publisherName || current.publisherName,
-        sourceTitle: metadata.sourceTitle || current.sourceTitle,
-        canonicalUrl: metadata.canonicalUrl || current.canonicalUrl,
-        sourcePublishedDate:
-          metadata.sourcePublishedDate || current.sourcePublishedDate,
-      }));
-      setMetadataPreview(metadata.descriptionPreview || '');
-      setPreview(null);
-      setSuccess(
-        isBn
-          ? 'অনুমোদিত উৎস থেকে আর্টিকেল মেটাডাটা নেওয়া হয়েছে। ঘটনার তথ্য নিজে যাচাই করে পূরণ করুন।'
-          : 'Article metadata loaded from an approved source. Verify and enter the incident facts yourself.'
-      );
-    } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to fetch source metadata.'
-      );
-    } finally {
-      setFetchingSource(false);
-    }
-  };
-
-  const handlePreview = async () => {
-    const problem = validate();
-    if (problem) {
-      setError(problem);
-      return;
-    }
-
-    setChecking(true);
-    setError(null);
-    setSuccess(null);
-    try {
-      setPreview(await newsIntakeApi.preview(payload()));
-    } catch (err: unknown) {
-      setPreview(null);
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Failed to check source and incident duplication.'
-      );
-    } finally {
-      setChecking(false);
-    }
-  };
-
-  const handleCreateDraft = async (publishAfterCreate: boolean) => {
-    const problem = validate();
-    if (problem) {
-      setError(problem);
-      return;
-    }
-
-    if (!preview) {
-      setError(
-        isBn
-          ? 'প্রথমে উৎস ও ডুপ্লিকেট যাচাই করুন।'
-          : 'Run the source and duplicate check first.'
-      );
-      return;
-    }
-
-    if (!preview.canCreateDraft) {
-      const missingFields = preview.schemaValidation?.missingFields || [];
-      if (missingFields.length > 0) {
-        const labels = missingFields
-          .map((field) =>
-            isBn
-              ? field.labelBn || field.labelEn || field.fieldKey
-              : field.labelEn || field.labelBn || field.fieldKey
-          )
-          .filter(Boolean)
-          .join(', ');
-        setError(
-          isBn
-            ? `বর্তমান রিপোর্ট ফর্মের আবশ্যক তথ্য অনুপস্থিত: ${labels}।`
-            : `Required information for the current report form is missing: ${labels}.`
-        );
-      } else {
-        setError(
-          isBn
-            ? 'একই উৎস ইতিমধ্যে সিস্টেমে আছে—নতুন রিপোর্ট তৈরি করা যাবে না।'
-            : 'This exact source already exists, so a new report cannot be created.'
-        );
-      }
-      return;
-    }
-
-    if (publishAfterCreate && !preview.canPublishImmediately) {
-      setError(
-        isBn
-          ? 'সম্ভাব্য একই ঘটনা আগে রিভিউ বা মার্জ করুন।'
-          : 'Review or merge the possible duplicate incident before publishing.'
-      );
-      return;
-    }
-
-    setCreating(true);
-    setPublishing(publishAfterCreate);
-    setError(null);
-    setSuccess(null);
-    setCreatedReportId(null);
-
-    try {
-      const created = await newsIntakeApi.createDraft(payload());
-      setCreatedReportId(created.reportId);
-
-      if (!publishAfterCreate) {
-        navigate(`/complaints/${encodeURIComponent(created.reportId)}`);
-        return;
-      }
-
-      if (!created.canPublishImmediately || created.duplicate.status !== 'clear') {
-        setPreview({
-          ...preview,
-          duplicate: created.duplicate,
-          canPublishImmediately: false,
+    for (const reportId of selectedReportIds) {
+      const complaint = reportMap[reportId];
+      const title =
+        complaint?.titleBn || complaint?.titleEn || reportId;
+      try {
+        await complaintApi.publishComplaint(reportId);
+        outcomes.push({ reportId, title, ok: true });
+      } catch (error: unknown) {
+        outcomes.push({
+          reportId,
+          title,
+          ok: false,
+          error: error instanceof Error ? error.message : 'Publication failed.',
         });
-        setError(
-          isBn
-            ? `রিপোর্ট ${created.reportId} Draft হিসেবে তৈরি হয়েছে, কিন্তু প্রকাশের আগে নতুন ডুপ্লিকেট রিভিউ প্রয়োজন।`
-            : `Report ${created.reportId} was created as a draft, but a new duplicate review is required before publishing.`
-        );
-        return;
       }
+    }
 
-      await complaintApi.publishComplaint(created.reportId);
-      navigate(`/complaints/${encodeURIComponent(created.reportId)}`);
-    } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to create or publish the sourced report.'
-      );
-    } finally {
-      setCreating(false);
-      setPublishing(false);
+    setPublishOutcomes(outcomes);
+    setSelectedReportIds([]);
+    await loadDashboard();
+    setStep(3);
+    setPublishing(false);
+  };
+
+  const actionLabel = (item: NewsIntakeAutomationItem) => {
+    switch (item.action) {
+      case 'created_draft':
+        return isBn ? 'ফিডের জন্য প্রস্তুত' : 'Feed ready';
+      case 'needs_review':
+        return isBn ? 'রিভিউ প্রয়োজন' : 'Needs review';
+      case 'skip_duplicate':
+        return isBn ? 'ডুপ্লিকেট' : 'Duplicate';
+      case 'merged_source':
+        return isBn ? 'উৎস মার্জ হয়েছে' : 'Source merged';
+      case 'error':
+        return isBn ? 'ত্রুটি' : 'Error';
+      default:
+        return isBn ? 'রিপোর্ট নয়' : 'Not a report';
     }
   };
 
-  const handleMerge = async (complaintId: string) => {
-    setMergingId(complaintId);
-    setError(null);
-    setSuccess(null);
-    try {
-      await newsIntakeApi.mergeSource(complaintId, source);
-      navigate(`/complaints/${encodeURIComponent(complaintId)}`);
-    } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to merge the source.'
-      );
-    } finally {
-      setMergingId(null);
-    }
+  const actionTone = (item: NewsIntakeAutomationItem) => {
+    if (item.action === 'created_draft') return 'success' as const;
+    if (item.action === 'needs_review') return 'warning' as const;
+    if (item.action === 'error') return 'danger' as const;
+    if (item.action === 'merged_source') return 'info' as const;
+    return 'neutral' as const;
   };
 
-  const exactDuplicates = preview?.duplicate.exactSourceDuplicates || [];
-  const candidates = preview?.duplicate.candidates || [];
+  const successfulPublishes = publishOutcomes.filter((item) => item.ok);
+  const failedPublishes = publishOutcomes.filter((item) => !item.ok);
+
+  const dashboardMetrics = [
+    {
+      label: isBn ? 'স্বয়ংক্রিয় সোর্স' : 'Automated sources',
+      value: automatedSources.length,
+      helper: isBn ? `${dashboard.sources.length} বিশ্বস্ত সোর্স` : `${dashboard.sources.length} trusted total`,
+    },
+    {
+      label: isBn ? 'সর্বশেষ আর্টিকেল' : 'Latest articles',
+      value: latestRun?.discoveredCount || 0,
+      helper: latestRun ? formatDateTime(latestRun.startedAt) : isBn ? 'এখনও স্ক্যান হয়নি' : 'No scan yet',
+    },
+    {
+      label: isBn ? 'ফিড-রেডি ড্রাফট' : 'Feed-ready drafts',
+      value: latestRun?.createdCount || 0,
+      helper: isBn ? 'প্রকাশের আগে অ্যাডমিন নির্বাচন করবে' : 'Admin selects before publishing',
+    },
+    {
+      label: isBn ? 'রিভিউ প্রয়োজন' : 'Needs review',
+      value: latestRun?.reviewCount || 0,
+      helper: isBn ? 'অনিশ্চিত তথ্য স্বয়ংক্রিয়ভাবে প্রকাশ হয় না' : 'Uncertain items never auto-publish',
+    },
+  ];
+
+  const modalFooter =
+    mode === 'automatic' && step === 2 ? (
+      <>
+        <Button variant="secondary" onClick={() => setStep(1)} disabled={publishing}>
+          {isBn ? 'পিছনে' : 'Back'}
+        </Button>
+        <div className="flex flex-1 items-center justify-end gap-3">
+          <p className="type-meta text-slate-500 dark:text-slate-400">
+            {isBn
+              ? `${selectedReportIds.length}টি রিপোর্ট নির্বাচিত`
+              : `${selectedReportIds.length} selected`}
+          </p>
+          <Button
+            variant="success"
+            onClick={handlePublishSelected}
+            isLoading={publishing}
+            disabled={selectedReportIds.length === 0}
+            leftIcon={<Send />}
+          >
+            {isBn ? 'নির্বাচিত রিপোর্ট ফিডে প্রকাশ করুন' : 'Publish Selected to Feed'}
+          </Button>
+        </div>
+      </>
+    ) : step === 3 ? (
+      <Button onClick={() => setWorkspaceOpen(false)}>
+        {isBn ? 'সম্পন্ন' : 'Done'}
+      </Button>
+    ) : null;
 
   return (
     <div className="space-y-6 pb-10">
@@ -475,806 +388,619 @@ export const NewsIntakePage: React.FC = () => {
         title={isBn ? 'নিউজ ইনটেক' : 'News Intake'}
         description={
           isBn
-            ? 'অনুমোদিত সংবাদ উৎস যাচাই করুন, একই ঘটনা শনাক্ত করুন, প্রয়োজন হলে উৎস মার্জ করুন এবং নিরাপদে সোর্সড রিপোর্ট প্রকাশ করুন।'
-            : 'Verify an approved news source, detect the same incident, merge supporting sources when appropriate, and safely publish sourced reports.'
+            ? 'বিশ্বস্ত সংবাদ সোর্স স্ক্যান করুন, ফিড-রেডি রিপোর্ট রিভিউ করুন এবং আপনি যেগুলো চান শুধু সেগুলো প্রকাশ করুন।'
+            : 'Scan trusted news sources, review feed-ready reports, and publish only the stories you select.'
+        }
+        actions={
+          <Button
+            size="lg"
+            onClick={openWorkspace}
+            leftIcon={<SearchCheck />}
+          >
+            {isBn ? 'এখনই যাচাই করুন' : 'Check Now'}
+          </Button>
         }
       />
 
-      <NewsAutomationPanel />
-
-      <FeedbackNotice tone="info" title={isBn ? 'নিরাপদ প্রকাশ নীতি' : 'Safe publishing policy'}>
-        <p>
-          {isBn
-            ? 'আর্টিকেল থেকে শুধু উৎসের মেটাডাটা আনা হয়। ক্যাটাগরি, স্থান, ঘটনার তারিখ, অভিযোগের ভাষা বা অন্য কোনো তথ্য স্বয়ংক্রিয়ভাবে বানানো হয় না। প্রতিটি নতুন রিপোর্ট প্রকাশের আগে ডুপ্লিকেট ইঞ্জিন আবার যাচাই করে।'
-            : 'Only source metadata is fetched from the article. Category, location, incident date, allegations, and other report facts are never invented automatically. Every new report is checked again by the duplicate engine at publication time.'}
-        </p>
-      </FeedbackNotice>
-
-      {error && (
-        <FeedbackNotice
-          tone="error"
-          title={isBn ? 'কাজটি সম্পন্ন হয়নি' : 'Action could not be completed'}
-          onDismiss={() => setError(null)}
-        >
-          <p>{error}</p>
-          {createdReportId && (
-            <Button
-              variant="secondary"
-              size="sm"
-              className="mt-2"
-              onClick={() => navigate(`/complaints/${encodeURIComponent(createdReportId)}`)}
-              leftIcon={<ExternalLink />}
-            >
-              <span>{isBn ? 'তৈরি হওয়া Draft খুলুন' : 'Open Created Draft'}</span>
-            </Button>
-          )}
+      {pageError && (
+        <FeedbackNotice tone="error" onDismiss={() => setPageError(null)}>
+          <p>{pageError}</p>
         </FeedbackNotice>
       )}
 
-      {success && (
-        <FeedbackNotice tone="success" onDismiss={() => setSuccess(null)}>
-          <p>{success}</p>
-        </FeedbackNotice>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{isBn ? '১. সংবাদ উৎস' : '1. News source'}</CardTitle>
-          <CardDescription>
-            {isBn
-              ? 'শুধু অনুমোদিত ডোমেইনের ফাইনাল আর্টিকেল URL ব্যবহার করুন।'
-              : 'Use the final article URL from an approved source domain.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-            <Input
-              id="news-intake-source-url"
-              type="url"
-              label={isBn ? 'ক্যানোনিক্যাল উৎস URL *' : 'Canonical source URL *'}
-              value={source.canonicalUrl}
-              onChange={(event) => updateSource({ canonicalUrl: event.target.value })}
-              placeholder="https://example.com/article/..."
-            />
-            <Button
-              variant="secondary"
-              size="md"
-              onClick={handleFetchMetadata}
-              isLoading={fetchingSource}
-              disabled={fetchingSource}
-              leftIcon={<Newspaper />}
-            >
-              <span>{isBn ? 'মেটাডাটা আনুন' : 'Fetch Metadata'}</span>
-            </Button>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <Input
-              label={isBn ? 'প্রকাশক *' : 'Publisher *'}
-              value={source.publisherName}
-              onChange={(event) => updateSource({ publisherName: event.target.value })}
-            />
-            <Select
-              label={isBn ? 'উৎসের ধরন' : 'Source type'}
-              value={source.sourceType}
-              onChange={(event) =>
-                updateSource({
-                  sourceType: event.target.value as NewsIntakeSource['sourceType'],
-                })
-              }
-              options={[
-                { value: 'news', label: isBn ? 'সংবাদ' : 'News' },
-                { value: 'official', label: isBn ? 'অফিসিয়াল' : 'Official' },
-                { value: 'social', label: isBn ? 'সামাজিক মাধ্যম' : 'Social' },
-                { value: 'article', label: isBn ? 'আর্টিকেল' : 'Article' },
-                { value: 'other', label: isBn ? 'অন্যান্য' : 'Other' },
-              ]}
-            />
-          </div>
-
-          <Input
-            label={isBn ? 'উৎস প্রতিবেদনের শিরোনাম *' : 'Source article title *'}
-            value={source.sourceTitle}
-            onChange={(event) => updateSource({ sourceTitle: event.target.value })}
-          />
-
-          <Input
-            type="date"
-            label={isBn ? 'উৎস প্রকাশের তারিখ' : 'Source publication date'}
-            value={source.sourcePublishedDate}
-            onChange={(event) =>
-              updateSource({ sourcePublishedDate: event.target.value })
-            }
-          />
-
-          {metadataPreview && (
-            <FeedbackNotice tone="neutral" compact title={isBn ? 'উৎসের মেটা বর্ণনা' : 'Source meta description'}>
-              <p>{metadataPreview}</p>
-            </FeedbackNotice>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{isBn ? '২. রিপোর্টের তথ্য' : '2. Report details'}</CardTitle>
-          <CardDescription>
-            {isBn
-              ? 'শুধু উৎসে সমর্থিত তথ্য লিখুন। কোনো অনুমান বা নতুন দাবি যোগ করবেন না।'
-              : 'Enter only facts supported by the source. Do not add assumptions or new allegations.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-2">
-            <Select
-              label={isBn ? 'ক্যাটাগরি *' : 'Category *'}
-              value={report.segmentId}
-              disabled={loadingTaxonomy}
-              onChange={(event) =>
-                updateReport({
-                  segmentId: event.target.value,
-                  subcategoryId: '',
-                })
-              }
-              options={[
-                { value: '', label: isBn ? 'ক্যাটাগরি নির্বাচন করুন' : 'Select category', disabled: true },
-                ...taxonomy.segments.map((item) => ({
-                  value: item.id,
-                  label: isBn ? item.nameBn : item.nameEn,
-                })),
-              ]}
-            />
-            <Select
-              label={isBn ? 'সাবক্যাটাগরি *' : 'Subcategory *'}
-              value={report.subcategoryId}
-              disabled={!report.segmentId || loadingTaxonomy}
-              onChange={(event) =>
-                updateReport({ subcategoryId: event.target.value })
-              }
-              options={[
-                { value: '', label: isBn ? 'সাবক্যাটাগরি নির্বাচন করুন' : 'Select subcategory', disabled: true },
-                ...availableSubcategories.map((item) => ({
-                  value: item.id,
-                  label: isBn ? item.nameBn : item.nameEn,
-                })),
-              ]}
-            />
-          </div>
-
-          {selectedSubcategory?.isSensitive && (
-            <FeedbackNotice tone="warning" compact>
-              <p>
-                {isBn
-                  ? 'এটি সংবেদনশীল রিপোর্টিং বিভাগ। উৎসে নেই এমন পরিচয়, সম্পর্ক বা অভিযোগ যোগ করবেন না।'
-                  : 'This is a sensitive reporting category. Do not add identities, relationships, or allegations that are not present in the source.'}
-              </p>
-            </FeedbackNotice>
-          )}
-
-          <FeedbackNotice tone="neutral" compact>
-            <p>
-              {isBn
-                ? 'শিরোনাম ও ঘটনার প্রেক্ষাপট উৎস সংবাদ যে ভাষায় লেখা, সেই ভাষাতেই লিখুন। আলাদা অনুবাদ প্রয়োজন নেই।'
-                : 'Write the title and incident context in the language used by the source article. Do not create a second translated version.'}
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {dashboardMetrics.map((metric) => (
+          <Card key={metric.label} padding="sm">
+            <p className="type-meta font-medium text-slate-500 dark:text-slate-400">
+              {metric.label}
             </p>
-          </FeedbackNotice>
+            <p className="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">
+              {loading ? '—' : metric.value}
+            </p>
+            <p className="mt-1 type-helper text-slate-500 dark:text-slate-400">
+              {metric.helper}
+            </p>
+          </Card>
+        ))}
+      </section>
 
-          <Input
-            label={isBn ? 'রিপোর্ট শিরোনাম (উৎসের ভাষা) *' : 'Report title (source language) *'}
-            maxLength={100}
-            value={report.titleBn}
-            onChange={(event) =>
-              updateReport({ titleBn: event.target.value, titleEn: '' })
-            }
-          />
-
-          <Textarea
-            label={isBn ? 'ঘটনার প্রেক্ষাপট (উৎসের ভাষা) *' : 'Incident context (source language) *'}
-            rows={6}
-            maxLength={2000}
-            value={report.descriptionBn}
-            onChange={(event) =>
-              updateReport({ descriptionBn: event.target.value, descriptionEn: '' })
-            }
-          />
-
-          <div className="grid gap-3 md:grid-cols-4">
-            <Input
-              type="date"
-              label={isBn ? 'ঘটনার তারিখ *' : 'Incident date *'}
-              value={report.incidentDate}
-              onChange={(event) =>
-                updateReport({ incidentDate: event.target.value })
-              }
-            />
-            <Input
-              type="time"
-              label={isBn ? 'ঘটনার সময়' : 'Incident time'}
-              value={report.incidentTime}
-              onChange={(event) =>
-                updateReport({ incidentTime: event.target.value })
-              }
-            />
-            <Select
-              label={isBn ? 'ঘটনার পুনরাবৃত্তি' : 'Frequency'}
-              value={report.frequency}
-              onChange={(event) =>
-                updateReport({
-                  frequency: event.target.value as NewsIntakeReport['frequency'],
-                })
-              }
-              options={[
-                { value: 'one-time', label: isBn ? 'একবার' : 'One-time' },
-                { value: 'repeated', label: isBn ? 'বারবার' : 'Repeated' },
-                { value: 'ongoing', label: isBn ? 'চলমান' : 'Ongoing' },
-                { value: 'unknown_not_stated', label: isBn ? 'জানা নেই / উল্লেখ নেই' : 'Unknown / not stated' },
-              ]}
-            />
-            <Select
-              label={isBn ? 'অগ্রাধিকার' : 'Priority'}
-              value={report.priority}
-              onChange={(event) =>
-                updateReport({
-                  priority: event.target.value as NewsIntakeReport['priority'],
-                })
-              }
-              options={[
-                { value: 'low', label: isBn ? 'কম' : 'Low' },
-                { value: 'medium', label: isBn ? 'মাঝারি' : 'Medium' },
-                { value: 'high', label: isBn ? 'উচ্চ' : 'High' },
-                { value: 'urgent', label: isBn ? 'জরুরি' : 'Urgent' },
-              ]}
-            />
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-            <Input
-              label={isBn ? 'বিভাগ *' : 'Division *'}
-              value={report.division}
-              onChange={(event) => updateReport({ division: event.target.value })}
-            />
-            <Input
-              label={isBn ? 'জেলা *' : 'District *'}
-              value={report.district}
-              onChange={(event) => updateReport({ district: event.target.value })}
-            />
-            <Input
-              label={isBn ? 'উপজেলা / থানা' : 'Upazila / Thana'}
-              value={report.upazilaOrThana}
-              onChange={(event) =>
-                updateReport({ upazilaOrThana: event.target.value })
-              }
-            />
-            <Input
-              label={isBn ? 'এলাকা' : 'Area'}
-              value={report.area}
-              onChange={(event) => updateReport({ area: event.target.value })}
-            />
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-3">
-            <Input
-              label={isBn ? 'রাস্তা' : 'Road'}
-              value={report.road}
-              onChange={(event) => updateReport({ road: event.target.value })}
-            />
-            <Input
-              label={isBn ? 'ল্যান্ডমার্ক' : 'Landmark'}
-              value={report.landmark}
-              onChange={(event) => updateReport({ landmark: event.target.value })}
-            />
-            <Input
-              label={isBn ? 'ফরম্যাটেড ঠিকানা' : 'Formatted address'}
-              value={report.formattedAddress}
-              onChange={(event) =>
-                updateReport({ formattedAddress: event.target.value })
-              }
-            />
-          </div>
-
-          {report.segmentId === 'harassment' && (
-            <section className="space-y-4 rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.6fr)]">
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <h3 className="type-card-title">{isBn ? 'হয়রানি / নির্যাতন তথ্য' : 'Harassment / abuse context'}</h3>
-                <p className="mt-1 type-helper text-slate-500 dark:text-slate-400">
+                <CardTitle>{isBn ? 'ইনটেক অটোমেশন' : 'Intake automation'}</CardTitle>
+                <CardDescription>
                   {isBn
-                    ? 'বর্তমান রিপোর্টিং কাঠামোর আবশ্যক শ্রেণিবিন্যাস।'
-                    : 'Required classification used by the current reporting contract.'}
+                    ? 'ব্যাকগ্রাউন্ড স্ক্যান চলবে, কিন্তু কোনো রিপোর্ট অ্যাডমিন নির্বাচন ছাড়া প্রকাশ হবে না।'
+                    : 'Background scanning continues, but no report is published without an admin selection.'}
+                </CardDescription>
+              </div>
+              <Tag tone={dashboard.automation.enabled ? 'success' : 'neutral'}>
+                {dashboard.automation.enabled
+                  ? isBn
+                    ? 'চালু'
+                    : 'ON'
+                  : isBn
+                    ? 'বন্ধ'
+                    : 'OFF'}
+              </Tag>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
+                <p className="type-meta text-slate-500 dark:text-slate-400">
+                  {isBn ? 'সর্বশেষ অটো স্ক্যান' : 'Last automatic scan'}
+                </p>
+                <p className="mt-1 type-secondary font-semibold text-slate-900 dark:text-slate-100">
+                  {formatDateTime(dashboard.automation.lastAutoDispatchedAt)}
                 </p>
               </div>
-              <div className="grid gap-3 md:grid-cols-3">
-                <Select
-                  label={isBn ? 'প্রভাবিত ব্যক্তির বয়সের গ্রুপ *' : 'Affected person age group *'}
-                  value={report.affectedPersonAgeGroup}
-                  onChange={(event) =>
-                    updateReport({ affectedPersonAgeGroup: event.target.value })
-                  }
-                  options={[
-                    { value: '', label: isBn ? 'নির্বাচন করুন' : 'Select', disabled: true },
-                    ...optionList(AGE_OPTIONS, isBn),
-                  ]}
-                />
-                <Select
-                  label={isBn ? 'অভিযুক্ত ব্যক্তির সঙ্গে সম্পর্ক *' : 'Relationship to alleged abuser *'}
-                  value={report.allegedAbuserRelationship}
-                  onChange={(event) =>
-                    updateReport({ allegedAbuserRelationship: event.target.value })
-                  }
-                  options={[
-                    { value: '', label: isBn ? 'নির্বাচন করুন' : 'Select', disabled: true },
-                    ...optionList(RELATIONSHIP_OPTIONS, isBn),
-                  ]}
-                />
-                <Select
-                  label={isBn ? 'কার পক্ষে রিপোর্ট *' : 'Reporting for *'}
-                  value={report.reportingFor}
-                  onChange={(event) =>
-                    updateReport({ reportingFor: event.target.value })
-                  }
-                  options={[
-                    { value: '', label: isBn ? 'নির্বাচন করুন' : 'Select', disabled: true },
-                    ...optionList(REPORTING_FOR_OPTIONS, isBn),
-                  ]}
-                />
+              <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
+                <p className="type-meta text-slate-500 dark:text-slate-400">
+                  {isBn ? 'পরবর্তী স্ক্যান' : 'Next scan'}
+                </p>
+                <p className="mt-1 type-secondary font-semibold text-slate-900 dark:text-slate-100">
+                  {dashboard.automation.enabled
+                    ? formatDateTime(dashboard.automation.nextAutoDueAt)
+                    : isBn
+                      ? 'বন্ধ'
+                      : 'Disabled'}
+                </p>
               </div>
+            </div>
 
-              <Input
-                label={isBn ? 'সম্পর্কের অতিরিক্ত প্রেক্ষাপট' : 'Additional relationship context'}
-                value={report.relationshipContext}
-                onChange={(event) =>
-                  updateReport({ relationshipContext: event.target.value })
-                }
-              />
+            <div className="flex flex-wrap items-center gap-2">
+              <Tag tone="info">{isBn ? 'প্রতি ৩৬ ঘণ্টা' : 'Every 36 hours'}</Tag>
+              <p className="type-meta text-slate-500 dark:text-slate-400">
+                {isBn
+                  ? 'ম্যানুয়াল Check Now অটো টাইমার রিসেট করে না।'
+                  : 'Manual Check Now does not reset the automatic timer.'}
+              </p>
+            </div>
 
-              {report.subcategoryId === 'sexual-harassment' && (
-                <div className="grid gap-3 md:grid-cols-3">
-                  <Select
-                    label={isBn ? 'যৌন হয়রানির ধরন' : 'Sexual harassment type'}
-                    value={report.sexualHarassmentType}
-                    onChange={(event) =>
-                      updateReport({ sexualHarassmentType: event.target.value })
-                    }
-                    options={[
-                      { value: '', label: isBn ? 'নির্বাচন করুন' : 'Select', disabled: true },
-                      ...optionList(SEXUAL_HARASSMENT_TYPE_OPTIONS, isBn),
-                    ]}
-                  />
-                  <Select
-                    label={isBn ? 'ঘটনার পরিবেশ / স্থান' : 'Incident context'}
-                    value={report.sexualHarassmentContext}
-                    onChange={(event) =>
-                      updateReport({ sexualHarassmentContext: event.target.value })
-                    }
-                    options={[
-                      { value: '', label: isBn ? 'নির্বাচন করুন' : 'Select', disabled: true },
-                      ...optionList(SEXUAL_CONTEXT_OPTIONS, isBn),
-                    ]}
-                  />
-                  <Input
-                    label={isBn ? 'প্রতিষ্ঠান' : 'Institution'}
-                    value={report.sexualHarassmentInstitution}
-                    onChange={(event) =>
-                      updateReport({ sexualHarassmentInstitution: event.target.value })
-                    }
-                  />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleAutoUpdate}
+                isLoading={updatingSchedule}
+                disabled={loading}
+                leftIcon={<RefreshCw />}
+              >
+                {dashboard.automation.enabled
+                  ? isBn
+                    ? 'অটো আপডেট বন্ধ করুন'
+                    : 'Turn Auto Update Off'
+                  : isBn
+                    ? 'অটো আপডেট চালু করুন'
+                    : 'Turn Auto Update On'}
+              </Button>
+              <Button size="sm" onClick={openWorkspace} leftIcon={<SearchCheck />}>
+                {isBn ? 'এখনই সংবাদ খুঁজুন' : 'Find News Now'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>{isBn ? 'বিশ্বস্ত সংবাদ সোর্স' : 'Trusted news sources'}</CardTitle>
+            <CardDescription>
+              {isBn
+                ? `${automatedSources.length} স্বয়ংক্রিয় · ${manualSources.length} ম্যানুয়াল-অনলি`
+                : `${automatedSources.length} automated · ${manualSources.length} manual-only`}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {automatedSources.slice(0, 8).map((source) => (
+                <Tag key={source.hostname} tone="success">
+                  {source.publisherName}
+                </Tag>
+              ))}
+            </div>
+            <FeedbackNotice tone="neutral" compact>
+              <p>
+                {isBn
+                  ? 'ম্যানুয়াল-অনলি সোর্সগুলো অ্যান্টি-বট বা সার্ভার সীমাবদ্ধতার কারণে ব্যাকগ্রাউন্ড স্ক্যানে নেই।'
+                  : 'Manual-only publishers are excluded from background scans because of server or anti-bot restrictions.'}
+              </p>
+            </FeedbackNotice>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <CardTitle>{isBn ? 'সাম্প্রতিক ইনটেক রান' : 'Recent intake runs'}</CardTitle>
+              <CardDescription>
+                {isBn
+                  ? 'রান খুললে কাঁচা সংবাদ ও ফিড-রেডি রিপোর্ট পাশাপাশি দেখা যাবে।'
+                  : 'Open a run to compare raw news with feed-ready reports side by side.'}
+              </CardDescription>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => void loadDashboard()} leftIcon={<RefreshCw />}>
+              {isBn ? 'রিফ্রেশ' : 'Refresh'}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {dashboard.runs.slice(0, 6).map((run) => (
+            <div
+              key={run.runId}
+              className="grid gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-800 lg:grid-cols-[minmax(180px,1fr)_repeat(5,minmax(70px,auto))_auto] lg:items-center"
+            >
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Tag tone={run.status === 'completed' ? 'success' : run.status === 'failed' ? 'danger' : 'warning'}>
+                    {run.status}
+                  </Tag>
+                  <Tag tone="neutral">
+                    {run.triggerType === 'automatic'
+                      ? isBn
+                        ? 'অটোমেটিক'
+                        : 'Automatic'
+                      : isBn
+                        ? 'ম্যানুয়াল'
+                        : 'Manual'}
+                  </Tag>
                 </div>
-              )}
-
-              {report.subcategoryId === 'blackmail-coercion' && (
-                <div className="grid gap-3 md:grid-cols-2">
-                  <Select
-                    label={isBn ? 'কি ঘটেছে' : 'What happened'}
-                    value={report.intimateWhatHappened}
-                    onChange={(event) =>
-                      updateReport({ intimateWhatHappened: event.target.value })
-                    }
-                    options={[
-                      { value: '', label: isBn ? 'নির্বাচন করুন' : 'Select', disabled: true },
-                      { value: 'threatened', label: isBn ? 'হুমকি দেওয়া হয়েছে' : 'Threatened' },
-                      { value: 'already_shared', label: isBn ? 'ইতিমধ্যে শেয়ার করা হয়েছে' : 'Already shared' },
-                      { value: 'recorded_secretly', label: isBn ? 'গোপনে ধারণ করা হয়েছে' : 'Recorded secretly' },
-                      { value: 'manipulated_deepfake', label: isBn ? 'পরিবর্তিত / ডিপফেক' : 'Manipulated / deepfake' },
-                      { value: 'other', label: isBn ? 'অন্যান্য' : 'Other' },
-                    ]}
-                  />
-                  <Select
-                    label={isBn ? 'প্ল্যাটফর্ম / মাধ্যম' : 'Platform / channel'}
-                    value={report.intimatePlatform}
-                    onChange={(event) =>
-                      updateReport({ intimatePlatform: event.target.value })
-                    }
-                    options={[
-                      { value: '', label: isBn ? 'নির্বাচন করুন' : 'Select', disabled: true },
-                      { value: 'facebook', label: 'Facebook' },
-                      { value: 'messenger', label: 'Messenger' },
-                      { value: 'whatsapp', label: 'WhatsApp' },
-                      { value: 'telegram', label: 'Telegram' },
-                      { value: 'dating_app', label: isBn ? 'ডেটিং অ্যাপ' : 'Dating app' },
-                      { value: 'website', label: isBn ? 'ওয়েবসাইট' : 'Website' },
-                      { value: 'in_person', label: isBn ? 'সরাসরি' : 'In person' },
-                      { value: 'other', label: isBn ? 'অন্যান্য' : 'Other' },
-                    ]}
-                  />
+                <p className="mt-1 type-meta text-slate-500 dark:text-slate-400">
+                  {formatDateTime(run.startedAt)}
+                </p>
+              </div>
+              {[
+                [isBn ? 'সংবাদ' : 'News', run.discoveredCount],
+                [isBn ? 'শ্রেণিবদ্ধ' : 'Classified', run.classifiedCount],
+                [isBn ? 'ড্রাফট' : 'Drafts', run.createdCount],
+                [isBn ? 'রিভিউ' : 'Review', run.reviewCount],
+                [isBn ? 'ত্রুটি' : 'Errors', run.errorCount],
+              ].map(([label, value]) => (
+                <div key={String(label)}>
+                  <p className="type-helper text-slate-500 dark:text-slate-400">{label}</p>
+                  <p className="type-secondary font-semibold text-slate-900 dark:text-slate-100">
+                    {String(value)}
+                  </p>
                 </div>
-              )}
-            </section>
-          )}
-
-          {report.subcategoryId === 'bribe-demanded-service' && (
-            <section className="space-y-3 rounded-lg border border-slate-200 p-4 dark:border-slate-800">
-              <h3 className="type-card-title">{isBn ? 'ঘুষের প্রেক্ষাপট' : 'Bribery context'}</h3>
-              <div className="grid gap-3 md:grid-cols-3">
-                <Input
-                  label={isBn ? 'বিভাগ / অফিস *' : 'Department / office *'}
-                  value={report.briberyDepartment}
-                  onChange={(event) =>
-                    updateReport({ briberyDepartment: event.target.value })
-                  }
-                />
-                <Input
-                  label={isBn ? 'সেবা *' : 'Service *'}
-                  value={report.briberyService}
-                  onChange={(event) =>
-                    updateReport({ briberyService: event.target.value })
-                  }
-                />
-                <Input
-                  type="number"
-                  min="0"
-                  label={isBn ? 'টাকার পরিমাণ' : 'Amount'}
-                  value={report.briberyAmount}
-                  onChange={(event) =>
-                    updateReport({ briberyAmount: event.target.value })
-                  }
-                />
-              </div>
-            </section>
-          )}
-
-          {report.segmentId === 'load_shedding' && (
-            <section className="space-y-3 rounded-lg border border-slate-200 p-4 dark:border-slate-800">
-              <h3 className="type-card-title">{isBn ? 'ইউটিলিটি তথ্য' : 'Utility details'}</h3>
-              <div className="grid gap-3 md:grid-cols-3">
-                <Input
-                  type="time"
-                  label={isBn ? 'সেবা পুনরায় চালুর সময়' : 'Service restoration time'}
-                  value={report.utilityEndTime}
-                  onChange={(event) =>
-                    updateReport({ utilityEndTime: event.target.value })
-                  }
-                />
-                <Input
-                  type="month"
-                  label={isBn ? 'সাম্প্রতিক বিলের মাস' : 'Recent bill month'}
-                  value={report.recentBillMonth}
-                  onChange={(event) =>
-                    updateReport({ recentBillMonth: event.target.value })
-                  }
-                />
-                <Input
-                  type="number"
-                  min="0"
-                  label={isBn ? 'সাম্প্রতিক বিলের পরিমাণ' : 'Recent bill amount'}
-                  value={report.recentBillAmount}
-                  onChange={(event) =>
-                    updateReport({ recentBillAmount: event.target.value })
-                  }
-                />
-                <Input
-                  type="month"
-                  label={isBn ? 'পূর্বের বিলের মাস' : 'Previous bill month'}
-                  value={report.previousBillMonth}
-                  onChange={(event) =>
-                    updateReport({ previousBillMonth: event.target.value })
-                  }
-                />
-                <Input
-                  type="number"
-                  min="0"
-                  label={isBn ? 'পূর্বের বিলের পরিমাণ' : 'Previous bill amount'}
-                  value={report.previousBillAmount}
-                  onChange={(event) =>
-                    updateReport({ previousBillAmount: event.target.value })
-                  }
-                />
-              </div>
-            </section>
-          )}
-
-          {report.subcategoryId === 'mob-justice' && (
-            <section className="space-y-3 rounded-lg border border-slate-200 p-4 dark:border-slate-800">
-              <h3 className="type-card-title">{isBn ? 'মব জাস্টিস তথ্য' : 'Mob-justice details'}</h3>
-              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-                <Select
-                  label={isBn ? 'কারণ / অভিযোগ *' : 'Trigger / allegation *'}
-                  value={report.mobJusticeDetails?.trigger || ''}
-                  onChange={(event) =>
-                    updateReport({
-                      mobJusticeDetails: {
-                        trigger: event.target.value,
-                        outcome: report.mobJusticeDetails?.outcome || '',
-                        ongoingStatus:
-                          report.mobJusticeDetails?.ongoingStatus || '',
-                        spread: report.mobJusticeDetails?.spread || null,
-                        targetedCount:
-                          report.mobJusticeDetails?.targetedCount ?? null,
-                      },
-                    })
-                  }
-                  options={[
-                    { value: '', label: isBn ? 'নির্বাচন করুন' : 'Select', disabled: true },
-                    ...optionList(MOB_TRIGGER_OPTIONS, isBn),
-                  ]}
-                />
-                <Select
-                  label={isBn ? 'ফলাফল *' : 'Outcome *'}
-                  value={report.mobJusticeDetails?.outcome || ''}
-                  onChange={(event) =>
-                    updateReport({
-                      mobJusticeDetails: {
-                        trigger: report.mobJusticeDetails?.trigger || '',
-                        outcome: event.target.value,
-                        ongoingStatus:
-                          report.mobJusticeDetails?.ongoingStatus || '',
-                        spread: report.mobJusticeDetails?.spread || null,
-                        targetedCount:
-                          report.mobJusticeDetails?.targetedCount ?? null,
-                      },
-                    })
-                  }
-                  options={[
-                    { value: '', label: isBn ? 'নির্বাচন করুন' : 'Select', disabled: true },
-                    ...optionList(MOB_OUTCOME_OPTIONS, isBn),
-                  ]}
-                />
-                <Select
-                  label={isBn ? 'চলমান অবস্থা *' : 'Ongoing status *'}
-                  value={report.mobJusticeDetails?.ongoingStatus || ''}
-                  onChange={(event) =>
-                    updateReport({
-                      mobJusticeDetails: {
-                        trigger: report.mobJusticeDetails?.trigger || '',
-                        outcome: report.mobJusticeDetails?.outcome || '',
-                        ongoingStatus: event.target.value,
-                        spread: report.mobJusticeDetails?.spread || null,
-                        targetedCount:
-                          report.mobJusticeDetails?.targetedCount ?? null,
-                      },
-                    })
-                  }
-                  options={[
-                    { value: '', label: isBn ? 'নির্বাচন করুন' : 'Select', disabled: true },
-                    { value: 'ongoing', label: isBn ? 'চলমান' : 'Ongoing' },
-                    { value: 'ended', label: isBn ? 'শেষ হয়েছে' : 'Ended' },
-                    { value: 'unknown', label: isBn ? 'জানা নেই' : 'Unknown' },
-                  ]}
-                />
-                <Input
-                  type="number"
-                  min="1"
-                  max="9999"
-                  label={isBn ? 'লক্ষ্য ব্যক্তির সংখ্যা' : 'Targeted count'}
-                  value={
-                    report.mobJusticeDetails?.targetedCount === null ||
-                    report.mobJusticeDetails?.targetedCount === undefined
-                      ? ''
-                      : String(report.mobJusticeDetails.targetedCount)
-                  }
-                  onChange={(event) =>
-                    updateReport({
-                      mobJusticeDetails: {
-                        trigger: report.mobJusticeDetails?.trigger || '',
-                        outcome: report.mobJusticeDetails?.outcome || '',
-                        ongoingStatus:
-                          report.mobJusticeDetails?.ongoingStatus || '',
-                        spread: report.mobJusticeDetails?.spread || null,
-                        targetedCount: event.target.value
-                          ? Number(event.target.value)
-                          : null,
-                      },
-                    })
-                  }
-                />
-              </div>
-            </section>
+              ))}
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => void openRunForReview(run)}
+              >
+                {isBn ? 'রিভিউ করুন' : 'Review'}
+              </Button>
+            </div>
+          ))}
+          {!loading && dashboard.runs.length === 0 && (
+            <FeedbackNotice tone="neutral">
+              <p>{isBn ? 'এখনও কোনো ইনটেক রান নেই।' : 'No intake runs yet.'}</p>
+            </FeedbackNotice>
           )}
         </CardContent>
       </Card>
 
-      <Card variant="highlighted">
-        <CardHeader>
-          <CardTitle>{isBn ? '৩. উৎস ও ডুপ্লিকেট যাচাই' : '3. Source & duplicate check'}</CardTitle>
-          <CardDescription>
-            {isBn
-              ? 'কোনো ডাটাবেস পরিবর্তন ছাড়াই প্রথমে যাচাই করুন।'
-              : 'Run this check before any database record is created.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Button
-            variant="primary"
-            size="md"
-            onClick={handlePreview}
-            isLoading={checking}
-            disabled={checking || creating || mergingId !== null}
-            leftIcon={<SearchCheck />}
-          >
-            <span>{isBn ? 'উৎস ও ডুপ্লিকেট যাচাই করুন' : 'Check Source & Duplicates'}</span>
-          </Button>
-
-          {preview && (
-            <div className="space-y-3">
-              <FeedbackNotice
-                tone={
-                  preview.duplicate.status === 'clear'
-                    ? 'success'
-                    : preview.duplicate.status === 'review'
-                      ? 'warning'
-                      : 'error'
+      <Modal
+        isOpen={workspaceOpen}
+        onClose={() => setWorkspaceOpen(false)}
+        size="full"
+        closeOnBackdrop={false}
+        title={isBn ? 'নিউজ ইনটেক ওয়ার্কস্পেস' : 'News Intake Workspace'}
+        description={
+          isBn
+            ? 'সংবাদ খুঁজুন → কাঁচা সংবাদ ও ফিড-রেডি রিপোর্ট তুলনা করুন → নির্বাচিত রিপোর্ট প্রকাশ করুন।'
+            : 'Find news → compare raw news with feed-ready reports → publish the reports you select.'
+        }
+        footer={modalFooter}
+      >
+        <div className="space-y-5">
+          <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-4 dark:border-slate-800">
+            {[
+              [1, isBn ? '১. সংবাদ খুঁজুন' : '1. Find news'],
+              [2, isBn ? '২. রিভিউ ও নির্বাচন' : '2. Review & select'],
+              [3, isBn ? '৩. প্রকাশের ফলাফল' : '3. Publish results'],
+            ].map(([number, label]) => (
+              <div
+                key={String(number)}
+                className={
+                  'rounded-full border px-3 py-1.5 type-meta font-semibold ' +
+                  (step === number
+                    ? 'border-sky-500 bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300'
+                    : step > Number(number)
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300'
+                      : 'border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400')
                 }
+              >
+                {String(label)}
+              </div>
+            ))}
+          </div>
+
+          {workspaceError && (
+            <FeedbackNotice tone="error" onDismiss={() => setWorkspaceError(null)}>
+              <p>{workspaceError}</p>
+            </FeedbackNotice>
+          )}
+
+          {step === 1 && (
+            <div className="mx-auto max-w-5xl space-y-5">
+              <div className="text-center">
+                <h3 className="type-section-title text-slate-950 dark:text-white">
+                  {isBn ? 'কীভাবে সংবাদ যাচাই করবেন?' : 'How do you want to check news?'}
+                </h3>
+                <p className="mt-2 type-secondary text-slate-500 dark:text-slate-400">
+                  {isBn
+                    ? 'অটোমেটিক মোড সব সমর্থিত সোর্স স্ক্যান করে। ম্যানুয়াল মোডে নির্দিষ্ট একটি সংবাদ URL দিয়ে রিপোর্ট তৈরি করা যায়।'
+                    : 'Automatic mode scans every supported publisher. Manual mode lets you intake a specific article URL.'}
+                </p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <Card
+                  variant={mode === 'automatic' ? 'highlighted' : 'interactive'}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setMode('automatic')}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') setMode('automatic');
+                  }}
+                >
+                  <div className="flex items-start gap-3">
+                    <SearchCheck className="mt-0.5 size-5 shrink-0 text-sky-600 dark:text-sky-400" />
+                    <div>
+                      <h3 className="type-card-title">{isBn ? 'অটোমেটিক স্ক্যান' : 'Automatic scan'}</h3>
+                      <p className="mt-1 type-secondary text-slate-500 dark:text-slate-400">
+                        {isBn
+                          ? `${automatedSources.length}টি সমর্থিত সংবাদ সোর্স থেকে নতুন খবর খুঁজবে, ক্যাটাগরি ও ডুপ্লিকেট যাচাই করবে এবং নিরাপদ ড্রাফট বানাবে।`
+                          : `Scan ${automatedSources.length} supported publishers, classify incidents, check duplicates, and create safe drafts.`}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+
+                <Card
+                  variant={mode === 'manual' ? 'highlighted' : 'interactive'}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setMode('manual')}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') setMode('manual');
+                  }}
+                >
+                  <div className="flex items-start gap-3">
+                    <Newspaper className="mt-0.5 size-5 shrink-0 text-sky-600 dark:text-sky-400" />
+                    <div>
+                      <h3 className="type-card-title">{isBn ? 'ম্যানুয়াল ইনটেক' : 'Manual intake'}</h3>
+                      <p className="mt-1 type-secondary text-slate-500 dark:text-slate-400">
+                        {isBn
+                          ? 'নির্দিষ্ট একটি অনুমোদিত সংবাদ URL যাচাই করে প্রয়োজনীয় রিপোর্ট তথ্য পূরণ করুন।'
+                          : 'Use a specific approved article URL and complete the report facts supported by that source.'}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              <div className="flex justify-center">
+                {mode === 'automatic' ? (
+                  <Button
+                    size="lg"
+                    onClick={handleScan}
+                    isLoading={scanning}
+                    disabled={dashboard.automation.running || automatedSources.length === 0}
+                    leftIcon={<SearchCheck />}
+                  >
+                    {isBn ? 'সব সোর্স এখনই স্ক্যান করুন' : 'Scan All Sources Now'}
+                  </Button>
+                ) : (
+                  <Button size="lg" onClick={() => setStep(2)} leftIcon={<Newspaper />}>
+                    {isBn ? 'ম্যানুয়াল ইনটেক খুলুন' : 'Open Manual Intake'}
+                  </Button>
+                )}
+              </div>
+
+              <FeedbackNotice tone="info">
+                <p>
+                  {isBn
+                    ? 'অটোমেশন কখনো নিজে প্রকাশ করে না। স্ক্যানের পর ফিড-রেডি রিপোর্টগুলো আপনি নির্বাচন করবেন।'
+                    : 'Automation never publishes by itself. After the scan, you choose which feed-ready reports are published.'}
+                </p>
+              </FeedbackNotice>
+            </div>
+          )}
+
+          {step === 2 && mode === 'manual' && (
+            <ManualNewsIntakeForm />
+          )}
+
+          {step === 2 && mode === 'automatic' && selectedRun && (
+            <div className="space-y-4">
+              <div className="sticky top-0 z-10 flex flex-col gap-3 rounded-lg border border-slate-200 bg-white/95 p-3 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Tag tone={selectedRun.status === 'completed' ? 'success' : 'warning'}>
+                      {selectedRun.status}
+                    </Tag>
+                    <Tag tone="neutral">
+                      {selectedItems.length} {isBn ? 'টি সংবাদ পাওয়া গেছে' : 'news items found'}
+                    </Tag>
+                    <Tag tone="success">
+                      {eligibleReportIds.length} {isBn ? 'টি প্রকাশযোগ্য' : 'ready to publish'}
+                    </Tag>
+                  </div>
+                  <p className="mt-1 type-meta text-slate-500 dark:text-slate-400">
+                    {formatDateTime(selectedRun.startedAt)}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={selectAllEligible}
+                    disabled={eligibleReportIds.length === 0 || loadingReports}
+                  >
+                    {isBn ? 'সব প্রকাশযোগ্য নির্বাচন করুন' : 'Select All Ready'}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedReportIds([])}
+                    disabled={selectedReportIds.length === 0}
+                  >
+                    {isBn ? 'নির্বাচন মুছুন' : 'Clear Selection'}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 px-1">
+                <p className="type-label font-semibold text-slate-900 dark:text-slate-100">
+                  {isBn ? 'কাঁচা সংবাদ পাওয়া গেছে' : 'Raw news found'}
+                </p>
+                <p className="type-label font-semibold text-slate-900 dark:text-slate-100">
+                  {isBn ? 'আমাদের ফিড-রেডি রিপোর্ট' : 'Feed-ready report'}
+                </p>
+              </div>
+
+              {selectedItems.map((item) => {
+                const reportId = item.reportId ? String(item.reportId) : '';
+                const complaint = reportId ? reportMap[reportId] : null;
+                const ready =
+                  item.action === 'created_draft' &&
+                  Boolean(complaint) &&
+                  complaint?.status === 'submitted';
+
+                return (
+                  <div
+                    key={item.id}
+                    className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50/40 p-3 dark:border-slate-800 dark:bg-slate-950/20 lg:grid-cols-2"
+                  >
+                    <Card padding="sm" className="h-full">
+                      <div className="flex h-full flex-col gap-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Tag tone="neutral">{item.contentLanguage.toUpperCase()}</Tag>
+                          <Tag tone={actionTone(item)}>{actionLabel(item)}</Tag>
+                        </div>
+                        <div>
+                          <h3 className="type-card-title">
+                            {item.sourceTitle || (isBn ? 'শিরোনাম পাওয়া যায়নি' : 'Untitled source')}
+                          </h3>
+                          <p className="mt-1 type-meta text-slate-500 dark:text-slate-400">
+                            {item.publisherName}
+                            {item.sourcePublishedDate ? ` · ${item.sourcePublishedDate}` : ''}
+                          </p>
+                        </div>
+                        {item.reason && (
+                          <p className="type-secondary text-slate-600 dark:text-slate-300">
+                            {item.reason}
+                          </p>
+                        )}
+                        <a
+                          href={item.canonicalUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-auto inline-flex items-center gap-1 type-action-sm text-sky-700 hover:underline dark:text-sky-400"
+                        >
+                          <ExternalLink className="size-3.5" />
+                          {isBn ? 'মূল সংবাদ খুলুন' : 'Open source'}
+                        </a>
+                      </div>
+                    </Card>
+
+                    <Card
+                      padding="sm"
+                      variant={ready ? 'highlighted' : 'default'}
+                      className="h-full"
+                    >
+                      {loadingReports && item.action === 'created_draft' ? (
+                        <div className="flex h-full min-h-32 items-center justify-center">
+                          <p className="type-secondary text-slate-500 dark:text-slate-400">
+                            {isBn ? 'রিপোর্ট প্রস্তুত করা হচ্ছে…' : 'Loading report card…'}
+                          </p>
+                        </div>
+                      ) : complaint ? (
+                        <div className="flex h-full flex-col gap-3">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div className="flex flex-wrap gap-2">
+                              <Tag tone={complaint.status === 'submitted' ? 'success' : 'neutral'}>
+                                {complaint.status === 'submitted'
+                                  ? isBn
+                                    ? 'ফিডের জন্য প্রস্তুত'
+                                    : 'Ready for feed'
+                                  : complaint.status}
+                              </Tag>
+                              {categoryLabel(item) && (
+                                <Tag tone="info">{categoryLabel(item)}</Tag>
+                              )}
+                            </div>
+                            <Checkbox
+                              aria-label={
+                                isBn
+                                  ? `${complaint.titleBn || complaint.titleEn} নির্বাচন করুন`
+                                  : `Select ${complaint.titleEn || complaint.titleBn}`
+                              }
+                              checked={selectedReportIds.includes(reportId)}
+                              onChange={() => toggleReport(reportId)}
+                              disabled={!ready || publishing}
+                            />
+                          </div>
+
+                          <div>
+                            <h3 className="type-card-title">
+                              {complaint.titleBn || complaint.titleEn}
+                            </h3>
+                            <p className="mt-2 line-clamp-4 type-secondary text-slate-600 dark:text-slate-300">
+                              {complaint.descriptionBn || complaint.descriptionEn}
+                            </p>
+                          </div>
+
+                          <div className="mt-auto flex flex-wrap gap-x-4 gap-y-1 type-meta text-slate-500 dark:text-slate-400">
+                            {complaint.incidentDate && <p>{complaint.incidentDate}</p>}
+                            {complaint.location?.district && <p>{complaint.location.district}</p>}
+                            <p>{complaint.id}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex h-full min-h-32 flex-col items-start justify-center gap-2">
+                          <Tag tone={actionTone(item)}>{actionLabel(item)}</Tag>
+                          <p className="type-secondary text-slate-600 dark:text-slate-300">
+                            {item.action === 'needs_review'
+                              ? isBn
+                                ? 'এই সংবাদ থেকে নিরাপদে সম্পূর্ণ রিপোর্ট বানাতে আরও যাচাই প্রয়োজন।'
+                                : 'More verification is required before this story can become a safe feed report.'
+                              : item.action === 'skip_duplicate'
+                                ? isBn
+                                  ? 'এই উৎস বা ঘটনা ইতিমধ্যে রিপোর্ট ডাটাবেসে আছে।'
+                                  : 'This source or incident already exists in the report database.'
+                                : item.action === 'merged_source'
+                                  ? isBn
+                                    ? 'সোর্সটি বিদ্যমান একই ঘটনার রিপোর্টে মার্জ হয়েছে।'
+                                    : 'This source was merged into the existing report for the same incident.'
+                                  : isBn
+                                    ? 'এটি আমাদের সমর্থিত রিপোর্ট বিভাগে ফিট করেনি।'
+                                    : 'This story did not fit a supported report category.'}
+                          </p>
+                        </div>
+                      )}
+                    </Card>
+                  </div>
+                );
+              })}
+
+              {selectedItems.length === 0 && (
+                <FeedbackNotice tone="neutral">
+                  <p>{isBn ? 'এই রানে কোনো সংবাদ আইটেম পাওয়া যায়নি।' : 'No news items were found in this run.'}</p>
+                </FeedbackNotice>
+              )}
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="mx-auto max-w-4xl space-y-5">
+              <FeedbackNotice
+                tone={failedPublishes.length > 0 ? 'warning' : 'success'}
                 title={
-                  preview.duplicate.status === 'clear'
-                    ? isBn
-                      ? 'নতুন ঘটনা হিসেবে পরিষ্কার'
-                      : 'Clear as a new incident'
-                    : preview.duplicate.status === 'exact'
-                      ? isBn
-                        ? 'একই উৎস ইতিমধ্যে আছে'
-                        : 'Exact source already exists'
-                      : preview.duplicate.status === 'match'
-                        ? isBn
-                          ? 'সম্ভবত একই ঘটনা'
-                          : 'Likely same incident'
-                        : isBn
-                          ? 'মানব রিভিউ প্রয়োজন'
-                          : 'Human review required'
+                  isBn
+                    ? `${successfulPublishes.length}টি রিপোর্ট ফিডে প্রকাশ হয়েছে`
+                    : `${successfulPublishes.length} reports published to the feed`
                 }
               >
                 <p>
-                  {preview.canPublishImmediately
+                  {failedPublishes.length > 0
                     ? isBn
-                      ? 'এখন এক ক্লিকে Draft তৈরি করে বর্তমান প্রকাশনা ফ্লো দিয়ে প্রকাশ করা যাবে।'
-                      : 'You can now create the draft and publish it through the current publication flow in one action.'
+                      ? `${failedPublishes.length}টি রিপোর্ট প্রকাশ করা যায়নি। নিচে কারণ দেখুন।`
+                      : `${failedPublishes.length} reports could not be published. See the reasons below.`
                     : isBn
-                      ? 'একই ঘটনা হলে নতুন পোস্ট না করে উৎসটি বিদ্যমান রিপোর্টে মার্জ করুন। আলাদা ঘটনা হলে Draft তৈরি করে রিপোর্ট ডিটেইলে ডুপ্লিকেট রিভিউ শেষ করুন।'
-                      : 'If it is the same incident, merge this source into the existing report instead of creating another post. If it is separate, create a draft and complete duplicate review on the report detail page.'}
+                      ? 'নির্বাচিত সব রিপোর্ট সফলভাবে প্রকাশ হয়েছে।'
+                      : 'Every selected report was published successfully.'}
                 </p>
               </FeedbackNotice>
 
-              {exactDuplicates.map((item) => (
-                <Card key={`exact-${item.complaintId}`} padding="sm">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0">
-                      <Tag tone="danger">{isBn ? 'একই উৎস' : 'Exact source'}</Tag>
-                      <p className="mt-2 type-secondary font-semibold text-slate-900 dark:text-slate-100">
-                        {item.titleBn || item.titleEn || item.complaintId}
-                      </p>
-                      <p className="mt-1 type-helper text-slate-500 dark:text-slate-400">
-                        {item.complaintId}
-                        {item.publisherName ? ` · ${item.publisherName}` : ''}
-                      </p>
-                    </div>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => navigate(`/complaints/${encodeURIComponent(item.complaintId)}`)}
-                      leftIcon={<ExternalLink />}
-                    >
-                      <span>{isBn ? 'বিদ্যমান রিপোর্ট খুলুন' : 'Open Existing Report'}</span>
-                    </Button>
-                  </div>
-                </Card>
-              ))}
-
-              {candidates.map((candidate) => (
-                <Card key={candidate.complaintId} padding="sm">
-                  <div className="flex flex-col gap-3">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
+              <div className="space-y-3">
+                {successfulPublishes.map((outcome) => (
+                  <Card key={outcome.reportId} padding="sm">
+                    <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
-                        <Tag tone={candidate.matchLevel === 'match' ? 'danger' : 'warning'}>
-                          {candidate.matchLevel === 'match'
-                            ? isBn
-                              ? 'শক্ত মিল'
-                              : 'Likely Match'
-                            : isBn
-                              ? 'রিভিউ'
-                              : 'Review'}
-                        </Tag>
-                        <p className="mt-2 type-secondary font-semibold text-slate-900 dark:text-slate-100">
-                          {(isBn
-                            ? candidate.titleBn || candidate.titleEn
-                            : candidate.titleEn || candidate.titleBn) ||
-                            candidate.complaintId}
-                        </p>
-                        <p className="mt-1 type-helper text-slate-500 dark:text-slate-400">
-                          {candidate.complaintId}
-                          {candidate.incidentDate ? ` · ${candidate.incidentDate}` : ''}
-                          {candidate.area || candidate.upazilaOrThana || candidate.district
-                            ? ` · ${[candidate.area, candidate.upazilaOrThana, candidate.district]
-                                .filter(Boolean)
-                                .join(', ')}`
-                            : ''}
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                          <h3 className="truncate type-card-title">{outcome.title}</h3>
+                        </div>
+                        <p className="mt-1 type-meta text-slate-500 dark:text-slate-400">
+                          {outcome.reportId}
                         </p>
                       </div>
-                      <Tag tone="neutral" mono>
-                        {isBn ? `স্কোর ${candidate.score}` : `Score ${candidate.score}`}
-                      </Tag>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
                       <Button
                         variant="secondary"
                         size="sm"
-                        onClick={() => navigate(`/complaints/${encodeURIComponent(candidate.complaintId)}`)}
-                        leftIcon={<ExternalLink />}
+                        onClick={() => {
+                          setWorkspaceOpen(false);
+                          navigate(`/complaints/${encodeURIComponent(outcome.reportId)}`);
+                        }}
+                        rightIcon={<ExternalLink />}
                       >
-                        <span>{isBn ? 'রিপোর্ট খুলুন' : 'Open Report'}</span>
-                      </Button>
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={() => handleMerge(candidate.complaintId)}
-                        isLoading={mergingId === candidate.complaintId}
-                        disabled={mergingId !== null || creating}
-                        leftIcon={<Link2 />}
-                      >
-                        <span>{isBn ? 'এই রিপোর্টে উৎস মার্জ করুন' : 'Merge Source Here'}</span>
+                        {isBn ? 'রিপোর্ট খুলুন' : 'Open report'}
                       </Button>
                     </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                ))}
 
-              <div className="flex flex-col gap-2 border-t border-slate-200 pt-4 dark:border-slate-800 sm:flex-row sm:justify-end">
-                {preview.canCreateDraft && (
-                  <Button
-                    variant="secondary"
-                    size="md"
-                    onClick={() => void handleCreateDraft(false)}
-                    isLoading={creating && !publishing}
-                    disabled={creating || mergingId !== null}
-                    leftIcon={<FilePlus2 />}
-                  >
-                    <span>
-                      {preview.canPublishImmediately
-                        ? isBn
-                          ? 'শুধু Draft তৈরি করুন'
-                          : 'Create Draft Only'
-                        : isBn
-                          ? 'রিভিউয়ের জন্য Draft তৈরি করুন'
-                          : 'Create Draft for Review'}
-                    </span>
-                  </Button>
-                )}
+                {failedPublishes.map((outcome) => (
+                  <Card key={outcome.reportId} padding="sm">
+                    <div className="flex items-start gap-2">
+                      <CircleAlert className="mt-0.5 size-4 shrink-0 text-rose-600 dark:text-rose-400" />
+                      <div>
+                        <h3 className="type-card-title">{outcome.title}</h3>
+                        <p className="mt-1 type-secondary text-rose-700 dark:text-rose-300">
+                          {outcome.error}
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
 
-                {preview.canPublishImmediately && (
-                  <Button
-                    variant="success"
-                    size="md"
-                    onClick={() => void handleCreateDraft(true)}
-                    isLoading={creating && publishing}
-                    disabled={creating || mergingId !== null}
-                    leftIcon={<Send />}
-                  >
-                    <span>{isBn ? 'তৈরি করে প্রকাশ করুন' : 'Create & Publish'}</span>
-                  </Button>
-                )}
+              <div className="flex justify-center">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setStep(1);
+                    setPublishOutcomes([]);
+                    setSelectedReportIds([]);
+                    setReportMap({});
+                  }}
+                  leftIcon={<RefreshCw />}
+                >
+                  {isBn ? 'আরেকটি ইনটেক চালান' : 'Run Another Intake'}
+                </Button>
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      <FeedbackNotice tone="neutral" compact>
-        <div className="flex items-start gap-2">
-          <RefreshCw />
-          <p>
-            {isBn
-              ? 'কোনো ইনপুট পরিবর্তন করলে আগের ডুপ্লিকেট ফলাফল বাতিল হয়। প্রকাশের আগে সার্ভার আবার বর্তমান ডাটা দিয়ে যাচাই করে।'
-              : 'Changing any input invalidates the previous duplicate result. The server rechecks current data again before publication.'}
-          </p>
         </div>
-      </FeedbackNotice>
+      </Modal>
     </div>
   );
 };
