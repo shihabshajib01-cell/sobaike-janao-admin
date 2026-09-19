@@ -92,7 +92,7 @@ export const CreateUserPage: React.FC = () => {
       return;
     }
 
-    if (!password || password.length < 6) {
+    if (!password || password.length < 12) {
       setError(t.users.passwordLengthError);
       return;
     }
@@ -249,7 +249,7 @@ export const CreateUserPage: React.FC = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   autoComplete="new-password"
-                  minLength={6}
+                  minLength={12}
                   className="w-full pl-3 pr-10 py-2 text-sm bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-400 text-slate-900 dark:text-slate-100 font-mono"
                 />
                 <ButtonBase
@@ -283,7 +283,7 @@ export const CreateUserPage: React.FC = () => {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
                   autoComplete="new-password"
-                  minLength={6}
+                  minLength={12}
                   className="w-full pl-3 pr-10 py-2 text-sm bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-400 text-slate-900 dark:text-slate-100 font-mono"
                 />
                 <ButtonBase
