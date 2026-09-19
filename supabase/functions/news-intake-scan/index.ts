@@ -437,7 +437,6 @@ const buildReportPayload = (
         ...(classification.subcategoryId === 'child_abduction_murder'
           ? {
               childIncidentType:childIncidentType || 'unknown_not_stated',
-              childAgeGroup:'unknown_not_stated',
             }
           : {}),
       },
