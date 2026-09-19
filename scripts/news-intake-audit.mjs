@@ -34,6 +34,8 @@ const page = read('src/pages/NewsIntake/NewsIntakePage.tsx');
 const manualForm = read('src/pages/NewsIntake/ManualNewsIntakeForm.tsx');
 const feedReadyPreview = read('src/pages/NewsIntake/FeedReadyReportPreview.tsx');
 const api = read('src/services/api/newsIntakeApi.ts');
+const reportingFormApi = read('src/services/api/reportingFormApi.ts');
+const modal = read('src/components/ui/Modal.tsx');
 const routes = read('src/routes/AppRoutes.tsx');
 const routeConfig = read('src/routes/routes.config.ts');
 const productionSmoke = read('.github/workflows/production-smoke.yml');
@@ -97,6 +99,9 @@ for (const needle of [
   'scoreDiscoveryLink',
   'MAX_ARTICLE_AGE_DAYS',
   'NON_INCIDENT_THEFT_RE',
+  'NON_PROPERTY_SNATCHING_RE',
+  'THEFT_ALLEGATION_VIOLENCE_RE',
+  'reviewReason',
 ]) {
   requireText(automationCore, needle, 'News Intake automation core');
 }
@@ -108,6 +113,8 @@ requireText(behaviorAudit, 'Bangla weekday plus bare সকাল must resolve a
 requireText(behaviorAudit, 'Excerpt/body overlap must not duplicate the same incident sentence', 'News Intake context de-duplication regression');
 requireText(behaviorAudit, 'Near-identical excerpt/body incident sentences must not be repeated', 'News Intake near-duplicate context regression');
 requireText(behaviorAudit, 'Bare proper incident place after at must be retained', 'News Intake bare-place grounding regression');
+requireText(behaviorAudit, 'Theft-accusation violence must not fall through to the broad theft rule', 'News Intake theft-accusation classification regression');
+requireText(behaviorAudit, 'Taking a detainee/suspect from police must not be classified as property snatching', 'News Intake non-property snatching regression');
 requireText(collisionErrorContract, "errcode='P0001'", 'News Intake collision error contract');
 requireText(collisionErrorContract, 'DUPLICATE_REVIEW_REQUIRED', 'News Intake collision error contract');
 requireText(explicitDenyPolicies, 'news_intake_runs_authenticated_deny', 'News Intake run-table deny policy');
@@ -213,6 +220,9 @@ for (const needle of [
   'extractPublishedDate',
   'datePublished',
   'finalPathLooksLikeArticle',
+  'articleDocumentSignal',
+  'classification.reviewReason',
+  'processing error(s) were recorded',
   'Section, homepage, or non-article URL was excluded',
   'inferSpecificLocationPhrase',
   'inferDistrictWideScope',
@@ -276,6 +286,11 @@ for (const needle of [
   'if (!preview.canCreateDraft)',
   'if (publishAfterCreate && !preview.canPublishImmediately)',
   'initialSourceUrl',
+  'reportingFormApi.getPublished',
+  'dynamicCustomFields',
+  'unsupportedRequiredFields',
+  'Published form fields',
+  'window.confirm',
 ]) {
   requireText(manualForm, needle, 'Manual News Intake UI safety flow');
 }
@@ -291,6 +306,12 @@ for (const needle of [
   'FeedReadyReportPreview',
   'feedDisplayItems.map',
   'rawFilterCounts',
+  "'excluded'",
+  "'ready'",
+  'reasonLabel',
+  'segmentLabel',
+  'subcategoryLabel',
+  'confidenceLabel',
   'filteredRawItems',
   'Scan summary:',
   'aria-pressed={rawFilter === value}',
@@ -303,6 +324,9 @@ for (const needle of [
   'rawNewsExpanded',
   'feedReadyExpanded',
   'scrollbar-gutter:stable',
+  'lg:max-h-[calc(94vh-22rem)]',
+  'min-h-11 lg:min-h-8',
+  'Show items needing review',
   'aria-expanded',
   'ManualNewsIntakeForm',
   'complaintApi.publishComplaint(reportId)',
@@ -313,6 +337,10 @@ for (const needle of [
 
 for (const needle of [
   'Public feed preview',
+  'DEFAULT_CATEGORY_STYLE',
+  'categoryLabelBn',
+  'categoryLabelEn',
+  'type-h3',
   'Select for publishing',
   'MapPin',
   'Eye',
@@ -322,6 +350,26 @@ for (const needle of [
   'publishable',
 ]) {
   requireText(feedReadyPreview, needle, 'Feed-ready public preview');
+}
+
+
+for (const needle of [
+  'getPublished(subcategoryId',
+  "get_public_reporting_configuration",
+  "status: 'published'",
+  "engineMode: form.engineMode === 'schema'",
+]) {
+  requireText(reportingFormApi, needle, 'published reporting-form contract API');
+}
+
+for (const needle of [
+  'previousFocusRef',
+  "e.key !== 'Tab'",
+  'aria-labelledby',
+  'aria-describedby',
+  'dialogRef.current?.focus()',
+]) {
+  requireText(modal, needle, 'shared modal accessibility');
 }
 
 for (const needle of [
@@ -363,5 +411,5 @@ if (errors.length) {
 }
 
 console.log(
-  'News Intake audit passed: trusted-source modes, source-grounded date/location extraction, acknowledged 36-hour scheduling, retry-safe dispatch, manual Check Now, overlap prevention, source-language handling, final server duplicate clearance, run-history visibility, mobile review controls, draft-first creation, source merge, and security checks are protected.'
+  'News Intake audit passed: trusted-source modes, false-positive classification guards, article-document filtering, source-grounded date/location extraction, published-form synchronization, acknowledged 36-hour scheduling, retry-safe dispatch, manual Check Now, overlap prevention, source-language handling, final server duplicate clearance, reconciled review states, accessible modal focus, mobile review controls, draft-first creation, source merge, and security checks are protected.'
 );
