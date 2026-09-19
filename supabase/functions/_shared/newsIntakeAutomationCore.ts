@@ -80,7 +80,7 @@ const NON_PROPERTY_SNATCHING_RE = /(পুলিশ(?:কে)?.{0,80}(আসা�
 // Theft words can describe the allegation that triggered retaliatory/mob violence
 // rather than the incident being reported. Treat those as a tentative mob-violence
 // classification and force human review instead of publishing them as Theft.
-const THEFT_ALLEGATION_VIOLENCE_RE = /((?:চুরি(?:র)?\s*(?:অপবাদ|সন্দেহ|অভিযোগ)|ভাত\s*চুরির\s*অপবাদ|theft\s+(?:suspicion|allegation)|suspected\s+theft|stolen\s+(?:meal|food)).{0,160}(?:পিটিয়ে|পিটিয়ে|পিটুনি|মারধর|হত্যা|খুন|নিহত|assault(?:ed)?|beat(?:en)?|killed|dies|died|death)|(?:পিটিয়ে|পিটিয়ে|পিটুনি|মারধর|হত্যা|খুন|নিহত|assault(?:ed)?|beat(?:en)?|killed|dies|died|death).{0,160}(?:চুরি(?:র)?\s*(?:অপবাদ|সন্দেহ|অভিযোগ)|theft\s+(?:suspicion|allegation)|stolen\s+(?:meal|food)))/iu;
+const THEFT_ALLEGATION_VIOLENCE_RE = /((?:চুরি(?:র)?[\s'’‘"“”\-–—]*(?:অপবাদ|সন্দেহ|অভিযোগ)|ভাত\s*চুরির[\s'’‘"“”\-–—]*অপবাদ|theft\s+(?:suspicion|allegation)|suspected\s+theft|stolen\s+(?:meal|food)).{0,160}(?:পিটিয়ে|পিটিয়ে|পিটুনি|মারধর|হত্যা|খুন|নিহত|assault(?:ed)?|beat(?:en)?|killed|dies|died|death)|(?:পিটিয়ে|পিটিয়ে|পিটুনি|মারধর|হত্যা|খুন|নিহত|assault(?:ed)?|beat(?:en)?|killed|dies|died|death).{0,160}(?:চুরি(?:র)?[\s'’‘"“”\-–—]*(?:অপবাদ|সন্দেহ|অভিযোগ)|theft\s+(?:suspicion|allegation)|stolen\s+(?:meal|food)))/iu;
 
 export const classifyArticle = (value: unknown): Classification | null => {
   const text = normalizeText(value);
