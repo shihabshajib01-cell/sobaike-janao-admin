@@ -161,13 +161,17 @@ if (deleteUserEdge.includes('"Access-Control-Allow-Origin": "*"')) {
 
 const newsIntakeScan = read('supabase/functions/news-intake-scan/index.ts');
 for (const needle of [
-  'assertPublicResolvedHost',
+  'assertStablePublicResolution',
+  'addressSetsOverlap',
+  'postFetchAddresses',
+  'Source DNS changed during validation; request blocked.',
+  'Source DNS changed during fetch; response blocked.',
   "Deno.resolveDns(host, 'A')",
   "Deno.resolveDns(host, 'AAAA')",
   'isPrivateOrReservedIp',
 ]) {
   if (!newsIntakeScan.includes(needle)) {
-    fail('News Intake SSRF hardening is missing: ' + needle);
+    fail('News Intake SSRF/DNS-rebinding hardening is missing: ' + needle);
   }
 }
 
