@@ -144,7 +144,7 @@ requireText(schemaRequirementGuard, 'sourced_report_missing_required_fields_inte
 requireText(schemaRequirementGuard, 'trg_guard_sourced_report_schema_requirements', 'News Intake schema requirement trigger');
 requireText(schemaRequirementGuard, 'schemaValidation', 'News Intake schema-aware preview');
 requireText(ledgerParityCloseout, 'revoke execute on function public.admin_get_location_taxonomy()', 'News Intake admin taxonomy anonymous-execute hardening');
-requireText(ledgerParityCloseout, 'revoke execute on function public.admin_resolve_news_intake_location(text, text)', 'News Intake location resolver anonymous-execute hardening');
+requireText(ledgerParityCloseout, 'revoke execute on function public.admin_resolve_news_intake_location(text,text)', 'News Intake location resolver anonymous-execute hardening');
 for (const needle of [
   'normalize_sourced_report_public_language',
   'trg_normalize_sourced_report_public_language',
@@ -177,6 +177,7 @@ for (const needle of [
   "interval '36 hours'",
   'ux_news_intake_runs_one_running',
   'sobaike-janao-news-intake-auto-dispatch',
+  "'* * * * *'",
 ]) {
   requireText(schedulerMigration, needle, '36-hour News Intake scheduler');
 }
@@ -184,7 +185,6 @@ for (const needle of [
   'service_begin_scheduled_news_intake_run',
   "date_trunc('minute'",
   "v_slot+interval '36 hours'",
-  "'* * * * *'",
   'timeout_milliseconds:=10000',
   "'scheduledSlot'",
 ]) {
