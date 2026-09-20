@@ -2,12 +2,12 @@
 -- Citizen/manual report rules remain unchanged. Only reports created through the
 -- approved-source automation path receive trustedSourceAuto=true.
 
-CREATE OR REPLACE FUNCTION public.validate_configured_complaint_answers()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function public.validate_configured_complaint_answers()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
 declare
   v_schema public.reporting_form_schemas%rowtype;
   v_field public.reporting_form_schema_fields%rowtype;
@@ -165,8 +165,7 @@ begin
 
   return new;
 end;
-$function$
-;
+$$;
 
 CREATE OR REPLACE FUNCTION public.sanitize_configured_complaint_answers()
 RETURNS trigger
