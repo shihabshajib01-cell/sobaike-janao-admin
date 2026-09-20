@@ -510,7 +510,7 @@ exception
     end if;
     raise;
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.guard_trusted_news_intake_one_click_contract()
@@ -586,5 +586,4 @@ begin
   end if;
   return new;
 end
-$function$
-
+$function$;
