@@ -8,6 +8,7 @@ import {
   inferDistrictWideScope,
   inferIncidentDate,
   inferSpecificLocationPhrase,
+  isKnownPublisherArticlePath,
   isUnsupportedArticleType,
 } from '../supabase/functions/_shared/newsIntakeAutomationCore.ts';
 
@@ -195,6 +196,24 @@ assert.equal(
   'A circulation-date cue must not be promoted to the incident date'
 );
 
+assert.equal(
+  inferIncidentDate(
+    'শনিবার (১৯ সেপ্টেম্বর) দিবাগত রাতে নিহতদের পরিচয় নিশ্চিত করেছে পুলিশ। এরআগে, রাত ১১টা ৪০ মিনিটের দিকে পটুয়াখালী সদর উপজেলার বসাক বাজারসংলগ্ন ধলু গাজীর মোড় এলাকায় এ দুর্ঘটনা ঘটে।',
+    '2026-09-19'
+  ),
+  '2026-09-19',
+  'An earlier incident sentence may inherit the immediately preceding factual date'
+);
+
+assert.equal(
+  inferIncidentDate(
+    'প্রকাশ: ১৯ সেপ্টেম্বর ২০২৬। এর আগে রাত ১১টা ৪০ মিনিটের দিকে এ দুর্ঘটনা ঘটে।',
+    '2026-09-19'
+  ),
+  null,
+  'Publication metadata must never be inherited as the incident date'
+);
+
 assert.deepEqual(
   findLocation("Two killed in bus crash in Cox's Bazar"),
   { division: 'Chattogram', district: 'Coxs Bazar' },
@@ -295,6 +314,17 @@ assert.equal(
   isUnsupportedArticleType('https://example.com/bangladesh/road-crash-123', 'Two killed in road crash'),
   false,
   'Incident article path must remain eligible'
+);
+
+assert.equal(
+  isKnownPublisherArticlePath('https://www.banglanews24.com/saradesh/news/bd/1681593.details'),
+  true,
+  'Banglanews final-detail article paths must be recognized even without semantic article wrappers'
+);
+assert.equal(
+  isKnownPublisherArticlePath('https://www.banglanews24.com/saradesh/'),
+  false,
+  'Banglanews section paths must never receive the final-detail article fallback'
 );
 
 console.log(
