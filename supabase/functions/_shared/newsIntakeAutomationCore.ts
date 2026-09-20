@@ -63,6 +63,22 @@ export const articleAgeDays = (publishedDate?: string | null) => {
   return Math.floor((Date.now() - published.getTime()) / 86400000);
 };
 
+// Some Banglanews article templates expose neither Article JSON-LD nor a semantic
+// <article> wrapper even though the URL is a stable final-detail article path.
+// Keep this fallback publisher-specific so section/index pages do not become
+// eligible merely because they have an OpenGraph title.
+export const isKnownPublisherArticlePath = (value: unknown) => {
+  try {
+    const url=new URL(String(value||''));
+    const host=url.hostname.toLowerCase().replace(/^www\./,'');
+    const path=url.pathname.toLowerCase();
+    return host==='banglanews24.com'
+      && /\/news\/bd\/\d+\.details\/?$/.test(path);
+  } catch {
+    return false;
+  }
+};
+
 export type Classification = {
   segmentId: string;
   subcategoryId: string;
@@ -368,19 +384,41 @@ export const inferIncidentDate = (value: unknown, publishedDate?: string | null)
   const text = asciiDigits(normalizeText(value));
   if (!text) return null;
 
-  const incidentScopes=text
+  const sentences=text
     .split(/(?<=[.!?।])\s+/)
     .map((item)=>item.trim())
-    .filter(Boolean)
-    .filter((item)=>INCIDENT_DATE_CUE_RE.test(item));
+    .filter(Boolean);
 
-  for (const scope of incidentScopes) {
+  const incidentIndexes=sentences
+    .map((item,index)=>INCIDENT_DATE_CUE_RE.test(item)?index:-1)
+    .filter((index)=>index>=0);
+
+  for (const index of incidentIndexes) {
+    const scope=sentences[index];
     const named=namedDateFromText(scope,publishedDate);
     if (named) return named;
     const numeric=numericDateFromText(scope);
     if (numeric) return numeric;
     const relative=relativeIncidentDateFromText(scope,publishedDate);
     if (relative) return relative;
+
+    // News reports commonly state a dated update first, then describe the
+    // incident in the next sentence with "এর আগে / earlier". In that narrow
+    // structure, carry the immediately preceding absolute date into the
+    // incident sentence. Never do this for publication/update metadata or for
+    // unrelated "today" wording.
+    const backReferencesPriorSentence=
+      /^(?:এর\s*আগে|এরআগে|এর\s*পূর্বে|এরপূর্বে|earlier|previously|before\s+that)(?:\s|,|:|।|$)/iu.test(scope);
+    const previous=index>0?sentences[index-1]:'';
+    const previousLooksLikePublicationMetadata=
+      /(?:প্রকাশ(?:িত)?|আপডেট|published(?:\s+on)?|publication\s+date|updated)(?:\s|:|-)/iu.test(previous);
+
+    if(backReferencesPriorSentence && previous && !previousLooksLikePublicationMetadata){
+      const previousNamed=namedDateFromText(previous,publishedDate);
+      if(previousNamed) return previousNamed;
+      const previousNumeric=numericDateFromText(previous);
+      if(previousNumeric) return previousNumeric;
+    }
   }
 
   // Avoid treating page-level publication/update dates or unrelated "today"
