@@ -347,7 +347,7 @@ for (const needle of [
   'complaints_core_facts_required_unless_trusted_source',
   "origin_type='sourced_report'",
   'trustedSourceAuto',
-  "sourceTruthMode','approved_publisher",
+  "sourceTruthMode','')='approved_publisher",
 ]) {
   requireText(trustedSourceOmissions, needle, 'trusted-source omission constraint');
 }
