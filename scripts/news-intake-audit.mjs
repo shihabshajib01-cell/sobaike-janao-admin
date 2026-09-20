@@ -192,6 +192,10 @@ for (const needle of [
 }
 
 for (const needle of [
+  'get_public_published_report',
+  'get_public_published_reports',
+  'get_public_home_feed',
+  'get_public_home_feed_page',
   "sourceLanguage'),''),'unknown'))='en'",
   "sourceLanguage'),''),'unknown'))='bn'",
   "sourceOmittedFields",
