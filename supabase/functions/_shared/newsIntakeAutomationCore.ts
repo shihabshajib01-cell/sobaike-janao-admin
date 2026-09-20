@@ -134,6 +134,20 @@ const NON_INCIDENT_GAS_RECOVERY_RE = /(গ্যাস\s*সংকটে\s*স�
 // That is not a property-snatching report and must not fall through to the broad
 // public-safety snatching keyword rule.
 const NON_PROPERTY_SNATCHING_RE = /(পুলিশ(?:কে)?.{0,80}(আসামি|অভিযুক্ত|সন্দেহভাজন|মাদক\s*কারবারি|আটক).{0,80}ছিনতাই|(আসামি|অভিযুক্ত|সন্দেহভাজন|মাদক\s*কারবারি|আটক).{0,80}ছিনতাই.{0,80}(পুলিশ|থানা)|(?:suspect|detainee|accused|prisoner).{0,80}(?:snatched|taken).{0,80}(?:police|custody))/iu;
+
+// Recovery of evidence or a stolen item during a different investigation is not
+// itself a fresh theft incident. This protects investigation follow-up stories
+// such as recovered phones/evidence from becoming standalone Theft reports.
+const NON_INCIDENT_EVIDENCE_RECOVERY_RE =
+  /(?:(?:police|detectives?|investigators?).{0,80}(?:recover(?:ed|s|ing)?|seize(?:d|s|ing)?).{0,120}(?:stolen|theft).{0,120}(?:suspect|detained|arrested|home|house)|(?:চুরি|চোরাই).{0,80}(?:ফোন|মোবাইল|মালামাল|সম্পদ).{0,100}(?:উদ্ধার|জব্দ).{0,100}(?:আটক|গ্রেপ্তার|বাড়ি|বাড়ি))/iu;
+
+// These headlines announce a future programme/strike or a threat of one.
+// Category words in the summary (e.g. "ডাকাতি বন্ধ") describe demands, not a
+// reported incident and must not create a false incident report.
+export const isNonIncidentHeadline = (value: unknown) => {
+  const text = normalizeText(value);
+  return /(?:ধর্মঘটের\s+হুঁশিয়ারি|ধর্মঘটের\s+হুঁশিয়ারি|ধর্মঘটের\s+ঘোষণা|কর্মসূচি\s+ঘোষণা|অনির্দিষ্টকালের\s+ধর্মঘট|strike\s+warning|threatens?\s+(?:an?\s+)?(?:indefinite\s+)?strike|announces?\s+(?:an?\s+)?strike|will\s+go\s+on\s+strike)/iu.test(text);
+};
 // Theft words can describe the allegation that triggered retaliatory/mob violence.
 // For approved-news automation, classify the primary reported incident itself
 // instead of creating an "ambiguous allegation" review state.
@@ -144,7 +158,8 @@ export const classifyArticle = (value: unknown): Classification | null => {
   if (
     NON_INCIDENT_THEFT_RE.test(text) ||
     NON_INCIDENT_GAS_RECOVERY_RE.test(text) ||
-    NON_PROPERTY_SNATCHING_RE.test(text)
+    NON_PROPERTY_SNATCHING_RE.test(text) ||
+    NON_INCIDENT_EVIDENCE_RECOVERY_RE.test(text)
   ) return null;
   if (THEFT_ALLEGATION_VIOLENCE_RE.test(text)) {
     return {
@@ -289,7 +304,7 @@ const compactLocationPhrase = (value: string) => {
   candidate=candidate
     .replace(/^\d+\s+/u,'')
     .replace(/^(?:আজ|গতকাল|ওইদিন|সেদিন|শনিবার|রবিবার|রোববার|সোমবার|মঙ্গলবার|বুধবার|বৃহস্পতিবার|শুক্রবার|today|yesterday|saturday|sunday|monday|tuesday|wednesday|thursday|friday)\s*/iu,'')
-    .replace(/^(?:সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|সন্ধ্যায়|সন্ধ্যায়|রাতে|morning|afternoon|evening|night)\s*/iu,'')
+    .replace(/^(?:সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা|সন্ধ্যায়|সন্ধ্যায়|রাতে|morning|afternoon|evening|night)\s*/iu,'')
     .split(/\s+/)
     .slice(-7)
     .join(' ')
@@ -455,20 +470,20 @@ const relativeIncidentDateFromText = (text: string, publishedDate?: string | nul
   }
 
   const weekdayNames: Array<[number, RegExp]> = [
-    [0, /(গত\s*)?রবিবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?))?|(?:last\s+)?sunday(?:\s+(?:night|morning|afternoon|evening))?/iu],
-    [1, /(গত\s*)?সোমবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?))?|(?:last\s+)?monday(?:\s+(?:night|morning|afternoon|evening))?/iu],
-    [2, /(গত\s*)?মঙ্গলবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?))?|(?:last\s+)?tuesday(?:\s+(?:night|morning|afternoon|evening))?/iu],
-    [3, /(গত\s*)?বুধবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?))?|(?:last\s+)?wednesday(?:\s+(?:night|morning|afternoon|evening))?/iu],
-    [4, /(গত\s*)?বৃহস্পতিবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?))?|(?:last\s+)?thursday(?:\s+(?:night|morning|afternoon|evening))?/iu],
-    [5, /(গত\s*)?শুক্রবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?))?|(?:last\s+)?friday(?:\s+(?:night|morning|afternoon|evening))?/iu],
-    [6, /(গত\s*)?শনিবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?))?|(?:last\s+)?saturday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [0, /(গত\s*)?রবিবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?sunday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [1, /(গত\s*)?সোমবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?monday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [2, /(গত\s*)?মঙ্গলবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?tuesday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [3, /(গত\s*)?বুধবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?wednesday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [4, /(গত\s*)?বৃহস্পতিবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?thursday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [5, /(গত\s*)?শুক্রবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?friday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [6, /(গত\s*)?শনিবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?saturday(?:\s+(?:night|morning|afternoon|evening))?/iu],
   ];
   const base=new Date(publishedDate + 'T00:00:00Z');
   for (const [weekday,pattern] of weekdayNames) {
     const match=text.match(pattern);
     if (!match) continue;
     const matchedText=match[0];
-    const hasPastCue=/(গত|last|রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|night|morning|afternoon|evening)/iu.test(matchedText);
+    const hasPastCue=/(গত|last|রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা|night|morning|afternoon|evening)/iu.test(matchedText);
     if (!hasPastCue) continue;
     const d=new Date(base);
     let delta=(d.getUTCDay()-weekday+7)%7;
