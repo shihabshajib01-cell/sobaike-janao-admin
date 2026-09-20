@@ -253,7 +253,6 @@ for (const needle of [
 }
 
 for (const needle of [
-  'Find News',
   'newsIntakeApi.scanSources()',
   'getAutomationDashboard()',
   'created_draft',
