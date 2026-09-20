@@ -27,6 +27,7 @@ const adminLocationRpcHardening = read('supabase/migrations/20260919085346_news_
 const sourceLanguageGroundingCleanup = read('supabase/migrations/20260919093100_news_intake_source_language_grounding_cleanup.sql');
 const misclassifiedReportQuarantine = read('supabase/migrations/20260919184200_quarantine_misclassified_automated_news_report.sql');
 const sensitiveContentReviewGate = read('supabase/migrations/20260920005500_news_intake_sensitive_content_review_gate.sql');
+const matchedReviewWorkspace = read('supabase/migrations/20260920064000_news_intake_matched_review_workspace.sql');
 const automationCore = read('supabase/functions/_shared/newsIntakeAutomationCore.ts');
 const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
 const edge = read('supabase/functions/news-intake-fetch/index.ts');
@@ -241,6 +242,9 @@ for (const needle of [
   'finalPathLooksLikeArticle',
   'articleDocumentSignal',
   'classification.reviewReason',
+  'buildAutomationReviewPayload',
+  'reviewPayload',
+  'reviewFields',
   'processing error(s) were recorded',
   'Section, homepage, or non-article URL was excluded',
   'inferSpecificLocationPhrase',
@@ -276,6 +280,7 @@ for (const needle of [
 requireText(api, "supabase.functions.invoke('news-intake-scan'", 'News Automation API');
 requireText(api, "supabase.rpc(\n      'admin_get_news_intake_automation_dashboard'", 'News Automation dashboard API');
 requireText(api, "'admin_set_news_intake_auto_update'", 'News Automation schedule control API');
+requireText(api, "'admin_complete_news_intake_item_review'", 'News Intake guided review completion API');
 
 if (/articleBody|fullArticle|bodyText|innerText/.test(edge)) {
   errors.push('secure metadata fetcher: article body must not be returned to the Admin client.');
@@ -313,14 +318,27 @@ for (const needle of [
   'sensitiveContentReviewed',
   'pendingMergeId',
   '<Modal',
+  'initialReviewItem',
+  'reviewMode',
+  'inferredReviewFields',
+  'reviewBoxClass',
+  'This report needs review',
+  'Save Review',
+  'onReviewSaved',
 ]) {
   requireText(manualForm, needle, 'Manual News Intake UI safety flow');
 }
 
-if (page.includes("matchedItems.map((item)")) {
-  errors.push(
-    'The right publish panel must not render all category-matched items; only feedReadyItems may appear there.'
-  );
+for (const needle of [
+  'review_payload jsonb',
+  'admin_complete_news_intake_item_review',
+  "'reviewPayload',i.review_payload",
+  'evaluate_sourced_report_duplicate_internal',
+  'news_intake_privacy_review_required',
+  'review_payload=null',
+  'REVOKE ALL ON FUNCTION public.admin_complete_news_intake_item_review',
+]) {
+  requireText(matchedReviewWorkspace, needle, 'matched-item guided review migration');
 }
 
 for (const needle of [
@@ -328,14 +346,15 @@ for (const needle of [
   'Find News',
   'Scan All Sources Now',
   'Raw news found',
-  'Feed-ready reports',
+  'Category-matched reports',
   'Select All',
   'Clear Selection',
   'Publish Selected to Feed',
   'FeedReadyReportPreview',
-  'feedReadyItems.map',
-  'rawFilterCounts',
-  'rawFilterCounts.published',
+  'matchedItems.map((item)',
+  'workspaceCounts',
+  'workspaceCounts.published',
+  'rawNewsItems',
   "'excluded'",
   "'ready'",
   "'published'",
@@ -352,9 +371,17 @@ for (const needle of [
   'complaintNeedsReview',
   'reportLoadErrors',
   'reviewItemManually',
+  'reviewingItem',
+  'handleReviewSaved',
+  'newsIntakeApi.completeItemReview',
   'requestWorkspaceClose',
-  'publishable',
-  'No feed-ready reports',
+  'closeConfirmOpen',
+  'Close News Intake?',
+  'Keep Working',
+  'Close News Intake',
+  'intakeStarted',
+  'publishable={ready}',
+  'No category-matched reports',
   'rawNewsExpanded',
   'feedReadyExpanded',
   'scrollbar-gutter:stable',
@@ -368,6 +395,11 @@ for (const needle of [
 ]) {
   requireText(page, needle, 'News Intake dashboard workspace');
 }
+
+if (!page.includes('matchedItems.map((item)')) {
+  errors.push('Every category-matched item must render in the right review panel.');
+}
+requireText(page, 'feedReadyItems.map((item) => String(item.reportId))', 'feed-ready-only selection eligibility');
 
 for (const needle of [
   'sensitiveContentReviewed',

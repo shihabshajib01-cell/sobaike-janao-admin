@@ -3,6 +3,7 @@ import {
   NewsIntakeAutomationConfig,
   NewsIntakeAutomationDashboard,
   NewsIntakeAutomationScanResult,
+  NewsIntakeReviewCompletionResult,
   NewsIntakeCreateResult,
   NewsIntakeMergeResult,
   NewsIntakePayload,
@@ -116,6 +117,38 @@ export class NewsIntakeApi {
     }
 
     return data as NewsIntakeAutomationScanResult;
+  }
+
+  async completeItemReview(
+    itemId: string,
+    reportId: string
+  ): Promise<NewsIntakeReviewCompletionResult> {
+    assertConfigured();
+
+    const { data, error } = await supabase.rpc(
+      'admin_complete_news_intake_item_review',
+      {
+        p_item_id: itemId,
+        p_report_id: reportId,
+      }
+    );
+
+    if (error) {
+      throw new Error(error.message || 'Failed to complete News Intake review.');
+    }
+
+    const raw = (data || {}) as any;
+    return {
+      success: Boolean(raw.success),
+      itemId: String(raw.itemId || itemId),
+      reportId: String(raw.reportId || reportId),
+      action: String(raw.action || 'needs_review') as NewsIntakeReviewCompletionResult['action'],
+      duplicateStatus:
+        raw.duplicateStatus === null || raw.duplicateStatus === undefined
+          ? null
+          : String(raw.duplicateStatus) as NewsIntakeReviewCompletionResult['duplicateStatus'],
+      ready: Boolean(raw.ready),
+    };
   }
 
   async getLocationTaxonomy(): Promise<NewsIntakeLocationTaxonomy> {
