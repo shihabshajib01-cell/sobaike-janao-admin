@@ -8,6 +8,7 @@ import {
   inferDistrictWideScope,
   inferIncidentDate,
   inferSpecificLocationPhrase,
+  isFactCheckOrMisinformationStory,
   isKnownPublisherArticlePath,
   isLegalFollowUpOnly,
   isLikelyForeignIncident,
@@ -69,6 +70,23 @@ assert.equal(
   isLegalFollowUpOnly('সাতকানিয়ায় ট্রেনের ধাক্কায় নিহত ২'),
   false,
   'A current incident headline must not be rejected as a legal follow-up'
+);
+
+assert.equal(
+  isFactCheckOrMisinformationStory(
+    'সুনামগঞ্জে তিন শিশুর মৃত্যুর ঘটনাকে রাজনৈতিক হত্যা বলে প্রচার',
+    'যাচাই করে দেখা গেছে দাবিটি সত্য নয়।'
+  ),
+  true,
+  'Fact-check/debunk stories must not be converted into fresh incident reports'
+);
+assert.equal(
+  isFactCheckOrMisinformationStory(
+    'কিশোরীকে অপহরণের পর হত্যা, মরদেহ উদ্ধার',
+    'পুলিশ ঘটনাটি তদন্ত করছে।'
+  ),
+  false,
+  'A direct incident report must not be rejected as misinformation content'
 );
 
 assert.equal(
@@ -374,6 +392,23 @@ assert.equal(
   ),
   'চট্টগ্রামের কোতোয়ালি থানার পেছনের সতীশ বাবু লেন',
   'Incident location must win over later narrative text ending in এলাকা'
+);
+
+assert.notEqual(
+  inferSpecificLocationPhrase(
+    'খুলনার ইসলামনগর এলাকার হল রোডে ঘটনাটি ঘটে। এদিকে এ ঘটনায় খুলনার হরিণটানা থানা পুলিশ তদন্ত করছে।',
+    'Khulna'
+  ),
+  'এদিকে এ ঘটনায় খুলনার হরিণটানা থানা',
+  'Narrative police-jurisdiction fragments must never become the public incident location'
+);
+assert.notEqual(
+  inferSpecificLocationPhrase(
+    'সুনামগঞ্জের তাহিরপুরে তিন শিশুর মৃত্যুর বিষয়ে যাচাই করে তাহিরপুর উপজেলা প্রশাসনের সঙ্গে কথা বলা হয়।',
+    'Sunamganj'
+  ),
+  'করে তাহিরপুর উপজেলা',
+  'Narrative verification fragments must not become a specific incident location'
 );
 
 assert.equal(
