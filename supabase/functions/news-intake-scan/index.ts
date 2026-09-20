@@ -14,6 +14,7 @@ import {
   inferChildIncidentType,
   inferIncidentDate,
   inferSpecificLocationPhrase,
+  isFactCheckOrMisinformationStory,
   isKnownPublisherArticlePath,
   isLegalFollowUpOnly,
   isLikelyForeignIncident,
@@ -866,6 +867,22 @@ const processNewsIntakeRun = async (
             action:'discovered',
             duplicateStatus:'unavailable',
             reason:'Headline describes a future programme, strike warning, or announcement rather than a reportable incident.',
+          });
+          return;
+        }
+
+        if(isFactCheckOrMisinformationStory(article.title,fullText)){
+          await record({
+            itemKind:'article',
+            sourceHostname:source.hostname,
+            publisherName:article.publisherName,
+            canonicalUrl:article.canonicalUrl,
+            sourceTitle:article.title,
+            sourcePublishedDate:article.sourcePublishedDate||'',
+            contentLanguage:language,
+            action:'discovered',
+            duplicateStatus:'unavailable',
+            reason:'Fact-check, misinformation, or debunking article was excluded because it does not establish a new reportable incident.',
           });
           return;
         }
