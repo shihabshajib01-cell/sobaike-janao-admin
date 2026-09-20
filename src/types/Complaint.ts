@@ -307,6 +307,8 @@ export interface Complaint {
   privacyChoice?: ComplaintPrivacyChoice;
   confirmPublicIdentity?: boolean;
   publicationPreferences?: ComplaintPublicationPreferences;
+  /** Server-owned dynamic/source workflow state, including News Intake review flags. */
+  customFieldAnswers?: Record<string, unknown>;
   assignedDepartment?: string;
   upvotesCount: number;
   commentsCount: number;
