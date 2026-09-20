@@ -313,7 +313,7 @@ for (const needle of [
   requireText(manualForm, needle, 'Manual News Intake UI safety flow');
 }
 
-if (newsIntakePage.includes("matchedItems.map((item)")) {
+if (page.includes("matchedItems.map((item)")) {
   errors.push(
     'The right publish panel must not render all category-matched items; only feedReadyItems may appear there.'
   );
@@ -349,7 +349,7 @@ for (const needle of [
   'reportLoadErrors',
   'reviewItemManually',
   'requestWorkspaceClose',
-  'publishable={eligibleReportIds.includes(reportId)}',
+  'publishable',
   'No feed-ready reports',
   'rawNewsExpanded',
   'feedReadyExpanded',
