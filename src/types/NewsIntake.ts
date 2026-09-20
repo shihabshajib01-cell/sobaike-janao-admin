@@ -119,6 +119,7 @@ export interface NewsIntakePreview {
     publisherName?: string | null;
   };
   duplicate: ReportDuplicateCheckResult;
+  privacyReviewRequired?: boolean;
   schemaValidation: {
     ready: boolean;
     missingFields: Array<{
