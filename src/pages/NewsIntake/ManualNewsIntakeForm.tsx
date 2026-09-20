@@ -1229,6 +1229,11 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
                 </p>
                 <Checkbox
                   id="news-intake-sensitive-content-reviewed"
+                  aria-label={
+                    isBn
+                      ? 'আমি পাবলিক শিরোনাম, সারাংশ, অবস্থান ও পরিচয়সংক্রান্ত তথ্য রিভিউ করেছি'
+                      : 'I reviewed the public title, summary, location, and identifying details'
+                  }
                   checked={report.customFieldAnswers?.sensitiveContentReviewed === true}
                   onChange={(event) =>
                     updateReport({
