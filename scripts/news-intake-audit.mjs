@@ -33,6 +33,7 @@ const ledgerParityCloseout = read('supabase/migrations/20260920131354_news_intak
 const schedulerCronParity = read('supabase/migrations/20260920132122_news_intake_scheduler_cron_parity.sql');
 const sourceQualityGate = read('supabase/migrations/20260920142434_news_intake_source_quality_gate.sql');
 const factcheckLocationQuality = read('supabase/migrations/20260920143209_news_intake_factcheck_location_quality.sql');
+const legacyQualityCleanup = read('supabase/migrations/20260920143848_news_intake_legacy_quality_cleanup.sql');
 const automationCore = read('supabase/functions/_shared/newsIntakeAutomationCore.ts');
 const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
 const edge = read('supabase/functions/news-intake-fetch/index.ts');
@@ -273,6 +274,16 @@ for (const needle of [
   "'source_unspecified'",
 ]) {
   requireText(factcheckLocationQuality, needle, 'News Intake fact-check/location quality closeout');
+}
+
+for (const needle of [
+  'news_intake.legacy_quality_quarantine',
+  "char_length(public.normalize_duplicate_text(c.description))<80",
+  "public.normalize_duplicate_text(c.title)=public.normalize_duplicate_text(c.description)",
+  "'newsIntakeReviewRequired',true",
+  'Legacy trusted-source report quarantined because it does not meet the current News Intake source-quality gate.',
+]) {
+  requireText(legacyQualityCleanup, needle, 'News Intake legacy source-quality cleanup');
 }
 
 for (const needle of [
