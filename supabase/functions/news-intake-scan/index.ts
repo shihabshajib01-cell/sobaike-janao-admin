@@ -203,7 +203,7 @@ const dhakaTodayYmd = () => {
     day:'2-digit',
   }).formatToParts(new Date());
   const read=(type:string)=>parts.find((part)=>part.type===type)?.value || '';
-  return `${read('year')}-${read('month')}-${read('day')}`;
+  return read('year')+'-'+read('month')+'-'+read('day');
 };
 
 const extractPublishedDate = (html: string, jsonLd: any, finalUrl='') => {
@@ -256,66 +256,12 @@ const extractPublishedDate = (html: string, jsonLd: any, finalUrl='') => {
     if(normalized)return normalized;
   }
 
-  // The Daily Star currently renders fresh article age as SEC/MIN/HOUR in the
-  // article header even when its HTML omits a machine-readable publication date.
-  // This is still publisher-authored freshness evidence: infer only the current
-  // Dhaka calendar day, and only for sub-24-hour relative labels.
   let host='';
   try { host=canonicalHostKey(new URL(finalUrl).hostname); } catch {}
   if(host==='thedailystar.net'){
     const monthPattern=Object.keys(DATE_MONTHS)
       .sort((a,b)=>b.length-a.length)
-      .map((name)=>name.replace(/[-/\\^$*+?.()|[\]{}]/g,'\\const extractPublishedDate = (html: string, jsonLd: any) => {
-  const timeTag=[...String(html||'').matchAll(/<time\b[^>]*>/gi)]
-    .map((match)=>attr(match[0],'datetime'))
-    .find(Boolean) || '';
-  const itemPropTag=[...String(html||'').matchAll(/<(?:meta|time)\b[^>]*>/gi)]
-    .find((match)=>/\bitemprop\s*=\s*["']?datepublished["']?/i.test(match[0]))?.[0] || '';
-  const itemPropDate=itemPropTag
-    ? (attr(itemPropTag,'content') || attr(itemPropTag,'datetime'))
-    : '';
-  const scriptDate=String(html||'').match(
-    /["'](?:datePublished|date_published|published_at|publishDate|publicationDate|dateCreated)["']\s*:\s*["']([^"']+)["']/i
-  )?.[1] || '';
-  const visibleHeader=stripTags(String(html||'').slice(0,250000)).slice(0,14000);
-  const visibleDate=visibleHeader.match(
-    /(?:প্রকাশ(?:িত)?|আপডেট|published(?:\s+on)?|publication\s+date)\s*[:\-]?\s*([^|।\n]{4,80})/iu
-  )?.[1] || '';
-
-  const candidates=[
-    jsonLd?.datePublished,
-    jsonLd?.dateCreated,
-    metaContent(html,[
-      'article:published_time',
-      'article:published',
-      'published_time',
-      'datepublished',
-      'date-published',
-      'publishdate',
-      'publish_date',
-      'publication_date',
-      'datecreated',
-      'date_created',
-      'pubdate',
-      'parsely-pub-date',
-      'sailthru.date',
-      'cxenseparse:recs:publishtime',
-      'dcterms.date',
-      'dc.date',
-      'date',
-    ]),
-    itemPropDate,
-    timeTag,
-    scriptDate,
-    visibleDate,
-  ];
-
-  for (const candidate of candidates) {
-    const normalized=normalizedDate(candidate);
-    if(normalized)return normalized;
-  }
-  return null;
-};'))
+      .map((name)=>name.replace(/[-/\\^$*+?.()|[\]{}]/g,'\\$&'))
       .join('|');
     const explicitHeaderDate=visibleHeader.match(
       new RegExp('(?:\\b\\d{1,2}\\s+(?:'+monthPattern+')\\s*,?\\s*20\\d{2}\\b|\\b(?:'+monthPattern+')\\s+\\d{1,2},?\\s+20\\d{2}\\b)','iu')
