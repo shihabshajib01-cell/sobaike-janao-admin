@@ -1,5 +1,6 @@
 import { ActionGroup, IconButton } from './Button';
 import React, { useEffect, useId, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '@/utils';
 
@@ -12,6 +13,8 @@ export interface ModalProps {
   footer?: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
   className?: string;
+  bodyClassName?: string;
+  mobileFullscreen?: boolean;
   closeOnBackdrop?: boolean;
 }
 
@@ -24,6 +27,8 @@ export const Modal: React.FC<ModalProps> = ({
   footer,
   size = 'md',
   className,
+  bodyClassName,
+  mobileFullscreen = false,
   closeOnBackdrop = true,
 }) => {
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -46,6 +51,11 @@ export const Modal: React.FC<ModalProps> = ({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return;
+      const activeElement =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      const activeDialog = activeElement?.closest('[data-modal-dialog]');
+      if (activeDialog && activeDialog !== dialogRef.current) return;
+
       if (e.key === 'Escape') {
         e.preventDefault();
         onCloseRef.current();
@@ -104,9 +114,14 @@ export const Modal: React.FC<ModalProps> = ({
     full: 'max-w-[calc(100vw-2rem)] sm:max-w-[calc(100vw-3rem)]',
   };
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+      className={cn(
+        'fixed inset-0 z-50 flex items-center justify-center overflow-y-auto',
+        mobileFullscreen ? 'p-0 sm:p-6' : 'p-4 sm:p-6'
+      )}
       role="dialog"
       aria-modal="true"
       aria-labelledby={title ? titleId : undefined}
@@ -122,16 +137,25 @@ export const Modal: React.FC<ModalProps> = ({
       {/* Modal Card */}
       <div
         ref={dialogRef}
+        data-modal-dialog
         tabIndex={-1}
         className={cn(
           'relative w-full bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden z-10 transition-all duration-200 animate-in zoom-in-95',
           size === 'full' && 'h-[94vh] flex flex-col',
+          mobileFullscreen &&
+            'max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:max-w-none max-sm:rounded-none max-sm:border-0 max-sm:shadow-none',
           sizeStyles[size],
           className
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800/80">
+        <div
+          data-modal-header
+          className={cn(
+            'flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800/80',
+            mobileFullscreen && 'max-sm:px-4 max-sm:py-3'
+          )}
+        >
           <div>
             {title && (
               <h3 id={titleId} className="type-card-title text-slate-900 dark:text-slate-100">
@@ -153,9 +177,12 @@ export const Modal: React.FC<ModalProps> = ({
 
         {/* Body */}
         <div
+          data-modal-body
           className={cn(
             'p-6 type-body text-slate-700 dark:text-slate-300 overflow-y-auto',
-            size === 'full' ? 'flex-1 min-h-0' : 'max-h-[calc(85vh-130px)]'
+            size === 'full' ? 'flex-1 min-h-0' : 'max-h-[calc(85vh-130px)]',
+            mobileFullscreen && 'max-sm:p-4',
+            bodyClassName
           )}
         >
           {children}
@@ -163,12 +190,19 @@ export const Modal: React.FC<ModalProps> = ({
 
         {/* Footer */}
         {footer && (
-          <ActionGroup className="px-6 py-4 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50">
+          <ActionGroup
+            data-modal-footer
+            className={cn(
+              'px-6 py-4 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50',
+              mobileFullscreen && 'max-sm:px-4 max-sm:py-3'
+            )}
+          >
             {footer}
           </ActionGroup>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
