@@ -446,6 +446,37 @@ const buildReportPayload = (
   };
 };
 
+const buildAutomationReviewPayload = (
+  article: any,
+  classification: any,
+  language: string,
+  reviewFields: string[],
+  location?: any,
+  incidentDate?: string | null
+) => {
+  const safeLocation = location || {
+    division:'',
+    district:'',
+    upazilaOrThana:'',
+    area:'',
+    road:'',
+    landmark:'',
+    formattedAddress:'',
+    locationScope:'specific',
+  };
+  const payload = buildReportPayload(
+    article,
+    classification,
+    safeLocation,
+    incidentDate || '',
+    language
+  );
+  return {
+    ...payload,
+    reviewFields:Array.from(new Set(reviewFields.filter(Boolean))),
+  };
+};
+
 const isUnsafeNetworkHostname = (hostname: string) => {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
   if (host === "localhost" || host === "::1" || host.endsWith(".localhost") || host.endsWith(".local")) return true;
@@ -807,6 +838,12 @@ const processNewsIntakeRun = async (
             action:'needs_review',
             duplicateStatus:'unavailable',
             reason:classification.reviewReason,
+            reviewPayload:buildAutomationReviewPayload(
+              article,
+              classification,
+              language,
+              ['category','incidentDate','location']
+            ),
           });
           return;
         }
@@ -827,6 +864,12 @@ const processNewsIntakeRun = async (
             action:'needs_review',
             duplicateStatus:'unavailable',
             reason:'Category detected, but the source publication date could not be verified safely.',
+            reviewPayload:buildAutomationReviewPayload(
+              article,
+              classification,
+              language,
+              ['sourcePublishedDate','incidentDate','location']
+            ),
           });
           return;
         }
@@ -845,6 +888,12 @@ const processNewsIntakeRun = async (
             action:'discovered',
             duplicateStatus:'unavailable',
             reason:'Outside the 7-day automated intake window.',
+            reviewPayload:buildAutomationReviewPayload(
+              article,
+              classification,
+              language,
+              ['incidentDate','location']
+            ),
           });
           return;
         }
@@ -863,6 +912,12 @@ const processNewsIntakeRun = async (
             action:'needs_review',
             duplicateStatus:'unavailable',
             reason:'Source publication date is unexpectedly in the future.',
+            reviewPayload:buildAutomationReviewPayload(
+              article,
+              classification,
+              language,
+              ['sourcePublishedDate','incidentDate','location']
+            ),
           });
           return;
         }
@@ -1005,6 +1060,18 @@ const processNewsIntakeRun = async (
             action:'needs_review',
             duplicateStatus:'unavailable',
             reason:`Category detected, but ${missing} could not be established safely from the source.`,
+            reviewPayload:buildAutomationReviewPayload(
+              article,
+              classification,
+              language,
+              [
+                !location ? 'location' : '',
+                !incidentDate ? 'incidentDate' : '',
+                !context ? 'description' : '',
+              ],
+              location,
+              incidentDate
+            ),
           });
           return;
         }
@@ -1028,6 +1095,14 @@ const processNewsIntakeRun = async (
             action:'needs_review',
             duplicateStatus:'unavailable',
             reason:locationReason,
+            reviewPayload:buildAutomationReviewPayload(
+              article,
+              classification,
+              language,
+              ['location'],
+              location,
+              incidentDate
+            ),
           });
           return;
         }
@@ -1047,6 +1122,14 @@ const processNewsIntakeRun = async (
             action:'needs_review',
             duplicateStatus:'unavailable',
             reason:'Bribery category detected, but department and service fields require source-specific verification.',
+            reviewPayload:buildAutomationReviewPayload(
+              article,
+              classification,
+              language,
+              ['briberyDepartment','briberyService'],
+              location,
+              incidentDate
+            ),
           });
           return;
         }
@@ -1083,6 +1166,10 @@ const processNewsIntakeRun = async (
             action:'needs_review',
             duplicateStatus,
             reason:'Privacy-sensitive category detected. Review the public title, summary, location, and identifying details before creating or publishing a report.',
+            reviewPayload:{
+              ...payload,
+              reviewFields:['sensitiveContent'],
+            },
           });
           return;
         }
@@ -1106,6 +1193,12 @@ const processNewsIntakeRun = async (
             action:'needs_review',
             duplicateStatus,
             reason:`The current published report form requires source facts that could not be established safely: ${missingLabels||'required fields'}.`,
+            reviewPayload:{
+              ...payload,
+              reviewFields:missingSchemaFields.map(
+                (field:any)=>String(field?.storageKey||field?.fieldKey||'schema')
+              ),
+            },
           });
           return;
         }
@@ -1178,6 +1271,10 @@ const processNewsIntakeRun = async (
             action:'needs_review',
             duplicateStatus,
             reason:'Possible same incident detected. No new report was created automatically.',
+            reviewPayload:{
+              ...payload,
+              reviewFields:['duplicate'],
+            },
           });
           return;
         }
@@ -1209,6 +1306,12 @@ const processNewsIntakeRun = async (
           reason:createdCanPublish
             ? 'Source-grounded draft created; publication remains a separate admin action.'
             : 'Draft created, but the final server duplicate evaluation requires review before publication.',
+          reviewPayload:createdCanPublish
+            ? null
+            : {
+                ...payload,
+                reviewFields:['duplicate'],
+              },
         });
       } catch(error) {
         processingErrors+=1;
