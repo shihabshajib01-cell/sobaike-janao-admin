@@ -34,6 +34,7 @@ const schedulerCronParity = read('supabase/migrations/20260920132122_news_intake
 const sourceQualityGate = read('supabase/migrations/20260920142434_news_intake_source_quality_gate.sql');
 const factcheckLocationQuality = read('supabase/migrations/20260920143209_news_intake_factcheck_location_quality.sql');
 const legacyQualityCleanup = read('supabase/migrations/20260920143848_news_intake_legacy_quality_cleanup.sql');
+const oneClickContract = read('supabase/migrations/20260920175318_news_intake_one_click_zero_issue_contract.sql');
 const automationCore = read('supabase/functions/_shared/newsIntakeAutomationCore.ts');
 const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
 const edge = read('supabase/functions/news-intake-fetch/index.ts');
@@ -113,6 +114,9 @@ for (const needle of [
   'THEFT_ALLEGATION_VIOLENCE_RE',
   'isLikelyForeignIncident',
   'isNonIncidentHeadline',
+  'buildFeedReadyIncidentContext',
+  'isSafeSpecificLocationText',
+  'sourceTextLength',
 ]) {
   requireText(automationCore, needle, 'News Intake automation core');
 }
@@ -147,6 +151,11 @@ requireText(behaviorAudit, 'Title-only extraction must never become Feed Ready',
 requireText(behaviorAudit, 'Court/bail follow-up headlines about older incidents must not create a fresh incident report', 'News Intake legal follow-up regression');
 requireText(behaviorAudit, 'Fact-check/debunk stories must not be converted into fresh incident reports', 'News Intake fact-check regression');
 requireText(behaviorAudit, 'Narrative police-jurisdiction fragments must never become the public incident location', 'News Intake noisy-location regression');
+requireText(behaviorAudit, 'Generic English road fragments must never become a specific location', 'News Intake semantic location regression');
+requireText(behaviorAudit, 'Narrative Bangla victim/thana fragments must never become a specific location', 'News Intake Bangla semantic location regression');
+requireText(behaviorAudit, 'Feed Ready source context must contain at least 400 characters', 'News Intake 400-character minimum regression');
+requireText(behaviorAudit, 'Feed Ready source context must never exceed 800 characters', 'News Intake 800-character maximum regression');
+requireText(behaviorAudit, 'Articles with less than 400 source-grounded characters must not become Feed Ready', 'News Intake short-context rejection regression');
 requireText(collisionErrorContract, "errcode='P0001'", 'News Intake collision error contract');
 requireText(collisionErrorContract, 'DUPLICATE_REVIEW_REQUIRED', 'News Intake collision error contract');
 requireText(explicitDenyPolicies, 'news_intake_runs_authenticated_deny', 'News Intake run-table deny policy');
@@ -287,6 +296,24 @@ for (const needle of [
 }
 
 for (const needle of [
+  'news_intake_specific_location_text_is_safe',
+  'guard_trusted_news_intake_one_click_contract',
+  'trg_guard_trusted_news_intake_one_click_contract',
+  '400 to 800 source-grounded characters',
+  'SOURCE_FRESHNESS_REQUIRED',
+  'SOURCE_REPORT_CONTRACT_FAILED',
+  'SOURCE_LOCATION_QUALITY_FAILED',
+  'canonical_upazila_name',
+  'Utility start time is required',
+  'Excess-bill comparison fields are required',
+  'news_intake.one_click_contract_quarantine',
+  'কোতোয়ালি',
+  'v_dist_count',
+]) {
+  requireText(oneClickContract, needle, 'News Intake final one-click zero-issue contract');
+}
+
+for (const needle of [
   'guard_sourced_report_publish_readiness',
   'trg_guard_sourced_report_publish_readiness',
   'SOURCE_GROUNDING_REVIEW_REQUIRED',
@@ -373,15 +400,23 @@ for (const needle of [
   'isFactCheckOrMisinformationStory',
   'serialized_article_body',
   "hostKey==='bdnews24.com' || hostKey==='bangla.bdnews24.com'",
+  "hostKey==='thedailystar.net'",
   "extractionStatus:'complete'",
   "substantiveContext:true",
   "currentIncident:true",
   "followUpOnly:false",
-  'Article extraction was incomplete or did not expose substantive incident context',
+  'buildFeedReadyIncidentContext',
+  'sourceTextLength(context)<400',
+  'sourceTextLength(context)>800',
+  'Source did not expose 400–800 characters of substantive incident context',
+  'Source publication date could not be verified safely; candidate was blocked from Feed Ready.',
+  'missingOneClickContractFields',
+  'Current report form requirements could not be fully grounded from the source',
+  "classification.subcategoryId === 'load-shedding-outage'",
+  "classification.subcategoryId === 'gas-shortage'",
+  "(!location || !location.upazilaOrThana ? ['location'] : [])",
   'Court, bail, remand, hearing, verdict, appeal, or trial follow-up was excluded',
   'Fact-check, misinformation, or debunking article was excluded',
-  "location.locationScope === 'district_only' ? ['location']",
-  "locationScope:!location || location.locationScope === 'district_only'",
 ]) {
   requireText(scanner, needle, 'automated News Intake scanner');
 }
