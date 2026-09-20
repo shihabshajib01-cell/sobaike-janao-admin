@@ -372,23 +372,17 @@ const ymd = (year: number, month: number, day: number) => {
   return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
 };
 
-const namedDateFromText = (text: string, publishedDate?: string | null) => {
-  const monthPattern = Object.keys(MONTHS)
-    .sort((a,b)=>b.length-a.length)
-    .map((m)=>m.replace(/[.*+?^$()|[\]{}\\]/g,'\\const namedDateFromText = (text: string, publishedDate?: string | null) => {
-  const monthPattern = Object.keys(MONTHS)
-    .sort((a,b)=>b.length-a.length)
-    .map((m)=>m.replace(/[.*+?^$()|[\]{}\\]/g,'\\$&'))
-    .join('|');
-  const named = text.match(new RegExp('(?:^|[\\s(])(\\d{1,2})\\s+(' + monthPattern + ')(?:\\s*,?\\s*(20\\d{2}))?','iu'));
-  if (!named) return null;
-  const baseYear = publishedDate ? Number(publishedDate.slice(0,4)) : new Date().getUTCFullYear();
-  return ymd(Number(named[3] || baseYear),MONTHS[named[2].toLowerCase()] || MONTHS[named[2]],Number(named[1]));
-};'))
-    .join('|');
-  const baseYear = publishedDate ? Number(publishedDate.slice(0,4)) : new Date().getUTCFullYear();
+const NAMED_MONTH_RE =
+  '(?:january|february|march|april|may|june|july|august|september|october|november|december|জানুয়ারি|জানুয়ারি|ফেব্রুয়ারি|ফেব্রুয়ারি|মার্চ|এপ্রিল|মে|জুন|জুলাই|আগস্ট|সেপ্টেম্বর|অক্টোবর|নভেম্বর|ডিসেম্বর)';
 
-  const dayFirst=text.match(new RegExp('(?:^|[\\s(])(\\d{1,2})\\s+(' + monthPattern + ')(?:\\s*,?\\s*(20\\d{2}))?','iu'));
+const namedDateFromText = (text: string, publishedDate?: string | null) => {
+  const baseYear = publishedDate
+    ? Number(publishedDate.slice(0,4))
+    : new Date().getUTCFullYear();
+
+  const dayFirst=text.match(
+    new RegExp('(?:^|[\\s(])(\\d{1,2})\\s+(' + NAMED_MONTH_RE + ')(?:\\s*,?\\s*(20\\d{2}))?','iu')
+  );
   if(dayFirst){
     return ymd(
       Number(dayFirst[3] || baseYear),
@@ -397,7 +391,9 @@ const namedDateFromText = (text: string, publishedDate?: string | null) => {
     );
   }
 
-  const monthFirst=text.match(new RegExp('(?:^|[\\s(])(' + monthPattern + ')\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:\\s*,?\\s*(20\\d{2}))?','iu'));
+  const monthFirst=text.match(
+    new RegExp('(?:^|[\\s(])(' + NAMED_MONTH_RE + ')\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:\\s*,?\\s*(20\\d{2}))?','iu')
+  );
   if(monthFirst){
     return ymd(
       Number(monthFirst[3] || baseYear),
@@ -405,6 +401,7 @@ const namedDateFromText = (text: string, publishedDate?: string | null) => {
       Number(monthFirst[2])
     );
   }
+
   return null;
 };
 
