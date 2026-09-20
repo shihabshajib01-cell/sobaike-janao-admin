@@ -3,6 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.112.4";
 import {
   MAX_ARTICLE_AGE_DAYS,
   articleAgeDays,
+  buildFeedReadyIncidentContext,
   buildIncidentContext,
   buildIncidentFocusedLocationText,
   buildSourceLanguageFields,
@@ -19,9 +20,11 @@ import {
   isLegalFollowUpOnly,
   isLikelyForeignIncident,
   isNonIncidentHeadline,
+  isSafeSpecificLocationText,
   isSubstantiveIncidentContext,
   isUnsupportedArticleType,
   scoreDiscoveryLink,
+  sourceTextLength,
 } from "../_shared/newsIntakeAutomationCore.ts";
 
 const ALLOWED_ORIGINS = new Set([
@@ -222,6 +225,11 @@ const extractPublishedDate = (html: string, jsonLd: any) => {
       'datecreated',
       'date_created',
       'pubdate',
+      'parsely-pub-date',
+      'sailthru.date',
+      'cxenseparse:recs:publishtime',
+      'dcterms.date',
+      'dc.date',
       'date',
     ]),
     itemPropDate,
@@ -383,12 +391,101 @@ const mapLimit = async <T,R>(items: T[], limit: number, worker: (item:T,index:nu
   return results;
 };
 
+const parseExplicitSourceTime = (value: unknown) => {
+  const text=String(value||'')
+    .replace(/[০-৯]/g,(digit)=>({
+      '০':'0','১':'1','২':'2','৩':'3','৪':'4','৫':'5','৬':'6','৭':'7','৮':'8','৯':'9',
+    } as Record<string,string>)[digit]||digit);
+
+  const twelve=text.match(/(?:^|\s)(\d{1,2})(?::(\d{2}))?\s*(am|pm)(?:\s|[,.।]|$)/iu);
+  if(twelve){
+    let hour=Number(twelve[1]);
+    const minute=Number(twelve[2]||0);
+    if(hour>=1 && hour<=12 && minute>=0 && minute<60){
+      if(twelve[3].toLowerCase()==='pm' && hour!==12) hour+=12;
+      if(twelve[3].toLowerCase()==='am' && hour===12) hour=0;
+      return `${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`;
+    }
+  }
+
+  const twentyFour=text.match(/(?:^|\s)([01]?\d|2[0-3]):([0-5]\d)(?:\s|[,.।]|$)/u);
+  return twentyFour
+    ? `${String(Number(twentyFour[1])).padStart(2,'0')}:${twentyFour[2]}`
+    : '';
+};
+
+const missingOneClickContractFields = (report: any) => {
+  const missing:string[]=[];
+  const segment=String(report?.segmentId||'');
+  const subcategory=String(report?.subcategoryId||'');
+  const text=(value:unknown)=>String(value??'').trim();
+  const numberOk=(value:unknown)=>{
+    const n=Number(value);
+    return text(value)!=='' && Number.isFinite(n) && n>0;
+  };
+
+  if(!text(report?.incidentDate) && subcategory!=='excess-electricity-bill'){
+    missing.push('incidentDate');
+  }
+
+  if(!text(report?.division) || !text(report?.district) || !text(report?.upazilaOrThana)){
+    missing.push('location');
+  }
+  if(
+    text(report?.formattedAddress)
+    && !isSafeSpecificLocationText(report.formattedAddress,report.district)
+  ){
+    missing.push('locationQuality');
+  }
+  if(
+    text(report?.area)
+    && !isSafeSpecificLocationText(report.area,report.district)
+  ){
+    missing.push('locationQuality');
+  }
+
+  if(subcategory==='load-shedding-outage' || subcategory==='gas-shortage'){
+    if(!text(report?.incidentTime)) missing.push('incidentTime');
+  }
+
+  if(subcategory==='excess-electricity-bill'){
+    if(!text(report?.recentBillMonth)) missing.push('recentBillMonth');
+    if(!numberOk(report?.recentBillAmount)) missing.push('recentBillAmount');
+    if(!text(report?.previousBillMonth)) missing.push('previousBillMonth');
+    if(!numberOk(report?.previousBillAmount)) missing.push('previousBillAmount');
+  }
+
+  if(segment==='harassment'){
+    if(!text(report?.affectedPersonAgeGroup)) missing.push('affectedPersonAgeGroup');
+    if(!text(report?.allegedAbuserRelationship)) missing.push('allegedAbuserRelationship');
+    if(!text(report?.reportingFor)) missing.push('reportingFor');
+  }
+  if(subcategory==='sexual-harassment'){
+    if(!text(report?.sexualHarassmentType)) missing.push('sexualHarassmentType');
+    if(!text(report?.sexualHarassmentContext)) missing.push('sexualHarassmentContext');
+  }
+
+  if(subcategory==='child_abduction_murder'){
+    if(!text(report?.customFieldAnswers?.childIncidentType)) missing.push('childIncidentType');
+  }
+
+  if(subcategory==='mob-justice'){
+    const details=report?.mobJusticeDetails||{};
+    if(!text(details.trigger)) missing.push('mobJusticeTrigger');
+    if(!text(details.outcome)) missing.push('mobJusticeOutcome');
+    if(!text(details.ongoingStatus)) missing.push('mobJusticeOngoingStatus');
+  }
+
+  return Array.from(new Set(missing));
+};
+
 const buildReportPayload = (
   article: any,
   classification: any,
   location: any | null,
   incidentDate: string | null,
-  language: string
+  language: string,
+  feedContext?: string
 ) => {
   const source = {
     sourceType:'news',
@@ -421,7 +518,7 @@ const buildReportPayload = (
 
   const fields=buildSourceLanguageFields(
     article.title,
-    buildIncidentContext(article),
+    feedContext || buildFeedReadyIncidentContext(article),
     language
   );
 
@@ -437,7 +534,11 @@ const buildReportPayload = (
       descriptionBn:fields.descriptionPrimary,
       descriptionEn:'',
       incidentDate:incidentDate || '',
-      incidentTime:'',
+      incidentTime:
+        classification.subcategoryId === 'load-shedding-outage' ||
+        classification.subcategoryId === 'gas-shortage'
+          ? parseExplicitSourceTime(text)
+          : '',
       utilityEndTime:'',
       frequency:'one-time',
       priority:'medium',
@@ -473,8 +574,8 @@ const buildReportPayload = (
         trustedSourceAuto:true,
         sourceTruthMode:'approved_publisher',
         sourceOmittedFields:[
-          ...(!incidentDate ? ['incidentDate'] : []),
-          ...(!location || location.locationScope === 'district_only' ? ['location'] : []),
+          ...(!incidentDate && classification.subcategoryId!=='excess-electricity-bill' ? ['incidentDate'] : []),
+          ...(!location || !location.upazilaOrThana ? ['location'] : []),
         ],
         locationScope:!location || location.locationScope === 'district_only'
           ? 'source_unspecified'
@@ -647,7 +748,7 @@ const safeScanFetch = async (
   for(let redirectCount=0;redirectCount<=3;redirectCount+=1){
     const hostKey=canonicalHostKey(current.hostname);
     const requestUserAgent=
-      hostKey==='unb.com.bd' || hostKey==='bdnews24.com' || hostKey==='bangla.bdnews24.com'
+      hostKey==='unb.com.bd' || hostKey==='bdnews24.com' || hostKey==='bangla.bdnews24.com' || hostKey==='thedailystar.net'
         ? 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36'
         : 'SobaiKeJanao-NewsIntake/3.0 (+https://shobaikejanao.com/)';
 
@@ -939,6 +1040,25 @@ const processNewsIntakeRun = async (
           return;
         }
 
+        if(!article.sourcePublishedDate){
+          await record({
+            itemKind:'article',
+            sourceHostname:source.hostname,
+            publisherName:article.publisherName,
+            canonicalUrl:article.canonicalUrl,
+            sourceTitle:article.title,
+            sourcePublishedDate:'',
+            contentLanguage:language,
+            segmentId:classification.segmentId,
+            subcategoryId:classification.subcategoryId,
+            confidence:classification.confidence,
+            action:'discovered',
+            duplicateStatus:'unavailable',
+            reason:'Source publication date could not be verified safely; candidate was blocked from Feed Ready.',
+          });
+          return;
+        }
+
         const ageDays=articleAgeDays(article.sourcePublishedDate);
         if(ageDays !== null && ageDays>MAX_ARTICLE_AGE_DAYS){
           await record({
@@ -1124,8 +1244,14 @@ const processNewsIntakeRun = async (
         }
 
         const incidentDate=inferIncidentDate(locationText,article.sourcePublishedDate);
-        const context=buildIncidentContext(article);
-        if(!isSubstantiveIncidentContext(article.title,context)){
+        const rawContext=buildIncidentContext(article);
+        const context=buildFeedReadyIncidentContext(article);
+        if(
+          !isSubstantiveIncidentContext(article.title,rawContext)
+          || !context
+          || sourceTextLength(context)<400
+          || sourceTextLength(context)>800
+        ){
           await record({
             itemKind:'article',
             sourceHostname:source.hostname,
@@ -1139,27 +1265,47 @@ const processNewsIntakeRun = async (
             confidence:classification.confidence,
             action:'discovered',
             duplicateStatus:'unavailable',
-            reason:'Article extraction was incomplete or did not expose substantive incident context; candidate was blocked from Feed Ready.',
+            reason:'Source did not expose 400–800 characters of substantive incident context; candidate was blocked from Feed Ready.',
           });
           return;
         }
 
         const payload={
-          ...buildReportPayload(article,classification,location,incidentDate,language),
+          ...buildReportPayload(article,classification,location,incidentDate,language,context),
           quality:{
             extractionStatus:'complete',
             extractionMethod:article.extractionMethod || 'unknown',
             substantiveContext:true,
-            contextLength:context.length,
+            contextLength:sourceTextLength(context),
             currentIncident:true,
             followUpOnly:false,
           },
         };
 
-        // Manual Find News remains a one-click review/select workspace: every
-        // approved-source category match is staged as feed-ready without
-        // forcing date/location/privacy review. Publication happens only after
-        // the admin selects it. Scheduled runs continue to auto-publish.
+        const missingContractFields=missingOneClickContractFields(payload.report);
+        if(missingContractFields.length){
+          await record({
+            itemKind:'article',
+            sourceHostname:source.hostname,
+            publisherName:article.publisherName,
+            canonicalUrl:article.canonicalUrl,
+            sourceTitle:article.title,
+            sourcePublishedDate:article.sourcePublishedDate||'',
+            contentLanguage:language,
+            segmentId:classification.segmentId,
+            subcategoryId:classification.subcategoryId,
+            confidence:classification.confidence,
+            action:'discovered',
+            duplicateStatus:'unavailable',
+            reason:`Current report form requirements could not be fully grounded from the source: ${missingContractFields.join(', ')}. Candidate was blocked from Feed Ready.`,
+          });
+          return;
+        }
+
+        // Manual Find News remains a one-click select/publish workspace.
+        // Only candidates that already satisfy freshness, 400-800 source context,
+        // semantic location quality, and the current report-form contract reach
+        // Feed Ready. Excluded candidates stay diagnostic/read-only.
         if(triggerType==='manual'){
           const {data:sourceDuplicate,error:sourceDuplicateError}=await supabase.rpc(
             'admin_check_source_duplicate',

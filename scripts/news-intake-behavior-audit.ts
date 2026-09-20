@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {
+  buildFeedReadyIncidentContext,
   buildIncidentContext,
   buildIncidentFocusedLocationText,
   buildSourceLanguageFields,
@@ -13,8 +14,10 @@ import {
   isLegalFollowUpOnly,
   isLikelyForeignIncident,
   isNonIncidentHeadline,
+  isSafeSpecificLocationText,
   isSubstantiveIncidentContext,
   isUnsupportedArticleType,
+  sourceTextLength,
 } from '../supabase/functions/_shared/newsIntakeAutomationCore.ts';
 
 // Munshiganj incident-focused location regression: residence/hospital destinations
@@ -104,6 +107,37 @@ assert.equal(
   ),
   true,
   'A substantive multi-sentence incident context must remain eligible'
+);
+
+assert.equal(isSafeSpecificLocationText('on Road','Dhaka'),false,'Generic English road fragments must never become a specific location');
+assert.equal(isSafeSpecificLocationText('র ভুক্তভোগী থানা','Chattogram'),false,'Narrative Bangla victim/thana fragments must never become a specific location');
+assert.equal(
+  isSafeSpecificLocationText('collected evidence and cordoned off the area','Faridpur'),
+  false,
+  'Narrative crime-scene actions must never become a specific location'
+);
+assert.equal(isSafeSpecificLocationText('Mirpur Section 6, Dhaka','Dhaka'),true,'Named source-grounded locations must remain eligible');
+
+const feedReadyContext=buildFeedReadyIncidentContext({
+  excerpt:'',
+  body:[
+    'The incident took place at a residential building after the complainant returned home and found the entrance damaged.',
+    'Police said cash, jewellery and a mobile phone were reported missing from the residence after the break-in.',
+    'The complainant filed a case with the local police station and investigators reviewed security-camera footage from the building.',
+    'Officers collected evidence from the scene and said they were working to identify the people seen entering and leaving the property.',
+    'The source also described the reported timeline and the items listed by the complainant in the case statement.'
+  ].join(' ')
+});
+assert.ok(sourceTextLength(feedReadyContext)>=400,'Feed Ready source context must contain at least 400 characters');
+assert.ok(sourceTextLength(feedReadyContext)<=800,'Feed Ready source context must never exceed 800 characters');
+
+assert.equal(
+  buildFeedReadyIncidentContext({
+    excerpt:'A short source summary.',
+    body:'The article only exposes a short paragraph about the incident and provides no further source-grounded context.'
+  }),
+  '',
+  'Articles with less than 400 source-grounded characters must not become Feed Ready'
 );
 
 assert.equal(
