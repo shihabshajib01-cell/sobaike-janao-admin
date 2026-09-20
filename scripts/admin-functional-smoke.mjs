@@ -1020,7 +1020,7 @@ await check('News Intake mobile workspace is full-screen and review panels colla
     timeout: 30000,
   });
 
-  await page.getByRole('button', { name: 'Review', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Open', exact: true }).first().click();
 
   const dialog = page.getByRole('dialog');
   const dialogBox = await dialog.boundingBox();
