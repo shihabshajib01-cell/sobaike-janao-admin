@@ -24,6 +24,7 @@ import {
   NewsIntakeAutomationDashboard,
   NewsIntakeAutomationItem,
   NewsIntakeAutomationRun,
+  NewsIntakePayload,
   NewsIntakeTaxonomy,
 } from '@/types/NewsIntake';
 import { FeedReadyReportPreview } from './FeedReadyReportPreview';
@@ -52,6 +53,38 @@ interface PublishOutcome {
   ok: boolean;
   error?: string;
 }
+
+const NEWS_INTAKE_WORKSPACE_SESSION_KEY = 'sobaike-news-intake-workspace-v2';
+
+type WorkspaceSessionSnapshot = {
+  open: boolean;
+  intakeStarted: boolean;
+  step: WorkspaceStep;
+  mode: IntakeMode;
+  selectedRunId: string | null;
+  selectedKeys: string[];
+};
+
+const readWorkspaceSession = (): WorkspaceSessionSnapshot | null => {
+  try {
+    const raw = window.sessionStorage.getItem(NEWS_INTAKE_WORKSPACE_SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<WorkspaceSessionSnapshot>;
+    if (parsed.open !== true || parsed.intakeStarted !== true) return null;
+    return {
+      open: true,
+      intakeStarted: true,
+      step: parsed.step === 2 || parsed.step === 3 ? parsed.step : 1,
+      mode: parsed.mode === 'manual' ? 'manual' : 'automatic',
+      selectedRunId: parsed.selectedRunId ? String(parsed.selectedRunId) : null,
+      selectedKeys: Array.isArray(parsed.selectedKeys)
+        ? parsed.selectedKeys.map(String)
+        : [],
+    };
+  } catch {
+    return null;
+  }
+};
 
 const articleItems = (run: NewsIntakeAutomationRun | null) =>
   (run?.items || []).filter((item) => item.itemKind !== 'source');
@@ -96,6 +129,44 @@ export const NewsIntakePage: React.FC = () => {
     subcategories: [],
   });
   const allowNavigationRef = useRef(false);
+  const workspaceSessionRestoredRef = useRef(false);
+  const restoredRunCardsRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (workspaceSessionRestoredRef.current) return;
+    workspaceSessionRestoredRef.current = true;
+    const snapshot = readWorkspaceSession();
+    if (!snapshot) return;
+    setWorkspaceOpen(true);
+    setIntakeStarted(true);
+    setStep(snapshot.step);
+    setMode(snapshot.mode);
+    setSelectedRunId(snapshot.selectedRunId);
+    setSelectedReportIds(snapshot.selectedKeys);
+  }, []);
+
+  useEffect(() => {
+    if (!workspaceOpen || !intakeStarted) return;
+    const snapshot: WorkspaceSessionSnapshot = {
+      open: true,
+      intakeStarted: true,
+      step,
+      mode,
+      selectedRunId,
+      selectedKeys: selectedReportIds,
+    };
+    window.sessionStorage.setItem(
+      NEWS_INTAKE_WORKSPACE_SESSION_KEY,
+      JSON.stringify(snapshot)
+    );
+  }, [
+    workspaceOpen,
+    intakeStarted,
+    step,
+    mode,
+    selectedRunId,
+    selectedReportIds,
+  ]);
 
   const navigationBlocker = useBlocker(
     useCallback(
@@ -159,6 +230,7 @@ export const NewsIntakePage: React.FC = () => {
 
       event.preventDefault();
       event.stopPropagation();
+      event.stopImmediatePropagation();
       setPendingNavigationPath(nextRoute);
       setCloseConfirmOpen(true);
     };
@@ -234,7 +306,10 @@ export const NewsIntakePage: React.FC = () => {
     }).format(date);
   };
 
-  const loadReportCards = async (run: NewsIntakeAutomationRun) => {
+  const loadReportCards = async (
+    run: NewsIntakeAutomationRun,
+    preserveSelection = false
+  ) => {
     const reportIds = Array.from(
       new Set(
         run.items
@@ -243,7 +318,7 @@ export const NewsIntakePage: React.FC = () => {
       )
     );
 
-    setSelectedReportIds([]);
+    if (!preserveSelection) setSelectedReportIds([]);
     setRawFilter('all');
     setReportMap({});
     setReportLoadErrors([]);
@@ -268,6 +343,21 @@ export const NewsIntakePage: React.FC = () => {
       setLoadingReports(false);
     }
   };
+
+  useEffect(() => {
+    if (
+      !workspaceOpen ||
+      !intakeStarted ||
+      step < 2 ||
+      !selectedRun ||
+      !workspaceSessionRestoredRef.current
+    ) {
+      return;
+    }
+    if (restoredRunCardsRef.current === selectedRun.runId) return;
+    restoredRunCardsRef.current = selectedRun.runId;
+    void loadReportCards(selectedRun, true);
+  }, [workspaceOpen, intakeStarted, step, selectedRun?.runId]);
 
   const openWorkspace = () => {
     allowNavigationRef.current = false;
@@ -479,6 +569,7 @@ export const NewsIntakePage: React.FC = () => {
     const nextPath = pendingNavigationPath;
     setPendingNavigationPath(null);
     setCloseConfirmOpen(false);
+    window.sessionStorage.removeItem(NEWS_INTAKE_WORKSPACE_SESSION_KEY);
     setWorkspaceOpen(false);
     setReviewingItem(null);
     setIntakeStarted(false);
@@ -496,6 +587,7 @@ export const NewsIntakePage: React.FC = () => {
 
   const navigateFromWorkspace = (to: string) => {
     allowNavigationRef.current = true;
+    window.sessionStorage.removeItem(NEWS_INTAKE_WORKSPACE_SESSION_KEY);
     setPendingNavigationPath(null);
     setCloseConfirmOpen(false);
     setWorkspaceOpen(false);
