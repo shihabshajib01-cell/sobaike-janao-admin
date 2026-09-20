@@ -824,7 +824,7 @@ await check('News Intake automatic review selects only intended reports and keep
     throw new Error('current review-required report remained selectable for publication');
   }
   await expectVisible(
-    page.getByText('Category-matched news', { exact: true }),
+    page.getByText('Category-matched news', { exact: true }).first(),
     'category-matched right panel heading missing'
   );
   const reviewCopies = page.getByText('E2E source requiring review', { exact: true });
