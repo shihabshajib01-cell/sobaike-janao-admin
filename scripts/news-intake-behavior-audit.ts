@@ -9,8 +9,10 @@ import {
   inferIncidentDate,
   inferSpecificLocationPhrase,
   isKnownPublisherArticlePath,
+  isLegalFollowUpOnly,
   isLikelyForeignIncident,
   isNonIncidentHeadline,
+  isSubstantiveIncidentContext,
   isUnsupportedArticleType,
 } from '../supabase/functions/_shared/newsIntakeAutomationCore.ts';
 
@@ -55,6 +57,35 @@ assert.equal(
   isNonIncidentHeadline('৩০ সেপ্টেম্বরের পর অনির্দিষ্টকালের ধর্মঘটের হুঁশিয়ারি বাল্কহেড মালিকদের'),
   true,
   'Future strike warnings must be excluded before category matching even if the article mentions robbery prevention'
+);
+
+
+assert.equal(
+  isLegalFollowUpOnly('প্রধানমন্ত্রীর লাল টেলিফোনের তার চুরি: সেই রঞ্জনের জামিন বাতিল'),
+  true,
+  'Court/bail follow-up headlines about older incidents must not create a fresh incident report'
+);
+assert.equal(
+  isLegalFollowUpOnly('সাতকানিয়ায় ট্রেনের ধাক্কায় নিহত ২'),
+  false,
+  'A current incident headline must not be rejected as a legal follow-up'
+);
+
+assert.equal(
+  isSubstantiveIncidentContext(
+    'সাতকানিয়ায় ট্রেনের ধাক্কায় নিহত ২',
+    'সাতকানিয়ায় ট্রেনের ধাক্কায় নিহত ২'
+  ),
+  false,
+  'Title-only extraction must never become Feed Ready'
+);
+assert.equal(
+  isSubstantiveIncidentContext(
+    'ছিনতাই: একজনের হাতে ছুরি, আরেকজন রিকশাযাত্রীর পকেট কাটল',
+    'চট্টগ্রাম নগরীর কোতোয়ালী থানার অদূরে সতীশ বাবু লেইনে এক রিকশাআরোহীকে ছুরি দেখিয়ে তার জিনিসপত্র কেড়ে নেয় দুই ছিনতাইকারী। ঘটনার ভিডিও শনিবার সকাল থেকে সামাজিক যোগাযোগমাধ্যমে ছড়িয়ে পড়ে এবং পুলিশ জড়িতদের ধরতে কাজ করছে।'
+  ),
+  true,
+  'A substantive multi-sentence incident context must remain eligible'
 );
 
 assert.equal(
