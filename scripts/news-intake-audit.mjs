@@ -20,16 +20,16 @@ const explicitDenyPolicies = read('supabase/migrations/20260918184743_news_intak
 const schemaRequirementGuard = read('supabase/migrations/20260918185342_news_intake_schema_requirement_guard.sql');
 const samakalMode = read('supabase/migrations/20260918185535_news_intake_samakal_manual_only.sql');
 const schedulerMigration = read('supabase/migrations/20260918191945_news_intake_36h_scheduler.sql');
-const schedulerAcknowledgement = read('supabase/migrations/20260919042801_news_intake_scheduler_acknowledgement.sql');
 const publishGroundingGuard = read('supabase/migrations/20260919082837_news_intake_publish_grounding_guard.sql');
 const groundingGuardAlignment = read('supabase/migrations/20260919083754_news_intake_grounding_guard_align_duplicate_gate.sql');
-const adminLocationRpcHardening = read('supabase/migrations/20260919085346_news_intake_admin_location_rpc_hardening.sql');
-const sourceLanguageGroundingCleanup = read('supabase/migrations/20260919093100_news_intake_source_language_grounding_cleanup.sql');
-const misclassifiedReportQuarantine = read('supabase/migrations/20260919184200_quarantine_misclassified_automated_news_report.sql');
+const misclassifiedReportQuarantine = read('supabase/migrations/20260919184248_quarantine_misclassified_automated_news_report.sql');
 const sensitiveContentReviewGate = read('supabase/migrations/20260920021207_news_intake_sensitive_content_review_gate.sql');
-const matchedReviewWorkspace = read('supabase/migrations/20260920064000_news_intake_matched_review_workspace.sql');
+const matchedReviewWorkspace = read('supabase/migrations/20260920065202_news_intake_matched_review_workspace.sql');
 const trustedAutoPublish = read('supabase/migrations/20260920093010_trusted_news_intake_auto_publish.sql');
 const trustedSourceOmissions = read('supabase/migrations/20260920093258_trusted_news_source_omission_columns.sql');
+const finalProductionCleanup = read('supabase/migrations/20260920122450_news_intake_final_production_cleanup.sql');
+const finalCloseout = read('supabase/migrations/20260920131136_news_intake_100_percent_closeout.sql');
+const ledgerParityCloseout = read('supabase/migrations/20260920131354_news_intake_ledger_parity_closeout.sql');
 const automationCore = read('supabase/functions/_shared/newsIntakeAutomationCore.ts');
 const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
 const edge = read('supabase/functions/news-intake-fetch/index.ts');
@@ -143,16 +143,15 @@ requireText(explicitDenyPolicies, 'news_intake_run_items_authenticated_deny', 'N
 requireText(schemaRequirementGuard, 'sourced_report_missing_required_fields_internal', 'News Intake schema requirement validator');
 requireText(schemaRequirementGuard, 'trg_guard_sourced_report_schema_requirements', 'News Intake schema requirement trigger');
 requireText(schemaRequirementGuard, 'schemaValidation', 'News Intake schema-aware preview');
-requireText(adminLocationRpcHardening, 'revoke execute on function public.admin_get_location_taxonomy()', 'News Intake admin taxonomy anonymous-execute hardening');
-requireText(adminLocationRpcHardening, 'revoke execute on function public.admin_resolve_news_intake_location(text, text)', 'News Intake location resolver anonymous-execute hardening');
+requireText(ledgerParityCloseout, 'revoke execute on function public.admin_get_location_taxonomy()', 'News Intake admin taxonomy anonymous-execute hardening');
+requireText(ledgerParityCloseout, 'revoke execute on function public.admin_resolve_news_intake_location(text, text)', 'News Intake location resolver anonymous-execute hardening');
 for (const needle of [
   'normalize_sourced_report_public_language',
   'trg_normalize_sourced_report_public_language',
   "v_prefs := v_prefs - 'publicTitleEn' - 'publicSummaryEn'",
   "v_prefs := v_prefs - 'publicTitleBn' - 'publicSummaryBn'",
-  'newsIntakeReviewRequired',
 ]) {
-  requireText(sourceLanguageGroundingCleanup, needle, 'News Intake source-language grounding cleanup');
+  requireText(ledgerParityCloseout, needle, 'News Intake source-language grounding cleanup');
 }
 for (const needle of [
   "id = 'SJ-2026-240019'",
@@ -189,7 +188,44 @@ for (const needle of [
   'timeout_milliseconds:=10000',
   "'scheduledSlot'",
 ]) {
-  requireText(schedulerAcknowledgement, needle, 'acknowledged News Intake scheduler');
+  requireText(ledgerParityCloseout, needle, 'acknowledged News Intake scheduler');
+}
+
+for (const needle of [
+  'get_public_published_report',
+  'get_public_published_reports',
+  'get_public_home_feed',
+  'get_public_home_feed_page',
+  "sourceLanguage'),''),'unknown'))='en'",
+  "sourceLanguage'),''),'unknown'))='bn'",
+  "sourceOmittedFields",
+  "incidentDate",
+  "jsonb_array_elements_text(v_omitted)",
+  "duplicate_token_similarity(v_area,c.area)>=0.78",
+  "duplicate_token_similarity(v_address,c.formatted_address)>=0.78",
+  "news_intake.source_grounding_repair",
+  "2026-09-18",
+]) {
+  requireText(finalCloseout, needle, 'News Intake 100% closeout migration');
+}
+
+for (const needle of [
+  "hostname='unb.com.bd'",
+  "scan_enabled=false",
+  'normalize_sourced_report_public_language',
+  'trg_normalize_sourced_report_public_language',
+  'admin_resolve_news_intake_location(text,text)',
+  'dispatch_news_intake_auto_scan',
+]) {
+  requireText(ledgerParityCloseout, needle, 'News Intake migration-ledger parity closeout');
+}
+
+for (const needle of [
+  "id='SJ-2026-917489'",
+  'news_intake.classification_quarantine',
+  'guard_sourced_report_publish_readiness',
+]) {
+  requireText(finalProductionCleanup, needle, 'News Intake final production cleanup');
 }
 
 for (const needle of [
@@ -256,6 +292,8 @@ for (const needle of [
   'knownPublisherDocumentFallback',
   'requestUserAgent',
   "canonicalHostKey(current.hostname)==='unb.com.bd'",
+  'const MAX_ARTICLES_PER_SOURCE = 10;',
+  'const MAX_TOTAL_ARTICLES = 70;',
   'isLikelyForeignIncident',
   'isNonIncidentHeadline',
   'admin_check_source_duplicate',
@@ -391,6 +429,9 @@ for (const needle of [
   requireText(matchedReviewWorkspace, needle, 'matched-item guided review migration');
 }
 
+requireText(feedReadyPreview, 'stagedReport?: NewsIntakeReport', 'News Intake staged public-feed preview');
+requireText(feedReadyPreview, "stagedReport?.titleBn || stagedReport?.titleEn", 'News Intake source-language staged preview');
+
 for (const needle of [
   'News Intake Workspace',
   'Find News',
@@ -401,6 +442,8 @@ for (const needle of [
   'Clear Selection',
   'Publish Selected to Feed',
   'FeedReadyReportPreview',
+  'stagedReport={stagedReport || undefined}',
+  'previewId={`staged-${item.id}`}',
   'matchedItems.map((item)',
   'workspaceCounts',
   'workspaceCounts.published',

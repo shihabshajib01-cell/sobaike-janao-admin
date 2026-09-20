@@ -277,6 +277,15 @@ assert.equal(
 
 assert.equal(
   inferIncidentDate(
+    'গত শুক্রবার বিকেলে বাসা থেকে বের হওয়ার পর ১৩ বছরের কিশোরটি নিখোঁজ হয়। পরে তার মরদেহ উদ্ধার করা হয়।',
+    '2026-09-20'
+  ),
+  '2026-09-18',
+  'Missing-person incident wording with a Bangla relative weekday must ground the incident date'
+);
+
+assert.equal(
+  inferIncidentDate(
     'রোববার (২০ সেপ্টেম্বর) বেলা সাড়ে ১১টার দিকে ঢাকা-চট্টগ্রাম মহাসড়কের কুমিল্লার কোটবাড়ি এলাকায় শিক্ষার্থীরা সড়ক অবরোধ করেন।',
     '2026-09-20'
   ),

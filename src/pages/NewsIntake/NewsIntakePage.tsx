@@ -1578,22 +1578,27 @@ export const NewsIntakePage: React.FC = () => {
                           const ready = isCurrentFeedReady(item);
                           const published = isCurrentPublishedItem(item);
                           const selectionKey = selectionKeyForItem(item);
+                          const stagedReport =
+                            isStagedTrustedCandidate(item) ? item.reviewPayload?.report || null : null;
+                          const previewCategoryId = complaint?.categoryId || stagedReport?.segmentId || item.segmentId || '';
 
-                          if (complaint && (ready || published)) {
+                          if ((complaint && (ready || published)) || (ready && stagedReport)) {
                             return (
                               <FeedReadyReportPreview
                                 key={item.id}
-                                complaint={complaint}
+                                complaint={complaint || undefined}
+                                stagedReport={stagedReport || undefined}
+                                previewId={`staged-${item.id}`}
                                 isBn={isBn}
                                 selected={ready && selectedReportIds.includes(selectionKey)}
                                 publishable={ready}
                                 onToggle={() => ready && toggleSelection(selectionKey)}
                                 disabled={publishing || !ready}
                                 categoryLabelBn={
-                                  taxonomy.segments.find((segment) => segment.id === complaint.categoryId)?.nameBn
+                                  taxonomy.segments.find((segment) => segment.id === previewCategoryId)?.nameBn
                                 }
                                 categoryLabelEn={
-                                  taxonomy.segments.find((segment) => segment.id === complaint.categoryId)?.nameEn
+                                  taxonomy.segments.find((segment) => segment.id === previewCategoryId)?.nameEn
                                 }
                               />
                             );
