@@ -452,6 +452,7 @@ for (const needle of [
   'serialized_article_body',
   'semantic_article_paragraphs',
   'details-brief',
+  'paragraphBody.length > Math.max(300,body.length+120)',
   'articleTitleTokens',
   '__NEXT_DATA__',
   "hostKey==='bdnews24.com' || hostKey==='bangla.bdnews24.com'",
