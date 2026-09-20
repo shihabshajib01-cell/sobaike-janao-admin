@@ -945,13 +945,13 @@ await check('News Intake shows every category match on the right and completes g
   );
   await page.getByRole('button', { name: 'Save Review', exact: true }).click();
 
-  if (!fixtures.isGuidedReviewCompleted()) {
-    throw new Error('guided review completion RPC was not called');
-  }
   await expectVisible(
     page.getByText('3 matched · 2 ready · 0 selected', { exact: true }).first(),
     'reviewed matched item did not become ready after server revalidation'
   );
+  if (!fixtures.isGuidedReviewCompleted()) {
+    throw new Error('guided review completion RPC was not called');
+  }
 
   const reviewedSelector = page.getByLabel('Select E2E staged matched report title for publishing');
   await expectVisible(reviewedSelector, 'reviewed matched item did not become selectable');
