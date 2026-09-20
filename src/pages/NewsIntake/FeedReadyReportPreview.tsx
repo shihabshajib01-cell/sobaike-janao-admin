@@ -118,7 +118,7 @@ const getPublicTitle = (complaint: Complaint, isBn: boolean) => {
       complaint.titleBn ||
       preferences?.publicTitleEn ||
       complaint.titleEn ||
-      id
+      complaint.id
     );
   }
   return (
@@ -126,7 +126,7 @@ const getPublicTitle = (complaint: Complaint, isBn: boolean) => {
     complaint.titleEn ||
     preferences?.publicTitleBn ||
     complaint.titleBn ||
-    id
+    complaint.id
   );
 };
 
