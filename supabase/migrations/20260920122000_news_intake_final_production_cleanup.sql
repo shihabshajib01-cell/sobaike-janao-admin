@@ -16,9 +16,7 @@ set status='unpublished',
       coalesce(custom_field_answers,'{}'::jsonb)
       || jsonb_build_object(
         'newsIntakeReviewRequired',true,
-        'newsIntakeReviewReason','Quarantined: attempted child murder is not Child Abduction / Murder unless an abduction or reported death is present.',
-        'newsIntakeQuarantined',true,
-        'newsIntakeQuarantineReason','attempted_child_murder_not_supported_by_child_abduction_murder'
+        'newsIntakeReviewReason','Quarantined: attempted child murder is not Child Abduction / Murder unless an abduction or reported death is present.'
       ),
     updated_at=now()
 where id='SJ-2026-917489'
@@ -83,19 +81,14 @@ begin
      and new.status = 'published'
      and old.status is distinct from 'published' then
 
-    if lower(coalesce(new.custom_field_answers->>'newsIntakeQuarantined','false'))='true' then
-      raise exception 'SOURCE_CLASSIFICATION_QUARANTINED: This sourced report was quarantined after a classification mismatch and cannot be published.'
+    if coalesce(new.custom_field_answers->>'newsIntakeReviewRequired','false') = 'true' then
+      raise exception 'SOURCE_GROUNDING_REVIEW_REQUIRED: This sourced report is flagged for review before publication.'
         using errcode='22023';
     end if;
 
     if lower(coalesce(new.custom_field_answers->>'trustedSourceAuto','false'))='true'
        and coalesce(new.custom_field_answers->>'sourceTruthMode','')='approved_publisher' then
       return new;
-    end if;
-
-    if coalesce(new.custom_field_answers->>'newsIntakeReviewRequired','false') = 'true' then
-      raise exception 'SOURCE_GROUNDING_REVIEW_REQUIRED: This sourced report is flagged for source-grounding review before publication.'
-        using errcode='22023';
     end if;
 
     v_privacy_review_required:=public.news_intake_privacy_review_required(new.subcategory_id);
