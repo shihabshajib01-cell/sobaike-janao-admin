@@ -134,9 +134,9 @@ const NON_INCIDENT_GAS_RECOVERY_RE = /(গ্যাস\s*সংকটে\s*স�
 // That is not a property-snatching report and must not fall through to the broad
 // public-safety snatching keyword rule.
 const NON_PROPERTY_SNATCHING_RE = /(পুলিশ(?:কে)?.{0,80}(আসামি|অভিযুক্ত|সন্দেহভাজন|মাদক\s*কারবারি|আটক).{0,80}ছিনতাই|(আসামি|অভিযুক্ত|সন্দেহভাজন|মাদক\s*কারবারি|আটক).{0,80}ছিনতাই.{0,80}(পুলিশ|থানা)|(?:suspect|detainee|accused|prisoner).{0,80}(?:snatched|taken).{0,80}(?:police|custody))/iu;
-// Theft words can describe the allegation that triggered retaliatory/mob violence
-// rather than the incident being reported. Treat those as a tentative mob-violence
-// classification and force human review instead of publishing them as Theft.
+// Theft words can describe the allegation that triggered retaliatory/mob violence.
+// For approved-news automation, classify the primary reported incident itself
+// instead of creating an "ambiguous allegation" review state.
 const THEFT_ALLEGATION_VIOLENCE_RE = /((?:চুরি(?:র)?[\s'’‘"“”\-–—]*(?:অপবাদ|সন্দেহ|অভিযোগ)|ভাত\s*চুরির[\s'’‘"“”\-–—]*অপবাদ|theft\s+(?:suspicion|allegation)|suspected\s+theft|stolen\s+(?:meal|food)).{0,160}(?:পিটিয়ে|পিটিয়ে|পিটুনি|মারধর|হত্যা|খুন|নিহত|assault(?:ed)?|beat(?:en)?|killed|dies|died|death)|(?:পিটিয়ে|পিটিয়ে|পিটুনি|মারধর|হত্যা|খুন|নিহত|assault(?:ed)?|beat(?:en)?|killed|dies|died|death).{0,160}(?:চুরি(?:র)?[\s'’‘"“”\-–—]*(?:অপবাদ|সন্দেহ|অভিযোগ)|theft\s+(?:suspicion|allegation)|stolen\s+(?:meal|food)))/iu;
 
 export const classifyArticle = (value: unknown): Classification | null => {
@@ -146,15 +146,11 @@ export const classifyArticle = (value: unknown): Classification | null => {
     NON_INCIDENT_GAS_RECOVERY_RE.test(text) ||
     NON_PROPERTY_SNATCHING_RE.test(text)
   ) return null;
-  if (
-    THEFT_ALLEGATION_VIOLENCE_RE.test(text) &&
-    !/(গণপিটুনি|মব\s*সহিংসতা|mob\s+violence|lynch|beaten\s+by\s+a\s+mob)/iu.test(text)
-  ) {
+  if (THEFT_ALLEGATION_VIOLENCE_RE.test(text)) {
     return {
       segmentId:'public_safety',
       subcategoryId:'mob-justice',
-      confidence:0.62,
-      reviewReason:'Potential retaliatory or mob violence following a theft allegation; confirm the incident category manually.',
+      confidence:0.96,
     };
   }
   for (const [segmentId, subcategoryId, confidence, patterns] of ARTICLE_RULES) {
@@ -193,7 +189,44 @@ const DISTRICTS: DistrictEntry[] = [
   ['Mymensingh',['ময়মনসিংহ','ময়মনসিংহ','mymensingh'],'Mymensingh'],['Jamalpur',['জামালপুর','jamalpur'],'Mymensingh'],['Netrokona',['নেত্রকোনা','netrokona'],'Mymensingh'],['Sherpur',['শেরপুর','sherpur'],'Mymensingh'],
 ];
 
+const DISTRICT_CONTEXT_CUE_RE =
+  /(জেলা|উপজেলা|থানা|এলাকা|কোটবাড়ি|কোটবাড়ি|শহর|নগরী|ঘটনাস্থল|ঘটেছে|ঘটে|সংঘর্ষ|অবরোধ|হত্যা|অপহরণ|ছিনতাই|ডাকাতি|চুরি|district|upazila|thana|area|city|incident|occurred|happened|crash|collision|blockade|murder|abduct|snatch|robbery|theft)/iu;
+
+const highwayEndpointPenalty = (text: string, index: number, alias: string) => {
+  const left=Math.max(0,index-40);
+  const right=Math.min(text.length,index+alias.length+60);
+  const window=text.slice(left,right);
+  return /(?:-|–|—|থেকে|to).{0,40}(?:মহাসড়ক|মহাসড়ক|highway)|(?:মহাসড়ক|মহাসড়ক|highway).{0,40}(?:-|–|—|থেকে|to)/iu.test(window);
+};
+
 export const findLocation = (value: unknown) => {
+  const text = normalizeText(value);
+  if (/রাজধানী/u.test(text) && !/(কুমিল্লা|cumilla|comilla).{0,120}(রাজধানী|ঢাকা)/iu.test(text)) {
+    return { division:'Dhaka', district:'Dhaka' };
+  }
+
+  let best: { division:string; district:string; score:number; index:number } | null = null;
+  for (const [district,aliases,division] of DISTRICTS) {
+    let score=0;
+    let firstIndex=Number.POSITIVE_INFINITY;
+    let occurrences=0;
+
+    for (const aliasRaw of aliases) {
+      const alias=aliasRaw.toLowerCase();
+      let from=0;
+      while(true){
+        const index=text.indexOf(alias,from);
+        if(index<0) break;
+        occurrences+=1;
+        firstIndex=Math.min(firstIndex,index);
+
+        const before=text.slice(Math.max(0,index-80),index);
+        const after=text.slice(index+alias.length,Math.min(text.length,index+alias.length+100));
+        const local=before.slice(-45)+' '+alias+' '+after.slice(0,65);
+
+        let mentionScore=3;
+        if (DISTRICT_CONTEXT_CUE_RE.test(local)) mentionScore+=5;
+        if (new RegExp('(?:জেলা|district)\\s*(?:of\\s+)?'+alias.replace(/[.*+?^$()|[\]{}\\]/g,'\\export const findLocation = (value: unknown) => {
   const text = normalizeText(value);
   if (/রাজধানী/u.test(text)) return { division:'Dhaka', district:'Dhaka' };
   let best: { division: string; district: string; index: number } | null = null;
@@ -204,6 +237,32 @@ export const findLocation = (value: unknown) => {
     }
   }
   return best ? { division:best.division, district:best.district } : null;
+};'),'iu').test(local)) mentionScore+=6;
+        if (new RegExp(alias.replace(/[.*+?^$()|[\]{}\\]/g,'\\export const findLocation = (value: unknown) => {
+  const text = normalizeText(value);
+  if (/রাজধানী/u.test(text)) return { division:'Dhaka', district:'Dhaka' };
+  let best: { division: string; district: string; index: number } | null = null;
+  for (const [district, aliases, division] of DISTRICTS) {
+    for (const alias of aliases) {
+      const index = text.indexOf(alias.toLowerCase());
+      if (index >= 0 && (!best || index < best.index)) best = { division, district, index };
+    }
+  }
+  return best ? { division:best.division, district:best.district } : null;
+};')+'\\s*(?:জেলা|district)','iu').test(local)) mentionScore+=6;
+        if (highwayEndpointPenalty(text,index,alias)) mentionScore-=8;
+
+        score+=mentionScore;
+        from=index+alias.length;
+      }
+    }
+
+    if(occurrences>1) score+=Math.min(6,(occurrences-1)*2);
+    if(score>0 && (!best || score>best.score || (score===best.score && firstIndex<best.index))){
+      best={division,district,score,index:firstIndex};
+    }
+  }
+  return best ? {division:best.division,district:best.district} : null;
 };
 
 const compactLocationPhrase = (value: string) =>
@@ -225,7 +284,8 @@ const locationCandidateIsUsable = (candidate: string, district?: string | null) 
   if (!normalized || normalized.length<4) return false;
   if (/^(এলাকা|বাজার|মার্কেট|থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|গ্রাম|শহর|নগরী|মহানগরী|রোড|লেন|গলি|area|market|bazaar|thana|upazila|union|village|city|road|street|lane)$/iu.test(normalized)) return false;
   if (/(বিভিন্ন|various|several)\s+(এলাকা|areas?)/iu.test(normalized)) return false;
-  if (/(বিষয়টি|বিষয়টি|জানার পর|জানতে পেরে|আমরা|তিনি|তারা|পুলিশ জানায়|পুলিশ জানায়|কর্তৃপক্ষ|we learned|we found|police said|officials said)/iu.test(normalized)) return false;
+  if (/(বিষয়টি|বিষয়টি|জানার পর|জানতে পেরে|আমরা|তিনি|তারা|পুলিশ জানায়|পুলিশ জানায়|কর্তৃপক্ষ|সন্ধান না পেয়ে|সন্ধান না পেয়ে|খোঁজ করেও|নিহত|আহত|উদ্ধার|গ্রেপ্তার|জানান|বলেন|we learned|we found|police said|officials said|was killed|were killed|was injured|were injured|was rescued|were rescued)/iu.test(normalized)) return false;
+  if (normalized.length>90) return false;
   if (district) {
     const districtNormalized=normalizeText(district);
     if (normalized===districtNormalized || normalized===districtNormalized + ' district') return false;
@@ -327,12 +387,37 @@ const ymd = (year: number, month: number, day: number) => {
 const namedDateFromText = (text: string, publishedDate?: string | null) => {
   const monthPattern = Object.keys(MONTHS)
     .sort((a,b)=>b.length-a.length)
+    .map((m)=>m.replace(/[.*+?^$()|[\]{}\\]/g,'\\const namedDateFromText = (text: string, publishedDate?: string | null) => {
+  const monthPattern = Object.keys(MONTHS)
+    .sort((a,b)=>b.length-a.length)
     .map((m)=>m.replace(/[.*+?^$()|[\]{}\\]/g,'\\$&'))
     .join('|');
   const named = text.match(new RegExp('(?:^|[\\s(])(\\d{1,2})\\s+(' + monthPattern + ')(?:\\s*,?\\s*(20\\d{2}))?','iu'));
   if (!named) return null;
   const baseYear = publishedDate ? Number(publishedDate.slice(0,4)) : new Date().getUTCFullYear();
   return ymd(Number(named[3] || baseYear),MONTHS[named[2].toLowerCase()] || MONTHS[named[2]],Number(named[1]));
+};'))
+    .join('|');
+  const baseYear = publishedDate ? Number(publishedDate.slice(0,4)) : new Date().getUTCFullYear();
+
+  const dayFirst=text.match(new RegExp('(?:^|[\\s(])(\\d{1,2})\\s+(' + monthPattern + ')(?:\\s*,?\\s*(20\\d{2}))?','iu'));
+  if(dayFirst){
+    return ymd(
+      Number(dayFirst[3] || baseYear),
+      MONTHS[dayFirst[2].toLowerCase()] || MONTHS[dayFirst[2]],
+      Number(dayFirst[1])
+    );
+  }
+
+  const monthFirst=text.match(new RegExp('(?:^|[\\s(])(' + monthPattern + ')\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:\\s*,?\\s*(20\\d{2}))?','iu'));
+  if(monthFirst){
+    return ymd(
+      Number(monthFirst[3] || baseYear),
+      MONTHS[monthFirst[1].toLowerCase()] || MONTHS[monthFirst[1]],
+      Number(monthFirst[2])
+    );
+  }
+  return null;
 };
 
 const numericDateFromText = (text: string) => {
@@ -378,7 +463,10 @@ const relativeIncidentDateFromText = (text: string, publishedDate?: string | nul
 };
 
 const INCIDENT_DATE_CUE_RE =
-  /(ঘটনাটি|এ ঘটনা|এই ঘটনা|দুর্ঘটনা(?:টি|য়|য়)?|হামলাটি|ধর্ষণের ঘটনা|ছিনতাইয়ের ঘটনা|ছিনতাইয়ের ঘটনা|ডাকাতির ঘটনা|চুরির ঘটনা|ঘটেছে|ঘটে|ঘটেছিল|সংঘটিত|নিয়ন্ত্রণ হারিয়ে|নিয়ন্ত্রণ হারিয়ে|incident|accident|attack|rape|robbery|snatching|theft|lost control)/iu;
+  /(ঘটনাটি|এ ঘটনা|এই ঘটনা|দুর্ঘটনা(?:টি|য়|য়)?|হামলাটি|ধর্ষণের ঘটনা|ছিনতাইয়ের ঘটনা|ছিনতাইয়ের ঘটনা|ডাকাতির ঘটনা|চুরির ঘটনা|ঘটেছে|ঘটে|ঘটেছিল|সংঘটিত|নিয়ন্ত্রণ হারিয়ে|নিয়ন্ত্রণ হারিয়ে|অবরোধ|অপহরণ|হত্যা|খুন|উদ্ধার|নিহত|আহত|সংঘর্ষ|পিটিয়ে|পিটিয়ে|মারধর|incident|accident|attack|rape|robbery|snatching|theft|lost control|blockade|abduct|kidnap|murder|killed|injured|rescued|collision|crash|assault)/iu;
+
+const PUBLICATION_METADATA_RE =
+  /(?:প্রকাশ(?:িত)?|আপডেট|নিজস্ব প্রতিবেদক|স্টাফ রিপোর্টার|published(?:\\s+on)?|publication\\s+date|updated|last\\s+updated)(?:\\s|:|-)/iu;
 
 export const inferIncidentDate = (value: unknown, publishedDate?: string | null) => {
   const text = asciiDigits(normalizeText(value));
@@ -421,14 +509,25 @@ export const inferIncidentDate = (value: unknown, publishedDate?: string | null)
     }
   }
 
-  // Avoid treating page-level publication/update dates or unrelated "today"
-  // wording as the incident date. Only a different absolute date is accepted
-  // as a conservative fallback when there is no incident-anchored sentence.
-  const namedFallback=namedDateFromText(text,publishedDate);
-  if (namedFallback && (!publishedDate || namedFallback!==publishedDate)) return namedFallback;
+  // Accept an explicit date from a sentence that describes the reported event,
+  // even when it is the same day as publication. This is distinct from page
+  // metadata because the sentence must carry an incident/action cue.
+  for(const sentence of sentences){
+    if(PUBLICATION_METADATA_RE.test(sentence) || !INCIDENT_DATE_CUE_RE.test(sentence)) continue;
+    const named=namedDateFromText(sentence,publishedDate);
+    if(named) return named;
+    const numeric=numericDateFromText(sentence);
+    if(numeric) return numeric;
+    const relative=relativeIncidentDateFromText(sentence,publishedDate);
+    if(relative) return relative;
+  }
 
-  const numericFallback=numericDateFromText(text);
-  if (numericFallback && (!publishedDate || numericFallback!==publishedDate)) return numericFallback;
+  const nonMetadataText=sentences.filter((sentence)=>!PUBLICATION_METADATA_RE.test(sentence)).join(' ');
+  const namedFallback=namedDateFromText(nonMetadataText,publishedDate);
+  if (namedFallback) return namedFallback;
+
+  const numericFallback=numericDateFromText(nonMetadataText);
+  if (numericFallback) return numericFallback;
 
   return null;
 };
@@ -498,6 +597,22 @@ export const buildSourceLanguageFields = (
   descriptionEn: '',
   sourceLanguage: language || 'unknown',
 });
+
+const FOREIGN_INCIDENT_TITLE_RE =
+  /(mumbai|delhi|kolkata|chennai|bengaluru|bangalore|karachi|lahore|islamabad|new york|los angeles|london|paris|tokyo|beijing|moscow|kyiv|gaza|israel|india|pakistan|nepal|sri lanka|united states|\busa\b|united kingdom|\buk\b|canada|australia|malaysia|singapore|dubai|uae|saudi arabia|qatar|মুম্বাই|দিল্লি|কলকাতা|ভারত|পাকিস্তান|নেপাল|শ্রীলঙ্কা|লন্ডন|যুক্তরাষ্ট্র|যুক্তরাজ্য|কানাডা|অস্ট্রেলিয়া|অস্ট্রেলিয়া|দুবাই|সৌদি আরব)/iu;
+
+export const isLikelyForeignIncident = (title: unknown, articleUrl?: unknown, fullText?: unknown) => {
+  const headline=normalizeText(title);
+  let path='';
+  try{path=new URL(String(articleUrl||'')).pathname.toLowerCase();}catch{}
+  const hasBangladeshDistrict=Boolean(findLocation(headline));
+  if(hasBangladeshDistrict) return false;
+  if(/\/(world|international|asia|middle-east|europe|americas|global)(?:\/|$)/i.test(path)) return true;
+  if(FOREIGN_INCIDENT_TITLE_RE.test(headline)) return true;
+
+  const text=normalizeText(fullText);
+  return !findLocation(text) && FOREIGN_INCIDENT_TITLE_RE.test(headline+' '+text.slice(0,700));
+};
 
 export const scoreDiscoveryLink = (url: string, anchorText: string) => {
   if (classifyArticle(anchorText)) return 0;
