@@ -92,7 +92,7 @@ const automaticDashboardFixture = {
       status: 'completed',
       triggerType: 'manual',
       sourceCount: 1,
-      discoveredCount: 3,
+      discoveredCount: 4,
       classifiedCount: 3,
       duplicateCount: 1,
       createdCount: 2,
@@ -206,6 +206,21 @@ const automaticDashboardFixture = {
           action: 'skip_duplicate',
           reportId: E2E_EXISTING_REPORT_ID,
           reason: 'Exact approved-source article already exists in the report database.',
+        },
+        {
+          id: 'auto-item-raw',
+          itemKind: 'article',
+          publisherName: 'The Daily Star',
+          sourceHostname: 'www.thedailystar.net',
+          canonicalUrl: 'https://www.thedailystar.net/e2e-raw-not-report',
+          sourceTitle: 'E2E raw news item that is outside supported incident categories',
+          sourcePublishedDate: '2026-09-20',
+          contentLanguage: 'en',
+          confidence: null,
+          duplicateStatus: 'unavailable',
+          action: 'discovered',
+          reportId: null,
+          reason: 'No supported incident category matched in the article headline or summary with enough confidence.',
         },
       ],
     },
@@ -913,6 +928,42 @@ await check('News Intake keeps Step 2 open and Select All publishes approved mat
   // ready count so this smoke tests behavior rather than network timing.
   await expectVisible(existingSelector, 'existing ready report selector missing');
   await expectVisible(stagedSelector, 'staged approved-source selector missing');
+
+  const rawCard = page.locator('[data-news-intake-raw-item]').first();
+  await expectVisible(rawCard, 'raw-news compact card missing');
+  const rawBox = await rawCard.boundingBox();
+  if (!rawBox || rawBox.height > 320) {
+    throw new Error(`raw-news card still stretches vertically: ${rawBox?.height || 0}px`);
+  }
+
+  const feedPreviews = page.locator('[data-news-intake-feed-preview]');
+  if ((await feedPreviews.count()) !== 2) {
+    throw new Error('Feed Ready items did not render as two public-feed previews');
+  }
+  if ((await page.locator('article[aria-label="Public feed preview"]').count()) !== 2) {
+    throw new Error('Feed Ready cards no longer match the public-feed preview structure');
+  }
+
+  const diagnostics = page.locator('[data-news-intake-diagnostic]');
+  if ((await diagnostics.count()) !== 1) {
+    throw new Error('duplicate/excluded result did not render as one compact diagnostic');
+  }
+  if (await diagnostics.locator('input[type="checkbox"]').count()) {
+    throw new Error('read-only diagnostics still render a fake disabled selection checkbox');
+  }
+  if (await page.getByText('Not selectable', { exact: true }).count()) {
+    throw new Error('read-only diagnostics still expose the old Not selectable selection bar');
+  }
+
+  const feedBeforeDiagnostic = await page.evaluate(() => {
+    const feed = document.querySelector('[data-news-intake-feed-preview]');
+    const diagnostic = document.querySelector('[data-news-intake-diagnostic]');
+    if (!feed || !diagnostic) return false;
+    return Boolean(feed.compareDocumentPosition(diagnostic) & Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+  if (!feedBeforeDiagnostic) {
+    throw new Error('Feed Ready previews must render before duplicate/excluded diagnostics');
+  }
 
   await page.waitForFunction(
     () => document.body.textContent?.includes('3 matched · 2 ready · 0 selected'),
