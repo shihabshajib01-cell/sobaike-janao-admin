@@ -343,7 +343,20 @@ const decodeSerializedString = (raw: string) => {
   }
 };
 
-const extractSerializedArticleBody = (html: string, finalUrl: string) => {
+const articleTitleTokens = (value:string) =>
+  Array.from(new Set(
+    String(value||'')
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu,' ')
+      .split(/\s+/)
+      .filter((token)=>token.length>=3)
+  )).slice(0,16);
+
+const extractSerializedArticleBody = (
+  html: string,
+  finalUrl: string,
+  articleTitle=''
+) => {
   let host='';
   try { host=canonicalHostKey(new URL(finalUrl).hostname); } catch {}
 
@@ -358,16 +371,77 @@ const extractSerializedArticleBody = (html: string, finalUrl: string) => {
   ]);
   if(!allowedHosts.has(host)) return '';
 
-  const candidates:string[]=[];
-  for(const match of String(html||'').matchAll(
-    /"(?:articleBody|article_body|body|content|details|newsDetails|news_details|story|storyBody|story_body)"\s*:\s*"((?:\\.|[^"\\]){180,})"/gi
-  )){
-    const decoded=stripTags(decodeSerializedString(match[1]));
+  const titleTokens=articleTitleTokens(articleTitle);
+  const candidates:Array<{text:string;score:number}>=[];
+  const addCandidate=(raw:unknown,strong=false)=>{
+    const decoded=stripTags(String(raw||''));
+    if(decoded.length<300) return;
+
     const sentenceCount=(decoded.match(/[.!?।](?:\s|$)/g)||[]).length;
     const wordCount=decoded.split(/\s+/).filter(Boolean).length;
-    if(decoded.length>=300 && (sentenceCount>=2 || wordCount>=55)) candidates.push(decoded);
+    if(sentenceCount<2 && wordCount<55) return;
+
+    const normalized=decoded.toLowerCase();
+    const overlap=titleTokens.filter((token)=>normalized.includes(token)).length;
+    if(!strong && titleTokens.length>=3 && overlap===0) return;
+
+    const score=(strong?20:5) + overlap*3 + Math.min(12,Math.floor(decoded.length/300));
+    if(!candidates.some((candidate)=>candidate.text===decoded)){
+      candidates.push({text:decoded,score});
+    }
+  };
+
+  for(const match of String(html||'').matchAll(
+    /"(?:articleBody|article_body|storyBody|story_body|newsDetails|news_details)"\s*:\s*"((?:\\.|[^"\\]){180,})"/gi
+  )){
+    addCandidate(decodeSerializedString(match[1]),true);
   }
-  return candidates.sort((a,b)=>b.length-a.length)[0] || '';
+
+  for(const match of String(html||'').matchAll(
+    /"(?:body|content|details|story|text)"\s*:\s*"((?:\\.|[^"\\]){300,})"/gi
+  )){
+    addCandidate(decodeSerializedString(match[1]),false);
+  }
+
+  const jsonScripts=[
+    ...String(html||'').matchAll(
+      /<script\b[^>]*(?:type=["']application\/json["']|id=["']__NEXT_DATA__["'])[^>]*>([\s\S]*?)<\/script>/gi
+    ),
+  ].slice(0,20);
+
+  const strongKeys=/^(?:articleBody|article_body|storyBody|story_body|newsDetails|news_details)$/i;
+  const bodyKeys=/^(?:body|content|details|story|text|description)$/i;
+  const walk=(value:any,key='',depth=0)=>{
+    if(depth>12 || value===null || value===undefined) return;
+    if(typeof value==='string'){
+      if(strongKeys.test(key)) addCandidate(value,true);
+      else if(bodyKeys.test(key)) addCandidate(value,false);
+      return;
+    }
+    if(Array.isArray(value)){
+      for(const child of value.slice(0,80)) walk(child,key,depth+1);
+      return;
+    }
+    if(typeof value==='object'){
+      for(const [childKey,child] of Object.entries(value).slice(0,120)){
+        walk(child,childKey,depth+1);
+      }
+    }
+  };
+
+  for(const script of jsonScripts){
+    const raw=decodeEntities(script[1]).trim();
+    if(!raw) continue;
+    try{
+      walk(JSON.parse(raw),'',0);
+    }catch{
+      // Some publishers HTML-escape or wrap JSON state; the direct key
+      // patterns above still provide a safe fallback.
+    }
+  }
+
+  return candidates
+    .sort((left,right)=>right.score-left.score || right.text.length-left.text.length)[0]?.text || '';
 };
 
 const extractArticle = (html: string, finalUrl: string, publisherFallback: string) => {
@@ -418,7 +492,7 @@ const extractArticle = (html: string, finalUrl: string, publisherFallback: strin
 
   // Several publishers expose the complete article in serialized page state.
   // Prefer it when it is materially fuller than the visible paragraph scrape.
-  const serializedBody=extractSerializedArticleBody(html,finalUrl);
+  const serializedBody=extractSerializedArticleBody(html,finalUrl,title);
   if(serializedBody && serializedBody.length > Math.max(300,body.length+120)){
     body=serializedBody;
     extractionMethod='serialized_article_body';
