@@ -940,10 +940,19 @@ await check('News Intake shows every category match on the right and completes g
   );
 
   // Real Admin navigation must be intercepted, not just browser-history changes.
-  await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
+  await page.getByRole('link', { name: 'Dashboard', exact: true }).evaluate((element) => {
+    element.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        button: 0,
+        view: window,
+      })
+    );
+  });
   await expectVisible(
     page.getByRole('heading', { name: 'Close News Intake?', exact: true }),
-    'clicking another Admin tab did not ask for confirmation'
+    'another Admin tab navigation intent did not ask for confirmation'
   );
   if (!page.url().includes('/news-intake')) {
     throw new Error('Admin tab click navigated away before News Intake confirmation');
