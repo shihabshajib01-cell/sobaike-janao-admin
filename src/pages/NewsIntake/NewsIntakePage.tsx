@@ -194,7 +194,7 @@ export const NewsIntakePage: React.FC = () => {
     setPublishOutcomes([]);
     setWorkspaceError(null);
     setReviewingItem(null);
-    setIntakeStarted(false);
+    setIntakeStarted(true);
     setCloseConfirmOpen(false);
     setWorkspaceOpen(true);
   };
