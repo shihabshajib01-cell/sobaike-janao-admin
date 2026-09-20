@@ -17,6 +17,7 @@ import {
   isKnownPublisherArticlePath,
   isLegalFollowUpOnly,
   isLikelyForeignIncident,
+  isMultiIncidentArticle,
   isNonIncidentHeadline,
   isSubstantiveIncidentContext,
   isUnsupportedArticleType,
@@ -194,7 +195,18 @@ const extractJsonLdArticle = (html: string) => {
   }) || null;
 };
 
-const extractPublishedDate = (html: string, jsonLd: any) => {
+const dhakaTodayYmd = () => {
+  const parts=new Intl.DateTimeFormat('en-US',{
+    timeZone:'Asia/Dhaka',
+    year:'numeric',
+    month:'2-digit',
+    day:'2-digit',
+  }).formatToParts(new Date());
+  const read=(type:string)=>parts.find((part)=>part.type===type)?.value || '';
+  return read('year')+'-'+read('month')+'-'+read('day');
+};
+
+const extractPublishedDate = (html: string, jsonLd: any, finalUrl='') => {
   const timeTag=[...String(html||'').matchAll(/<time\b[^>]*>/gi)]
     .map((match)=>attr(match[0],'datetime'))
     .find(Boolean) || '';
@@ -243,6 +255,29 @@ const extractPublishedDate = (html: string, jsonLd: any) => {
     const normalized=normalizedDate(candidate);
     if(normalized)return normalized;
   }
+
+  let host='';
+  try { host=canonicalHostKey(new URL(finalUrl).hostname); } catch {}
+  if(host==='thedailystar.net'){
+    const monthPattern=Object.keys(DATE_MONTHS)
+      .sort((a,b)=>b.length-a.length)
+      .map((name)=>name.replace(/[-/\\^$*+?.()|[\]{}]/g,'\\$&'))
+      .join('|');
+    const explicitHeaderDate=visibleHeader.match(
+      new RegExp('(?:\\b\\d{1,2}\\s+(?:'+monthPattern+')\\s*,?\\s*20\\d{2}\\b|\\b(?:'+monthPattern+')\\s+\\d{1,2},?\\s+20\\d{2}\\b)','iu')
+    )?.[0] || '';
+    const explicitNormalized=normalizedDate(explicitHeaderDate);
+    if(explicitNormalized)return explicitNormalized;
+
+    const relative=visibleHeader.match(/\b(\d{1,2})\s*(SEC|MIN|HOUR)\(s\)/i);
+    if(relative){
+      const amount=Number(relative[1]);
+      const unit=String(relative[2]).toUpperCase();
+      if(Number.isFinite(amount) && amount>=0 && (unit!=='HOUR' || amount<24)){
+        return dhakaTodayYmd();
+      }
+    }
+  }
   return null;
 };
 
@@ -254,7 +289,20 @@ const decodeSerializedString = (raw: string) => {
   }
 };
 
-const extractSerializedArticleBody = (html: string, finalUrl: string) => {
+const articleTitleTokens = (value:string) =>
+  Array.from(new Set(
+    String(value||'')
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu,' ')
+      .split(/\s+/)
+      .filter((token)=>token.length>=3)
+  )).slice(0,16);
+
+const extractSerializedArticleBody = (
+  html: string,
+  finalUrl: string,
+  articleTitle=''
+) => {
   let host='';
   try { host=canonicalHostKey(new URL(finalUrl).hostname); } catch {}
 
@@ -269,16 +317,77 @@ const extractSerializedArticleBody = (html: string, finalUrl: string) => {
   ]);
   if(!allowedHosts.has(host)) return '';
 
-  const candidates:string[]=[];
-  for(const match of String(html||'').matchAll(
-    /"(?:articleBody|article_body|body|content|details|newsDetails|news_details|story|storyBody|story_body)"\s*:\s*"((?:\\.|[^"\\]){180,})"/gi
-  )){
-    const decoded=stripTags(decodeSerializedString(match[1]));
+  const titleTokens=articleTitleTokens(articleTitle);
+  const candidates:Array<{text:string;score:number}>=[];
+  const addCandidate=(raw:unknown,strong=false)=>{
+    const decoded=stripTags(String(raw||''));
+    if(decoded.length<300) return;
+
     const sentenceCount=(decoded.match(/[.!?।](?:\s|$)/g)||[]).length;
     const wordCount=decoded.split(/\s+/).filter(Boolean).length;
-    if(decoded.length>=300 && (sentenceCount>=2 || wordCount>=55)) candidates.push(decoded);
+    if(sentenceCount<2 && wordCount<55) return;
+
+    const normalized=decoded.toLowerCase();
+    const overlap=titleTokens.filter((token)=>normalized.includes(token)).length;
+    if(!strong && titleTokens.length>=3 && overlap===0) return;
+
+    const score=(strong?20:5) + overlap*3 + Math.min(12,Math.floor(decoded.length/300));
+    if(!candidates.some((candidate)=>candidate.text===decoded)){
+      candidates.push({text:decoded,score});
+    }
+  };
+
+  for(const match of String(html||'').matchAll(
+    /"(?:articleBody|article_body|storyBody|story_body|newsDetails|news_details)"\s*:\s*"((?:\\.|[^"\\]){180,})"/gi
+  )){
+    addCandidate(decodeSerializedString(match[1]),true);
   }
-  return candidates.sort((a,b)=>b.length-a.length)[0] || '';
+
+  for(const match of String(html||'').matchAll(
+    /"(?:body|content|details|story|text)"\s*:\s*"((?:\\.|[^"\\]){300,})"/gi
+  )){
+    addCandidate(decodeSerializedString(match[1]),false);
+  }
+
+  const jsonScripts=[
+    ...String(html||'').matchAll(
+      /<script\b[^>]*(?:type=["']application\/json["']|id=["']__NEXT_DATA__["'])[^>]*>([\s\S]*?)<\/script>/gi
+    ),
+  ].slice(0,20);
+
+  const strongKeys=/^(?:articleBody|article_body|storyBody|story_body|newsDetails|news_details)$/i;
+  const bodyKeys=/^(?:body|content|details|story|text|description)$/i;
+  const walk=(value:any,key='',depth=0)=>{
+    if(depth>12 || value===null || value===undefined) return;
+    if(typeof value==='string'){
+      if(strongKeys.test(key)) addCandidate(value,true);
+      else if(bodyKeys.test(key)) addCandidate(value,false);
+      return;
+    }
+    if(Array.isArray(value)){
+      for(const child of value.slice(0,80)) walk(child,key,depth+1);
+      return;
+    }
+    if(typeof value==='object'){
+      for(const [childKey,child] of Object.entries(value).slice(0,120)){
+        walk(child,childKey,depth+1);
+      }
+    }
+  };
+
+  for(const script of jsonScripts){
+    const raw=decodeEntities(script[1]).trim();
+    if(!raw) continue;
+    try{
+      walk(JSON.parse(raw),'',0);
+    }catch{
+      // Some publishers HTML-escape or wrap JSON state; the direct key
+      // patterns above still provide a safe fallback.
+    }
+  }
+
+  return candidates
+    .sort((left,right)=>right.score-left.score || right.text.length-left.text.length)[0]?.text || '';
 };
 
 const extractArticle = (html: string, finalUrl: string, publisherFallback: string) => {
@@ -303,7 +412,7 @@ const extractArticle = (html: string, finalUrl: string, publisherFallback: strin
   const canonicalRaw = linkHref(html,'canonical') || finalUrl;
   let canonicalUrl = finalUrl;
   try { canonicalUrl = new URL(canonicalRaw,finalUrl).toString(); } catch {}
-  const sourcePublishedDate = extractPublishedDate(html,jsonLd);
+  const sourcePublishedDate = extractPublishedDate(html,jsonLd,finalUrl);
   const articleMatch = html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i);
   let body = String(jsonLd?.articleBody || '').trim();
   let extractionMethod = body ? 'json_ld_article_body' : '';
@@ -329,7 +438,7 @@ const extractArticle = (html: string, finalUrl: string, publisherFallback: strin
 
   // Several publishers expose the complete article in serialized page state.
   // Prefer it when it is materially fuller than the visible paragraph scrape.
-  const serializedBody=extractSerializedArticleBody(html,finalUrl);
+  const serializedBody=extractSerializedArticleBody(html,finalUrl,title);
   if(serializedBody && serializedBody.length > Math.max(300,body.length+120)){
     body=serializedBody;
     extractionMethod='serialized_article_body';
@@ -571,15 +680,38 @@ const safeScanFetch = async (
         ? 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36'
         : 'SobaiKeJanao-NewsIntake/3.0 (+https://shobaikejanao.com/)';
 
-    response=await fetch(current.toString(),{
-      redirect:'manual',
-      headers:{
-        'User-Agent':requestUserAgent,
-        'Accept':accept,
-        'Accept-Language':'bn-BD,bn;q=0.9,en;q=0.8',
-      },
-      signal:AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    });
+    const maxAttempts=hostKey==='tbsnews.net' ? 2 : 1;
+    const timeoutMs=hostKey==='tbsnews.net' ? 12000 : FETCH_TIMEOUT_MS;
+    let lastFetchError:unknown=null;
+
+    for(let attempt=0;attempt<maxAttempts;attempt+=1){
+      try{
+        response=await fetch(current.toString(),{
+          redirect:'manual',
+          headers:{
+            'User-Agent':requestUserAgent,
+            'Accept':accept,
+            'Accept-Language':'bn-BD,bn;q=0.9,en;q=0.8',
+          },
+          signal:AbortSignal.timeout(timeoutMs),
+        });
+
+        if(response.status>=500 && attempt<maxAttempts-1){
+          try{ await response.body?.cancel(); }catch{}
+          await new Promise((resolve)=>setTimeout(resolve,250));
+          response=null;
+          continue;
+        }
+        lastFetchError=null;
+        break;
+      }catch(error){
+        lastFetchError=error;
+        if(attempt>=maxAttempts-1) throw error;
+        await new Promise((resolve)=>setTimeout(resolve,250));
+      }
+    }
+
+    if(!response && lastFetchError) throw lastFetchError;
 
     const postFetchAddresses=await resolvePublicHost(current.hostname);
     if(!addressSetsOverlap(validatedAddresses,postFetchAddresses)){
@@ -818,7 +950,7 @@ const processNewsIntakeRun = async (
             contentLanguage:language,
             action:'discovered',
             duplicateStatus:'unavailable',
-            reason:'Court, bail, remand, hearing, verdict, appeal, or trial follow-up was excluded because it does not report a new incident.',
+            reason:'Court, bail, remand, confession, hearing, verdict, appeal, or trial follow-up was excluded because it does not report a new incident.',
           });
           return;
         }
@@ -836,6 +968,25 @@ const processNewsIntakeRun = async (
             action:'discovered',
             duplicateStatus:'unavailable',
             reason:'No supported incident category matched in the article headline or summary with enough confidence.',
+          });
+          return;
+        }
+
+        if(isMultiIncidentArticle(article.title,`${article.excerpt} ${article.body.slice(0,5000)}`)){
+          await record({
+            itemKind:'article',
+            sourceHostname:source.hostname,
+            publisherName:article.publisherName,
+            canonicalUrl:article.canonicalUrl,
+            sourceTitle:article.title,
+            sourcePublishedDate:article.sourcePublishedDate||'',
+            contentLanguage:language,
+            segmentId:classification.segmentId,
+            subcategoryId:classification.subcategoryId,
+            confidence:classification.confidence,
+            action:'discovered',
+            duplicateStatus:'unavailable',
+            reason:'Source contains multiple distinct incidents; candidate was blocked from Feed Ready so separate incidents are never merged into one report.',
           });
           return;
         }
@@ -933,16 +1084,56 @@ const processNewsIntakeRun = async (
           if(focusedLocationError) throw new Error(focusedLocationError.message);
 
           if(
-            focusedLocation &&
-            String(focusedLocation.quality||'') !== 'multiple_locations'
+            focusedLocation?.quality === 'multiple_locations'
+            || focusedLocation?.locationScope === 'multi_location'
           ){
+            await record({
+              itemKind:'article',
+              sourceHostname:source.hostname,
+              publisherName:article.publisherName,
+              canonicalUrl:article.canonicalUrl,
+              sourceTitle:article.title,
+              sourcePublishedDate:article.sourcePublishedDate||'',
+              contentLanguage:language,
+              segmentId:classification.segmentId,
+              subcategoryId:classification.subcategoryId,
+              confidence:classification.confidence,
+              action:'discovered',
+              duplicateStatus:'unavailable',
+              reason:'Multiple distinct incident locations were detected; candidate was blocked from Feed Ready rather than guessing one location.',
+            });
+            return;
+          }
+
+          if(focusedLocation){
             location=focusedLocation;
-          } else {
+          }else{
             const {data:resolvedLocation,error:locationError}=await supabase.rpc(
               'admin_resolve_news_intake_location',
               {p_text:locationText,p_language:language}
             );
             if(locationError) throw new Error(locationError.message);
+            if(
+              resolvedLocation?.quality === 'multiple_locations'
+              || resolvedLocation?.locationScope === 'multi_location'
+            ){
+              await record({
+                itemKind:'article',
+                sourceHostname:source.hostname,
+                publisherName:article.publisherName,
+                canonicalUrl:article.canonicalUrl,
+                sourceTitle:article.title,
+                sourcePublishedDate:article.sourcePublishedDate||'',
+                contentLanguage:language,
+                segmentId:classification.segmentId,
+                subcategoryId:classification.subcategoryId,
+                confidence:classification.confidence,
+                action:'discovered',
+                duplicateStatus:'unavailable',
+                reason:'Multiple distinct incident locations were detected; candidate was blocked from Feed Ready rather than guessing one location.',
+              });
+              return;
+            }
             location=resolvedLocation;
           }
         }catch{
@@ -972,7 +1163,22 @@ const processNewsIntakeRun = async (
           || findLocation(locationText);
 
         if(location?.quality === 'multiple_locations' || location?.locationScope === 'multi_location'){
-          location=null;
+          await record({
+            itemKind:'article',
+            sourceHostname:source.hostname,
+            publisherName:article.publisherName,
+            canonicalUrl:article.canonicalUrl,
+            sourceTitle:article.title,
+            sourcePublishedDate:article.sourcePublishedDate||'',
+            contentLanguage:language,
+            segmentId:classification.segmentId,
+            subcategoryId:classification.subcategoryId,
+            confidence:classification.confidence,
+            action:'discovered',
+            duplicateStatus:'unavailable',
+            reason:'Multiple distinct incident locations were detected; candidate was blocked from Feed Ready rather than guessing one location.',
+          });
+          return;
         }else if(
           contextualDistrict?.district
           && location?.district

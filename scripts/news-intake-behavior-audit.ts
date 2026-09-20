@@ -13,6 +13,7 @@ import {
   isKnownPublisherArticlePath,
   isLegalFollowUpOnly,
   isLikelyForeignIncident,
+  isMultiIncidentArticle,
   isNonIncidentHeadline,
   isSafeSpecificLocationText,
   isSubstantiveIncidentContext,
@@ -81,6 +82,29 @@ assert.equal(
 );
 
 assert.equal(
+  isLegalFollowUpOnly('কুমিল্লায় অপ্রতিম হত্যা: তুহিন ও ২ কিশোরের জবানবন্দি'),
+  true,
+  'Confession-statement follow-ups must not create a fresh Child Safety report'
+);
+
+assert.equal(
+  isMultiIncidentArticle(
+    'নীলফামারীতে পৃথক সড়ক দুর্ঘটনায় দম্পতিসহ নিহত ৩',
+    'জেলার জলঢাকা ও কিশোরগঞ্জ উপজেলায় পৃথক দুর্ঘটনায় তিনজন নিহত হওয়ার ঘটনাটি ঘটে।'
+  ),
+  true,
+  'Two separate road incidents in one source must be blocked rather than merged into one report'
+);
+assert.equal(
+  isMultiIncidentArticle(
+    'সাতকানিয়ায় ট্রেনের ধাক্কায় নিহত ২',
+    'একটি ট্রেন দুর্ঘটনায় একই স্থানে দুইজন নিহত হয়েছেন।'
+  ),
+  false,
+  'One incident with multiple victims must remain eligible'
+);
+
+assert.equal(
   isFactCheckOrMisinformationStory(
     'সুনামগঞ্জে তিন শিশুর মৃত্যুর ঘটনাকে রাজনৈতিক হত্যা বলে প্রচার',
     'যাচাই করে দেখা গেছে দাবিটি সত্য নয়।'
@@ -122,6 +146,17 @@ assert.equal(
   'Narrative crime-scene actions must never become a specific location'
 );
 assert.equal(isSafeSpecificLocationText('Mirpur Section 6, Dhaka','Dhaka'),true,'Named source-grounded locations must remain eligible');
+
+assert.equal(
+  isSafeSpecificLocationText('সেপ্টেম্বর বিকেলে জেলার জলঢাকা ও কিশোরগঞ্জ উপজেলা','Nilphamari'),
+  false,
+  'Date/time narrative with multiple upazilas must never become a specific incident location'
+);
+assert.equal(
+  isSafeSpecificLocationText('দিঘির পাড় কোল্ড স্টোরেজ সংলগ্ন এলাকা','Nilphamari'),
+  true,
+  'A single named source-grounded local place must remain eligible'
+);
 
 const feedReadyContext=buildFeedReadyIncidentContext({
   excerpt:'',

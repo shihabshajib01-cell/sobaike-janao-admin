@@ -36,6 +36,7 @@ const factcheckLocationQuality = read('supabase/migrations/20260920143209_news_i
 const legacyQualityCleanup = read('supabase/migrations/20260920143848_news_intake_legacy_quality_cleanup.sql');
 const oneClickContract = read('supabase/migrations/20260920175318_news_intake_one_click_zero_issue_contract.sql');
 const subcategoryBuilderContract = read('supabase/migrations/20260920183600_news_intake_subcategory_builder_contract.sql');
+const locationSemanticGuard = read('supabase/migrations/20260920193000_news_intake_location_semantic_guard.sql');
 const automationCore = read('supabase/functions/_shared/newsIntakeAutomationCore.ts');
 const subcategoryBuilders = read('supabase/functions/_shared/newsIntakeSubcategoryBuilders.ts');
 const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
@@ -115,6 +116,7 @@ for (const needle of [
   'NON_PROPERTY_SNATCHING_RE',
   'THEFT_ALLEGATION_VIOLENCE_RE',
   'isLikelyForeignIncident',
+  'isMultiIncidentArticle',
   'isNonIncidentHeadline',
   'buildFeedReadyIncidentContext',
   'isSafeSpecificLocationText',
@@ -354,6 +356,16 @@ for (const needle of [
 }
 
 for (const needle of [
+  'news_intake_specific_location_text_is_safe',
+  'সেপ্টেম্বর',
+  'জেলার',
+  'উপজেলা',
+  'service_role',
+]) {
+  requireText(locationSemanticGuard, needle, 'News Intake semantic location guard');
+}
+
+for (const needle of [
   'guard_sourced_report_publish_readiness',
   'trg_guard_sourced_report_publish_readiness',
   'SOURCE_GROUNDING_REVIEW_REQUIRED',
@@ -419,6 +431,9 @@ for (const needle of [
   'const MAX_ARTICLES_PER_SOURCE = 10;',
   'const MAX_TOTAL_ARTICLES = 70;',
   'isLikelyForeignIncident',
+  'isMultiIncidentArticle',
+  'Source contains multiple distinct incidents; candidate was blocked from Feed Ready',
+  'Multiple distinct incident locations were detected; candidate was blocked from Feed Ready',
   'isNonIncidentHeadline',
   'admin_check_source_duplicate',
   "triggerType==='manual'",
@@ -435,8 +450,14 @@ for (const needle of [
   'isLegalFollowUpOnly',
   'isFactCheckOrMisinformationStory',
   'serialized_article_body',
+  'articleTitleTokens',
+  '__NEXT_DATA__',
   "hostKey==='bdnews24.com' || hostKey==='bangla.bdnews24.com'",
   "hostKey==='thedailystar.net'",
+  "hostKey==='tbsnews.net' ? 2 : 1",
+  "hostKey==='tbsnews.net' ? 12000",
+  'dhakaTodayYmd',
+  "unit!=='HOUR' || amount<24",
   "extractionStatus:'complete'",
   "substantiveContext:true",
   "currentIncident:true",
@@ -449,7 +470,7 @@ for (const needle of [
   'buildNewsIntakeSubcategoryReport',
   'missingNewsIntakeSubcategoryFields',
   'Current report form requirements could not be fully grounded from the source',
-  'Court, bail, remand, hearing, verdict, appeal, or trial follow-up was excluded',
+  'Court, bail, remand, confession, hearing, verdict, appeal, or trial follow-up was excluded',
   'Fact-check, misinformation, or debunking article was excluded',
 ]) {
   requireText(scanner, needle, 'automated News Intake scanner');
@@ -585,7 +606,7 @@ for (const needle of [
   'FeedReadyReportPreview',
   'stagedReport={stagedReport || undefined}',
   'previewId={`staged-${item.id}`}',
-  'matchedItems.map((item)',
+  'orderedMatchedItems.map((item)',
   'workspaceCounts',
   'workspaceCounts.published',
   'rawNewsItems',
@@ -616,7 +637,6 @@ for (const needle of [
   'canManuallyReviewItem',
   'if (!canManuallyReviewItem(item))',
   'Automatic excluded matches are diagnostic results, not a manual-data-entry',
-  'Review required',
   'Needs review',
   'reviewingItem',
   'handleReviewSaved',
@@ -651,8 +671,8 @@ for (const needle of [
   requireText(page, needle, 'News Intake dashboard workspace');
 }
 
-if (!page.includes('matchedItems.map((item)')) {
-  errors.push('Every category-matched item must render in the right review panel.');
+if (!page.includes('orderedMatchedItems.map((item)')) {
+  errors.push('Every category-matched item must render in the right panel, with Feed Ready previews ordered before diagnostics.');
 }
 
 if (/const canReview[\s\S]{0,260}isExcludedItem\(item\)/.test(page)) {
@@ -664,6 +684,19 @@ if (scanner.includes('const buildReportPayload =')) {
 }
 if (!scanner.includes('newsIntakeSubcategoryBuilders.ts')) {
   errors.push('News Intake scanner must route classified articles through the proven subcategory builder registry.');
+}
+
+for (const needle of [
+  'data-news-intake-raw-item',
+  'data-news-intake-feed-preview',
+  'data-news-intake-diagnostic',
+  'No Feed Ready reports in this run',
+  'orderedMatchedItems',
+]) {
+  requireText(page, needle, 'News Intake Step 2 compact/feed-preview UI');
+}
+if (page.includes('padding="sm" className="h-full"')) {
+  errors.push('Raw News cards must size to content instead of stretching to the panel height.');
 }
 if (page.includes('Historical review item') || page.includes('Historical review')) {
   errors.push('News Intake must not label current excluded matches as historical review work.');
