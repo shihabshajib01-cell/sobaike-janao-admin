@@ -159,8 +159,8 @@ const stripTags = (value: unknown) => decodeEntities(String(value || '')
   .trim());
 
 const MAX_SOURCES = 20;
-const MAX_ARTICLES_PER_SOURCE = 6;
-const MAX_TOTAL_ARTICLES = 54;
+const MAX_ARTICLES_PER_SOURCE = 10;
+const MAX_TOTAL_ARTICLES = 70;
 const FETCH_TIMEOUT_MS = 7000;
 
 const extractJsonLdArticle = (html: string) => {
