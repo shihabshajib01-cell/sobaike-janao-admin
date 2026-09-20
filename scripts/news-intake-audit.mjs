@@ -380,6 +380,8 @@ for (const needle of [
   "navigationBlocker.state === 'blocked'",
   'navigationBlocker.reset()',
   'navigationBlocker.proceed()',
+  'onNavigateToReport',
+  'navigateFromWorkspace',
   'switching to another Admin tab',
   'closeConfirmOpen',
   'Close News Intake?',
