@@ -24,6 +24,7 @@ import {
   NewsIntakeAutomationDashboard,
   NewsIntakeAutomationItem,
   NewsIntakeAutomationRun,
+  NewsIntakePayload,
   NewsIntakeTaxonomy,
 } from '@/types/NewsIntake';
 import { FeedReadyReportPreview } from './FeedReadyReportPreview';
@@ -52,6 +53,38 @@ interface PublishOutcome {
   ok: boolean;
   error?: string;
 }
+
+const NEWS_INTAKE_WORKSPACE_SESSION_KEY = 'sobaike-news-intake-workspace-v2';
+
+type WorkspaceSessionSnapshot = {
+  open: boolean;
+  intakeStarted: boolean;
+  step: WorkspaceStep;
+  mode: IntakeMode;
+  selectedRunId: string | null;
+  selectedKeys: string[];
+};
+
+const readWorkspaceSession = (): WorkspaceSessionSnapshot | null => {
+  try {
+    const raw = window.sessionStorage.getItem(NEWS_INTAKE_WORKSPACE_SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<WorkspaceSessionSnapshot>;
+    if (parsed.open !== true || parsed.intakeStarted !== true) return null;
+    return {
+      open: true,
+      intakeStarted: true,
+      step: parsed.step === 2 || parsed.step === 3 ? parsed.step : 1,
+      mode: parsed.mode === 'manual' ? 'manual' : 'automatic',
+      selectedRunId: parsed.selectedRunId ? String(parsed.selectedRunId) : null,
+      selectedKeys: Array.isArray(parsed.selectedKeys)
+        ? parsed.selectedKeys.map(String)
+        : [],
+    };
+  } catch {
+    return null;
+  }
+};
 
 const articleItems = (run: NewsIntakeAutomationRun | null) =>
   (run?.items || []).filter((item) => item.itemKind !== 'source');
@@ -96,6 +129,44 @@ export const NewsIntakePage: React.FC = () => {
     subcategories: [],
   });
   const allowNavigationRef = useRef(false);
+  const workspaceSessionRestoredRef = useRef(false);
+  const restoredRunCardsRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (workspaceSessionRestoredRef.current) return;
+    workspaceSessionRestoredRef.current = true;
+    const snapshot = readWorkspaceSession();
+    if (!snapshot) return;
+    setWorkspaceOpen(true);
+    setIntakeStarted(true);
+    setStep(snapshot.step);
+    setMode(snapshot.mode);
+    setSelectedRunId(snapshot.selectedRunId);
+    setSelectedReportIds(snapshot.selectedKeys);
+  }, []);
+
+  useEffect(() => {
+    if (!workspaceOpen || !intakeStarted) return;
+    const snapshot: WorkspaceSessionSnapshot = {
+      open: true,
+      intakeStarted: true,
+      step,
+      mode,
+      selectedRunId,
+      selectedKeys: selectedReportIds,
+    };
+    window.sessionStorage.setItem(
+      NEWS_INTAKE_WORKSPACE_SESSION_KEY,
+      JSON.stringify(snapshot)
+    );
+  }, [
+    workspaceOpen,
+    intakeStarted,
+    step,
+    mode,
+    selectedRunId,
+    selectedReportIds,
+  ]);
 
   const navigationBlocker = useBlocker(
     useCallback(
@@ -159,6 +230,7 @@ export const NewsIntakePage: React.FC = () => {
 
       event.preventDefault();
       event.stopPropagation();
+      event.stopImmediatePropagation();
       setPendingNavigationPath(nextRoute);
       setCloseConfirmOpen(true);
     };
@@ -234,7 +306,10 @@ export const NewsIntakePage: React.FC = () => {
     }).format(date);
   };
 
-  const loadReportCards = async (run: NewsIntakeAutomationRun) => {
+  const loadReportCards = async (
+    run: NewsIntakeAutomationRun,
+    preserveSelection = false
+  ) => {
     const reportIds = Array.from(
       new Set(
         run.items
@@ -243,7 +318,7 @@ export const NewsIntakePage: React.FC = () => {
       )
     );
 
-    setSelectedReportIds([]);
+    if (!preserveSelection) setSelectedReportIds([]);
     setRawFilter('all');
     setReportMap({});
     setReportLoadErrors([]);
@@ -268,6 +343,21 @@ export const NewsIntakePage: React.FC = () => {
       setLoadingReports(false);
     }
   };
+
+  useEffect(() => {
+    if (
+      !workspaceOpen ||
+      !intakeStarted ||
+      step < 2 ||
+      !selectedRun ||
+      !workspaceSessionRestoredRef.current
+    ) {
+      return;
+    }
+    if (restoredRunCardsRef.current === selectedRun.runId) return;
+    restoredRunCardsRef.current = selectedRun.runId;
+    void loadReportCards(selectedRun, true);
+  }, [workspaceOpen, intakeStarted, step, selectedRun?.runId]);
 
   const openWorkspace = () => {
     allowNavigationRef.current = false;
@@ -372,6 +462,10 @@ export const NewsIntakePage: React.FC = () => {
     const answers = (
       complaint as Complaint & { customFieldAnswers?: Record<string, unknown> }
     ).customFieldAnswers;
+    const trustedSourceAuto =
+      answers?.trustedSourceAuto === true &&
+      answers?.sourceTruthMode === 'approved_publisher';
+    if (trustedSourceAuto) return false;
     const privacyReviewRequired = privacyReviewSubcategories.has(complaint.subcategoryId);
     return (
       answers?.newsIntakeReviewRequired === true ||
@@ -379,7 +473,14 @@ export const NewsIntakePage: React.FC = () => {
     );
   };
 
+  const isStagedTrustedCandidate = (item: NewsIntakeAutomationItem) =>
+    item.action === 'created_draft' &&
+    !item.reportId &&
+    item.duplicateStatus === 'clear' &&
+    Boolean(item.reviewPayload?.source?.canonicalUrl && item.reviewPayload?.report);
+
   const isCurrentFeedReady = (item: NewsIntakeAutomationItem) => {
+    if (isStagedTrustedCandidate(item)) return true;
     if (item.action !== 'created_draft' || !item.reportId) return false;
     const complaint = complaintForItem(item);
     return Boolean(
@@ -389,6 +490,9 @@ export const NewsIntakePage: React.FC = () => {
         !complaintNeedsReview(complaint)
     );
   };
+
+  const selectionKeyForItem = (item: NewsIntakeAutomationItem) =>
+    item.reportId ? `report:${String(item.reportId)}` : `item:${item.id}`;
 
   const isCurrentReviewItem = (item: NewsIntakeAutomationItem) => {
     if (item.action === 'needs_review') return true;
@@ -450,21 +554,21 @@ export const NewsIntakePage: React.FC = () => {
     return rawNewsItems;
   }, [rawFilter, rawNewsItems]);
 
-  const eligibleReportIds = useMemo(
-    () => feedReadyItems.map((item) => String(item.reportId)).filter(Boolean),
+  const eligibleSelectionKeys = useMemo(
+    () => feedReadyItems.map(selectionKeyForItem),
     [feedReadyItems]
   );
 
-  const toggleReport = (reportId: string) => {
+  const toggleSelection = (selectionKey: string) => {
     setSelectedReportIds((current) =>
-      current.includes(reportId)
-        ? current.filter((id) => id !== reportId)
-        : [...current, reportId]
+      current.includes(selectionKey)
+        ? current.filter((id) => id !== selectionKey)
+        : [...current, selectionKey]
     );
   };
 
   const selectAllEligible = () => {
-    setSelectedReportIds(eligibleReportIds);
+    setSelectedReportIds(eligibleSelectionKeys);
   };
 
   const cancelWorkspaceClose = () => {
@@ -479,6 +583,7 @@ export const NewsIntakePage: React.FC = () => {
     const nextPath = pendingNavigationPath;
     setPendingNavigationPath(null);
     setCloseConfirmOpen(false);
+    window.sessionStorage.removeItem(NEWS_INTAKE_WORKSPACE_SESSION_KEY);
     setWorkspaceOpen(false);
     setReviewingItem(null);
     setIntakeStarted(false);
@@ -496,6 +601,7 @@ export const NewsIntakePage: React.FC = () => {
 
   const navigateFromWorkspace = (to: string) => {
     allowNavigationRef.current = true;
+    window.sessionStorage.removeItem(NEWS_INTAKE_WORKSPACE_SESSION_KEY);
     setPendingNavigationPath(null);
     setCloseConfirmOpen(false);
     setWorkspaceOpen(false);
@@ -561,23 +667,60 @@ export const NewsIntakePage: React.FC = () => {
   const handlePublishSelected = async () => {
     if (selectedReportIds.length === 0) return;
 
+    const selectedItemsForPublish = matchedItems.filter(
+      (item) =>
+        isCurrentFeedReady(item) &&
+        selectedReportIds.includes(selectionKeyForItem(item))
+    );
+    if (selectedItemsForPublish.length === 0) return;
+
     setPublishing(true);
     setWorkspaceError(null);
     const outcomes: PublishOutcome[] = [];
 
-    for (const reportId of selectedReportIds) {
-      const complaint = reportMap[reportId];
+    for (const item of selectedItemsForPublish) {
+      const existingReportId = item.reportId ? String(item.reportId) : '';
+      const complaint = existingReportId ? reportMap[existingReportId] : null;
       const title =
-        complaint?.titleBn || complaint?.titleEn || reportId;
+        complaint?.titleBn ||
+        complaint?.titleEn ||
+        item.sourceTitle ||
+        existingReportId ||
+        item.id;
+
       try {
-        const result = await complaintApi.publishComplaint(reportId);
-        if (result.complaint.status !== 'published') {
-          throw new Error('The report was not confirmed as published.');
+        if (existingReportId) {
+          const result = await complaintApi.publishComplaint(existingReportId);
+          if (result.complaint.status !== 'published') {
+            throw new Error('The report was not confirmed as published.');
+          }
+          outcomes.push({ reportId: existingReportId, title, ok: true });
+          continue;
         }
-        outcomes.push({ reportId, title, ok: true });
+
+        if (!item.reviewPayload) {
+          throw new Error('Approved-source payload is missing for this matched report.');
+        }
+
+        const processed = await newsIntakeApi.publishTrustedCandidate(
+          item.reviewPayload as NewsIntakePayload
+        );
+        if (!processed.reportId || processed.published !== true) {
+          throw new Error(
+            processed.action === 'skip_duplicate'
+              ? 'The source already exists but is not yet published.'
+              : 'The approved-source report was not confirmed as published.'
+          );
+        }
+
+        outcomes.push({
+          reportId: processed.reportId,
+          title,
+          ok: true,
+        });
       } catch (error: unknown) {
         outcomes.push({
-          reportId,
+          reportId: existingReportId || item.id,
           title,
           ok: false,
           error: error instanceof Error ? error.message : 'Publication failed.',
@@ -617,6 +760,7 @@ export const NewsIntakePage: React.FC = () => {
       'Exact source URL already exists in the report database.': 'এই একই উৎস URL ইতিমধ্যে রিপোর্ট ডাটাবেসে আছে।',
       'Possible same incident detected. No new report was created automatically.': 'সম্ভবত একই ঘটনা আগে থেকেই আছে। নতুন রিপোর্ট স্বয়ংক্রিয়ভাবে তৈরি করা হয়নি।',
       'Source-grounded draft created; publication remains a separate admin action.': 'উৎসভিত্তিক ড্রাফট তৈরি হয়েছে; প্রকাশ করা এখনও আলাদা অ্যাডমিন অ্যাকশন।',
+      'Approved-source report is ready for one-click publication.': 'অনুমোদিত সোর্সের রিপোর্ট এক ক্লিকে প্রকাশের জন্য প্রস্তুত।',
       'Draft created, but the final server duplicate evaluation requires review before publication.': 'ড্রাফট তৈরি হয়েছে, তবে প্রকাশের আগে সার্ভারের চূড়ান্ত ডুপ্লিকেট যাচাই রিভিউ করতে হবে।',
       'Privacy-sensitive category detected. Review the public title, summary, location, and identifying details before creating or publishing a report.': 'গোপনীয়তা-সংবেদনশীল ক্যাটাগরি পাওয়া গেছে। রিপোর্ট তৈরি বা প্রকাশের আগে পাবলিক শিরোনাম, সারাংশ, অবস্থান ও পরিচয়সংক্রান্ত তথ্য রিভিউ করুন।',
       'Potential retaliatory or mob violence following a theft allegation; confirm the incident category manually.': 'চুরির অভিযোগকে ঘিরে প্রতিশোধমূলক বা মব সহিংসতা হতে পারে; ক্যাটাগরি ম্যানুয়ালি নিশ্চিত করুন।',
@@ -710,16 +854,16 @@ export const NewsIntakePage: React.FC = () => {
       helper: latestRun ? formatDateTime(latestRun.startedAt) : isBn ? 'এখনও স্ক্যান হয়নি' : 'No scan yet',
     },
     {
-      label: isBn ? 'তৈরি হওয়া ড্রাফট' : 'Drafts created',
-      value: latestRun?.createdCount || 0,
-      helper: isBn
-        ? 'সর্বশেষ রানে তৈরি; বর্তমান প্রকাশযোগ্যতা রিভিউতে যাচাই হয়'
-        : 'Created in the latest run; current eligibility is checked in Review',
+      label: isBn ? 'ক্যাটাগরি ম্যাচ' : 'Category matches',
+      value: latestRun?.classifiedCount || 0,
+      helper: isBn ? 'সর্বশেষ রানে শনাক্ত' : 'Detected in the latest run',
     },
     {
-      label: isBn ? 'রিভিউ প্রয়োজন' : 'Needs review',
-      value: latestRun?.reviewCount || 0,
-      helper: isBn ? 'অনিশ্চিত তথ্য স্বয়ংক্রিয়ভাবে প্রকাশ হয় না' : 'Uncertain items never auto-publish',
+      label: isBn ? 'প্রস্তুত / প্রকাশিত' : 'Ready / published',
+      value: latestRun?.createdCount || 0,
+      helper: isBn
+        ? 'ম্যানুয়াল রানে নির্বাচনযোগ্য; অটোমেটিক রানে সরাসরি প্রকাশিত'
+        : 'Selectable in manual runs; published directly in automatic runs',
     },
   ];
 
@@ -766,8 +910,8 @@ export const NewsIntakePage: React.FC = () => {
         title={isBn ? 'নিউজ ইনটেক' : 'News Intake'}
         description={
           isBn
-            ? 'বিশ্বস্ত সংবাদ সোর্স স্ক্যান করুন, ক্যাটাগরি-ম্যাচড সংবাদ রিভিউ করুন এবং শুধু প্রস্তুত রিপোর্ট প্রকাশ করুন।'
-            : 'Scan trusted news sources, review category-matched stories, and publish only reports that are ready.'
+            ? 'বিশ্বস্ত সংবাদ সোর্স স্ক্যান করুন, ক্যাটাগরি-ম্যাচড রিপোর্ট নির্বাচন করুন এবং এক ক্লিকে ফিডে প্রকাশ করুন।'
+            : 'Scan trusted news sources, select category-matched reports, and publish them to the feed in one click.'
         }
         actions={
           <Button
@@ -810,8 +954,8 @@ export const NewsIntakePage: React.FC = () => {
                 <CardTitle>{isBn ? 'ইনটেক অটোমেশন' : 'Intake automation'}</CardTitle>
                 <CardDescription>
                   {isBn
-                    ? 'ব্যাকগ্রাউন্ড স্ক্যান চলবে, কিন্তু কোনো রিপোর্ট অ্যাডমিন নির্বাচন ছাড়া প্রকাশ হবে না।'
-                    : 'Background scanning continues, but no report is published without an admin selection.'}
+                    ? 'ম্যানুয়াল স্ক্যানে আপনি রিপোর্ট নির্বাচন করে প্রকাশ করবেন; ৩৬ ঘণ্টার অটোমেশন অনুমোদিত সোর্সের নতুন ম্যাচ স্বয়ংক্রিয়ভাবে প্রকাশ করবে।'
+                    : 'Manual scans wait for your selection; the 36-hour automation publishes new approved-source matches automatically.'}
                 </CardDescription>
               </div>
               <Tag tone={dashboard.automation.enabled ? 'success' : 'neutral'}>
@@ -952,8 +1096,8 @@ export const NewsIntakePage: React.FC = () => {
               {[
                 [isBn ? 'সংবাদ' : 'News', run.discoveredCount],
                 [isBn ? 'শ্রেণিবদ্ধ' : 'Classified', run.classifiedCount],
-                [isBn ? 'ড্রাফট' : 'Drafts', run.createdCount],
-                [isBn ? 'রিভিউ' : 'Review', run.reviewCount],
+                [isBn ? 'প্রস্তুত / প্রকাশিত' : 'Ready / Published', run.createdCount],
+                [isBn ? 'ডুপ্লিকেট' : 'Duplicates', run.duplicateCount],
                 [isBn ? 'ত্রুটি' : 'Errors', run.errorCount],
               ].map(([label, value]) => (
                 <div key={String(label)}>
@@ -968,7 +1112,7 @@ export const NewsIntakePage: React.FC = () => {
                 size="sm"
                 onClick={() => void openRunForReview(run)}
               >
-                {isBn ? 'রিভিউ করুন' : 'Review'}
+                {isBn ? 'খুলুন' : 'Open'}
               </Button>
             </div>
           ))}
@@ -991,8 +1135,8 @@ export const NewsIntakePage: React.FC = () => {
         title={isBn ? 'নিউজ ইনটেক ওয়ার্কস্পেস' : 'News Intake Workspace'}
         description={
           isBn
-            ? 'সংবাদ খুঁজুন → সব ক্যাটাগরি-ম্যাচড রিপোর্ট ডান পাশে দেখুন → প্রয়োজন হলে ফর্মে রিভিউ করুন → প্রস্তুত রিপোর্ট নির্বাচন করে প্রকাশ করুন।'
-            : 'Find news → see every category-matched report on the right → review flagged fields when needed → select and publish ready reports.'
+            ? 'সংবাদ খুঁজুন → অনুমোদিত সব ক্যাটাগরি-ম্যাচড রিপোর্ট ডান পাশে দেখুন → প্রয়োজনীয় রিপোর্ট নির্বাচন করুন → ফিডে প্রকাশ করুন।'
+            : 'Find news → see every approved category match on the right → select the reports you want → publish them to the feed.'
         }
         footer={modalFooter}
       >
@@ -1001,7 +1145,7 @@ export const NewsIntakePage: React.FC = () => {
             <div className="flex min-w-max items-center gap-2">
             {[
               [1, isBn ? '১. সংবাদ খুঁজুন' : '1. Find news'],
-              [2, isBn ? '২. রিভিউ ও নির্বাচন' : '2. Review & select'],
+              [2, isBn ? '২. রিপোর্ট নির্বাচন' : '2. Select reports'],
               [3, isBn ? '৩. প্রকাশের ফলাফল' : '3. Publish results'],
             ].map(([number, label]) => (
               <div
@@ -1170,7 +1314,7 @@ export const NewsIntakePage: React.FC = () => {
                       {selectedItems.length} {isBn ? 'টি সংবাদ পাওয়া গেছে' : 'news items found'}
                     </Tag>
                     <Tag tone="success">
-                      {eligibleReportIds.length} {isBn ? 'টি প্রকাশযোগ্য' : 'ready to publish'}
+                      {eligibleSelectionKeys.length} {isBn ? 'টি প্রকাশযোগ্য' : 'ready to publish'}
                     </Tag>
                   </div>
                   <p className="mt-1 type-meta text-slate-500 dark:text-slate-400">
@@ -1191,7 +1335,6 @@ export const NewsIntakePage: React.FC = () => {
                   {isBn ? 'ফলাফল:' : 'Outcome:'}
                 </p>
                 <Tag tone="success">{workspaceCounts.ready} {isBn ? 'প্রস্তুত' : 'ready'}</Tag>
-                <Tag tone="warning">{workspaceCounts.review} {isBn ? 'রিভিউ' : 'review'}</Tag>
                 {workspaceCounts.published > 0 && (
                   <Tag tone="success">{workspaceCounts.published} {isBn ? 'প্রকাশিত' : 'published'}</Tag>
                 )}
@@ -1227,7 +1370,7 @@ export const NewsIntakePage: React.FC = () => {
                       variant="secondary"
                       size="sm"
                       onClick={selectAllEligible}
-                      disabled={eligibleReportIds.length === 0 || loadingReports}
+                      disabled={eligibleSelectionKeys.length === 0 || loadingReports}
                     >
                       {isBn ? 'সব নির্বাচন করুন' : 'Select All'}
                     </Button>
@@ -1386,7 +1529,7 @@ export const NewsIntakePage: React.FC = () => {
                         variant="secondary"
                         size="sm"
                           onClick={selectAllEligible}
-                        disabled={eligibleReportIds.length === 0 || loadingReports}
+                        disabled={eligibleSelectionKeys.length === 0 || loadingReports}
                       >
                         {isBn ? 'সব নির্বাচন করুন' : 'Select All'}
                       </Button>
@@ -1434,6 +1577,7 @@ export const NewsIntakePage: React.FC = () => {
                           const complaint = reportId ? reportMap[reportId] : null;
                           const ready = isCurrentFeedReady(item);
                           const published = isCurrentPublishedItem(item);
+                          const selectionKey = selectionKeyForItem(item);
 
                           if (complaint && (ready || published)) {
                             return (
@@ -1441,9 +1585,9 @@ export const NewsIntakePage: React.FC = () => {
                                 key={item.id}
                                 complaint={complaint}
                                 isBn={isBn}
-                                selected={ready && selectedReportIds.includes(reportId)}
+                                selected={ready && selectedReportIds.includes(selectionKey)}
                                 publishable={ready}
-                                onToggle={() => ready && toggleReport(reportId)}
+                                onToggle={() => ready && toggleSelection(selectionKey)}
                                 disabled={publishing || !ready}
                                 categoryLabelBn={
                                   taxonomy.segments.find((segment) => segment.id === complaint.categoryId)?.nameBn
@@ -1456,9 +1600,12 @@ export const NewsIntakePage: React.FC = () => {
                           }
 
                           const canReview =
-                            item.action === 'needs_review' ||
-                            isExcludedItem(item) ||
-                            (item.action === 'created_draft' && isCurrentReviewItem(item));
+                            !ready &&
+                            (
+                              item.action === 'needs_review' ||
+                              isExcludedItem(item) ||
+                              (item.action === 'created_draft' && isCurrentReviewItem(item))
+                            );
 
                           return (
                             <Card key={item.id} padding="sm">
@@ -1467,31 +1614,41 @@ export const NewsIntakePage: React.FC = () => {
                                   <Checkbox
                                     id={`news-intake-match-${item.id}`}
                                     label={
-                                      canReview
+                                      ready
                                         ? isBn
-                                          ? 'রিভিউ শেষে নির্বাচন করা যাবে'
-                                          : 'Review before selection'
-                                        : isBn
-                                          ? 'এই আইটেম নির্বাচনযোগ্য নয়'
-                                          : 'Not selectable'
+                                          ? 'প্রকাশের জন্য নির্বাচন করুন'
+                                          : 'Select for publishing'
+                                        : canReview
+                                          ? isBn
+                                            ? 'ঐতিহাসিক রিভিউ আইটেম'
+                                            : 'Historical review item'
+                                          : isBn
+                                            ? 'এই আইটেম নির্বাচনযোগ্য নয়'
+                                            : 'Not selectable'
                                     }
-                                    checked={false}
-                                    onChange={() => undefined}
-                                    disabled
+                                    checked={ready && selectedReportIds.includes(selectionKey)}
+                                    onChange={() => ready && toggleSelection(selectionKey)}
+                                    disabled={publishing || !ready}
                                     aria-label={
-                                      canReview
+                                      ready
                                         ? isBn
-                                          ? `${item.sourceTitle || 'রিপোর্ট'} রিভিউ শেষে নির্বাচন করা যাবে`
-                                          : `Review ${item.sourceTitle || 'report'} before selection`
-                                        : isBn
-                                          ? `${item.sourceTitle || 'রিপোর্ট'} নির্বাচনযোগ্য নয়`
-                                          : `${item.sourceTitle || 'Report'} is not selectable`
+                                          ? `${item.sourceTitle || 'রিপোর্ট'} প্রকাশের জন্য নির্বাচন করুন`
+                                          : `Select ${item.sourceTitle || 'report'} for publishing`
+                                        : canReview
+                                          ? isBn
+                                            ? `${item.sourceTitle || 'রিপোর্ট'} পুরোনো রিভিউ আইটেম`
+                                            : `${item.sourceTitle || 'report'} is a historical review item`
+                                          : isBn
+                                            ? `${item.sourceTitle || 'রিপোর্ট'} নির্বাচনযোগ্য নয়`
+                                            : `${item.sourceTitle || 'Report'} is not selectable`
                                     }
                                   />
-                                  <Tag tone={canReview ? 'warning' : 'neutral'}>
-                                    {canReview
-                                      ? isBn ? 'রিভিউ প্রয়োজন' : 'Review required'
-                                      : isBn ? 'নির্বাচনযোগ্য নয়' : 'Not selectable'}
+                                  <Tag tone={ready ? 'success' : canReview ? 'warning' : 'neutral'}>
+                                    {ready
+                                      ? isBn ? 'প্রকাশের জন্য প্রস্তুত' : 'Ready to publish'
+                                      : canReview
+                                        ? isBn ? 'পুরোনো রিভিউ' : 'Historical review'
+                                        : isBn ? 'নির্বাচনযোগ্য নয়' : 'Not selectable'}
                                   </Tag>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2">
@@ -1513,7 +1670,7 @@ export const NewsIntakePage: React.FC = () => {
                                 </div>
                                 {item.reason && (
                                   <FeedbackNotice
-                                    tone={canReview ? 'warning' : 'neutral'}
+                                    tone={ready ? 'success' : canReview ? 'warning' : 'neutral'}
                                     compact
                                   >
                                     <p>{reasonLabel(item.reason)}</p>
@@ -1529,7 +1686,7 @@ export const NewsIntakePage: React.FC = () => {
                                     <ExternalLink className="size-3.5" />
                                     {isBn ? 'মূল সংবাদ খুলুন' : 'Open source'}
                                   </a>
-                                  {canReview && (
+                                  {canReview && !ready && (
                                     <Button
                                       variant="primary"
                                       size="sm"
@@ -1567,8 +1724,8 @@ export const NewsIntakePage: React.FC = () => {
                               </h3>
                               <p className="mt-1 type-secondary text-slate-500 dark:text-slate-400">
                                 {isBn
-                                  ? 'ক্যাটাগরি মিললে রিপোর্টটি এখানে দেখাবে। রিভিউ প্রয়োজন হলে এখান থেকেই প্রিফিলড ফর্ম খুলবে।'
-                                  : 'Any category match appears here. Items needing review open a prefilled review form from this panel.'}
+                                  ? 'ক্যাটাগরি মিললে অনুমোদিত সোর্সের রিপোর্ট এখানে সরাসরি নির্বাচন ও প্রকাশ করা যাবে।'
+                                  : 'Approved-source category matches appear here ready for direct selection and publication.'}
                               </p>
                             </div>
                           </div>
@@ -1686,8 +1843,8 @@ export const NewsIntakePage: React.FC = () => {
         title={isBn ? 'নিউজ ইনটেক বন্ধ করবেন?' : 'Close News Intake?'}
         description={
           isBn
-            ? 'আপনি ইনটেক শুরু করেছেন। মডাল বন্ধ করা বা অন্য অ্যাডমিন ট্যাবে গেলে বর্তমান নির্বাচন বা অসম্পূর্ণ রিভিউ হারাতে পারেন।'
-            : 'You started News Intake. Closing the workspace or switching to another Admin tab can discard the current selection or an unfinished review.'
+            ? 'আপনি ইনটেক শুরু করেছেন। মডাল বন্ধ করা বা অন্য অ্যাডমিন ট্যাবে গেলে বর্তমান নির্বাচন ও রান স্টেট হারাতে পারেন।'
+            : 'You started News Intake. Closing the workspace or switching to another Admin tab can discard the current selection and run state.'
         }
         footer={
           <>

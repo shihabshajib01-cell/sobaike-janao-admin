@@ -9,6 +9,8 @@ import {
   inferIncidentDate,
   inferSpecificLocationPhrase,
   isKnownPublisherArticlePath,
+  isLikelyForeignIncident,
+  isNonIncidentHeadline,
   isUnsupportedArticleType,
 } from '../supabase/functions/_shared/newsIntakeAutomationCore.ts';
 
@@ -28,6 +30,37 @@ assert.doesNotMatch(
   munshiganjFocusedLocation,
   /ঢাকা মেডিকেল|ঢাকার বাসিন্দা/u,
   'Residence and hospital-transfer locations must be excluded when incident-location evidence exists'
+);
+
+assert.equal(
+  isLikelyForeignIncident(
+    'BMW crashes into 4 pedestrians in Mumbai, killing three',
+    'https://example.com/world/mumbai-crash',
+    'The incident happened in Mumbai, India.'
+  ),
+  true,
+  'Clear foreign incidents must be excluded from the Bangladesh reporting feed'
+);
+assert.equal(
+  isLikelyForeignIncident(
+    'অপ্রতিম হত্যার বিচার দাবিতে ঢাকা-চট্টগ্রাম মহাসড়ক অবরোধ',
+    'https://example.com/bangladesh/cumilla-road-block',
+    'কুমিল্লার কোটবাড়ি এলাকায় ঢাকা-চট্টগ্রাম মহাসড়ক অবরোধ করেন শিক্ষার্থীরা।'
+  ),
+  false,
+  'A Bangladesh incident must not be excluded because a highway name contains Dhaka and Chattogram'
+);
+
+assert.equal(
+  isNonIncidentHeadline('৩০ সেপ্টেম্বরের পর অনির্দিষ্টকালের ধর্মঘটের হুঁশিয়ারি বাল্কহেড মালিকদের'),
+  true,
+  'Future strike warnings must be excluded before category matching even if the article mentions robbery prevention'
+);
+
+assert.equal(
+  classifyArticle("Police recover iPhone stolen from Apratim from detained Tuhin's home"),
+  null,
+  'Evidence recovery during a murder investigation must not become a standalone theft report'
 );
 
 const classificationCases: Array<[string, string, string]> = [
@@ -101,9 +134,10 @@ assert.equal(
   'mob-justice',
   'Theft-accusation violence must not fall through to the broad theft rule'
 );
-assert.ok(
+assert.equal(
   theftAccusationBn?.reviewReason,
-  'Ambiguous theft-accusation violence must fail closed to human review'
+  undefined,
+  'Approved-source theft-accusation violence must resolve to the primary mob-justice incident without a manual-review state'
 );
 
 const theftAccusationEn = classifyArticle(
@@ -114,9 +148,10 @@ assert.equal(
   'mob-justice',
   'English theft-accusation violence must not be published as theft'
 );
-assert.ok(
+assert.equal(
   theftAccusationEn?.reviewReason,
-  'English theft-accusation violence must require human review'
+  undefined,
+  'Approved-source English theft-accusation violence must resolve without an ambiguity review state'
 );
 
 assert.equal(
@@ -214,6 +249,34 @@ assert.equal(
   'Publication metadata must never be inherited as the incident date'
 );
 
+
+assert.equal(
+  inferIncidentDate(
+    'The toddler was abducted on September 17 and rescued within six hours.',
+    '2026-09-20'
+  ),
+  '2026-09-17',
+  'English month-first incident dates must resolve'
+);
+
+assert.equal(
+  inferIncidentDate(
+    'রোববার (২০ সেপ্টেম্বর) বেলা সাড়ে ১১টার দিকে ঢাকা-চট্টগ্রাম মহাসড়কের কুমিল্লার কোটবাড়ি এলাকায় শিক্ষার্থীরা সড়ক অবরোধ করেন।',
+    '2026-09-20'
+  ),
+  '2026-09-20',
+  'Explicit same-day event dates must not be discarded as publication metadata'
+);
+
+assert.equal(
+  inferIncidentDate(
+    'রোববার বেলা সোয়া ১১টার দিকে কুমিল্লার কোটবাড়ি বিশ্বরোড এলাকায় অবরোধ শুরু করেন তারা।',
+    '2026-09-20'
+  ),
+  '2026-09-20',
+  'Same-day Bangla weekday plus বেলা must resolve to the publication day'
+);
+
 assert.deepEqual(
   findLocation("Two killed in bus crash in Cox's Bazar"),
   { division: 'Chattogram', district: 'Coxs Bazar' },
@@ -223,6 +286,18 @@ assert.deepEqual(
   findLocation('Road crash leaves one dead in Comilla'),
   { division: 'Chattogram', district: 'Cumilla' },
   'Legacy English district spelling must resolve'
+);
+
+assert.deepEqual(
+  findLocation('ঢাকা-চট্টগ্রাম মহাসড়কের কুমিল্লার কোটবাড়ি এলাকায় শিক্ষার্থীরা সড়ক অবরোধ করেন'),
+  { division: 'Chattogram', district: 'Cumilla' },
+  'Incident district context must beat highway endpoint names'
+);
+
+assert.deepEqual(
+  findLocation('রোববার বেলা সোয়া ১১টার দিকে কুমিল্লার কোটবাড়ি বিশ্বরোড এলাকায় অবরোধ শুরু করেন তারা। এতে ঢাকা-চট্টগ্রাম মহাসড়কের উভয় পাশে যানজট হয়।'),
+  { division: 'Chattogram', district: 'Cumilla' },
+  'Exact production road-block wording must ground Cumilla instead of the Dhaka highway endpoint'
 );
 
 assert.equal(

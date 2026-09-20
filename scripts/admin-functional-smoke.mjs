@@ -81,7 +81,7 @@ const automaticDashboardFixture = {
       priority: 1,
       scanEnabled: true,
       automationNote: null,
-      lastScannedAt: '2026-09-19T07:00:00Z',
+      lastScannedAt: '2026-09-20T10:00:00Z',
     },
   ],
   runs: [
@@ -91,15 +91,15 @@ const automaticDashboardFixture = {
       triggerType: 'manual',
       sourceCount: 1,
       discoveredCount: 3,
-      classifiedCount: 2,
-      duplicateCount: 0,
+      classifiedCount: 3,
+      duplicateCount: 1,
       createdCount: 2,
       mergedCount: 0,
-      reviewCount: 1,
+      reviewCount: 0,
       skippedCount: 0,
       errorCount: 0,
-      startedAt: '2026-09-19T07:00:00Z',
-      completedAt: '2026-09-19T07:00:05Z',
+      startedAt: '2026-09-20T10:00:00Z',
+      completedAt: '2026-09-20T10:00:05Z',
       errorSummary: null,
       items: [
         {
@@ -109,7 +109,7 @@ const automaticDashboardFixture = {
           sourceHostname: 'www.thedailystar.net',
           canonicalUrl: 'https://www.thedailystar.net/e2e-auto-a',
           sourceTitle: 'E2E automatic report A',
-          sourcePublishedDate: '2026-09-19',
+          sourcePublishedDate: '2026-09-20',
           contentLanguage: 'bn',
           segmentId: 'public_safety',
           subcategoryId: 'theft',
@@ -117,68 +117,51 @@ const automaticDashboardFixture = {
           duplicateStatus: 'clear',
           action: 'created_draft',
           reportId: E2E_AUTO_REPORT_A,
-          reason: 'Source-grounded draft created; publication remains a separate admin action.',
+          reason: 'Approved-source report is ready for one-click publication.',
         },
         {
-          id: 'auto-item-b',
+          id: 'auto-item-staged',
           itemKind: 'article',
           publisherName: 'The Daily Star',
           sourceHostname: 'www.thedailystar.net',
-          canonicalUrl: 'https://www.thedailystar.net/e2e-auto-b',
-          sourceTitle: 'E2E automatic report B',
-          sourcePublishedDate: '2026-09-19',
-          contentLanguage: 'bn',
-          segmentId: 'public_safety',
-          subcategoryId: 'theft',
-          confidence: 0.93,
-          duplicateStatus: 'clear',
-          action: 'created_draft',
-          reportId: E2E_AUTO_REPORT_B,
-          reason: 'Source-grounded draft created; publication remains a separate admin action.',
-        },
-        {
-          id: 'auto-item-review',
-          itemKind: 'article',
-          publisherName: 'The Daily Star',
-          sourceHostname: 'www.thedailystar.net',
-          canonicalUrl: 'https://www.thedailystar.net/e2e-auto-review',
-          sourceTitle: 'E2E source requiring review',
-          sourcePublishedDate: '2026-09-19',
+          canonicalUrl: 'https://www.thedailystar.net/e2e-auto-staged',
+          sourceTitle: 'E2E staged approved-source report',
+          sourcePublishedDate: '2026-09-20',
           contentLanguage: 'en',
           segmentId: 'public_safety',
           subcategoryId: 'theft',
-          confidence: 0.88,
-          duplicateStatus: 'review',
-          action: 'needs_review',
+          confidence: 0.92,
+          duplicateStatus: 'clear',
+          action: 'created_draft',
           reportId: null,
-          reason: 'Incident date could not be established safely from the source.',
+          reason: 'Approved-source report is ready for one-click publication.',
           reviewPayload: {
             source: {
               sourceType: 'news',
               publisherName: 'The Daily Star',
-              sourceTitle: 'E2E source requiring review',
-              canonicalUrl: 'https://www.thedailystar.net/e2e-auto-review',
-              sourcePublishedDate: '2026-09-19',
+              sourceTitle: 'E2E staged approved-source report',
+              canonicalUrl: 'https://www.thedailystar.net/e2e-auto-staged',
+              sourcePublishedDate: '2026-09-20',
             },
             report: {
               segmentId: 'public_safety',
               subcategoryId: 'theft',
-              titleBn: 'E2E staged matched report title',
+              titleBn: 'E2E staged approved-source report',
               titleEn: '',
-              descriptionBn: 'Prefilled source-grounded context for guided News Intake review.',
+              descriptionBn: 'Approved publisher source context for direct one-click publication.',
               descriptionEn: '',
               incidentDate: '',
               incidentTime: '',
               utilityEndTime: '',
               frequency: 'one-time',
               priority: 'medium',
-              division: 'Dhaka',
-              district: 'Dhaka',
-              upazilaOrThana: 'Tejgaon',
-              area: 'E2E Intake Area',
+              division: '',
+              district: '',
+              upazilaOrThana: '',
+              area: '',
               road: '',
               landmark: '',
-              formattedAddress: 'E2E Intake Area, Tejgaon, Dhaka',
+              formattedAddress: '',
               relationshipContext: '',
               recentBillMonth: '',
               recentBillAmount: '',
@@ -202,8 +185,25 @@ const automaticDashboardFixture = {
                 locationScope: 'specific',
               },
             },
-            reviewFields: ['incidentDate'],
+            reviewFields: [],
           },
+        },
+        {
+          id: 'auto-item-duplicate',
+          itemKind: 'article',
+          publisherName: 'The Daily Star',
+          sourceHostname: 'www.thedailystar.net',
+          canonicalUrl: 'https://www.thedailystar.net/e2e-auto-duplicate',
+          sourceTitle: 'E2E existing duplicate source',
+          sourcePublishedDate: '2026-09-20',
+          contentLanguage: 'en',
+          segmentId: 'public_safety',
+          subcategoryId: 'theft',
+          confidence: 0.9,
+          duplicateStatus: 'exact',
+          action: 'skip_duplicate',
+          reportId: E2E_EXISTING_REPORT_ID,
+          reason: 'Exact approved-source article already exists in the report database.',
         },
       ],
     },
@@ -211,8 +211,8 @@ const automaticDashboardFixture = {
   automation: {
     enabled: true,
     intervalHours: 36,
-    lastAutoDispatchedAt: '2026-09-18T19:00:00Z',
-    nextAutoDueAt: '2026-09-20T07:00:00Z',
+    lastAutoDispatchedAt: '2026-09-19T04:34:00Z',
+    nextAutoDueAt: '2026-09-20T16:34:00Z',
     running: false,
   },
 };
@@ -557,6 +557,16 @@ async function installSupabaseFixtures(page) {
         sourceId: 'e2e-merged-source',
         status: 'published',
       };
+    } else if (path.includes('/rest/v1/rpc/process_trusted_news_intake_candidate')) {
+      publishedIds.add(E2E_AUTO_REVIEW_REPORT);
+      body = {
+        success: true,
+        action: 'published',
+        reportId: E2E_AUTO_REVIEW_REPORT,
+        status: 'published',
+        published: true,
+        duplicateStatus: 'clear',
+      };
     } else if (path.includes('/rest/v1/rpc/admin_publish_complaint')) {
       const payload = request.postDataJSON?.() || {};
       const complaintId = String(payload.p_complaint_id || E2E_NEWS_INTAKE_REPORT_ID);
@@ -661,8 +671,7 @@ async function installSupabaseFixtures(page) {
               ? autoComplaint(
                   E2E_AUTO_REPORT_B,
                   'স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট B',
-                  publishedIds.has(E2E_AUTO_REPORT_B) ? 'published' : 'submitted',
-                  !publishedIds.has(E2E_AUTO_REPORT_B)
+                  publishedIds.has(E2E_AUTO_REPORT_B) ? 'published' : 'submitted'
                 )
               : requestedId.includes(E2E_AUTO_REVIEW_REPORT)
                 ? autoComplaint(
@@ -871,10 +880,10 @@ await check('Sourced report publish is blocked until duplicate review is resolve
   await context.close();
 });
 
-await check('News Intake shows every category match on the right and completes guided review before selection', async () => {
+await check('News Intake keeps Step 2 open and Select All publishes approved matches without review', async () => {
   const context = await browser.newContext({ viewport: { width: 1365, height: 1000 } });
   const page = await context.newPage();
-  attachPageGuards(page, 'local-news-intake-automatic');
+  attachPageGuards(page, 'local-news-intake-zero-review');
   const fixtures = await installSupabaseFixtures(page);
 
   await page.goto(hashUrl(LOCAL_URL, '/dashboard'), {
@@ -887,51 +896,37 @@ await check('News Intake shows every category match on the right and completes g
   await page.getByRole('button', { name: 'Scan All Sources Now', exact: true }).click();
 
   await expectVisible(
-    page.getByText('3 matched · 1 ready · 0 selected', { exact: true }).first(),
-    'category-matched panel did not expose matched and ready counts'
+    page.getByText('3 matched · 2 ready · 0 selected', { exact: true }).first(),
+    'category-matched panel did not expose the zero-review ready counts'
   );
   await expectVisible(
     page.getByText('Category-matched reports', { exact: true }).first(),
     'category-matched panel heading missing'
   );
-  await expectVisible(
-    page.getByText('E2E source requiring review', { exact: true }).first(),
-    'review-required category match did not appear on the right'
-  );
-  await expectVisible(
-    page.getByText('E2E automatic report B', { exact: true }).first(),
-    'existing draft requiring review did not remain visible on the right'
-  );
 
-  const reportA = page.getByLabel('Select স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট A for publishing');
-  await expectVisible(reportA, 'ready automatic report selector missing');
-  const reviewRequiredDraftSelector = page.getByLabel(
-    'Review E2E automatic report B before selection'
-  );
-  await expectVisible(
-    reviewRequiredDraftSelector,
-    'review-required matched draft did not expose its checkbox state'
-  );
-  if (!(await reviewRequiredDraftSelector.isDisabled())) {
-    throw new Error('review-required matched draft checkbox must stay disabled until review clears');
+  if (await page.getByText('Review required', { exact: true }).count()) {
+    throw new Error('current approved-source matches still expose Review required');
+  }
+  if (await page.getByText('Review before selection', { exact: true }).count()) {
+    throw new Error('current approved-source matches still require review before selection');
   }
 
-  const stagedReviewSelector = page.getByLabel(
-    'Review E2E source requiring review before selection'
+  const existingSelector = page.getByLabel(
+    'Select স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট A for publishing'
   );
-  await expectVisible(
-    stagedReviewSelector,
-    'review-required category match did not expose its checkbox state'
+  const stagedSelector = page.getByLabel(
+    'Select E2E staged approved-source report for publishing'
   );
-  if (!(await stagedReviewSelector.isDisabled())) {
-    throw new Error('review-required category match checkbox must stay disabled until review clears');
-  }
+  await expectVisible(existingSelector, 'existing ready report selector missing');
+  await expectVisible(stagedSelector, 'staged approved-source selector missing');
+  if (await existingSelector.isDisabled()) throw new Error('existing ready report checkbox is disabled');
+  if (await stagedSelector.isDisabled()) throw new Error('staged approved-source checkbox is disabled');
 
   const dialog = page.getByRole('dialog').first();
   await dialog.getByLabel('Close modal').click();
   await expectVisible(
     page.getByRole('heading', { name: 'Close News Intake?', exact: true }),
-    'closing an active intake did not ask for confirmation'
+    'closing active intake did not ask for confirmation'
   );
   await page.getByRole('button', { name: 'Keep Working', exact: true }).click();
   await expectVisible(
@@ -939,7 +934,7 @@ await check('News Intake shows every category match on the right and completes g
     'workspace closed after Keep Working'
   );
 
-  // Real Admin navigation must be intercepted, not just browser-history changes.
+  // Shared Admin navigation must not silently tear down Step 2.
   await page.getByRole('link', { name: 'Dashboard', exact: true }).evaluate((element) => {
     element.dispatchEvent(
       new MouseEvent('click', {
@@ -952,119 +947,64 @@ await check('News Intake shows every category match on the right and completes g
   });
   await expectVisible(
     page.getByRole('heading', { name: 'Close News Intake?', exact: true }),
-    'another Admin tab navigation intent did not ask for confirmation'
+    'Admin tab switch did not ask for confirmation'
   );
   if (!page.url().includes('/news-intake')) {
-    throw new Error('Admin tab click navigated away before News Intake confirmation');
+    throw new Error('Admin tab switch navigated away before confirmation');
   }
   await page.getByRole('button', { name: 'Keep Working', exact: true }).click();
-  await expectVisible(
-    page.getByText('Category-matched reports', { exact: true }).first(),
-    'Step 2 closed after cancelling Admin tab navigation'
-  );
 
-  // Switching browser tabs must never reset the active workspace.
+  // Browser tab switching must leave the open workspace untouched.
   const secondTab = await context.newPage();
   await secondTab.goto('about:blank');
   await secondTab.bringToFront();
   await page.bringToFront();
   await expectVisible(
     page.getByText('Category-matched reports', { exact: true }).first(),
-    'browser tab switching closed the active News Intake workspace'
+    'browser tab switching closed Step 2'
   );
   await secondTab.close();
 
-  await page.evaluate(() => window.history.back());
-  await expectVisible(
-    page.getByRole('heading', { name: 'Close News Intake?', exact: true }),
-    'leaving Step 2 through Admin navigation did not ask for confirmation'
-  );
-  if (!page.url().includes('/news-intake')) {
-    throw new Error('Admin navigation bypassed the active News Intake blocker');
-  }
-  await page.getByRole('button', { name: 'Keep Working', exact: true }).click();
+  // Persist one selection, simulate a browser tab discard/reload, and verify
+  // that Step 2, the run and selection are restored from sessionStorage.
+  await existingSelector.check({ force: true });
+  await expectVisible(page.getByText('1 selected', { exact: true }), 'selection did not update');
+
+  page.once('dialog', async (nativeDialog) => {
+    await nativeDialog.accept();
+  });
+  await page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
+
   await expectVisible(
     page.getByText('Category-matched reports', { exact: true }).first(),
-    'Step 2 did not remain open after cancelling Admin navigation'
-  );
-  if (!page.url().includes('/news-intake')) {
-    throw new Error('News Intake route changed after cancelling Admin navigation');
-  }
-
-  const matchedReviewCard = page.getByText('E2E source requiring review', { exact: true }).first();
-  const card = matchedReviewCard.locator('xpath=ancestor::div[contains(@class,"flex flex-col gap-3")][1]');
-  await card.getByRole('button', { name: 'Review', exact: true }).click();
-
-  await expectVisible(
-    page.getByText('This report needs review', { exact: true }),
-    'guided review form did not open'
-  );
-  await expectInputValue(
-    page.getByLabel('Report title (source language) *'),
-    'E2E staged matched report title',
-    'guided review did not prefill the staged report title'
+    'Step 2 did not restore after browser reload/tab discard'
   );
   await expectVisible(
-    page.getByText('Confirm the incident date', { exact: true }),
-    'guided review did not indicate the unresolved incident date'
+    page.getByText('3 matched · 2 ready · 1 selected', { exact: true }).first(),
+    'run/selection state did not restore after browser reload'
   );
-  await page.getByLabel('Incident date *').fill('2026-09-19');
-  await page.getByRole('button', { name: 'Check Source & Duplicates', exact: true }).click();
-  await expectVisible(
-    page.getByRole('button', { name: 'Save Review', exact: true }),
-    'guided review did not expose the Save Review action after validation'
-  );
-  await page.getByRole('button', { name: 'Save Review', exact: true }).click();
 
+  await page.getByRole('button', { name: 'Select All', exact: true }).click();
   await expectVisible(
-    page.getByText('3 matched · 2 ready · 0 selected', { exact: true }).first(),
-    'reviewed matched item did not become ready after server revalidation'
+    page.getByText('2 selected', { exact: true }),
+    'Select All did not select every publishable category match'
   );
-  if (!fixtures.isGuidedReviewCompleted()) {
-    throw new Error('guided review completion RPC was not called');
-  }
 
-  const reviewedSelector = page.getByLabel('Select E2E staged matched report title for publishing');
-  await expectVisible(reviewedSelector, 'reviewed matched item did not become selectable');
-
-  await reportA.check({ force: true });
-  await expectVisible(
-    page.getByText('1 selected', { exact: true }),
-    'selection count did not update'
-  );
   await page.getByRole('button', { name: 'Publish Selected to Feed', exact: true }).click();
-
   await expectVisible(
-    page.getByText('1 reports published to the feed', { exact: true }),
-    'automatic selected-only publish result missing'
+    page.getByText('2 reports published to the feed', { exact: true }),
+    'one-click publication did not publish both selected matches'
   );
+
   if (!fixtures.publishedIds.has(E2E_AUTO_REPORT_A)) {
-    throw new Error('selected automatic report was not published');
+    throw new Error('existing ready report was not published');
   }
-  if (fixtures.publishedIds.has(E2E_AUTO_REPORT_B) || fixtures.publishedIds.has(E2E_AUTO_REVIEW_REPORT)) {
-    throw new Error('an unselected matched report was published');
+  if (!fixtures.publishedIds.has(E2E_AUTO_REVIEW_REPORT)) {
+    throw new Error('staged approved-source candidate was not published through trusted-source RPC');
   }
-
-  await page.getByRole('button', { name: 'Done', exact: true }).click();
-  await page.getByRole('button', { name: 'Review', exact: true }).first().click();
-
-  if (await page.getByLabel('Select স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট A for publishing').count()) {
-    throw new Error('already-published report remained selectable');
+  if (fixtures.publishedIds.has(E2E_AUTO_REPORT_B)) {
+    throw new Error('unrelated report was published');
   }
-  const historicalReviewSelector = page.getByLabel(
-    'Review E2E automatic report B before selection'
-  );
-  await expectVisible(
-    historicalReviewSelector,
-    'historical review-required item did not expose its checkbox state'
-  );
-  if (!(await historicalReviewSelector.isDisabled())) {
-    throw new Error('historical review-required item became publish-selectable');
-  }
-  await expectVisible(
-    page.getByLabel('Select E2E staged matched report title for publishing'),
-    'completed guided review did not remain ready in run history'
-  );
 
   await context.close();
 });
@@ -1080,7 +1020,7 @@ await check('News Intake mobile workspace is full-screen and review panels colla
     timeout: 30000,
   });
 
-  await page.getByRole('button', { name: 'Review', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Open', exact: true }).first().click();
 
   const dialog = page.getByRole('dialog');
   const dialogBox = await dialog.boundingBox();

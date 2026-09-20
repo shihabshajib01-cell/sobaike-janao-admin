@@ -15,7 +15,6 @@ type Fixture = {
   expectedIncidentDate: string | null;
   expectedDistrict?: string;
   expectedLocationIncludes?: string;
-  expectReviewReason?: boolean;
 };
 
 const fixtures: Fixture[] = [
@@ -63,25 +62,23 @@ const fixtures: Fixture[] = [
     expectedLocationIncludes: 'Gopalnagar',
   },
   {
-    name: 'bdnews24 theft-accusation killing must fail closed to mob-justice review',
+    name: 'bdnews24 theft-accusation killing resolves directly to mob justice',
     title: '‘ভাত চুরির’ অপবাদে বিশ্ববিদ্যালয় ছাত্রকে খুন: চারজনের বিরুদ্ধে মামলা',
     context:
       'চুরির অপবাদে এক বিশ্ববিদ্যালয় ছাত্রকে পিটিয়ে হত্যার অভিযোগে মামলা হয়েছে।',
     publishedDate: '2026-09-19',
     expectedCategory: { segmentId: 'public_safety', subcategoryId: 'mob-justice' },
     expectedIncidentDate: null,
-    expectReviewReason: true,
   },
   {
-    name: 'TBS theft-suspicion assault must not become a theft report',
+    name: 'TBS theft-suspicion assault resolves directly to the violent incident category',
     title: 'Khulna student ‘assaulted over theft suspicion’, dies after falling from 5th floor',
     context:
-      'The student was assaulted over a theft suspicion before his death. The source requires human review of the incident classification.',
+      'The student was assaulted over a theft suspicion before his death. The source reports the violent incident directly.',
     publishedDate: '2026-09-19',
     expectedCategory: { segmentId: 'public_safety', subcategoryId: 'mob-justice' },
     expectedIncidentDate: null,
     expectedDistrict: 'Khulna',
-    expectReviewReason: true,
   },
   {
     name: 'bdnews24 detainee taken from police is not property snatching',
@@ -149,13 +146,6 @@ for (const fixture of fixtures) {
     fixture.expectedCategory.subcategoryId,
     `${fixture.name}: wrong subcategory`
   );
-  if (fixture.expectReviewReason) {
-    assert.ok(
-      classification?.reviewReason,
-      `${fixture.name}: ambiguous production wording must require human review`
-    );
-  }
-
   const location = findLocation(fullText);
   if (fixture.expectedDistrict) {
     assert.equal(
