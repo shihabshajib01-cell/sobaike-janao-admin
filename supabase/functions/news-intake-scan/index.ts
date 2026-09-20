@@ -4,6 +4,7 @@ import {
   MAX_ARTICLE_AGE_DAYS,
   articleAgeDays,
   buildIncidentContext,
+  buildIncidentFocusedLocationText,
   buildSourceLanguageFields,
   classifyArticle,
   clip,
@@ -859,17 +860,32 @@ const processNewsIntakeRun = async (
         }
 
         const locationText=`${article.title} ${article.excerpt} ${article.body.slice(0,6000)}`;
+        const focusedLocationText=buildIncidentFocusedLocationText(article);
         let location:any=null;
         try{
-          const {data:resolvedLocation,error:locationError}=await supabase.rpc(
+          const {data:focusedLocation,error:focusedLocationError}=await supabase.rpc(
             'admin_resolve_news_intake_location',
-            {p_text:locationText,p_language:language}
+            {p_text:focusedLocationText,p_language:language}
           );
-          if(locationError) throw new Error(locationError.message);
-          location=resolvedLocation;
+          if(focusedLocationError) throw new Error(focusedLocationError.message);
+
+          if(
+            focusedLocation &&
+            String(focusedLocation.quality||'') !== 'multiple_locations'
+          ){
+            location=focusedLocation;
+          } else {
+            const {data:resolvedLocation,error:locationError}=await supabase.rpc(
+              'admin_resolve_news_intake_location',
+              {p_text:locationText,p_language:language}
+            );
+            if(locationError) throw new Error(locationError.message);
+            location=resolvedLocation;
+          }
         }catch{
           const districtOnly=
-            findLocation(article.title)
+            findLocation(focusedLocationText)
+            || findLocation(article.title)
             || findLocation(article.excerpt)
             || findLocation(article.body.slice(0,3500));
           location=districtOnly
@@ -1038,10 +1054,30 @@ const processNewsIntakeRun = async (
         const exact=Array.isArray(preview?.duplicate?.exactSourceDuplicates)
           ? preview.duplicate.exactSourceDuplicates
           : [];
+        const privacyReviewRequired=preview?.privacyReviewRequired===true;
         const schemaReady=preview?.schemaValidation?.ready !== false;
         const missingSchemaFields=Array.isArray(preview?.schemaValidation?.missingFields)
           ? preview.schemaValidation.missingFields
           : [];
+
+        if(privacyReviewRequired){
+          await record({
+            itemKind:'article',
+            sourceHostname:source.hostname,
+            publisherName:article.publisherName,
+            canonicalUrl:article.canonicalUrl,
+            sourceTitle:article.title,
+            sourcePublishedDate:article.sourcePublishedDate||'',
+            contentLanguage:language,
+            segmentId:classification.segmentId,
+            subcategoryId:classification.subcategoryId,
+            confidence:classification.confidence,
+            action:'needs_review',
+            duplicateStatus,
+            reason:'Privacy-sensitive category detected. Review the public title, summary, location, and identifying details before creating or publishing a report.',
+          });
+          return;
+        }
 
         if(!schemaReady){
           const missingLabels=missingSchemaFields
