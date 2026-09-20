@@ -31,6 +31,7 @@ const finalProductionCleanup = read('supabase/migrations/20260920122450_news_int
 const finalCloseout = read('supabase/migrations/20260920131136_news_intake_100_percent_closeout.sql');
 const ledgerParityCloseout = read('supabase/migrations/20260920131354_news_intake_ledger_parity_closeout.sql');
 const schedulerCronParity = read('supabase/migrations/20260920132122_news_intake_scheduler_cron_parity.sql');
+const sourceQualityGate = read('supabase/migrations/20260920142434_news_intake_source_quality_gate.sql');
 const automationCore = read('supabase/functions/_shared/newsIntakeAutomationCore.ts');
 const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
 const edge = read('supabase/functions/news-intake-fetch/index.ts');
@@ -133,10 +134,14 @@ requireText(behaviorAudit, 'Taking a detainee/suspect from police must not be cl
 requireText(behaviorAudit, 'Future strike warnings must be excluded before category matching', 'News Intake non-incident strike regression');
 requireText(behaviorAudit, 'Evidence recovery during a murder investigation must not become a standalone theft report', 'News Intake evidence-recovery regression');
 requireText(behaviorAudit, 'Same-day Bangla weekday plus বেলা must resolve to the publication day', 'News Intake Bangla বেলা date regression');
+requireText(automationCore, 'isSubstantiveIncidentContext', 'News Intake substantive context helper');
+requireText(automationCore, 'isLegalFollowUpOnly', 'News Intake legal follow-up helper');
 requireText(behaviorAudit, 'Exact production road-block wording must ground Cumilla', 'News Intake production location regression');
 requireText(behaviorAudit, 'Attempted child murder without abduction or a reported death must not be published as Child Abduction / Murder', 'News Intake child attempted-murder regression');
 requireText(behaviorAudit, 'An abduction remains in Child Abduction / Murder even if the later killing was only attempted', 'News Intake child abduction/attempt regression');
 requireText(behaviorAudit, 'A reported death after an attempted killing must remain a child murder report', 'News Intake child death-after-attempt regression');
+requireText(behaviorAudit, 'Title-only extraction must never become Feed Ready', 'News Intake title-only extraction regression');
+requireText(behaviorAudit, 'Court/bail follow-up headlines about older incidents must not create a fresh incident report', 'News Intake legal follow-up regression');
 requireText(collisionErrorContract, "errcode='P0001'", 'News Intake collision error contract');
 requireText(collisionErrorContract, 'DUPLICATE_REVIEW_REQUIRED', 'News Intake collision error contract');
 requireText(explicitDenyPolicies, 'news_intake_runs_authenticated_deny', 'News Intake run-table deny policy');
@@ -238,6 +243,22 @@ for (const needle of [
 }
 
 for (const needle of [
+  'SOURCE_QUALITY_GATE_FAILED',
+  "v_quality jsonb:=coalesce(p_payload->'quality','{}'::jsonb)",
+  "extractionStatus",
+  "substantiveContext",
+  "currentIncident",
+  "followUpOnly",
+  "contextLength",
+  "normalize_duplicate_text(v_title)=public.normalize_duplicate_text(v_description)",
+  "id='SJ-2026-729442'",
+  "Satish Babu Lane",
+  "news_intake.source_grounding_repair",
+]) {
+  requireText(sourceQualityGate, needle, 'News Intake source-quality closeout');
+}
+
+for (const needle of [
   'guard_sourced_report_publish_readiness',
   'trg_guard_sourced_report_publish_readiness',
   'SOURCE_GROUNDING_REVIEW_REQUIRED',
@@ -319,6 +340,16 @@ for (const needle of [
   'Section, homepage, or non-article URL was excluded',
   'inferSpecificLocationPhrase',
   'inferDistrictWideScope',
+  'isSubstantiveIncidentContext',
+  'isLegalFollowUpOnly',
+  'serialized_article_body',
+  "hostKey==='bdnews24.com' || hostKey==='bangla.bdnews24.com'",
+  "extractionStatus:'complete'",
+  "substantiveContext:true",
+  "currentIncident:true",
+  "followUpOnly:false",
+  'Article extraction was incomplete or did not expose substantive incident context',
+  'Court, bail, remand, hearing, verdict, appeal, or trial follow-up was excluded',
 ]) {
   requireText(scanner, needle, 'automated News Intake scanner');
 }
