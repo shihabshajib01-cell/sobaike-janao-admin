@@ -181,19 +181,22 @@ const parseAgeGroup=(text:string)=>{
 };
 
 const inferRelationship=(text:string)=>{
+  // Prefer an explicitly stated alleged-person relationship. News stories often
+  // mention police, doctors, or other officials later as responders; those
+  // narrative mentions must not become the alleged person's relationship.
   if(/(স্বামী|স্ত্রী|husband|wife|spouse|boyfriend|girlfriend|partner)/iu.test(text)) return "intimate_partner";
-  if(/(বাবা|মা|ভাই|বোন|পরিবার|family|father|mother|brother|sister)/iu.test(text)) return "household_family";
+  if(/(বাবা|মা|ভাই|বোন|পরিবারের সদস্য|family member|father|mother|brother|sister)/iu.test(text)) return "household_family";
   if(/(আত্মীয়|আত্মীয়|চাচা|মামা|কাকা|relative|uncle|cousin)/iu.test(text)) return "other_relative";
   if(/(সহপাঠী|classmate|সহকর্মী|colleague|coworker)/iu.test(text)) return "coworker_classmate";
   if(/(প্রতিবেশী|neighbor|neighbour)/iu.test(text)) return "neighbor";
   if(/(শিক্ষক|টিউটর|teacher|tutor)/iu.test(text)) return "teacher_tutor";
   if(/(বস|সুপারভাইজার|নিয়োগকর্তা|নিয়োগকর্তা|boss|supervisor|employer)/iu.test(text)) return "supervisor_employer";
-  if(/(পুলিশ|আইনশৃঙ্খলা|police|law enforcement)/iu.test(text)) return "law_enforcement_authority";
-  if(/(ডাক্তার|নার্স|স্বাস্থ্যকর্মী|সেবাদানকারী|doctor|nurse|health worker|service provider)/iu.test(text)) return "service_health_worker";
   if(/(ড্রাইভার|চালক|হেলপার|transport worker|driver|helper)/iu.test(text)) return "transport_worker";
-  if(/(বন্ধু|পরিচিত|friend|acquaintance)/iu.test(text)) return "friend_acquaintance";
-  if(/(অজ্ঞাত|অপরিচিত|unknown man|unknown person|stranger)/iu.test(text)) return "stranger";
-  if(/(একাধিক|দলবদ্ধ|several|multiple|group of)/iu.test(text)) return "multiple_people";
+  if(/(বন্ধু|পরিচিত ব্যক্তি|friend|acquaintance)/iu.test(text)) return "friend_acquaintance";
+  if(/(অজ্ঞাত|অপরিচিত|unknown man|unknown person|unidentified man|unidentified person|stranger)/iu.test(text)) return "stranger";
+  if(/(একাধিক অভিযুক্ত|একাধিক ব্যক্তি|দলবদ্ধভাবে|several assailants|multiple people|group of (?:men|people|persons))/iu.test(text)) return "multiple_people";
+  if(/(পুলিশ সদস্য|পুলিশ কর্মকর্তা|কনস্টেবল|এসআই|ওসি|police officer|police constable|law enforcement officer)/iu.test(text)) return "law_enforcement_authority";
+  if(/(ডাক্তার|নার্স|স্বাস্থ্যকর্মী|সেবাদানকারী|doctor|nurse|health worker|service provider)/iu.test(text)) return "service_health_worker";
   return "unknown_not_stated";
 };
 
