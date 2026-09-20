@@ -16,6 +16,7 @@ import {
   inferSpecificLocationPhrase,
   isKnownPublisherArticlePath,
   isLikelyForeignIncident,
+  isNonIncidentHeadline,
   isUnsupportedArticleType,
   scoreDiscoveryLink,
 } from "../_shared/newsIntakeAutomationCore.ts";
@@ -817,7 +818,23 @@ const processNewsIntakeRun = async (
           return;
         }
 
-        const classification=classifyArticle(headlineText);
+        if(isNonIncidentHeadline(article.title)){
+          await record({
+            itemKind:'article',
+            sourceHostname:source.hostname,
+            publisherName:article.publisherName,
+            canonicalUrl:article.canonicalUrl,
+            sourceTitle:article.title,
+            sourcePublishedDate:article.sourcePublishedDate||'',
+            contentLanguage:language,
+            action:'discovered',
+            duplicateStatus:'unavailable',
+            reason:'Headline describes a future programme, strike warning, or announcement rather than a reportable incident.',
+          });
+          return;
+        }
+
+        const classification=classifyArticle(article.title) || classifyArticle(headlineText);
         if(!classification){
           await record({
             itemKind:'article',
@@ -1059,6 +1076,58 @@ const processNewsIntakeRun = async (
         }
 
         const payload=buildReportPayload(article,classification,location,incidentDate,language);
+
+        // Manual Find News remains a one-click review/select workspace: every
+        // approved-source category match is staged as feed-ready without
+        // forcing date/location/privacy review. Publication happens only after
+        // the admin selects it. Scheduled runs continue to auto-publish.
+        if(triggerType==='manual'){
+          const {data:sourceDuplicate,error:sourceDuplicateError}=await supabase.rpc(
+            'admin_check_source_duplicate',
+            {p_canonical_url:article.canonicalUrl}
+          );
+          if(sourceDuplicateError) throw new Error(sourceDuplicateError.message);
+
+          if(sourceDuplicate?.duplicate===true){
+            await record({
+              itemKind:'article',
+              sourceHostname:source.hostname,
+              publisherName:article.publisherName,
+              canonicalUrl:article.canonicalUrl,
+              sourceTitle:article.title,
+              sourcePublishedDate:article.sourcePublishedDate||'',
+              contentLanguage:language,
+              segmentId:classification.segmentId,
+              subcategoryId:classification.subcategoryId,
+              confidence:classification.confidence,
+              action:'skip_duplicate',
+              duplicateStatus:'exact',
+              reportId:String(sourceDuplicate.complaintId||''),
+              reason:'Exact approved-source article already exists in the report database.',
+            });
+            return;
+          }
+
+          await record({
+            itemKind:'article',
+            sourceHostname:source.hostname,
+            publisherName:article.publisherName,
+            canonicalUrl:article.canonicalUrl,
+            sourceTitle:article.title,
+            sourcePublishedDate:article.sourcePublishedDate||'',
+            contentLanguage:language,
+            segmentId:classification.segmentId,
+            subcategoryId:classification.subcategoryId,
+            confidence:classification.confidence,
+            action:'created_draft',
+            duplicateStatus:'clear',
+            reportId:null,
+            reason:'Approved-source report is ready for one-click publication.',
+            reviewPayload:payload,
+          });
+          return;
+        }
+
         const {data:processed,error:processError}=await supabase.rpc(
           'process_trusted_news_intake_candidate',
           {p_payload:payload}
