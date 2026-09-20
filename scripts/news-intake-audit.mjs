@@ -30,6 +30,7 @@ const trustedSourceOmissions = read('supabase/migrations/20260920093258_trusted_
 const finalProductionCleanup = read('supabase/migrations/20260920122450_news_intake_final_production_cleanup.sql');
 const finalCloseout = read('supabase/migrations/20260920131136_news_intake_100_percent_closeout.sql');
 const ledgerParityCloseout = read('supabase/migrations/20260920131354_news_intake_ledger_parity_closeout.sql');
+const schedulerCronParity = read('supabase/migrations/20260920132122_news_intake_scheduler_cron_parity.sql');
 const automationCore = read('supabase/functions/_shared/newsIntakeAutomationCore.ts');
 const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
 const edge = read('supabase/functions/news-intake-fetch/index.ts');
@@ -177,7 +178,6 @@ for (const needle of [
   "interval '36 hours'",
   'ux_news_intake_runs_one_running',
   'sobaike-janao-news-intake-auto-dispatch',
-  "'* * * * *'",
 ]) {
   requireText(schedulerMigration, needle, '36-hour News Intake scheduler');
 }
@@ -189,6 +189,15 @@ for (const needle of [
   "'scheduledSlot'",
 ]) {
   requireText(ledgerParityCloseout, needle, 'acknowledged News Intake scheduler');
+}
+
+for (const needle of [
+  'sobaike-janao-news-intake-auto-dispatch',
+  "'* * * * *'",
+  'cron.unschedule',
+  'dispatch_news_intake_auto_scan',
+]) {
+  requireText(schedulerCronParity, needle, 'canonical News Intake cron parity');
 }
 
 for (const needle of [
