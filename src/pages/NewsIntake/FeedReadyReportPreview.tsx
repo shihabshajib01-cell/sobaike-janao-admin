@@ -266,22 +266,26 @@ export const FeedReadyReportPreview: React.FC<FeedReadyReportPreviewProps> = ({
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 dark:border-emerald-900/70 dark:bg-emerald-950/25">
         <div className="min-w-0">
-          {publishable ? (
-            <Checkbox
-              id={`news-intake-publish-${complaint.id}`}
-              label={isBn ? 'প্রকাশের জন্য নির্বাচন করুন' : 'Select for publishing'}
-              checked={selected}
-              onChange={onToggle}
-              disabled={disabled}
-              aria-label={
-                isBn ? `${title} প্রকাশের জন্য নির্বাচন করুন` : `Select ${title} for publishing`
-              }
-            />
-          ) : (
-            <p className="type-label font-medium text-slate-700 dark:text-slate-300">
-              {statusLabel}
-            </p>
-          )}
+          <Checkbox
+            id={`news-intake-publish-${complaint.id}`}
+            label={
+              publishable
+                ? isBn ? 'প্রকাশের জন্য নির্বাচন করুন' : 'Select for publishing'
+                : status === 'published'
+                  ? isBn ? 'ইতিমধ্যে প্রকাশিত' : 'Already published'
+                  : isBn ? 'রিভিউ শেষে নির্বাচন করা যাবে' : 'Review before selection'
+            }
+            checked={publishable ? selected : false}
+            onChange={publishable ? onToggle : () => undefined}
+            disabled={disabled || !publishable}
+            aria-label={
+              publishable
+                ? isBn ? `${title} প্রকাশের জন্য নির্বাচন করুন` : `Select ${title} for publishing`
+                : status === 'published'
+                  ? isBn ? `${title} ইতিমধ্যে প্রকাশিত` : `${title} is already published`
+                  : isBn ? `${title} রিভিউ শেষে নির্বাচন করা যাবে` : `Review ${title} before selection`
+            }
+          />
         </div>
         <Tag tone={statusTone}>{statusLabel}</Tag>
       </div>
