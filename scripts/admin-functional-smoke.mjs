@@ -9,6 +9,7 @@ const E2E_NEWS_INTAKE_REPORT_ID = 'E2E-NEWS-001';
 const E2E_AUTO_RUN_ID = '11111111-2222-4333-8444-555555555555';
 const E2E_AUTO_REPORT_A = 'E2E-AUTO-001';
 const E2E_AUTO_REPORT_B = 'E2E-AUTO-002';
+const E2E_AUTO_REVIEW_REPORT = 'E2E-AUTO-REVIEW-001';
 
 const e2eNewsIntakeComplaint = {
   id: E2E_NEWS_INTAKE_REPORT_ID,
@@ -151,6 +152,58 @@ const automaticDashboardFixture = {
           action: 'needs_review',
           reportId: null,
           reason: 'Incident date could not be established safely from the source.',
+          reviewPayload: {
+            source: {
+              sourceType: 'news',
+              publisherName: 'The Daily Star',
+              sourceTitle: 'E2E source requiring review',
+              canonicalUrl: 'https://www.thedailystar.net/e2e-auto-review',
+              sourcePublishedDate: '2026-09-19',
+            },
+            report: {
+              segmentId: 'public_safety',
+              subcategoryId: 'theft',
+              titleBn: 'E2E staged matched report title',
+              titleEn: '',
+              descriptionBn: 'Prefilled source-grounded context for guided News Intake review.',
+              descriptionEn: '',
+              incidentDate: '',
+              incidentTime: '',
+              utilityEndTime: '',
+              frequency: 'one-time',
+              priority: 'medium',
+              division: 'Dhaka',
+              district: 'Dhaka',
+              upazilaOrThana: 'Tejgaon',
+              area: 'E2E Intake Area',
+              road: '',
+              landmark: '',
+              formattedAddress: 'E2E Intake Area, Tejgaon, Dhaka',
+              relationshipContext: '',
+              recentBillMonth: '',
+              recentBillAmount: '',
+              previousBillMonth: '',
+              previousBillAmount: '',
+              briberyDepartment: '',
+              briberyService: '',
+              briberyAmount: '',
+              affectedPersonAgeGroup: '',
+              allegedAbuserRelationship: '',
+              reportingFor: '',
+              sexualHarassmentType: '',
+              sexualHarassmentContext: '',
+              sexualHarassmentInstitution: '',
+              intimateWhatHappened: '',
+              intimatePlatform: '',
+              mobJusticeDetails: null,
+              customFieldAnswers: {
+                sourceLanguage: 'en',
+                automatedIntake: true,
+                locationScope: 'specific',
+              },
+            },
+            reviewFields: ['incidentDate'],
+          },
         },
       ],
     },
@@ -318,6 +371,7 @@ function attachPageGuards(page, label) {
 
 async function installSupabaseFixtures(page) {
   const publishedIds = new Set();
+  let guidedReviewCompleted = false;
 
   await page.route(E2E_SUPABASE_ORIGIN + '/**', async (route) => {
     const request = route.request();
@@ -350,7 +404,21 @@ async function installSupabaseFixtures(page) {
         approved: true,
       };
     } else if (path.includes('/rest/v1/rpc/admin_get_news_intake_automation_dashboard')) {
-      body = automaticDashboardFixture;
+      body = JSON.parse(JSON.stringify(automaticDashboardFixture));
+      if (guidedReviewCompleted) {
+        const item = body.runs?.[0]?.items?.find((entry) => entry.id === 'auto-item-review');
+        if (item) {
+          item.action = 'created_draft';
+          item.duplicateStatus = 'clear';
+          item.reportId = E2E_AUTO_REVIEW_REPORT;
+          item.reason = 'Manual review completed; report is ready for publication.';
+          item.reviewPayload = null;
+        }
+        if (body.runs?.[0]) {
+          body.runs[0].createdCount = 3;
+          body.runs[0].reviewCount = 1;
+        }
+      }
     } else if (path.includes('/rest/v1/rpc/admin_get_location_taxonomy')) {
       body = {
         divisions: [
@@ -460,12 +528,27 @@ async function installSupabaseFixtures(page) {
     } else if (path.includes('/rest/v1/rpc/admin_preview_sourced_report_intake')) {
       body = newsIntakeClearFixture;
     } else if (path.includes('/rest/v1/rpc/admin_create_sourced_report_from_intake')) {
+      const payload = request.postDataJSON?.() || {};
+      const sourceUrl = String(payload?.p_payload?.source?.canonicalUrl || '');
+      const createdReportId = sourceUrl.includes('e2e-auto-review')
+        ? E2E_AUTO_REVIEW_REPORT
+        : E2E_NEWS_INTAKE_REPORT_ID;
       body = {
         success: true,
-        reportId: E2E_NEWS_INTAKE_REPORT_ID,
+        reportId: createdReportId,
         status: 'submitted',
         duplicate: duplicateClearFixture,
         canPublishImmediately: true,
+      };
+    } else if (path.includes('/rest/v1/rpc/admin_complete_news_intake_item_review')) {
+      guidedReviewCompleted = true;
+      body = {
+        success: true,
+        itemId: 'auto-item-review',
+        reportId: E2E_AUTO_REVIEW_REPORT,
+        action: 'created_draft',
+        duplicateStatus: 'clear',
+        ready: true,
       };
     } else if (path.includes('/rest/v1/rpc/admin_merge_intake_source')) {
       body = {
@@ -581,7 +664,13 @@ async function installSupabaseFixtures(page) {
                   publishedIds.has(E2E_AUTO_REPORT_B) ? 'published' : 'submitted',
                   !publishedIds.has(E2E_AUTO_REPORT_B)
                 )
-              : [];
+              : requestedId.includes(E2E_AUTO_REVIEW_REPORT)
+                ? autoComplaint(
+                    E2E_AUTO_REVIEW_REPORT,
+                    'E2E staged matched report title',
+                    publishedIds.has(E2E_AUTO_REVIEW_REPORT) ? 'published' : 'submitted'
+                  )
+                : [];
     } else if (path.includes('/rest/v1/rpc/')) {
       body = [];
     } else if (path.includes('/auth/v1/')) {
@@ -597,7 +686,10 @@ async function installSupabaseFixtures(page) {
     });
   });
 
-  return { publishedIds };
+  return {
+    publishedIds,
+    isGuidedReviewCompleted: () => guidedReviewCompleted,
+  };
 }
 
 
