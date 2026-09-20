@@ -101,9 +101,10 @@ assert.equal(
   'mob-justice',
   'Theft-accusation violence must not fall through to the broad theft rule'
 );
-assert.ok(
+assert.equal(
   theftAccusationBn?.reviewReason,
-  'Ambiguous theft-accusation violence must fail closed to human review'
+  undefined,
+  'Approved-source theft-accusation violence must resolve to the primary mob-justice incident without a manual-review state'
 );
 
 const theftAccusationEn = classifyArticle(
@@ -114,9 +115,10 @@ assert.equal(
   'mob-justice',
   'English theft-accusation violence must not be published as theft'
 );
-assert.ok(
+assert.equal(
   theftAccusationEn?.reviewReason,
-  'English theft-accusation violence must require human review'
+  undefined,
+  'Approved-source English theft-accusation violence must resolve without an ambiguity review state'
 );
 
 assert.equal(
@@ -214,6 +216,25 @@ assert.equal(
   'Publication metadata must never be inherited as the incident date'
 );
 
+
+assert.equal(
+  inferIncidentDate(
+    'The toddler was abducted on September 17 and rescued within six hours.',
+    '2026-09-20'
+  ),
+  '2026-09-17',
+  'English month-first incident dates must resolve'
+);
+
+assert.equal(
+  inferIncidentDate(
+    'রোববার (২০ সেপ্টেম্বর) বেলা সাড়ে ১১টার দিকে ঢাকা-চট্টগ্রাম মহাসড়কের কুমিল্লার কোটবাড়ি এলাকায় শিক্ষার্থীরা সড়ক অবরোধ করেন।',
+    '2026-09-20'
+  ),
+  '2026-09-20',
+  'Explicit same-day event dates must not be discarded as publication metadata'
+);
+
 assert.deepEqual(
   findLocation("Two killed in bus crash in Cox's Bazar"),
   { division: 'Chattogram', district: 'Coxs Bazar' },
@@ -223,6 +244,12 @@ assert.deepEqual(
   findLocation('Road crash leaves one dead in Comilla'),
   { division: 'Chattogram', district: 'Cumilla' },
   'Legacy English district spelling must resolve'
+);
+
+assert.deepEqual(
+  findLocation('ঢাকা-চট্টগ্রাম মহাসড়কের কুমিল্লার কোটবাড়ি এলাকায় শিক্ষার্থীরা সড়ক অবরোধ করেন'),
+  { division: 'Chattogram', district: 'Cumilla' },
+  'Incident district context must beat highway endpoint names'
 );
 
 assert.equal(
