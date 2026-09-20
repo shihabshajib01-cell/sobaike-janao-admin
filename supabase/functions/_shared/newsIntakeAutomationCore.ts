@@ -269,7 +269,9 @@ const compactLocationPhrase = (value: string) =>
     .replace(/^(?:the\s+)?(?:incident|accident|attack)\s+(?:happened|occurred|took\s+place)(?:\s+(?:near|at|in|on))?\s+/i,'')
     .replace(/\b(?:happened|occurred|took\s+place)(?:\s+(?:near|at|in|on))?\s+/i,'')
     .split(/\s+/)
-    .slice(-10)
+    // Keep the place phrase itself, not earlier narrative words from the
+    // incident sentence (e.g. "লাশ উদ্ধার ... গড়িয়ারপাড় এলাকায়").
+    .slice(-7)
     .join(' ')
     .replace(/(এলাকা|মহল্লা|গ্রাম|বাজার|মার্কেট|থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|সড়ক|সড়ক|রোড|লেন|গলি|মোড়|মোড়|স্টেশন)(?:য়|য়|তে|ে)$/u,'$1')
     .trim();
