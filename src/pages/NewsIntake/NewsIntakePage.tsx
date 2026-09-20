@@ -462,6 +462,10 @@ export const NewsIntakePage: React.FC = () => {
     const answers = (
       complaint as Complaint & { customFieldAnswers?: Record<string, unknown> }
     ).customFieldAnswers;
+    const trustedSourceAuto =
+      answers?.trustedSourceAuto === true &&
+      answers?.sourceTruthMode === 'approved_publisher';
+    if (trustedSourceAuto) return false;
     const privacyReviewRequired = privacyReviewSubcategories.has(complaint.subcategoryId);
     return (
       answers?.newsIntakeReviewRequired === true ||
@@ -469,7 +473,14 @@ export const NewsIntakePage: React.FC = () => {
     );
   };
 
+  const isStagedTrustedCandidate = (item: NewsIntakeAutomationItem) =>
+    item.action === 'created_draft' &&
+    !item.reportId &&
+    item.duplicateStatus === 'clear' &&
+    Boolean(item.reviewPayload?.source?.canonicalUrl && item.reviewPayload?.report);
+
   const isCurrentFeedReady = (item: NewsIntakeAutomationItem) => {
+    if (isStagedTrustedCandidate(item)) return true;
     if (item.action !== 'created_draft' || !item.reportId) return false;
     const complaint = complaintForItem(item);
     return Boolean(
@@ -479,6 +490,9 @@ export const NewsIntakePage: React.FC = () => {
         !complaintNeedsReview(complaint)
     );
   };
+
+  const selectionKeyForItem = (item: NewsIntakeAutomationItem) =>
+    item.reportId ? `report:${String(item.reportId)}` : `item:${item.id}`;
 
   const isCurrentReviewItem = (item: NewsIntakeAutomationItem) => {
     if (item.action === 'needs_review') return true;
@@ -540,21 +554,21 @@ export const NewsIntakePage: React.FC = () => {
     return rawNewsItems;
   }, [rawFilter, rawNewsItems]);
 
-  const eligibleReportIds = useMemo(
-    () => feedReadyItems.map((item) => String(item.reportId)).filter(Boolean),
+  const eligibleSelectionKeys = useMemo(
+    () => feedReadyItems.map(selectionKeyForItem),
     [feedReadyItems]
   );
 
-  const toggleReport = (reportId: string) => {
+  const toggleSelection = (selectionKey: string) => {
     setSelectedReportIds((current) =>
-      current.includes(reportId)
-        ? current.filter((id) => id !== reportId)
-        : [...current, reportId]
+      current.includes(selectionKey)
+        ? current.filter((id) => id !== selectionKey)
+        : [...current, selectionKey]
     );
   };
 
   const selectAllEligible = () => {
-    setSelectedReportIds(eligibleReportIds);
+    setSelectedReportIds(eligibleSelectionKeys);
   };
 
   const cancelWorkspaceClose = () => {
@@ -653,23 +667,60 @@ export const NewsIntakePage: React.FC = () => {
   const handlePublishSelected = async () => {
     if (selectedReportIds.length === 0) return;
 
+    const selectedItemsForPublish = matchedItems.filter(
+      (item) =>
+        isCurrentFeedReady(item) &&
+        selectedReportIds.includes(selectionKeyForItem(item))
+    );
+    if (selectedItemsForPublish.length === 0) return;
+
     setPublishing(true);
     setWorkspaceError(null);
     const outcomes: PublishOutcome[] = [];
 
-    for (const reportId of selectedReportIds) {
-      const complaint = reportMap[reportId];
+    for (const item of selectedItemsForPublish) {
+      const existingReportId = item.reportId ? String(item.reportId) : '';
+      const complaint = existingReportId ? reportMap[existingReportId] : null;
       const title =
-        complaint?.titleBn || complaint?.titleEn || reportId;
+        complaint?.titleBn ||
+        complaint?.titleEn ||
+        item.sourceTitle ||
+        existingReportId ||
+        item.id;
+
       try {
-        const result = await complaintApi.publishComplaint(reportId);
-        if (result.complaint.status !== 'published') {
-          throw new Error('The report was not confirmed as published.');
+        if (existingReportId) {
+          const result = await complaintApi.publishComplaint(existingReportId);
+          if (result.complaint.status !== 'published') {
+            throw new Error('The report was not confirmed as published.');
+          }
+          outcomes.push({ reportId: existingReportId, title, ok: true });
+          continue;
         }
-        outcomes.push({ reportId, title, ok: true });
+
+        if (!item.reviewPayload) {
+          throw new Error('Approved-source payload is missing for this matched report.');
+        }
+
+        const processed = await newsIntakeApi.publishTrustedCandidate(
+          item.reviewPayload as NewsIntakePayload
+        );
+        if (!processed.reportId || processed.published !== true) {
+          throw new Error(
+            processed.action === 'skip_duplicate'
+              ? 'The source already exists but is not yet published.'
+              : 'The approved-source report was not confirmed as published.'
+          );
+        }
+
+        outcomes.push({
+          reportId: processed.reportId,
+          title,
+          ok: true,
+        });
       } catch (error: unknown) {
         outcomes.push({
-          reportId,
+          reportId: existingReportId || item.id,
           title,
           ok: false,
           error: error instanceof Error ? error.message : 'Publication failed.',
@@ -1262,7 +1313,7 @@ export const NewsIntakePage: React.FC = () => {
                       {selectedItems.length} {isBn ? 'টি সংবাদ পাওয়া গেছে' : 'news items found'}
                     </Tag>
                     <Tag tone="success">
-                      {eligibleReportIds.length} {isBn ? 'টি প্রকাশযোগ্য' : 'ready to publish'}
+                      {eligibleSelectionKeys.length} {isBn ? 'টি প্রকাশযোগ্য' : 'ready to publish'}
                     </Tag>
                   </div>
                   <p className="mt-1 type-meta text-slate-500 dark:text-slate-400">
@@ -1319,7 +1370,7 @@ export const NewsIntakePage: React.FC = () => {
                       variant="secondary"
                       size="sm"
                       onClick={selectAllEligible}
-                      disabled={eligibleReportIds.length === 0 || loadingReports}
+                      disabled={eligibleSelectionKeys.length === 0 || loadingReports}
                     >
                       {isBn ? 'সব নির্বাচন করুন' : 'Select All'}
                     </Button>
@@ -1478,7 +1529,7 @@ export const NewsIntakePage: React.FC = () => {
                         variant="secondary"
                         size="sm"
                           onClick={selectAllEligible}
-                        disabled={eligibleReportIds.length === 0 || loadingReports}
+                        disabled={eligibleSelectionKeys.length === 0 || loadingReports}
                       >
                         {isBn ? 'সব নির্বাচন করুন' : 'Select All'}
                       </Button>
