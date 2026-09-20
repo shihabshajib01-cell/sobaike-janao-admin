@@ -237,7 +237,7 @@ const locationFromScope = (scope: string, district?: string | null) => {
   // in reading order, but ignore medical/destination phrases such as
   // "died at RMCH" so they cannot beat the actual incident place.
   const englishIncidentPlacePattern =
-    /\b(?:at|near)\s+([A-Z][A-Za-z0-9.'’\-]*(?:\s+[A-Z][A-Za-z0-9.'’\-]*){0,5})(?=\s+(?:around|about|at|on|when|where|while|after|before|and|but)|[,.!?]|$)/gu;
+    /\b(?:at|near)\s+([A-Z][A-Za-z0-9.'’\-]*(?:\s+[A-Z][A-Za-z0-9.'’\-]*){0,5})(?=\s+(?:around|about|at|on|in|when|where|while|after|before|and|but)|[,.!?]|$)/gu;
   for (const match of scope.matchAll(englishIncidentPlacePattern)) {
     const matchIndex=match.index ?? 0;
     const prefix=scope.slice(Math.max(0,matchIndex-48),matchIndex);
