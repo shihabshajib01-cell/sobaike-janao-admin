@@ -369,20 +369,36 @@ const compactLocationPhrase = (value: string) => {
   return candidate;
 };
 
-const locationCandidateIsUsable = (candidate: string, district?: string | null) => {
-  const normalized=normalizeText(candidate);
-  if (!normalized || normalized.length<4) return false;
-  if (/^(এলাকা|বাজার|মার্কেট|থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|গ্রাম|শহর|নগরী|মহানগরী|রোড|লেন|গলি|area|market|bazaar|thana|upazila|union|village|city|road|street|lane)$/iu.test(normalized)) return false;
+export const isSafeSpecificLocationText = (
+  value: unknown,
+  district?: string | null
+) => {
+  const normalized=normalizeText(value);
+  if (!normalized || normalized.length<5 || normalized.length>120) return false;
+
+  if (/^(এলাকা|বাজার|মার্কেট|থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|গ্রাম|শহর|নগরী|মহানগরী|রোড|লেন|গলি|মোড়|মোড়|স্টেশন|area|market|bazaar|thana|upazila|union|village|city|road|street|lane|station)$/iu.test(normalized)) return false;
+  if (/^(?:on|at|in|near)\s+(?:the\s+)?(?:road|street|lane|area|city|district|station)(?:\s+\d+)?$/iu.test(normalized)) return false;
   if (/(বিভিন্ন|various|several)\s+(এলাকা|areas?)/iu.test(normalized)) return false;
-  if (/(?:^|\s)(?:এদিকে|অন্যদিকে|এ\s+ঘটনায়|এ\s+ঘটনায়|এই\s+ঘটনায়|এই\s+ঘটনায়|এ\s+বিষয়ে|এ\s+বিষয়ে|করে\s+(?:তাহিরপুর|থানা|উপজেলা))(?=\s|$)/iu.test(normalized)) return false;
-  if (/(বিষয়টি|বিষয়টি|জানার পর|জানতে পেরে|আমরা|তিনি|তারা|পুলিশ জানায়|পুলিশ জানায়|কর্তৃপক্ষ|সন্ধান না পেয়ে|সন্ধান না পেয়ে|খোঁজ করেও|নিহত|আহত|উদ্ধার|গ্রেপ্তার|জানান|বলেন|we learned|we found|police said|officials said|was killed|were killed|was injured|were injured|was rescued|were rescued)/iu.test(normalized)) return false;
-  if (normalized.length>90) return false;
+
+  // Narrative/action fragments must never be promoted to an incident place.
+  if (/(?:collected\s+evidence|cordoned\s+off|investigat(?:e|ed|ing|ion)|police\s+said|officials?\s+said|victim(?:s)?|the\s+victim|was\s+arrested|were\s+arrested|detained|reported\s+the\s+incident|went\s+to\s+the\s+area|visited\s+the\s+area)/iu.test(normalized)) return false;
+  if (/(?:ভুক্তভোগী|পুলিশ\s+জানায়|পুলিশ\s+জানায়|কর্তৃপক্ষ|তদন্ত|গ্রেপ্তার|আটক|নিহত|আহত|উদ্ধার|জানান|বলেন|সন্ধান\s+না\s+পেয়ে|সন্ধান\s+না\s+পেয়ে|খোঁজ\s+করেও)/iu.test(normalized)) return false;
+  if (/(?:^|\s)(?:এদিকে|অন্যদিকে|এ\s+ঘটনায়|এ\s+ঘটনায়|এই\s+ঘটনায়|এই\s+ঘটনায়|এ\s+বিষয়ে|এ\s+বিষয়ে)(?=\s|$)/iu.test(normalized)) return false;
+
+  // A road/street/lane phrase must carry an actual identifier or named place.
+  if (/^(?:road|street|lane|avenue)\s*$/iu.test(normalized)) return false;
+  if (/^(?:on|at|in|near)\s+(?:road|street|lane|avenue)\b/iu.test(normalized)) return false;
+  if (/^(?:র|এর)\s+/u.test(normalized)) return false;
+
   if (district) {
     const districtNormalized=normalizeText(district);
     if (normalized===districtNormalized || normalized===districtNormalized + ' district') return false;
   }
   return true;
 };
+
+const locationCandidateIsUsable = (candidate: string, district?: string | null) =>
+  isSafeSpecificLocationText(candidate,district);
 
 const SPECIFIC_LOCATION_PATTERNS = [
   /([^।.!?;,\n]{2,150}(?:থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|বাজার|মার্কেট|এলাকা|মহল্লা|গ্রাম|সড়ক|সড়ক|রোড|লেন|গলি|মোড়|মোড়|স্টেশন)(?:য়|য়|তে|ে)?)(?=\s|[।.!?;,]|$)/gu,
@@ -669,9 +685,38 @@ export const buildIncidentContext = (article: { excerpt?: string | null; body?: 
     if (!candidate) continue;
     if (selected.some((existing)=>isNearDuplicateIncidentSentence(candidate,existing))) continue;
     selected.push(candidate);
-    if (selected.join(' ').length >= 1400 || selected.length >= 5) break;
+    if (selected.join(' ').length >= 1200 || selected.length >= 10) break;
   }
   return clip(selected.join(' '), 1800);
+};
+
+export const sourceTextLength = (value: unknown) =>
+  Array.from(String(value ?? '').trim()).length;
+
+const clipSourceTextWithoutInventing = (value: unknown, max: number) => {
+  const text=String(value ?? '').replace(/\s+/g,' ').trim();
+  const chars=Array.from(text);
+  if(chars.length<=max) return text;
+
+  const head=chars.slice(0,max+1).join('');
+  const punctuation=[head.lastIndexOf('।'),head.lastIndexOf('.'),head.lastIndexOf('!'),head.lastIndexOf('?')]
+    .filter((index)=>index>=400);
+  if(punctuation.length){
+    return head.slice(0,Math.max(...punctuation)+1).trim();
+  }
+
+  const lastSpace=head.lastIndexOf(' ');
+  return (lastSpace>=400 ? head.slice(0,lastSpace) : chars.slice(0,max).join('')).trim();
+};
+
+export const buildFeedReadyIncidentContext = (
+  article: { excerpt?: string | null; body?: string | null },
+  min=400,
+  max=800
+) => {
+  const context=buildIncidentContext(article);
+  const clipped=clipSourceTextWithoutInventing(context,max);
+  return sourceTextLength(clipped)>=min ? clipped : '';
 };
 
 export const buildSourceLanguageFields = (
@@ -680,7 +725,7 @@ export const buildSourceLanguageFields = (
   language: string
 ) => ({
   titlePrimary: clip(title,100),
-  descriptionPrimary: clip(description,1800),
+  descriptionPrimary: clipSourceTextWithoutInventing(description,800),
   titleEn: '',
   descriptionEn: '',
   sourceLanguage: language || 'unknown',
