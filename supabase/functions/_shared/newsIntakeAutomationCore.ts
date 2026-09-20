@@ -506,7 +506,7 @@ const relativeIncidentDateFromText = (text: string, publishedDate?: string | nul
 };
 
 const INCIDENT_DATE_CUE_RE =
-  /(ঘটনাটি|এ ঘটনা|এই ঘটনা|দুর্ঘটনা(?:টি|য়|য়)?|হামলাটি|ধর্ষণের ঘটনা|ছিনতাইয়ের ঘটনা|ছিনতাইয়ের ঘটনা|ডাকাতির ঘটনা|চুরির ঘটনা|ঘটেছে|ঘটে|ঘটেছিল|সংঘটিত|নিয়ন্ত্রণ হারিয়ে|নিয়ন্ত্রণ হারিয়ে|অবরোধ|অপহরণ|হত্যা|খুন|উদ্ধার|নিহত|আহত|সংঘর্ষ|পিটিয়ে|পিটিয়ে|মারধর|incident|accident|attack|rape|robbery|snatching|theft|lost control|blockade|abduct|kidnap|murder|killed|injured|rescued|collision|crash|assault)/iu;
+  /(ঘটনাটি|এ ঘটনা|এই ঘটনা|দুর্ঘটনা(?:টি|য়|য়)?|হামলাটি|ধর্ষণের ঘটনা|ছিনতাইয়ের ঘটনা|ছিনতাইয়ের ঘটনা|ডাকাতির ঘটনা|চুরির ঘটনা|ঘটেছে|ঘটে|ঘটেছিল|সংঘটিত|নিয়ন্ত্রণ হারিয়ে|নিয়ন্ত্রণ হারিয়ে|অবরোধ|অপহরণ|হত্যা|খুন|উদ্ধার|নিখোঁজ|নিহত|আহত|সংঘর্ষ|পিটিয়ে|পিটিয়ে|মারধর|incident|accident|attack|rape|robbery|snatching|theft|lost control|blockade|abduct|kidnap|murder|missing|disappeared|killed|injured|rescued|collision|crash|assault)/iu;
 
 const PUBLICATION_METADATA_RE =
   /(?:প্রকাশ(?:িত)?|আপডেট|নিজস্ব প্রতিবেদক|স্টাফ রিপোর্টার|published(?:\\s+on)?|publication\\s+date|updated|last\\s+updated)(?:\\s|:|-)/iu;
