@@ -201,11 +201,15 @@ const highwayEndpointPenalty = (text: string, index: number, alias: string) => {
 
 export const findLocation = (value: unknown) => {
   const text = normalizeText(value);
-  if (/রাজধানী/u.test(text) && !/(কুমিল্লা|cumilla|comilla).{0,120}(রাজধানী|ঢাকা)/iu.test(text)) {
+  if (
+    /রাজধানী/u.test(text) &&
+    !/(কুমিল্লা|cumilla|comilla).{0,120}(রাজধানী|ঢাকা)/iu.test(text)
+  ) {
     return { division:'Dhaka', district:'Dhaka' };
   }
 
   let best: { division:string; district:string; score:number; index:number } | null = null;
+
   for (const [district,aliases,division] of DISTRICTS) {
     let score=0;
     let firstIndex=Number.POSITIVE_INFINITY;
@@ -214,42 +218,22 @@ export const findLocation = (value: unknown) => {
     for (const aliasRaw of aliases) {
       const alias=aliasRaw.toLowerCase();
       let from=0;
+
       while(true){
         const index=text.indexOf(alias,from);
         if(index<0) break;
+
         occurrences+=1;
         firstIndex=Math.min(firstIndex,index);
 
         const before=text.slice(Math.max(0,index-80),index);
         const after=text.slice(index+alias.length,Math.min(text.length,index+alias.length+100));
         const local=before.slice(-45)+' '+alias+' '+after.slice(0,65);
+        const labelWindow=before.slice(-18)+' '+after.slice(0,18);
 
         let mentionScore=3;
         if (DISTRICT_CONTEXT_CUE_RE.test(local)) mentionScore+=5;
-        if (new RegExp('(?:জেলা|district)\\s*(?:of\\s+)?'+alias.replace(/[.*+?^$()|[\]{}\\]/g,'\\export const findLocation = (value: unknown) => {
-  const text = normalizeText(value);
-  if (/রাজধানী/u.test(text)) return { division:'Dhaka', district:'Dhaka' };
-  let best: { division: string; district: string; index: number } | null = null;
-  for (const [district, aliases, division] of DISTRICTS) {
-    for (const alias of aliases) {
-      const index = text.indexOf(alias.toLowerCase());
-      if (index >= 0 && (!best || index < best.index)) best = { division, district, index };
-    }
-  }
-  return best ? { division:best.division, district:best.district } : null;
-};'),'iu').test(local)) mentionScore+=6;
-        if (new RegExp(alias.replace(/[.*+?^$()|[\]{}\\]/g,'\\export const findLocation = (value: unknown) => {
-  const text = normalizeText(value);
-  if (/রাজধানী/u.test(text)) return { division:'Dhaka', district:'Dhaka' };
-  let best: { division: string; district: string; index: number } | null = null;
-  for (const [district, aliases, division] of DISTRICTS) {
-    for (const alias of aliases) {
-      const index = text.indexOf(alias.toLowerCase());
-      if (index >= 0 && (!best || index < best.index)) best = { division, district, index };
-    }
-  }
-  return best ? { division:best.division, district:best.district } : null;
-};')+'\\s*(?:জেলা|district)','iu').test(local)) mentionScore+=6;
+        if (/(জেলা|district)/iu.test(labelWindow)) mentionScore+=6;
         if (highwayEndpointPenalty(text,index,alias)) mentionScore-=8;
 
         score+=mentionScore;
@@ -258,10 +242,14 @@ export const findLocation = (value: unknown) => {
     }
 
     if(occurrences>1) score+=Math.min(6,(occurrences-1)*2);
-    if(score>0 && (!best || score>best.score || (score===best.score && firstIndex<best.index))){
+    if(
+      score>0 &&
+      (!best || score>best.score || (score===best.score && firstIndex<best.index))
+    ){
       best={division,district,score,index:firstIndex};
     }
   }
+
   return best ? {division:best.division,district:best.district} : null;
 };
 
