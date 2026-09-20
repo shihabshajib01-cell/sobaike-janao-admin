@@ -201,7 +201,7 @@ const inferRelationship=(text:string)=>{
 };
 
 const inferSexualType=(text:string)=>{
-  if(/(অনাকাঙ্ক্ষিত স্পর্শ|শ্লীলতাহানি|touch|grop|molest)/iu.test(text)) return "unwanted_physical_contact";
+  if(/(অনাকাঙ্ক্ষিত স্পর্শ|শ্লীলতাহানি|\btouch(?:ed|ing)?\b|\bgrop(?:e|ed|ing)?\b|\bmolest(?:ed|ing)?\b)/iu.test(text)) return "unwanted_physical_contact";
   if(/(ইভ\s*টিজ|eve[- ]?teas|কটূক্তি|যৌন মন্তব্য|sexual comment|gesture|proposition)/iu.test(text)) return "eve_teasing";
   if(/(স্টকিং|অনুসরণ|\bstalk(?:ed|ing)?\b)/iu.test(text)) return "stalking";
   if(/(অনলাইন|ফেসবুক|মেসেঞ্জার|সোশ্যাল|\bonline\b|\bfacebook\b|\bmessenger\b|\bsocial media\b)/iu.test(text)) return "online_digital_harassment";
