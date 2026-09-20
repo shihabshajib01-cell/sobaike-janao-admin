@@ -257,14 +257,26 @@ const decodeSerializedString = (raw: string) => {
 const extractSerializedArticleBody = (html: string, finalUrl: string) => {
   let host='';
   try { host=canonicalHostKey(new URL(finalUrl).hostname); } catch {}
-  if(host!=='bdnews24.com' && host!=='bangla.bdnews24.com') return '';
+
+  const allowedHosts=new Set([
+    'bdnews24.com',
+    'bangla.bdnews24.com',
+    'banglanews24.com',
+    'dhakapost.com',
+    'prothomalo.com',
+    'tbsnews.net',
+    'thedailystar.net',
+  ]);
+  if(!allowedHosts.has(host)) return '';
 
   const candidates:string[]=[];
   for(const match of String(html||'').matchAll(
-    /"(?:articleBody|article_body|body|content|details|newsDetails|news_details)"\s*:\s*"((?:\\.|[^"\\]){120,})"/gi
+    /"(?:articleBody|article_body|body|content|details|newsDetails|news_details|story|storyBody|story_body)"\s*:\s*"((?:\\.|[^"\\]){180,})"/gi
   )){
     const decoded=stripTags(decodeSerializedString(match[1]));
-    if(decoded.length>=120) candidates.push(decoded);
+    const sentenceCount=(decoded.match(/[.!?।](?:\s|$)/g)||[]).length;
+    const wordCount=decoded.split(/\s+/).filter(Boolean).length;
+    if(decoded.length>=300 && (sentenceCount>=2 || wordCount>=55)) candidates.push(decoded);
   }
   return candidates.sort((a,b)=>b.length-a.length)[0] || '';
 };
@@ -295,19 +307,34 @@ const extractArticle = (html: string, finalUrl: string, publisherFallback: strin
   const articleMatch = html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i);
   let body = String(jsonLd?.articleBody || '').trim();
   let extractionMethod = body ? 'json_ld_article_body' : '';
+
   if (!body) {
-    const scope = articleMatch?.[1] || html;
+    const semanticBodyMatch=html.match(
+      /<(?:div|section)\b[^>]*(?:class|id)\s*=\s*(?:"[^"]*(?:article-body|story-body|story-content|news-content|details-body|content-body)[^"]*"|'[^']*(?:article-body|story-body|story-content|news-content|details-body|content-body)[^']*')[^>]*>([\s\S]*?)<\/(?:div|section)>/i
+    );
+    const scope = semanticBodyMatch?.[1] || articleMatch?.[1] || html;
     body = [...scope.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)]
       .map((m)=>stripTags(m[1]))
       .filter((text)=>text.length>=35)
-      .slice(0,20)
+      .slice(0,30)
       .join(' ');
-    if(body) extractionMethod = articleMatch ? 'article_paragraphs' : 'page_paragraphs';
+    if(body) {
+      extractionMethod = semanticBodyMatch
+        ? 'semantic_article_paragraphs'
+        : articleMatch
+          ? 'article_paragraphs'
+          : 'page_paragraphs';
+    }
   }
-  if(!body){
-    body=extractSerializedArticleBody(html,finalUrl);
-    if(body) extractionMethod='serialized_article_body';
+
+  // Several publishers expose the complete article in serialized page state.
+  // Prefer it when it is materially fuller than the visible paragraph scrape.
+  const serializedBody=extractSerializedArticleBody(html,finalUrl);
+  if(serializedBody && serializedBody.length > Math.max(300,body.length+120)){
+    body=serializedBody;
+    extractionMethod='serialized_article_body';
   }
+
   body = clip(stripTags(body),12000);
   const excerpt = clip(description || body,1800);
   // Do not treat a section/index page as a news article merely because it has
