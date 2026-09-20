@@ -450,7 +450,7 @@ for (const needle of [
   'max-sm:[&_[data-button-size=sm]]:min-h-11',
   'aria-expanded',
   'ManualNewsIntakeForm',
-  'complaintApi.publishComplaint(reportId)',
+  'complaintApi.publishComplaint(existingReportId)',
   "result.complaint.status !== 'published'",
 ]) {
   requireText(page, needle, 'News Intake dashboard workspace');
