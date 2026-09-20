@@ -28,6 +28,8 @@ const sourceLanguageGroundingCleanup = read('supabase/migrations/20260919093100_
 const misclassifiedReportQuarantine = read('supabase/migrations/20260919184200_quarantine_misclassified_automated_news_report.sql');
 const sensitiveContentReviewGate = read('supabase/migrations/20260920005500_news_intake_sensitive_content_review_gate.sql');
 const matchedReviewWorkspace = read('supabase/migrations/20260920064000_news_intake_matched_review_workspace.sql');
+const trustedAutoPublish = read('supabase/migrations/20260920083500_trusted_news_intake_auto_publish.sql');
+const trustedSourceOmissions = read('supabase/migrations/20260920085000_trusted_news_source_omission_columns.sql');
 const automationCore = read('supabase/functions/_shared/newsIntakeAutomationCore.ts');
 const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
 const edge = read('supabase/functions/news-intake-fetch/index.ts');
@@ -105,7 +107,7 @@ for (const needle of [
   'NON_INCIDENT_THEFT_RE',
   'NON_PROPERTY_SNATCHING_RE',
   'THEFT_ALLEGATION_VIOLENCE_RE',
-  'reviewReason',
+  'isLikelyForeignIncident',
 ]) {
   requireText(automationCore, needle, 'News Intake automation core');
 }
@@ -116,6 +118,10 @@ requireText(behaviorAudit, 'Incident location must win over later narrative text
 requireText(behaviorAudit, 'Bangla weekday plus bare সকাল must resolve against same-day publication date', 'News Intake Bangla daypart incident-date regression');
 requireText(behaviorAudit, 'An earlier incident sentence may inherit the immediately preceding factual date', 'News Intake adjacent-date grounding regression');
 requireText(behaviorAudit, 'Publication metadata must never be inherited as the incident date', 'News Intake publication-date isolation regression');
+requireText(behaviorAudit, 'English month-first incident dates must resolve', 'News Intake month-first date regression');
+requireText(behaviorAudit, 'Explicit same-day event dates must not be discarded as publication metadata', 'News Intake same-day date regression');
+requireText(behaviorAudit, 'Incident district context must beat highway endpoint names', 'News Intake highway/district regression');
+requireText(behaviorAudit, 'must resolve without an ambiguity review state', 'News Intake zero allegation-ambiguity regression');
 requireText(behaviorAudit, 'Banglanews final-detail article paths must be recognized even without semantic article wrappers', 'News Intake Banglanews final-detail article regression');
 requireText(behaviorAudit, 'Excerpt/body overlap must not duplicate the same incident sentence', 'News Intake context de-duplication regression');
 requireText(behaviorAudit, 'Near-identical excerpt/body incident sentences must not be repeated', 'News Intake near-duplicate context regression');
@@ -221,9 +227,7 @@ for (const needle of [
 for (const needle of [
   'admin_begin_news_intake_run',
   'admin_get_news_intake_scan_sources',
-  'admin_preview_sourced_report_intake',
-  'admin_create_sourced_report_from_intake',
-  'admin_merge_intake_source',
+  'process_trusted_news_intake_candidate',
   'admin_record_news_intake_item',
   'admin_finish_news_intake_run',
   'buildSourceLanguageFields',
@@ -241,22 +245,19 @@ for (const needle of [
   'datePublished',
   'finalPathLooksLikeArticle',
   'articleDocumentSignal',
-  'classification.reviewReason',
-  'buildAutomationReviewPayload',
-  'reviewPayload',
-  'reviewFields',
+  'isLikelyForeignIncident',
+  'trustedSourceAuto',
+  'sourceTruthMode',
+  'sourceOmittedFields',
+  'contextualDistrict',
+  'Incident is outside the Bangladesh reporting scope.',
+  'Approved-source report automatically created and published to the public feed.',
+  'Strong same-incident match; approved source merged',
   'processing error(s) were recorded',
   'Section, homepage, or non-article URL was excluded',
   'inferSpecificLocationPhrase',
   'inferDistrictWideScope',
-  "location.quality !== 'multiple_locations'",
-  "location.locationScope !== 'multi_location'",
-  'createdCanPublish',
-  'createdDuplicateStatus',
-  'Draft created, but the final server duplicate evaluation requires review before publication.',
-  'verify_jwt',
 ]) {
-  if (needle === 'verify_jwt') continue;
   requireText(scanner, needle, 'automated News Intake scanner');
 }
 
@@ -327,6 +328,39 @@ for (const needle of [
   'onReviewSaved',
 ]) {
   requireText(manualForm, needle, 'Manual News Intake UI safety flow');
+}
+
+for (const needle of [
+  'ALTER COLUMN incident_date DROP NOT NULL',
+  'ALTER COLUMN division DROP NOT NULL',
+  'ALTER COLUMN district DROP NOT NULL',
+  'complaints_core_facts_required_unless_trusted_source',
+  "origin_type='sourced_report'",
+  'trustedSourceAuto',
+  "sourceTruthMode','approved_publisher",
+]) {
+  requireText(trustedSourceOmissions, needle, 'trusted-source omission constraint');
+}
+
+for (const needle of [
+  'process_trusted_news_intake_candidate',
+  'trustedSourceAuto',
+  "sourceTruthMode','approved_publisher",
+  'sourceOmittedFields',
+  'news_intake.auto_publish',
+  'news_intake.auto_source_merge',
+  'admin_check_news_source_domain',
+  "'verified',true",
+  'guard_sourced_report_schema_requirements',
+  'guard_automated_sourced_report_collision',
+  'enforce_sourced_report_duplicate_review',
+  'guard_sourced_report_publish_readiness',
+  'validate_configured_complaint_answers',
+  'sanitize_configured_complaint_answers',
+  'REVOKE ALL ON FUNCTION public.process_trusted_news_intake_candidate',
+  'GRANT EXECUTE ON FUNCTION public.process_trusted_news_intake_candidate(jsonb) TO service_role',
+]) {
+  requireText(trustedAutoPublish, needle, 'trusted-source atomic auto-publish migration');
 }
 
 for (const needle of [
@@ -427,10 +461,8 @@ if (manualForm.includes('window.confirm')) {
 for (const needle of [
   'buildIncidentFocusedLocationText',
   'focusedLocationText',
-  'Privacy-sensitive category detected.',
-  'privacyReviewRequired',
 ]) {
-  requireText(scanner, needle, 'News Intake incident-location and sensitive-review scanner');
+  requireText(scanner, needle, 'News Intake incident-location scanner');
 }
 
 for (const needle of [
@@ -509,5 +541,5 @@ if (errors.length) {
 }
 
 console.log(
-  'News Intake audit passed: trusted-source modes, false-positive classification guards, article-document filtering, incident-focused date/location extraction, sensitive-content publication gating, published-form validation parity, acknowledged 36-hour scheduling, retry-safe dispatch, Find News entry, overlap prevention, source-language handling, final server duplicate clearance, current-state readiness, category-matched review visibility, accessible nested modal focus, mobile full-screen review controls, draft-first creation, source merge, and security checks are protected.'
+  'News Intake audit passed: approved-source atomic auto-publish, zero allegation-ambiguity review, source-omission preservation, Bangladesh scope filtering, context-grounded date/location resolution, exact-source de-duplication, strong source merging, 36-hour scheduling, manual/citizen safety boundaries, guided historical review, mobile workspace behavior, and security checks are protected.'
 );
