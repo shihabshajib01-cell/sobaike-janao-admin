@@ -203,22 +203,22 @@ const inferRelationship=(text:string)=>{
 const inferSexualType=(text:string)=>{
   if(/(অনাকাঙ্ক্ষিত স্পর্শ|শ্লীলতাহানি|touch|grop|molest)/iu.test(text)) return "unwanted_physical_contact";
   if(/(ইভ\s*টিজ|eve[- ]?teas|কটূক্তি|যৌন মন্তব্য|sexual comment|gesture|proposition)/iu.test(text)) return "eve_teasing";
-  if(/(স্টকিং|অনুসরণ|stalk)/iu.test(text)) return "stalking";
-  if(/(অনলাইন|ফেসবুক|মেসেঞ্জার|সোশ্যাল|online|facebook|messenger|social media)/iu.test(text)) return "online_digital_harassment";
-  if(/(কর্মক্ষেত্র|অফিস|workplace|office)/iu.test(text)) return "workplace_harassment";
+  if(/(স্টকিং|অনুসরণ|\bstalk(?:ed|ing)?\b)/iu.test(text)) return "stalking";
+  if(/(অনলাইন|ফেসবুক|মেসেঞ্জার|সোশ্যাল|\bonline\b|\bfacebook\b|\bmessenger\b|\bsocial media\b)/iu.test(text)) return "online_digital_harassment";
+  if(/(কর্মক্ষেত্র|অফিস|\bworkplace\b|\boffice\b)/iu.test(text)) return "workplace_harassment";
   if(/(ক্ষমতা|পদমর্যাদা|authority|abuse of power)/iu.test(text)) return "abuse_of_power";
   return "unknown_not_stated";
 };
 
 const inferSexualContext=(text:string)=>{
-  if(/(স্কুল|কলেজ|বিশ্ববিদ্যালয়|বিশ্ববিদ্যালয়|ক্যাম্পাস|school|college|university|campus)/iu.test(text)) return "educational_institution";
-  if(/(বাস|ট্রেন|লঞ্চ|গণপরিবহন|public transport|bus|train)/iu.test(text)) return "public_transport";
-  if(/(হাসপাতাল|ক্লিনিক|healthcare|hospital|clinic)/iu.test(text)) return "healthcare";
-  if(/(অফিস|কর্মক্ষেত্র|workplace|office)/iu.test(text)) return "workplace";
-  if(/(অনলাইন|ফেসবুক|মেসেঞ্জার|সোশ্যাল|online|facebook|messenger|social media)/iu.test(text)) return "online_social_media";
-  if(/(বাসা|বাড়ি|বাড়ি|ফ্ল্যাট|home|house|flat|residence)/iu.test(text)) return "home_private_space";
-  if(/(সরকারি অফিস|service office|government office)/iu.test(text)) return "government_service";
-  if(/(রাস্তা|পার্ক|উদ্যান|বাজার|public space|road|street|park|market)/iu.test(text)) return "road_public_space";
+  if(/(স্কুল|কলেজ|বিশ্ববিদ্যালয়|বিশ্ববিদ্যালয়|ক্যাম্পাস|\bschool\b|\bcollege\b|\buniversity\b|\bcampus\b)/iu.test(text)) return "educational_institution";
+  if(/(বাস|ট্রেন|লঞ্চ|গণপরিবহন|\bpublic transport\b|\bbus\b|\btrain\b)/iu.test(text)) return "public_transport";
+  if(/(হাসপাতাল|ক্লিনিক|\bhealthcare\b|\bhospital\b|\bclinic\b)/iu.test(text)) return "healthcare";
+  if(/(অফিস|কর্মক্ষেত্র|\bworkplace\b|\boffice\b)/iu.test(text)) return "workplace";
+  if(/(অনলাইন|ফেসবুক|মেসেঞ্জার|সোশ্যাল|\bonline\b|\bfacebook\b|\bmessenger\b|\bsocial media\b)/iu.test(text)) return "online_social_media";
+  if(/(বাসা|বাড়ি|বাড়ি|ফ্ল্যাট|\bhome\b|\bhouse\b|\bflat\b|\bresidence\b)/iu.test(text)) return "home_private_space";
+  if(/(সরকারি অফিস|\bservice office\b|\bgovernment office\b)/iu.test(text)) return "government_service";
+  if(/(রাস্তা|পার্ক|উদ্যান|বাজার|\bpublic space\b|\broad\b|\bstreet\b|\bpark\b|\bmarket\b)/iu.test(text)) return "road_public_space";
   return "unknown_not_stated";
 };
 
