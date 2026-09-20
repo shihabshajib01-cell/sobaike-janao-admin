@@ -880,10 +880,10 @@ await check('Sourced report publish is blocked until duplicate review is resolve
   await context.close();
 });
 
-await check('News Intake shows every category match on the right and completes guided review before selection', async () => {
+await check('News Intake keeps Step 2 open and Select All publishes approved matches without review', async () => {
   const context = await browser.newContext({ viewport: { width: 1365, height: 1000 } });
   const page = await context.newPage();
-  attachPageGuards(page, 'local-news-intake-automatic');
+  attachPageGuards(page, 'local-news-intake-zero-review');
   const fixtures = await installSupabaseFixtures(page);
 
   await page.goto(hashUrl(LOCAL_URL, '/dashboard'), {
@@ -896,51 +896,37 @@ await check('News Intake shows every category match on the right and completes g
   await page.getByRole('button', { name: 'Scan All Sources Now', exact: true }).click();
 
   await expectVisible(
-    page.getByText('3 matched · 1 ready · 0 selected', { exact: true }).first(),
-    'category-matched panel did not expose matched and ready counts'
+    page.getByText('3 matched · 2 ready · 0 selected', { exact: true }).first(),
+    'category-matched panel did not expose the zero-review ready counts'
   );
   await expectVisible(
     page.getByText('Category-matched reports', { exact: true }).first(),
     'category-matched panel heading missing'
   );
-  await expectVisible(
-    page.getByText('E2E source requiring review', { exact: true }).first(),
-    'review-required category match did not appear on the right'
-  );
-  await expectVisible(
-    page.getByText('E2E automatic report B', { exact: true }).first(),
-    'existing draft requiring review did not remain visible on the right'
-  );
 
-  const reportA = page.getByLabel('Select স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট A for publishing');
-  await expectVisible(reportA, 'ready automatic report selector missing');
-  const reviewRequiredDraftSelector = page.getByLabel(
-    'Review E2E automatic report B before selection'
-  );
-  await expectVisible(
-    reviewRequiredDraftSelector,
-    'review-required matched draft did not expose its checkbox state'
-  );
-  if (!(await reviewRequiredDraftSelector.isDisabled())) {
-    throw new Error('review-required matched draft checkbox must stay disabled until review clears');
+  if (await page.getByText('Review required', { exact: true }).count()) {
+    throw new Error('current approved-source matches still expose Review required');
+  }
+  if (await page.getByText('Review before selection', { exact: true }).count()) {
+    throw new Error('current approved-source matches still require review before selection');
   }
 
-  const stagedReviewSelector = page.getByLabel(
-    'Review E2E source requiring review before selection'
+  const existingSelector = page.getByLabel(
+    'Select স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট A for publishing'
   );
-  await expectVisible(
-    stagedReviewSelector,
-    'review-required category match did not expose its checkbox state'
+  const stagedSelector = page.getByLabel(
+    'Select E2E staged approved-source report for publishing'
   );
-  if (!(await stagedReviewSelector.isDisabled())) {
-    throw new Error('review-required category match checkbox must stay disabled until review clears');
-  }
+  await expectVisible(existingSelector, 'existing ready report selector missing');
+  await expectVisible(stagedSelector, 'staged approved-source selector missing');
+  if (await existingSelector.isDisabled()) throw new Error('existing ready report checkbox is disabled');
+  if (await stagedSelector.isDisabled()) throw new Error('staged approved-source checkbox is disabled');
 
   const dialog = page.getByRole('dialog').first();
   await dialog.getByLabel('Close modal').click();
   await expectVisible(
     page.getByRole('heading', { name: 'Close News Intake?', exact: true }),
-    'closing an active intake did not ask for confirmation'
+    'closing active intake did not ask for confirmation'
   );
   await page.getByRole('button', { name: 'Keep Working', exact: true }).click();
   await expectVisible(
@@ -948,7 +934,7 @@ await check('News Intake shows every category match on the right and completes g
     'workspace closed after Keep Working'
   );
 
-  // Real Admin navigation must be intercepted, not just browser-history changes.
+  // Shared Admin navigation must not silently tear down Step 2.
   await page.getByRole('link', { name: 'Dashboard', exact: true }).evaluate((element) => {
     element.dispatchEvent(
       new MouseEvent('click', {
@@ -961,119 +947,64 @@ await check('News Intake shows every category match on the right and completes g
   });
   await expectVisible(
     page.getByRole('heading', { name: 'Close News Intake?', exact: true }),
-    'another Admin tab navigation intent did not ask for confirmation'
+    'Admin tab switch did not ask for confirmation'
   );
   if (!page.url().includes('/news-intake')) {
-    throw new Error('Admin tab click navigated away before News Intake confirmation');
+    throw new Error('Admin tab switch navigated away before confirmation');
   }
   await page.getByRole('button', { name: 'Keep Working', exact: true }).click();
-  await expectVisible(
-    page.getByText('Category-matched reports', { exact: true }).first(),
-    'Step 2 closed after cancelling Admin tab navigation'
-  );
 
-  // Switching browser tabs must never reset the active workspace.
+  // Browser tab switching must leave the open workspace untouched.
   const secondTab = await context.newPage();
   await secondTab.goto('about:blank');
   await secondTab.bringToFront();
   await page.bringToFront();
   await expectVisible(
     page.getByText('Category-matched reports', { exact: true }).first(),
-    'browser tab switching closed the active News Intake workspace'
+    'browser tab switching closed Step 2'
   );
   await secondTab.close();
 
-  await page.evaluate(() => window.history.back());
-  await expectVisible(
-    page.getByRole('heading', { name: 'Close News Intake?', exact: true }),
-    'leaving Step 2 through Admin navigation did not ask for confirmation'
-  );
-  if (!page.url().includes('/news-intake')) {
-    throw new Error('Admin navigation bypassed the active News Intake blocker');
-  }
-  await page.getByRole('button', { name: 'Keep Working', exact: true }).click();
+  // Persist one selection, simulate a browser tab discard/reload, and verify
+  // that Step 2, the run and selection are restored from sessionStorage.
+  await existingSelector.check({ force: true });
+  await expectVisible(page.getByText('1 selected', { exact: true }), 'selection did not update');
+
+  page.once('dialog', async (nativeDialog) => {
+    await nativeDialog.accept();
+  });
+  await page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
+
   await expectVisible(
     page.getByText('Category-matched reports', { exact: true }).first(),
-    'Step 2 did not remain open after cancelling Admin navigation'
-  );
-  if (!page.url().includes('/news-intake')) {
-    throw new Error('News Intake route changed after cancelling Admin navigation');
-  }
-
-  const matchedReviewCard = page.getByText('E2E source requiring review', { exact: true }).first();
-  const card = matchedReviewCard.locator('xpath=ancestor::div[contains(@class,"flex flex-col gap-3")][1]');
-  await card.getByRole('button', { name: 'Review', exact: true }).click();
-
-  await expectVisible(
-    page.getByText('This report needs review', { exact: true }),
-    'guided review form did not open'
-  );
-  await expectInputValue(
-    page.getByLabel('Report title (source language) *'),
-    'E2E staged matched report title',
-    'guided review did not prefill the staged report title'
+    'Step 2 did not restore after browser reload/tab discard'
   );
   await expectVisible(
-    page.getByText('Confirm the incident date', { exact: true }),
-    'guided review did not indicate the unresolved incident date'
+    page.getByText('3 matched · 2 ready · 1 selected', { exact: true }).first(),
+    'run/selection state did not restore after browser reload'
   );
-  await page.getByLabel('Incident date *').fill('2026-09-19');
-  await page.getByRole('button', { name: 'Check Source & Duplicates', exact: true }).click();
-  await expectVisible(
-    page.getByRole('button', { name: 'Save Review', exact: true }),
-    'guided review did not expose the Save Review action after validation'
-  );
-  await page.getByRole('button', { name: 'Save Review', exact: true }).click();
 
+  await page.getByRole('button', { name: 'Select All', exact: true }).click();
   await expectVisible(
-    page.getByText('3 matched · 2 ready · 0 selected', { exact: true }).first(),
-    'reviewed matched item did not become ready after server revalidation'
+    page.getByText('2 selected', { exact: true }),
+    'Select All did not select every publishable category match'
   );
-  if (!fixtures.isGuidedReviewCompleted()) {
-    throw new Error('guided review completion RPC was not called');
-  }
 
-  const reviewedSelector = page.getByLabel('Select E2E staged matched report title for publishing');
-  await expectVisible(reviewedSelector, 'reviewed matched item did not become selectable');
-
-  await reportA.check({ force: true });
-  await expectVisible(
-    page.getByText('1 selected', { exact: true }),
-    'selection count did not update'
-  );
   await page.getByRole('button', { name: 'Publish Selected to Feed', exact: true }).click();
-
   await expectVisible(
-    page.getByText('1 reports published to the feed', { exact: true }),
-    'automatic selected-only publish result missing'
+    page.getByText('2 reports published to the feed', { exact: true }),
+    'one-click publication did not publish both selected matches'
   );
+
   if (!fixtures.publishedIds.has(E2E_AUTO_REPORT_A)) {
-    throw new Error('selected automatic report was not published');
+    throw new Error('existing ready report was not published');
   }
-  if (fixtures.publishedIds.has(E2E_AUTO_REPORT_B) || fixtures.publishedIds.has(E2E_AUTO_REVIEW_REPORT)) {
-    throw new Error('an unselected matched report was published');
+  if (!fixtures.publishedIds.has(E2E_AUTO_REVIEW_REPORT)) {
+    throw new Error('staged approved-source candidate was not published through trusted-source RPC');
   }
-
-  await page.getByRole('button', { name: 'Done', exact: true }).click();
-  await page.getByRole('button', { name: 'Review', exact: true }).first().click();
-
-  if (await page.getByLabel('Select স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট A for publishing').count()) {
-    throw new Error('already-published report remained selectable');
+  if (fixtures.publishedIds.has(E2E_AUTO_REPORT_B)) {
+    throw new Error('unrelated report was published');
   }
-  const historicalReviewSelector = page.getByLabel(
-    'Review E2E automatic report B before selection'
-  );
-  await expectVisible(
-    historicalReviewSelector,
-    'historical review-required item did not expose its checkbox state'
-  );
-  if (!(await historicalReviewSelector.isDisabled())) {
-    throw new Error('historical review-required item became publish-selectable');
-  }
-  await expectVisible(
-    page.getByLabel('Select E2E staged matched report title for publishing'),
-    'completed guided review did not remain ready in run history'
-  );
 
   await context.close();
 });
