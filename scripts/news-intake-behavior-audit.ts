@@ -10,6 +10,7 @@ import {
   inferSpecificLocationPhrase,
   isKnownPublisherArticlePath,
   isLikelyForeignIncident,
+  isNonIncidentHeadline,
   isUnsupportedArticleType,
 } from '../supabase/functions/_shared/newsIntakeAutomationCore.ts';
 
@@ -48,6 +49,18 @@ assert.equal(
   ),
   false,
   'A Bangladesh incident must not be excluded because a highway name contains Dhaka and Chattogram'
+);
+
+assert.equal(
+  isNonIncidentHeadline('৩০ সেপ্টেম্বরের পর অনির্দিষ্টকালের ধর্মঘটের হুঁশিয়ারি বাল্কহেড মালিকদের'),
+  true,
+  'Future strike warnings must be excluded before category matching even if the article mentions robbery prevention'
+);
+
+assert.equal(
+  classifyArticle("Police recover iPhone stolen from Apratim from detained Tuhin's home"),
+  null,
+  'Evidence recovery during a murder investigation must not become a standalone theft report'
 );
 
 const classificationCases: Array<[string, string, string]> = [
@@ -255,6 +268,15 @@ assert.equal(
   'Explicit same-day event dates must not be discarded as publication metadata'
 );
 
+assert.equal(
+  inferIncidentDate(
+    'রোববার বেলা সোয়া ১১টার দিকে কুমিল্লার কোটবাড়ি বিশ্বরোড এলাকায় অবরোধ শুরু করেন তারা।',
+    '2026-09-20'
+  ),
+  '2026-09-20',
+  'Same-day Bangla weekday plus বেলা must resolve to the publication day'
+);
+
 assert.deepEqual(
   findLocation("Two killed in bus crash in Cox's Bazar"),
   { division: 'Chattogram', district: 'Coxs Bazar' },
@@ -270,6 +292,12 @@ assert.deepEqual(
   findLocation('ঢাকা-চট্টগ্রাম মহাসড়কের কুমিল্লার কোটবাড়ি এলাকায় শিক্ষার্থীরা সড়ক অবরোধ করেন'),
   { division: 'Chattogram', district: 'Cumilla' },
   'Incident district context must beat highway endpoint names'
+);
+
+assert.deepEqual(
+  findLocation('রোববার বেলা সোয়া ১১টার দিকে কুমিল্লার কোটবাড়ি বিশ্বরোড এলাকায় অবরোধ শুরু করেন তারা। এতে ঢাকা-চট্টগ্রাম মহাসড়কের উভয় পাশে যানজট হয়।'),
+  { division: 'Chattogram', district: 'Cumilla' },
+  'Exact production road-block wording must ground Cumilla instead of the Dhaka highway endpoint'
 );
 
 assert.equal(
