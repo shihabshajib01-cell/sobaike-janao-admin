@@ -502,6 +502,16 @@ export const NewsIntakePage: React.FC = () => {
     return complaintNeedsReview(complaint) || item.duplicateStatus !== 'clear';
   };
 
+  // Automatic excluded matches are diagnostic results, not a manual-data-entry
+  // queue. Only explicit review states may enter the guided review workflow.
+  const canManuallyReviewItem = (item: NewsIntakeAutomationItem) =>
+    item.action === 'needs_review' ||
+    (
+      item.action === 'created_draft' &&
+      Boolean(item.reportId) &&
+      isCurrentReviewItem(item)
+    );
+
   const isCurrentPublishedItem = (item: NewsIntakeAutomationItem) =>
     item.action === 'created_draft' && complaintForItem(item)?.status === 'published';
 
@@ -627,6 +637,15 @@ export const NewsIntakePage: React.FC = () => {
   };
 
   const reviewItemManually = (item: NewsIntakeAutomationItem) => {
+    if (!canManuallyReviewItem(item)) {
+      setWorkspaceError(
+        isBn
+          ? 'এই স্বয়ংক্রিয় ফলাফলটি প্রকাশের জন্য ব্লক করা হয়েছে। উৎস বা এক্সট্র্যাকশন ঠিক হলে Find News আবার চালান।'
+          : 'This automatic result is blocked from publishing. Re-run Find News after the source or extraction issue is resolved.'
+      );
+      return;
+    }
+
     setIntakeStarted(true);
     setWorkspaceError(null);
     if (item.reportId) {
@@ -1605,12 +1624,7 @@ export const NewsIntakePage: React.FC = () => {
                           }
 
                           const canReview =
-                            !ready &&
-                            (
-                              item.action === 'needs_review' ||
-                              isExcludedItem(item) ||
-                              (item.action === 'created_draft' && isCurrentReviewItem(item))
-                            );
+                            !ready && canManuallyReviewItem(item);
 
                           return (
                             <Card key={item.id} padding="sm">
@@ -1625,8 +1639,8 @@ export const NewsIntakePage: React.FC = () => {
                                           : 'Select for publishing'
                                         : canReview
                                           ? isBn
-                                            ? 'ঐতিহাসিক রিভিউ আইটেম'
-                                            : 'Historical review item'
+                                            ? 'রিভিউ প্রয়োজন'
+                                            : 'Review required'
                                           : isBn
                                             ? 'এই আইটেম নির্বাচনযোগ্য নয়'
                                             : 'Not selectable'
@@ -1641,8 +1655,8 @@ export const NewsIntakePage: React.FC = () => {
                                           : `Select ${item.sourceTitle || 'report'} for publishing`
                                         : canReview
                                           ? isBn
-                                            ? `${item.sourceTitle || 'রিপোর্ট'} পুরোনো রিভিউ আইটেম`
-                                            : `${item.sourceTitle || 'report'} is a historical review item`
+                                            ? `${item.sourceTitle || 'রিপোর্ট'} রিভিউ প্রয়োজন`
+                                            : `${item.sourceTitle || 'report'} requires review`
                                           : isBn
                                             ? `${item.sourceTitle || 'রিপোর্ট'} নির্বাচনযোগ্য নয়`
                                             : `${item.sourceTitle || 'Report'} is not selectable`
@@ -1652,7 +1666,7 @@ export const NewsIntakePage: React.FC = () => {
                                     {ready
                                       ? isBn ? 'প্রকাশের জন্য প্রস্তুত' : 'Ready to publish'
                                       : canReview
-                                        ? isBn ? 'পুরোনো রিভিউ' : 'Historical review'
+                                        ? isBn ? 'রিভিউ প্রয়োজন' : 'Needs review'
                                         : isBn ? 'নির্বাচনযোগ্য নয়' : 'Not selectable'}
                                   </Tag>
                                 </div>
