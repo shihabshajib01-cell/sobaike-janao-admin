@@ -35,7 +35,9 @@ const sourceQualityGate = read('supabase/migrations/20260920142434_news_intake_s
 const factcheckLocationQuality = read('supabase/migrations/20260920143209_news_intake_factcheck_location_quality.sql');
 const legacyQualityCleanup = read('supabase/migrations/20260920143848_news_intake_legacy_quality_cleanup.sql');
 const oneClickContract = read('supabase/migrations/20260920175318_news_intake_one_click_zero_issue_contract.sql');
+const subcategoryBuilderContract = read('supabase/migrations/20260920183600_news_intake_subcategory_builder_contract.sql');
 const automationCore = read('supabase/functions/_shared/newsIntakeAutomationCore.ts');
+const subcategoryBuilders = read('supabase/functions/_shared/newsIntakeSubcategoryBuilders.ts');
 const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
 const edge = read('supabase/functions/news-intake-fetch/index.ts');
 const scanner = read('supabase/functions/news-intake-scan/index.ts');
@@ -119,6 +121,25 @@ for (const needle of [
   'sourceTextLength',
 ]) {
   requireText(automationCore, needle, 'News Intake automation core');
+}
+
+for (const needle of [
+  'NEWS_INTAKE_SUBCATEGORY_BUILDERS',
+  'NEWS_INTAKE_SUBCATEGORY_IDS',
+  'buildNewsIntakeSubcategoryReport',
+  'missingNewsIntakeSubcategoryFields',
+  '"bribe-demanded-service"',
+  '"sexual-harassment"',
+  '"mob-justice"',
+  '"child_abduction_murder"',
+  '"excess-electricity-bill"',
+  '"road-accident"',
+  '"road-block"',
+]) {
+  requireText(subcategoryBuilders, needle, 'News Intake proven subcategory builder registry');
+}
+if ((subcategoryBuilders.match(/segmentId:/g) || []).length < 26) {
+  errors.push('News Intake proven subcategory builder registry must cover all 26 active subcategories.');
 }
 requireText(behaviorAudit, 'classificationCases', 'News Intake behavior audit');
 requireText(behaviorAudit, 'English content must not be duplicated', 'News Intake source-language audit');
@@ -314,6 +335,16 @@ for (const needle of [
 }
 
 for (const needle of [
+  'news_intake_location_contract_is_valid',
+  'safe specific place',
+  'district-wide scope',
+  "v_answers->>'locationScope'",
+  "new.custom_field_answers->>'locationScope'",
+]) {
+  requireText(subcategoryBuilderContract, needle, 'News Intake subcategory-builder server contract');
+}
+
+for (const needle of [
   'guard_sourced_report_publish_readiness',
   'trg_guard_sourced_report_publish_readiness',
   'SOURCE_GROUNDING_REVIEW_REQUIRED',
@@ -410,7 +441,8 @@ for (const needle of [
   'sourceTextLength(context)>800',
   'Source did not expose 400–800 characters of substantive incident context',
   'Source publication date could not be verified safely; candidate was blocked from Feed Ready.',
-  'missingOneClickContractFields',
+  'buildNewsIntakeSubcategoryReport',
+  'missingNewsIntakeSubcategoryFields',
   'Current report form requirements could not be fully grounded from the source',
   "classification.subcategoryId === 'load-shedding-outage'",
   "classification.subcategoryId === 'gas-shortage'",
@@ -623,6 +655,13 @@ if (!page.includes('matchedItems.map((item)')) {
 
 if (/const canReview[\s\S]{0,260}isExcludedItem\(item\)/.test(page)) {
   errors.push('Automatic excluded News Intake items must remain read-only and must not enter the manual review workflow.');
+}
+
+if (scanner.includes('const buildReportPayload =')) {
+  errors.push('News Intake scanner must not fall back to the old generic buildReportPayload implementation.');
+}
+if (!scanner.includes('newsIntakeSubcategoryBuilders.ts')) {
+  errors.push('News Intake scanner must route classified articles through the proven subcategory builder registry.');
 }
 if (page.includes('Historical review item') || page.includes('Historical review')) {
   errors.push('News Intake must not label current excluded matches as historical review work.');
