@@ -168,6 +168,12 @@ export interface NewsIntakeAutomationSource {
   lastScannedAt?: string | null;
 }
 
+export interface NewsIntakeAutomationReviewPayload {
+  source: NewsIntakeSource;
+  report: NewsIntakeReport;
+  reviewFields: string[];
+}
+
 export interface NewsIntakeAutomationItem {
   id: string;
   itemKind?: 'source' | 'article';
@@ -184,6 +190,7 @@ export interface NewsIntakeAutomationItem {
   action: NewsIntakeAutomationAction;
   reportId?: string | null;
   reason?: string | null;
+  reviewPayload?: NewsIntakeAutomationReviewPayload | null;
 }
 
 export interface NewsIntakeAutomationRun {
@@ -217,6 +224,15 @@ export interface NewsIntakeAutomationDashboard {
   sources: NewsIntakeAutomationSource[];
   runs: NewsIntakeAutomationRun[];
   automation: NewsIntakeAutomationConfig;
+}
+
+export interface NewsIntakeReviewCompletionResult {
+  success: boolean;
+  itemId: string;
+  reportId: string;
+  action: NewsIntakeAutomationAction;
+  duplicateStatus: NewsIntakeAutomationItem['duplicateStatus'];
+  ready: boolean;
 }
 
 export interface NewsIntakeAutomationScanResult {
