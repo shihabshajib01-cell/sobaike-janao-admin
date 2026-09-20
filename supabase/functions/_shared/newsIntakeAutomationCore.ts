@@ -146,10 +146,37 @@ const isChildMurderAttemptOnly = (value: unknown) => {
     && !CHILD_MURDER_COMPLETION_RE.test(text);
 };
 
+const CHILD_ABDUCTION_NEGATION_RE =
+  /(?:no\s+(?:child\s+)?(?:abduction|kidnapping)|not\s+(?:abducted|kidnapped)|abduction\s+(?:was\s+)?not\s+reported|kidnapping\s+(?:was\s+)?not\s+reported|অপহরণ\s*(?:হয়নি|হয়নি|ঘটেনি|নয়|নয়)|অপহৃত\s*(?:হয়নি|হয়নি))/iu;
+const CHILD_MURDER_NEGATION_RE =
+  /(?:no\s+(?:child\s+)?(?:murder|killing|death)|not\s+(?:murdered|killed)|murder\s+(?:was\s+)?not\s+reported|death\s+(?:was\s+)?not\s+reported|হত্যা\s*(?:হয়নি|হয়নি|ঘটেনি|নয়|নয়)|খুন\s*(?:হয়নি|হয়নি|ঘটেনি|নয়|নয়)|নিহত\s*(?:হয়নি|হয়নি)|মৃত্যু\s*(?:হয়নি|হয়নি))/iu;
+const CHILD_DEATH_NEGATION_RE =
+  /(?:no\s+death|did\s+not\s+die|not\s+killed|death\s+(?:was\s+)?not\s+reported|মৃত্যু\s*(?:হয়নি|হয়নি)|নিহত\s*(?:হয়নি|হয়নি))/iu;
+
 export const inferChildIncidentType = (value: unknown) => {
   const text = normalizeText(value);
-  const hasAbduction = CHILD_ABDUCTION_RE.test(text);
-  const hasMurder = CHILD_MURDER_RE.test(text) && !isChildMurderAttemptOnly(text);
+  const sentences = text
+    .split(/(?<=[.!?।])\s+/)
+    .map((sentence)=>sentence.trim())
+    .filter(Boolean);
+
+  const hasAbduction = sentences.some(
+    (sentence)=>CHILD_ABDUCTION_RE.test(sentence) && !CHILD_ABDUCTION_NEGATION_RE.test(sentence)
+  );
+
+  const murderEvidence = sentences.filter(
+    (sentence)=>CHILD_MURDER_RE.test(sentence) && !CHILD_MURDER_NEGATION_RE.test(sentence)
+  );
+  const directMurder = murderEvidence.some(
+    (sentence)=>!isChildMurderAttemptOnly(sentence)
+  );
+  const attemptedMurderWithReportedDeath =
+    murderEvidence.some((sentence)=>CHILD_MURDER_ATTEMPT_RE.test(sentence))
+    && sentences.some(
+      (sentence)=>CHILD_MURDER_COMPLETION_RE.test(sentence) && !CHILD_DEATH_NEGATION_RE.test(sentence)
+    );
+  const hasMurder = directMurder || attemptedMurderWithReportedDeath;
+
   if (hasAbduction && hasMurder) return 'abduction_and_murder';
   if (hasAbduction) return 'abduction';
   if (hasMurder) return 'murder';

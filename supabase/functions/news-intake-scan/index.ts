@@ -6,13 +6,11 @@ import {
   buildFeedReadyIncidentContext,
   buildIncidentContext,
   buildIncidentFocusedLocationText,
-  buildSourceLanguageFields,
   classifyArticle,
   clip,
   detectLanguage,
   findLocation,
   inferDistrictWideScope,
-  inferChildIncidentType,
   inferIncidentDate,
   inferSpecificLocationPhrase,
   isFactCheckOrMisinformationStory,
@@ -20,12 +18,15 @@ import {
   isLegalFollowUpOnly,
   isLikelyForeignIncident,
   isNonIncidentHeadline,
-  isSafeSpecificLocationText,
   isSubstantiveIncidentContext,
   isUnsupportedArticleType,
   scoreDiscoveryLink,
   sourceTextLength,
 } from "../_shared/newsIntakeAutomationCore.ts";
+import {
+  buildNewsIntakeSubcategoryReport,
+  missingNewsIntakeSubcategoryFields,
+} from "../_shared/newsIntakeSubcategoryBuilders.ts";
 
 const ALLOWED_ORIGINS = new Set([
   "https://shihabshajib01-cell.github.io",
@@ -256,14 +257,26 @@ const decodeSerializedString = (raw: string) => {
 const extractSerializedArticleBody = (html: string, finalUrl: string) => {
   let host='';
   try { host=canonicalHostKey(new URL(finalUrl).hostname); } catch {}
-  if(host!=='bdnews24.com' && host!=='bangla.bdnews24.com') return '';
+
+  const allowedHosts=new Set([
+    'bdnews24.com',
+    'bangla.bdnews24.com',
+    'banglanews24.com',
+    'dhakapost.com',
+    'prothomalo.com',
+    'tbsnews.net',
+    'thedailystar.net',
+  ]);
+  if(!allowedHosts.has(host)) return '';
 
   const candidates:string[]=[];
   for(const match of String(html||'').matchAll(
-    /"(?:articleBody|article_body|body|content|details|newsDetails|news_details)"\s*:\s*"((?:\\.|[^"\\]){120,})"/gi
+    /"(?:articleBody|article_body|body|content|details|newsDetails|news_details|story|storyBody|story_body)"\s*:\s*"((?:\\.|[^"\\]){180,})"/gi
   )){
     const decoded=stripTags(decodeSerializedString(match[1]));
-    if(decoded.length>=120) candidates.push(decoded);
+    const sentenceCount=(decoded.match(/[.!?।](?:\s|$)/g)||[]).length;
+    const wordCount=decoded.split(/\s+/).filter(Boolean).length;
+    if(decoded.length>=300 && (sentenceCount>=2 || wordCount>=55)) candidates.push(decoded);
   }
   return candidates.sort((a,b)=>b.length-a.length)[0] || '';
 };
@@ -294,19 +307,34 @@ const extractArticle = (html: string, finalUrl: string, publisherFallback: strin
   const articleMatch = html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i);
   let body = String(jsonLd?.articleBody || '').trim();
   let extractionMethod = body ? 'json_ld_article_body' : '';
+
   if (!body) {
-    const scope = articleMatch?.[1] || html;
+    const semanticBodyMatch=html.match(
+      /<(?:div|section)\b[^>]*(?:class|id)\s*=\s*(?:"[^"]*(?:article-body|story-body|story-content|news-content|details-body|content-body)[^"]*"|'[^']*(?:article-body|story-body|story-content|news-content|details-body|content-body)[^']*')[^>]*>([\s\S]*?)<\/(?:div|section)>/i
+    );
+    const scope = semanticBodyMatch?.[1] || articleMatch?.[1] || html;
     body = [...scope.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)]
       .map((m)=>stripTags(m[1]))
       .filter((text)=>text.length>=35)
-      .slice(0,20)
+      .slice(0,30)
       .join(' ');
-    if(body) extractionMethod = articleMatch ? 'article_paragraphs' : 'page_paragraphs';
+    if(body) {
+      extractionMethod = semanticBodyMatch
+        ? 'semantic_article_paragraphs'
+        : articleMatch
+          ? 'article_paragraphs'
+          : 'page_paragraphs';
+    }
   }
-  if(!body){
-    body=extractSerializedArticleBody(html,finalUrl);
-    if(body) extractionMethod='serialized_article_body';
+
+  // Several publishers expose the complete article in serialized page state.
+  // Prefer it when it is materially fuller than the visible paragraph scrape.
+  const serializedBody=extractSerializedArticleBody(html,finalUrl);
+  if(serializedBody && serializedBody.length > Math.max(300,body.length+120)){
+    body=serializedBody;
+    extractionMethod='serialized_article_body';
   }
+
   body = clip(stripTags(body),12000);
   const excerpt = clip(description || body,1800);
   // Do not treat a section/index page as a news article merely because it has
@@ -391,207 +419,6 @@ const mapLimit = async <T,R>(items: T[], limit: number, worker: (item:T,index:nu
   return results;
 };
 
-const parseExplicitSourceTime = (value: unknown) => {
-  const text=String(value||'')
-    .replace(/[০-৯]/g,(digit)=>({
-      '০':'0','১':'1','২':'2','৩':'3','৪':'4','৫':'5','৬':'6','৭':'7','৮':'8','৯':'9',
-    } as Record<string,string>)[digit]||digit);
-
-  const twelve=text.match(/(?:^|\s)(\d{1,2})(?::(\d{2}))?\s*(am|pm)(?:\s|[,.।]|$)/iu);
-  if(twelve){
-    let hour=Number(twelve[1]);
-    const minute=Number(twelve[2]||0);
-    if(hour>=1 && hour<=12 && minute>=0 && minute<60){
-      if(twelve[3].toLowerCase()==='pm' && hour!==12) hour+=12;
-      if(twelve[3].toLowerCase()==='am' && hour===12) hour=0;
-      return `${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`;
-    }
-  }
-
-  const twentyFour=text.match(/(?:^|\s)([01]?\d|2[0-3]):([0-5]\d)(?:\s|[,.।]|$)/u);
-  return twentyFour
-    ? `${String(Number(twentyFour[1])).padStart(2,'0')}:${twentyFour[2]}`
-    : '';
-};
-
-const missingOneClickContractFields = (report: any) => {
-  const missing:string[]=[];
-  const segment=String(report?.segmentId||'');
-  const subcategory=String(report?.subcategoryId||'');
-  const text=(value:unknown)=>String(value??'').trim();
-  const numberOk=(value:unknown)=>{
-    const n=Number(value);
-    return text(value)!=='' && Number.isFinite(n) && n>0;
-  };
-
-  if(!text(report?.incidentDate) && subcategory!=='excess-electricity-bill'){
-    missing.push('incidentDate');
-  }
-
-  if(!text(report?.division) || !text(report?.district) || !text(report?.upazilaOrThana)){
-    missing.push('location');
-  }
-  if(
-    text(report?.formattedAddress)
-    && !isSafeSpecificLocationText(report.formattedAddress,report.district)
-  ){
-    missing.push('locationQuality');
-  }
-  if(
-    text(report?.area)
-    && !isSafeSpecificLocationText(report.area,report.district)
-  ){
-    missing.push('locationQuality');
-  }
-
-  if(subcategory==='load-shedding-outage' || subcategory==='gas-shortage'){
-    if(!text(report?.incidentTime)) missing.push('incidentTime');
-  }
-
-  if(subcategory==='excess-electricity-bill'){
-    if(!text(report?.recentBillMonth)) missing.push('recentBillMonth');
-    if(!numberOk(report?.recentBillAmount)) missing.push('recentBillAmount');
-    if(!text(report?.previousBillMonth)) missing.push('previousBillMonth');
-    if(!numberOk(report?.previousBillAmount)) missing.push('previousBillAmount');
-  }
-
-  if(segment==='harassment'){
-    if(!text(report?.affectedPersonAgeGroup)) missing.push('affectedPersonAgeGroup');
-    if(!text(report?.allegedAbuserRelationship)) missing.push('allegedAbuserRelationship');
-    if(!text(report?.reportingFor)) missing.push('reportingFor');
-  }
-  if(subcategory==='sexual-harassment'){
-    if(!text(report?.sexualHarassmentType)) missing.push('sexualHarassmentType');
-    if(!text(report?.sexualHarassmentContext)) missing.push('sexualHarassmentContext');
-  }
-
-  if(subcategory==='child_abduction_murder'){
-    if(!text(report?.customFieldAnswers?.childIncidentType)) missing.push('childIncidentType');
-  }
-
-  if(subcategory==='mob-justice'){
-    const details=report?.mobJusticeDetails||{};
-    if(!text(details.trigger)) missing.push('mobJusticeTrigger');
-    if(!text(details.outcome)) missing.push('mobJusticeOutcome');
-    if(!text(details.ongoingStatus)) missing.push('mobJusticeOngoingStatus');
-  }
-
-  return Array.from(new Set(missing));
-};
-
-const buildReportPayload = (
-  article: any,
-  classification: any,
-  location: any | null,
-  incidentDate: string | null,
-  language: string,
-  feedContext?: string
-) => {
-  const source = {
-    sourceType:'news',
-    publisherName:article.publisherName,
-    sourceTitle:article.title,
-    canonicalUrl:article.canonicalUrl,
-    sourcePublishedDate:article.sourcePublishedDate || '',
-  };
-  const text = `${article.title} ${article.excerpt} ${article.body}`;
-  const mobOutcome = /(নিহত|মৃত্যু|death|died|killed)/iu.test(text)
-    ? 'death_reported'
-    : /(গুরুতর আহত|seriously injured)/iu.test(text)
-      ? 'seriously_injured'
-      : /(আহত|injured|assaulted|পিটুনি|মারধর)/iu.test(text)
-        ? 'physically_assaulted'
-        : 'unknown';
-  const mobTrigger = /(ছিনতাই|snatching)/iu.test(text)
-    ? 'snatching_allegation'
-    : /(চুরি|ডাকাতি|theft|robbery|dacoity)/iu.test(text)
-      ? 'suspected_theft_robbery'
-      : /(অপহরণ|kidnap)/iu.test(text)
-        ? 'kidnapping_allegation'
-        : /(যৌন|sexual)/iu.test(text)
-          ? 'sexual_offence_allegation'
-          : 'unknown';
-  const childIncidentType =
-    classification.subcategoryId === 'child_abduction_murder'
-      ? inferChildIncidentType(text)
-      : null;
-
-  const fields=buildSourceLanguageFields(
-    article.title,
-    feedContext || buildFeedReadyIncidentContext(article),
-    language
-  );
-
-  return {
-    source,
-    report:{
-      segmentId:classification.segmentId,
-      subcategoryId:classification.subcategoryId,
-      // The legacy DB keys are named *Bn, but for sourced reports the primary
-      // fields intentionally store the source language only.
-      titleBn:fields.titlePrimary,
-      titleEn:'',
-      descriptionBn:fields.descriptionPrimary,
-      descriptionEn:'',
-      incidentDate:incidentDate || '',
-      incidentTime:
-        classification.subcategoryId === 'load-shedding-outage' ||
-        classification.subcategoryId === 'gas-shortage'
-          ? parseExplicitSourceTime(text)
-          : '',
-      utilityEndTime:'',
-      frequency:'one-time',
-      priority:'medium',
-      division:location?.division || '',
-      district:location?.district || '',
-      upazilaOrThana:location?.upazilaOrThana || '',
-      area:location?.area || '',
-      road:location?.road || '',
-      landmark:location?.landmark || '',
-      formattedAddress:location?.formattedAddress || '',
-      relationshipContext:'',
-      recentBillMonth:'',
-      recentBillAmount:'',
-      previousBillMonth:'',
-      previousBillAmount:'',
-      briberyDepartment:'',
-      briberyService:'',
-      briberyAmount:'',
-      affectedPersonAgeGroup:classification.segmentId === 'harassment' ? 'unknown_not_stated' : '',
-      allegedAbuserRelationship:classification.segmentId === 'harassment' ? 'unknown_not_stated' : '',
-      reportingFor:classification.segmentId === 'harassment' ? 'someone_else' : '',
-      sexualHarassmentType:classification.subcategoryId === 'sexual-harassment' ? 'unknown_not_stated' : '',
-      sexualHarassmentContext:classification.subcategoryId === 'sexual-harassment' ? 'unknown_not_stated' : '',
-      sexualHarassmentInstitution:'',
-      intimateWhatHappened:'',
-      intimatePlatform:'',
-      mobJusticeDetails:classification.subcategoryId === 'mob-justice'
-        ? { trigger:mobTrigger, outcome:mobOutcome, ongoingStatus:'unknown' }
-        : null,
-      customFieldAnswers:{
-        sourceLanguage:fields.sourceLanguage,
-        automatedIntake:true,
-        trustedSourceAuto:true,
-        sourceTruthMode:'approved_publisher',
-        sourceOmittedFields:[
-          ...(!incidentDate && classification.subcategoryId!=='excess-electricity-bill' ? ['incidentDate'] : []),
-          ...(!location || !location.upazilaOrThana ? ['location'] : []),
-        ],
-        locationScope:!location || location.locationScope === 'district_only'
-          ? 'source_unspecified'
-          : location.locationScope === 'district_wide'
-            ? 'district_wide'
-            : 'specific',
-        ...(classification.subcategoryId === 'child_abduction_murder'
-          ? {
-              childIncidentType:childIncidentType || 'unknown_not_stated',
-            }
-          : {}),
-      },
-    },
-  };
-};
-
 const buildAutomationReviewPayload = (
   article: any,
   classification: any,
@@ -600,23 +427,15 @@ const buildAutomationReviewPayload = (
   location?: any,
   incidentDate?: string | null
 ) => {
-  const safeLocation = location || {
-    division:'',
-    district:'',
-    upazilaOrThana:'',
-    area:'',
-    road:'',
-    landmark:'',
-    formattedAddress:'',
-    locationScope:'specific',
-  };
-  const payload = buildReportPayload(
+  const context=buildFeedReadyIncidentContext(article) || buildIncidentContext(article);
+  const payload=buildNewsIntakeSubcategoryReport({
     article,
     classification,
-    safeLocation,
-    incidentDate || '',
-    language
-  );
+    location:location || null,
+    incidentDate:incidentDate || null,
+    language,
+    feedContext:context,
+  });
   return {
     ...payload,
     reviewFields:Array.from(new Set(reviewFields.filter(Boolean))),
@@ -1271,7 +1090,14 @@ const processNewsIntakeRun = async (
         }
 
         const payload={
-          ...buildReportPayload(article,classification,location,incidentDate,language,context),
+          ...buildNewsIntakeSubcategoryReport({
+            article,
+            classification,
+            location,
+            incidentDate,
+            language,
+            feedContext:context,
+          }),
           quality:{
             extractionStatus:'complete',
             extractionMethod:article.extractionMethod || 'unknown',
@@ -1282,7 +1108,7 @@ const processNewsIntakeRun = async (
           },
         };
 
-        const missingContractFields=missingOneClickContractFields(payload.report);
+        const missingContractFields=missingNewsIntakeSubcategoryFields(payload.report);
         if(missingContractFields.length){
           await record({
             itemKind:'article',

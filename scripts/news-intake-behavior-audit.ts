@@ -19,6 +19,11 @@ import {
   isUnsupportedArticleType,
   sourceTextLength,
 } from '../supabase/functions/_shared/newsIntakeAutomationCore.ts';
+import {
+  NEWS_INTAKE_SUBCATEGORY_IDS,
+  buildNewsIntakeSubcategoryReport,
+  missingNewsIntakeSubcategoryFields,
+} from '../supabase/functions/_shared/newsIntakeSubcategoryBuilders.ts';
 
 // Munshiganj incident-focused location regression: residence/hospital destinations
 // must not outrank the actual crash location.
@@ -186,6 +191,107 @@ for (const [subcategoryId, text, segmentId] of classificationCases) {
   assert.equal(result?.subcategoryId, subcategoryId, `Wrong subcategory for: ${text}`);
   assert.equal(result?.segmentId, segmentId, `Wrong segment for: ${text}`);
 }
+
+const publishedClassificationIds = Array.from(
+  new Set(classificationCases.map(([subcategoryId]) => subcategoryId))
+).sort();
+assert.deepEqual(
+  [...NEWS_INTAKE_SUBCATEGORY_IDS].sort(),
+  publishedClassificationIds,
+  'Every classified active subcategory must have exactly one proven News Intake builder'
+);
+assert.equal(
+  NEWS_INTAKE_SUBCATEGORY_IDS.length,
+  26,
+  'The proven News Intake builder registry must cover all 26 active published subcategories'
+);
+
+const fixtureArticle = {
+  title: 'Road crash kills two in Mirpur',
+  excerpt: '',
+  body: 'Police said the crash happened on 20 September 2026 at Mirpur Section 6 in Dhaka. Two vehicles collided near Road 5 and two people died at the scene. Investigators inspected the vehicles and local residents described heavy traffic after the crash. Police later removed the vehicles from the road and restored traffic movement. The report states that the collision happened in Mirpur and does not attribute the incident to another district.',
+  publisherName: 'Fixture News',
+  canonicalUrl: 'https://example.com/road-crash-fixture',
+  sourcePublishedDate: '2026-09-20',
+};
+
+const roadBuilder = buildNewsIntakeSubcategoryReport({
+  article: fixtureArticle,
+  classification: {segmentId:'road_transport',subcategoryId:'road-accident'},
+  location: {
+    division:'Dhaka',district:'Dhaka',upazilaOrThana:'Mirpur',
+    area:'Mirpur Section 6',formattedAddress:'Mirpur Section 6, Dhaka',
+    locationScope:'specific'
+  },
+  incidentDate:'2026-09-20',
+  language:'en',
+  feedContext: fixtureArticle.body.slice(0,800),
+});
+assert.equal(roadBuilder.report.frequency,'one-time','Road Accident builder must preserve the proven one-time pattern');
+assert.deepEqual(missingNewsIntakeSubcategoryFields(roadBuilder.report),[],'A complete Road Accident builder fixture must be Feed Ready');
+
+const mobBuilder = buildNewsIntakeSubcategoryReport({
+  article:{
+    ...fixtureArticle,
+    title:'Youth beaten to death over theft suspicion in Mirpur',
+    body:'Residents said a youth was accused of theft and a group beat him at the location. He died after the assault. Police arrived, ended the gathering and began an investigation. The source says the accusation was made directly at the location. The incident happened in Mirpur on 20 September 2026 and police later took control of the scene. No continuing mob gathering was reported after officers arrived.'
+  },
+  classification:{segmentId:'public_safety',subcategoryId:'mob-justice'},
+  location:{division:'Dhaka',district:'Dhaka',upazilaOrThana:'Mirpur',area:'Mirpur',locationScope:'specific'},
+  incidentDate:'2026-09-20',
+  language:'en',
+  feedContext:'Residents said a youth was accused of theft and a group beat him at the location. He died after the assault. Police arrived, ended the gathering and began an investigation. The source says the accusation was made directly at the location. The incident happened in Mirpur on 20 September 2026 and police later took control of the scene. No continuing mob gathering was reported after officers arrived.',
+});
+assert.equal(mobBuilder.report.mobJusticeDetails.trigger,'suspected_theft_robbery');
+assert.equal(mobBuilder.report.mobJusticeDetails.outcome,'death_reported');
+assert.equal(mobBuilder.report.mobJusticeDetails.ongoingStatus,'ended');
+
+const harassmentBuilder = buildNewsIntakeSubcategoryReport({
+  article:{
+    ...fixtureArticle,
+    title:'25-year-old woman reports sexual harassment near public park',
+    body:'A 25-year-old woman reported unwanted physical contact by an unknown man near a public park in Dhaka. The incident happened on 20 September 2026. Police recorded the complaint and said the suspect was not known to the complainant. The report describes the location as a public space and states that the woman was returning home when the incident happened. Officers later reviewed nearby security-camera footage.'
+  },
+  classification:{segmentId:'harassment',subcategoryId:'sexual-harassment'},
+  location:{division:'Dhaka',district:'Dhaka',upazilaOrThana:'Shahbagh',area:'public park',locationScope:'specific'},
+  incidentDate:'2026-09-20',
+  language:'en',
+  feedContext:'A 25-year-old woman reported unwanted physical contact by an unknown man near a public park in Dhaka. The incident happened on 20 September 2026. Police recorded the complaint and said the suspect was not known to the complainant. The report describes the location as a public space and states that the woman was returning home when the incident happened. Officers later reviewed nearby security-camera footage.',
+});
+assert.equal(harassmentBuilder.report.affectedPersonAgeGroup,'18_29');
+assert.equal(harassmentBuilder.report.allegedAbuserRelationship,'stranger');
+assert.equal(harassmentBuilder.report.reportingFor,'someone_else');
+assert.equal(harassmentBuilder.report.sexualHarassmentType,'unwanted_physical_contact');
+assert.equal(harassmentBuilder.report.sexualHarassmentContext,'road_public_space');
+
+const utilityBuilder = buildNewsIntakeSubcategoryReport({
+  article:{
+    ...fixtureArticle,
+    title:'Power supply to remain suspended in Mirpur for maintenance',
+    body:'The utility said electricity supply would be suspended in Mirpur from 9:00 am to 12:00 pm on 20 September 2026 for system maintenance. The notice covers Mirpur in Dhaka and names the affected service area. Supply is expected to resume after maintenance is completed. The report provides both the start and expected end time and identifies the affected location within Dhaka.'
+  },
+  classification:{segmentId:'load_shedding',subcategoryId:'load-shedding-outage'},
+  location:{division:'Dhaka',district:'Dhaka',upazilaOrThana:'Mirpur',locationScope:'specific'},
+  incidentDate:'2026-09-20',
+  language:'en',
+  feedContext:'The utility said electricity supply would be suspended in Mirpur from 9:00 am to 12:00 pm on 20 September 2026 for system maintenance. The notice covers Mirpur in Dhaka and names the affected service area. Supply is expected to resume after maintenance is completed. The report provides both the start and expected end time and identifies the affected location within Dhaka.',
+});
+assert.equal(utilityBuilder.report.incidentTime,'09:00');
+assert.equal(utilityBuilder.report.utilityEndTime,'12:00');
+
+const childBuilder = buildNewsIntakeSubcategoryReport({
+  article:{
+    ...fixtureArticle,
+    title:'Child abducted from home in Mirpur and rescued later',
+    body:'Police said a child was abducted from a home in Mirpur on 20 September 2026. The family reported the incident and officers began searching the area. Investigators later rescued the child and detained a suspect. The source identifies Mirpur in Dhaka as the incident location and describes the case as an abduction. No child murder was reported in the article.'
+  },
+  classification:{segmentId:'public_safety',subcategoryId:'child_abduction_murder'},
+  location:{division:'Dhaka',district:'Dhaka',upazilaOrThana:'Mirpur',locationScope:'specific'},
+  incidentDate:'2026-09-20',
+  language:'en',
+  feedContext:'Police said a child was abducted from a home in Mirpur on 20 September 2026. The family reported the incident and officers began searching the area. Investigators later rescued the child and detained a suspect. The source identifies Mirpur in Dhaka as the incident location and describes the case as an abduction. No child murder was reported in the article.',
+});
+assert.equal(childBuilder.report.customFieldAnswers.childIncidentType,'abduction');
 
 assert.equal(
   classifyArticle('টিউবওয়েলের পানি নিয়ে বিরোধ, কিল-ঘুষিতে বৃদ্ধের মৃত্যু'),
