@@ -920,6 +920,23 @@ await check('News Intake shows every category match on the right and completes g
     'workspace closed after Keep Working'
   );
 
+  await page.getByRole('link', { name: 'Dashboard', exact: true }).click({ force: true });
+  await expectVisible(
+    page.getByRole('heading', { name: 'Close News Intake?', exact: true }),
+    'switching Admin tabs during Step 2 did not ask for confirmation'
+  );
+  if (!page.url().includes('/news-intake')) {
+    throw new Error('Admin tab navigation bypassed the active News Intake blocker');
+  }
+  await page.getByRole('button', { name: 'Keep Working', exact: true }).click();
+  await expectVisible(
+    page.getByText('Category-matched reports', { exact: true }).first(),
+    'Step 2 did not remain open after cancelling Admin tab navigation'
+  );
+  if (!page.url().includes('/news-intake')) {
+    throw new Error('News Intake route changed after cancelling Admin tab navigation');
+  }
+
   const matchedReviewCard = page.getByText('E2E source requiring review', { exact: true }).first();
   const card = matchedReviewCard.locator('xpath=ancestor::div[contains(@class,"flex flex-col gap-3")][1]');
   await card.getByRole('button', { name: 'Review', exact: true }).click();

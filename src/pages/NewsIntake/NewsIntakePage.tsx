@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CheckCircle2,
   ChevronDown,
@@ -9,7 +9,7 @@ import {
   SearchCheck,
   Send,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useBlocker, useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button, ButtonBase } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -92,6 +92,24 @@ export const NewsIntakePage: React.FC = () => {
     segments: [],
     subcategories: [],
   });
+  const allowNavigationRef = useRef(false);
+
+  const navigationBlocker = useBlocker(
+    useCallback(
+      ({ currentLocation, nextLocation }) =>
+        workspaceOpen &&
+        intakeStarted &&
+        !allowNavigationRef.current &&
+        currentLocation.pathname !== nextLocation.pathname,
+      [workspaceOpen, intakeStarted]
+    )
+  );
+
+  useEffect(() => {
+    if (navigationBlocker.state === 'blocked') {
+      setCloseConfirmOpen(true);
+    }
+  }, [navigationBlocker.state]);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -184,6 +202,7 @@ export const NewsIntakePage: React.FC = () => {
   };
 
   const openWorkspace = () => {
+    allowNavigationRef.current = false;
     setMode('automatic');
     setStep(1);
     setSelectedRunId(null);
@@ -380,11 +399,31 @@ export const NewsIntakePage: React.FC = () => {
     setSelectedReportIds(eligibleReportIds);
   };
 
+  const cancelWorkspaceClose = () => {
+    setCloseConfirmOpen(false);
+    if (navigationBlocker.state === 'blocked') {
+      navigationBlocker.reset();
+    }
+  };
+
   const closeWorkspaceImmediately = () => {
     setCloseConfirmOpen(false);
     setWorkspaceOpen(false);
     setReviewingItem(null);
     setIntakeStarted(false);
+
+    if (navigationBlocker.state === 'blocked') {
+      navigationBlocker.proceed();
+    }
+  };
+
+  const navigateFromWorkspace = (to: string) => {
+    allowNavigationRef.current = true;
+    setCloseConfirmOpen(false);
+    setWorkspaceOpen(false);
+    setReviewingItem(null);
+    setIntakeStarted(false);
+    navigate(to);
   };
 
   const requestWorkspaceClose = () => {
@@ -407,8 +446,7 @@ export const NewsIntakePage: React.FC = () => {
     setIntakeStarted(true);
     setWorkspaceError(null);
     if (item.reportId) {
-      closeWorkspaceImmediately();
-      navigate(`/complaints/${encodeURIComponent(String(item.reportId))}`);
+      navigateFromWorkspace(`/complaints/${encodeURIComponent(String(item.reportId))}`);
       return;
     }
     setReviewingItem(item);
@@ -1391,8 +1429,7 @@ export const NewsIntakePage: React.FC = () => {
                                       variant="secondary"
                                       size="sm"
                                       onClick={() => {
-                                        closeWorkspaceImmediately();
-                                        navigate(`/complaints/${encodeURIComponent(String(item.reportId))}`);
+                                        navigateFromWorkspace(`/complaints/${encodeURIComponent(String(item.reportId))}`);
                                       }}
                                     >
                                       {isBn ? 'বিদ্যমান রিপোর্ট খুলুন' : 'Open existing report'}
@@ -1465,8 +1502,7 @@ export const NewsIntakePage: React.FC = () => {
                         variant="secondary"
                         size="sm"
                         onClick={() => {
-                          setWorkspaceOpen(false);
-                          navigate(`/complaints/${encodeURIComponent(outcome.reportId)}`);
+                          navigateFromWorkspace(`/complaints/${encodeURIComponent(outcome.reportId)}`);
                         }}
                         rightIcon={<ExternalLink />}
                       >
@@ -1495,8 +1531,7 @@ export const NewsIntakePage: React.FC = () => {
                         variant="secondary"
                         size="sm"
                         onClick={() => {
-                          setWorkspaceOpen(false);
-                          navigate(`/complaints/${encodeURIComponent(outcome.reportId)}`);
+                          navigateFromWorkspace(`/complaints/${encodeURIComponent(outcome.reportId)}`);
                         }}
                         rightIcon={<ExternalLink />}
                       >
@@ -1528,18 +1563,18 @@ export const NewsIntakePage: React.FC = () => {
 
       <Modal
         isOpen={closeConfirmOpen}
-        onClose={() => setCloseConfirmOpen(false)}
+        onClose={cancelWorkspaceClose}
         size="sm"
         closeOnBackdrop={false}
         title={isBn ? 'নিউজ ইনটেক বন্ধ করবেন?' : 'Close News Intake?'}
         description={
           isBn
-            ? 'আপনি ইনটেক শুরু করেছেন। বন্ধ করলে বর্তমান ওয়ার্কস্পেসের নির্বাচন বা অসম্পূর্ণ রিভিউ হারাতে পারেন।'
-            : 'You started News Intake. Closing can discard the current workspace selection or an unfinished review.'
+            ? 'আপনি ইনটেক শুরু করেছেন। মডাল বন্ধ করা বা অন্য অ্যাডমিন ট্যাবে গেলে বর্তমান নির্বাচন বা অসম্পূর্ণ রিভিউ হারাতে পারেন।'
+            : 'You started News Intake. Closing the workspace or switching to another Admin tab can discard the current selection or an unfinished review.'
         }
         footer={
           <>
-            <Button variant="secondary" onClick={() => setCloseConfirmOpen(false)}>
+            <Button variant="secondary" onClick={cancelWorkspaceClose}>
               {isBn ? 'চালিয়ে যান' : 'Keep Working'}
             </Button>
             <Button variant="danger" onClick={closeWorkspaceImmediately}>
