@@ -474,15 +474,13 @@ const buildReportPayload = (
         sourceTruthMode:'approved_publisher',
         sourceOmittedFields:[
           ...(!incidentDate ? ['incidentDate'] : []),
-          ...(!location ? ['location'] : []),
+          ...(!location || location.locationScope === 'district_only' ? ['location'] : []),
         ],
-        locationScope:!location
+        locationScope:!location || location.locationScope === 'district_only'
           ? 'source_unspecified'
           : location.locationScope === 'district_wide'
             ? 'district_wide'
-            : location.locationScope === 'district_only'
-              ? 'district_only'
-              : 'specific',
+            : 'specific',
         ...(classification.subcategoryId === 'child_abduction_murder'
           ? {
               childIncidentType:childIncidentType || 'unknown_not_stated',
