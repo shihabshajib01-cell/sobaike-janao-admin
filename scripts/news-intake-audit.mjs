@@ -606,7 +606,7 @@ for (const needle of [
   'FeedReadyReportPreview',
   'stagedReport={stagedReport || undefined}',
   'previewId={`staged-${item.id}`}',
-  'matchedItems.map((item)',
+  'orderedMatchedItems.map((item)',
   'workspaceCounts',
   'workspaceCounts.published',
   'rawNewsItems',
@@ -637,7 +637,6 @@ for (const needle of [
   'canManuallyReviewItem',
   'if (!canManuallyReviewItem(item))',
   'Automatic excluded matches are diagnostic results, not a manual-data-entry',
-  'Review required',
   'Needs review',
   'reviewingItem',
   'handleReviewSaved',
@@ -672,8 +671,8 @@ for (const needle of [
   requireText(page, needle, 'News Intake dashboard workspace');
 }
 
-if (!page.includes('matchedItems.map((item)')) {
-  errors.push('Every category-matched item must render in the right review panel.');
+if (!page.includes('orderedMatchedItems.map((item)')) {
+  errors.push('Every category-matched item must render in the right panel, with Feed Ready previews ordered before diagnostics.');
 }
 
 if (/const canReview[\s\S]{0,260}isExcludedItem\(item\)/.test(page)) {
