@@ -7,6 +7,39 @@ export const clip = (value: unknown, max: number) => {
 export const normalizeText = (value: unknown) =>
   String(value ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
 
+const normalizeComparableIncidentText = (value: unknown) =>
+  normalizeText(value)
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+export const isSubstantiveIncidentContext = (
+  title: unknown,
+  context: unknown
+) => {
+  const headline = normalizeComparableIncidentText(title);
+  const detail = normalizeComparableIncidentText(context);
+  if (!headline || !detail) return false;
+  if (detail === headline) return false;
+
+  const tokens = detail.split(' ').filter(Boolean);
+  if (detail.length < 80 || tokens.length < 10) return false;
+
+  const headlineTokens = new Set(headline.split(' ').filter(Boolean));
+  const additionalTokens = new Set(
+    tokens.filter((token) => !headlineTokens.has(token))
+  );
+  return additionalTokens.size >= 4;
+};
+
+const LEGAL_FOLLOW_UP_HEADLINE_RE =
+  /(?:জামিন(?:\s+বাতিল)?|রিমান্ড|আদালত|শুনানি|চার্জশিট|চার্জ\s*শিট|অভিযোগপত্র|রায়|রায়|দণ্ড|সাজা|আপিল|বিচার\s+শুরু|সাক্ষ্যগ্রহণ|\bbail\b|\bremand\b|\bcourt\b|\bhearing\b|charge\s*sheet|chargesheet|\bverdict\b|\bsentenced?\b|\bappeal\b|\btrial\b)/iu;
+
+export const isLegalFollowUpOnly = (
+  title: unknown,
+  _context?: unknown
+) => LEGAL_FOLLOW_UP_HEADLINE_RE.test(normalizeText(title));
+
 
 export const buildIncidentFocusedLocationText = (article: {
   title?: string;
