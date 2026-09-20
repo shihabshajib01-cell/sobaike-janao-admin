@@ -419,7 +419,7 @@ const extractArticle = (html: string, finalUrl: string, publisherFallback: strin
 
   if (!body) {
     const semanticBodyMatch=html.match(
-      /<(?:div|section)\b[^>]*(?:class|id)\s*=\s*(?:"[^"]*(?:article-body|story-body|story-content|news-content|details-body|content-body)[^"]*"|'[^']*(?:article-body|story-body|story-content|news-content|details-body|content-body)[^']*')[^>]*>([\s\S]*?)<\/(?:div|section)>/i
+      /<(?:div|section)\b[^>]*(?:class|id)\s*=\s*(?:"[^"]*(?:article-body|story-body|story-content|news-content|details-body|details-brief|content-body)[^"]*"|'[^']*(?:article-body|story-body|story-content|news-content|details-body|details-brief|content-body)[^']*')[^>]*>([\s\S]*?)<\/(?:div|section)>/i
     );
     const scope = semanticBodyMatch?.[1] || articleMatch?.[1] || html;
     body = [...scope.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)]
