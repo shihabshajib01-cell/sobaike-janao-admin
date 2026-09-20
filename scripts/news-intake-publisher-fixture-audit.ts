@@ -4,6 +4,8 @@ import {
   findLocation,
   inferIncidentDate,
   inferSpecificLocationPhrase,
+  isLegalFollowUpOnly,
+  isSubstantiveIncidentContext,
 } from '../supabase/functions/_shared/newsIntakeAutomationCore.ts';
 
 type Fixture = {
@@ -89,6 +91,16 @@ const fixtures: Fixture[] = [
     expectedCategory: null,
     expectedIncidentDate: null,
   },
+
+  {
+    name: 'bdnews24 bail cancellation is a legal follow-up, not a fresh theft incident',
+    title: 'প্রধানমন্ত্রীর লাল টেলিফোনের তার চুরি: সেই রঞ্জনের জামিন বাতিল',
+    context:
+      'পুরোনো তার চুরির মামলায় আদালতের জামিন সংক্রান্ত আদেশের খবর এটি। নতুন কোনো চুরির ঘটনা প্রতিবেদনে জানানো হয়নি।',
+    publishedDate: '2026-09-20',
+    expectedCategory: null,
+    expectedIncidentDate: null,
+  },
   {
     name: 'Child abduction report is classified under public safety child protection',
     title: 'ঢাকায় ৯ বছরের শিশু অপহরণ, থানায় মামলা',
@@ -124,7 +136,8 @@ const fixtures: Fixture[] = [
 
 for (const fixture of fixtures) {
   const fullText = `${fixture.title} ${fixture.context}`;
-  const classification = classifyArticle(fullText);
+  const legalFollowUp = isLegalFollowUpOnly(fixture.title, fixture.context);
+  const classification = legalFollowUp ? null : classifyArticle(fullText);
 
   if (fixture.expectedCategory === null) {
     assert.equal(
@@ -170,6 +183,24 @@ for (const fixture of fixtures) {
     );
   }
 }
+
+
+assert.equal(
+  isSubstantiveIncidentContext(
+    'ছিনতাই: একজনের হাতে ছুরি, আরেকজন রিকশাযাত্রীর পকেট কাটল',
+    'চট্টগ্রাম নগরীর কোতোয়ালী থানার অদূরে সতীশ বাবু লেইনে এক রিকশাআরোহীকে ছুরি দেখিয়ে তার জিনিসপত্র কেড়ে নেয় দুই ছিনতাইকারী। ঘটনার ভিডিও ছড়িয়ে পড়ার পর পুলিশ জড়িতদের ধরতে কাজ করছে।'
+  ),
+  true,
+  'bdnews24 full incident context must pass the Feed Ready quality gate'
+);
+assert.equal(
+  isSubstantiveIncidentContext(
+    'সাতকানিয়ায় ট্রেনের ধাক্কায় নিহত ২',
+    'সাতকানিয়ায় ট্রেনের ধাক্কায় নিহত ২'
+  ),
+  false,
+  'bdnews24 title-only extraction must fail the Feed Ready quality gate'
+);
 
 console.log(
   `News Intake publisher fixture audit passed: ${fixtures.length} production-derived publisher cases are protected.`
