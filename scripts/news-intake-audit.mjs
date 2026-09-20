@@ -29,6 +29,7 @@ const misclassifiedReportQuarantine = read('supabase/migrations/20260919184200_q
 const sensitiveContentReviewGate = read('supabase/migrations/20260920005500_news_intake_sensitive_content_review_gate.sql');
 const matchedReviewWorkspace = read('supabase/migrations/20260920064000_news_intake_matched_review_workspace.sql');
 const trustedAutoPublish = read('supabase/migrations/20260920083500_trusted_news_intake_auto_publish.sql');
+const trustedSourceOmissions = read('supabase/migrations/20260920085000_trusted_news_source_omission_columns.sql');
 const automationCore = read('supabase/functions/_shared/newsIntakeAutomationCore.ts');
 const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
 const edge = read('supabase/functions/news-intake-fetch/index.ts');
@@ -327,6 +328,18 @@ for (const needle of [
   'onReviewSaved',
 ]) {
   requireText(manualForm, needle, 'Manual News Intake UI safety flow');
+}
+
+for (const needle of [
+  'ALTER COLUMN incident_date DROP NOT NULL',
+  'ALTER COLUMN division DROP NOT NULL',
+  'ALTER COLUMN district DROP NOT NULL',
+  'complaints_core_facts_required_unless_trusted_source',
+  "origin_type='sourced_report'",
+  'trustedSourceAuto',
+  "sourceTruthMode','approved_publisher",
+]) {
+  requireText(trustedSourceOmissions, needle, 'trusted-source omission constraint');
 }
 
 for (const needle of [
