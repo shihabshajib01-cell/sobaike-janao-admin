@@ -47,8 +47,8 @@ export type Classification = {
   reviewReason?: string;
 };
 
-const CHILD_ABDUCTION_RE = /(?:(?:শিশু|বালক|বালিকা|কিশোর|কিশোরী|নাবালক|নাবালিকা|\\bminor\\b|\\bchild\\b|\\bboy\\b|\\bgirl\\b).{0,100}(?:অপহরণ|অপহৃত|kidnap(?:ped|ping)?|abduct(?:ed|ion)?)|(?:অপহরণ|অপহৃত|kidnap(?:ped|ping)?|abduct(?:ed|ion)?).{0,100}(?:শিশু|বালক|বালিকা|কিশোর|কিশোরী|নাবালক|নাবালিকা|\\bminor\\b|\\bchild\\b|\\bboy\\b|\\bgirl\\b))/iu;
-const CHILD_MURDER_RE = /(?:(?:শিশু|বালক|বালিকা|কিশোর|কিশোরী|নাবালক|নাবালিকা|\\bminor\\b|\\bchild\\b|\\bboy\\b|\\bgirl\\b).{0,100}(?:হত্যা|খুন|murder(?:ed)?|homicide)|(?:হত্যা|খুন|murder(?:ed)?|homicide).{0,100}(?:শিশু|বালক|বালিকা|কিশোর|কিশোরী|নাবালক|নাবালিকা|\\bminor\\b|\\bchild\\b|\\bboy\\b|\\bgirl\\b))/iu;
+const CHILD_ABDUCTION_RE = /(?:(?:শিশু|বালক|বালিকা|কিশোর|কিশোরী|নাবালক|নাবালিকা|\bminor\b|\bchild\b|\bboy\b|\bgirl\b).{0,100}(?:অপহরণ|অপহৃত|kidnap(?:ped|ping)?|abduct(?:ed|ion)?)|(?:অপহরণ|অপহৃত|kidnap(?:ped|ping)?|abduct(?:ed|ion)?).{0,100}(?:শিশু|বালক|বালিকা|কিশোর|কিশোরী|নাবালক|নাবালিকা|\bminor\b|\bchild\b|\bboy\b|\bgirl\b))/iu;
+const CHILD_MURDER_RE = /(?:(?:শিশু|বালক|বালিকা|কিশোর|কিশোরী|নাবালক|নাবালিকা|\bminor\b|\bchild\b|\bboy\b|\bgirl\b).{0,100}(?:হত্যা|খুন|murder(?:ed)?|homicide)|(?:হত্যা|খুন|murder(?:ed)?|homicide).{0,100}(?:শিশু|বালক|বালিকা|কিশোর|কিশোরী|নাবালক|নাবালিকা|\bminor\b|\bchild\b|\bboy\b|\bgirl\b))/iu;
 
 export const inferChildIncidentType = (value: unknown) => {
   const text = normalizeText(value);
