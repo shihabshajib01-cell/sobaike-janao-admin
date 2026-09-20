@@ -254,6 +254,8 @@ for (const needle of [
   'finalPathLooksLikeArticle',
   'articleDocumentSignal',
   'knownPublisherDocumentFallback',
+  'requestUserAgent',
+  "canonicalHostKey(current.hostname)==='unb.com.bd'",
   'isLikelyForeignIncident',
   'isNonIncidentHeadline',
   'admin_check_source_duplicate',

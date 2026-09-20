@@ -612,10 +612,15 @@ const safeScanFetch = async (
 
   let response: Response | null=null;
   for(let redirectCount=0;redirectCount<=3;redirectCount+=1){
+    const requestUserAgent=
+      canonicalHostKey(current.hostname)==='unb.com.bd'
+        ? 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36'
+        : 'SobaiKeJanao-NewsIntake/3.0 (+https://shobaikejanao.com/)';
+
     response=await fetch(current.toString(),{
       redirect:'manual',
       headers:{
-        'User-Agent':'SobaiKeJanao-NewsIntake/3.0 (+https://shobaikejanao.com/)',
+        'User-Agent':requestUserAgent,
         'Accept':accept,
         'Accept-Language':'bn-BD,bn;q=0.9,en;q=0.8',
       },
@@ -748,7 +753,6 @@ const processNewsIntakeRun = async (
         const knownPublisherDocumentFallback=Boolean(
           isKnownPublisherArticlePath(article.canonicalUrl)
           && article.title.length>=20
-          && (article.excerpt.length>=80 || article.body.length>=120)
         );
 
         if(!article.articleDocumentSignal && !knownPublisherDocumentFallback){
