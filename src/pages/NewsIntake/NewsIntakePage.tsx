@@ -9,12 +9,13 @@ import {
   SearchCheck,
   Send,
 } from 'lucide-react';
-import { useBlocker, useNavigate } from 'react-router-dom';
+import { useBlocker, useLocation, useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button, ButtonBase } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { FeedbackNotice } from '@/components/ui/FeedbackNotice';
 import { Modal } from '@/components/ui/Modal';
+import { Checkbox } from '@/components/ui/Checkbox';
 import { Tag } from '@/components/ui/Tag';
 import { useLanguage } from '@/context/LanguageContext';
 import { complaintApi, newsIntakeApi } from '@/services/api';
@@ -60,6 +61,7 @@ const isExcludedItem = (item: NewsIntakeAutomationItem) =>
 
 export const NewsIntakePage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { language } = useLanguage();
   const isBn = language === 'bn';
 
@@ -88,6 +90,7 @@ export const NewsIntakePage: React.FC = () => {
   const [feedReadyExpanded, setFeedReadyExpanded] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [publishOutcomes, setPublishOutcomes] = useState<PublishOutcome[]>([]);
+  const [pendingNavigationPath, setPendingNavigationPath] = useState<string | null>(null);
   const [taxonomy, setTaxonomy] = useState<NewsIntakeTaxonomy>({
     segments: [],
     subcategories: [],
@@ -110,6 +113,71 @@ export const NewsIntakePage: React.FC = () => {
       setCloseConfirmOpen(true);
     }
   }, [navigationBlocker.state]);
+
+  // React Router's blocker protects history navigation, but Admin tabs are
+  // ordinary anchors rendered by the shared shell. Intercept those clicks
+  // while intake is active so the workspace cannot disappear before the user
+  // explicitly confirms leaving.
+  useEffect(() => {
+    if (!workspaceOpen || !intakeStarted) return;
+
+    const handleAdminNavigation = (event: MouseEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const anchor = target.closest<HTMLAnchorElement>('a[href]');
+      if (!anchor) return;
+
+      const anchorTarget = anchor.getAttribute('target');
+      if (anchorTarget && anchorTarget !== '_self') return;
+
+      const href = anchor.getAttribute('href');
+      if (!href) return;
+
+      let url: URL;
+      try {
+        url = new URL(href, window.location.href);
+      } catch {
+        return;
+      }
+
+      if (url.origin !== window.location.origin || !url.hash.startsWith('#/')) return;
+
+      const nextRoute = url.hash.slice(1);
+      const nextPathname = nextRoute.split(/[?#]/, 1)[0] || '/';
+      if (nextPathname === location.pathname) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      setPendingNavigationPath(nextRoute);
+      setCloseConfirmOpen(true);
+    };
+
+    document.addEventListener('click', handleAdminNavigation, true);
+    return () => document.removeEventListener('click', handleAdminNavigation, true);
+  }, [workspaceOpen, intakeStarted, location.pathname]);
+
+  // Full-page reload/close is a separate browser navigation path. Keep the
+  // native unsaved-work guard active while the News Intake workspace is open.
+  useEffect(() => {
+    if (!workspaceOpen || !intakeStarted) return;
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [workspaceOpen, intakeStarted]);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -400,6 +468,7 @@ export const NewsIntakePage: React.FC = () => {
   };
 
   const cancelWorkspaceClose = () => {
+    setPendingNavigationPath(null);
     setCloseConfirmOpen(false);
     if (navigationBlocker.state === 'blocked') {
       navigationBlocker.reset();
@@ -407,6 +476,8 @@ export const NewsIntakePage: React.FC = () => {
   };
 
   const closeWorkspaceImmediately = () => {
+    const nextPath = pendingNavigationPath;
+    setPendingNavigationPath(null);
     setCloseConfirmOpen(false);
     setWorkspaceOpen(false);
     setReviewingItem(null);
@@ -414,11 +485,18 @@ export const NewsIntakePage: React.FC = () => {
 
     if (navigationBlocker.state === 'blocked') {
       navigationBlocker.proceed();
+      return;
+    }
+
+    if (nextPath) {
+      allowNavigationRef.current = true;
+      navigate(nextPath);
     }
   };
 
   const navigateFromWorkspace = (to: string) => {
     allowNavigationRef.current = true;
+    setPendingNavigationPath(null);
     setCloseConfirmOpen(false);
     setWorkspaceOpen(false);
     setReviewingItem(null);
@@ -1385,6 +1463,37 @@ export const NewsIntakePage: React.FC = () => {
                           return (
                             <Card key={item.id} padding="sm">
                               <div className="flex flex-col gap-3">
+                                <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-900/60">
+                                  <Checkbox
+                                    id={`news-intake-match-${item.id}`}
+                                    label={
+                                      canReview
+                                        ? isBn
+                                          ? 'রিভিউ শেষে নির্বাচন করা যাবে'
+                                          : 'Review before selection'
+                                        : isBn
+                                          ? 'এই আইটেম নির্বাচনযোগ্য নয়'
+                                          : 'Not selectable'
+                                    }
+                                    checked={false}
+                                    onChange={() => undefined}
+                                    disabled
+                                    aria-label={
+                                      canReview
+                                        ? isBn
+                                          ? `${item.sourceTitle || 'রিপোর্ট'} রিভিউ শেষে নির্বাচন করা যাবে`
+                                          : `Review ${item.sourceTitle || 'report'} before selection`
+                                        : isBn
+                                          ? `${item.sourceTitle || 'রিপোর্ট'} নির্বাচনযোগ্য নয়`
+                                          : `${item.sourceTitle || 'Report'} is not selectable`
+                                    }
+                                  />
+                                  <Tag tone={canReview ? 'warning' : 'neutral'}>
+                                    {canReview
+                                      ? isBn ? 'রিভিউ প্রয়োজন' : 'Review required'
+                                      : isBn ? 'নির্বাচনযোগ্য নয়' : 'Not selectable'}
+                                  </Tag>
+                                </div>
                                 <div className="flex flex-wrap items-center gap-2">
                                   <Tag tone={actionTone(item)}>{actionLabel(item)}</Tag>
                                   {item.segmentId && <Tag tone="info">{segmentLabel(item.segmentId)}</Tag>}
