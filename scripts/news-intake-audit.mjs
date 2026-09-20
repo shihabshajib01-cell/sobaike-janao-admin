@@ -32,6 +32,7 @@ const finalCloseout = read('supabase/migrations/20260920131136_news_intake_100_p
 const ledgerParityCloseout = read('supabase/migrations/20260920131354_news_intake_ledger_parity_closeout.sql');
 const schedulerCronParity = read('supabase/migrations/20260920132122_news_intake_scheduler_cron_parity.sql');
 const sourceQualityGate = read('supabase/migrations/20260920142434_news_intake_source_quality_gate.sql');
+const factcheckLocationQuality = read('supabase/migrations/20260920143209_news_intake_factcheck_location_quality.sql');
 const automationCore = read('supabase/functions/_shared/newsIntakeAutomationCore.ts');
 const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
 const edge = read('supabase/functions/news-intake-fetch/index.ts');
@@ -136,12 +137,15 @@ requireText(behaviorAudit, 'Evidence recovery during a murder investigation must
 requireText(behaviorAudit, 'Same-day Bangla weekday plus বেলা must resolve to the publication day', 'News Intake Bangla বেলা date regression');
 requireText(automationCore, 'isSubstantiveIncidentContext', 'News Intake substantive context helper');
 requireText(automationCore, 'isLegalFollowUpOnly', 'News Intake legal follow-up helper');
+requireText(automationCore, 'isFactCheckOrMisinformationStory', 'News Intake fact-check helper');
 requireText(behaviorAudit, 'Exact production road-block wording must ground Cumilla', 'News Intake production location regression');
 requireText(behaviorAudit, 'Attempted child murder without abduction or a reported death must not be published as Child Abduction / Murder', 'News Intake child attempted-murder regression');
 requireText(behaviorAudit, 'An abduction remains in Child Abduction / Murder even if the later killing was only attempted', 'News Intake child abduction/attempt regression');
 requireText(behaviorAudit, 'A reported death after an attempted killing must remain a child murder report', 'News Intake child death-after-attempt regression');
 requireText(behaviorAudit, 'Title-only extraction must never become Feed Ready', 'News Intake title-only extraction regression');
 requireText(behaviorAudit, 'Court/bail follow-up headlines about older incidents must not create a fresh incident report', 'News Intake legal follow-up regression');
+requireText(behaviorAudit, 'Fact-check/debunk stories must not be converted into fresh incident reports', 'News Intake fact-check regression');
+requireText(behaviorAudit, 'Narrative police-jurisdiction fragments must never become the public incident location', 'News Intake noisy-location regression');
 requireText(collisionErrorContract, "errcode='P0001'", 'News Intake collision error contract');
 requireText(collisionErrorContract, 'DUPLICATE_REVIEW_REQUIRED', 'News Intake collision error contract');
 requireText(explicitDenyPolicies, 'news_intake_runs_authenticated_deny', 'News Intake run-table deny policy');
@@ -259,6 +263,19 @@ for (const needle of [
 }
 
 for (const needle of [
+  'SOURCE_CURRENT_INCIDENT_REQUIRED',
+  'Fact-check or misinformation/debunking stories cannot be published as new incidents',
+  'Court/legal follow-up stories cannot be published as new incidents',
+  "id='SJ-2026-873249'",
+  'news_intake.classification_quarantine',
+  "id='SJ-2026-159311'",
+  'news_intake.location_quality_repair',
+  "'source_unspecified'",
+]) {
+  requireText(factcheckLocationQuality, needle, 'News Intake fact-check/location quality closeout');
+}
+
+for (const needle of [
   'guard_sourced_report_publish_readiness',
   'trg_guard_sourced_report_publish_readiness',
   'SOURCE_GROUNDING_REVIEW_REQUIRED',
@@ -342,6 +359,7 @@ for (const needle of [
   'inferDistrictWideScope',
   'isSubstantiveIncidentContext',
   'isLegalFollowUpOnly',
+  'isFactCheckOrMisinformationStory',
   'serialized_article_body',
   "hostKey==='bdnews24.com' || hostKey==='bangla.bdnews24.com'",
   "extractionStatus:'complete'",
@@ -350,6 +368,9 @@ for (const needle of [
   "followUpOnly:false",
   'Article extraction was incomplete or did not expose substantive incident context',
   'Court, bail, remand, hearing, verdict, appeal, or trial follow-up was excluded',
+  'Fact-check, misinformation, or debunking article was excluded',
+  "location.locationScope === 'district_only' ? ['location']",
+  "locationScope:!location || location.locationScope === 'district_only'",
 ]) {
   requireText(scanner, needle, 'automated News Intake scanner');
 }
