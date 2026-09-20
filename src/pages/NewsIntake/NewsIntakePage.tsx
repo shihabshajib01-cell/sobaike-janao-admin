@@ -1061,6 +1061,9 @@ export const NewsIntakePage: React.FC = () => {
                   initialReviewItem={reviewingItem}
                   reviewMode
                   onReviewSaved={(reportId) => handleReviewSaved(reviewingItem, reportId)}
+                  onNavigateToReport={(reportId) =>
+                    navigateFromWorkspace(`/complaints/${encodeURIComponent(reportId)}`)
+                  }
                 />
               </div>
             </div>
@@ -1068,7 +1071,12 @@ export const NewsIntakePage: React.FC = () => {
 
           {step === 2 && mode === 'manual' && !reviewingItem && (
             <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-              <ManualNewsIntakeForm initialSourceUrl={manualSourceUrl} />
+              <ManualNewsIntakeForm
+                initialSourceUrl={manualSourceUrl}
+                onNavigateToReport={(reportId) =>
+                  navigateFromWorkspace(`/complaints/${encodeURIComponent(reportId)}`)
+                }
+              />
             </div>
           )}
 
