@@ -861,13 +861,20 @@ await check('News Intake automatic review selects only intended reports and keep
   await page.getByRole('button', { name: 'Done', exact: true }).click();
   await page.getByRole('button', { name: 'Review', exact: true }).first().click();
 
-  await expectVisible(
-    page.getByRole('paragraph').filter({ hasText: /^Published$/ }).first(),
-    'historical run hid the already-published feed-ready report'
-  );
+  if (await page.getByLabel('Select স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট A for publishing').count()) {
+    throw new Error('already-published report remained selectable in the feed-ready publish panel');
+  }
   if (await page.getByLabel('Select স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট B for publishing').count()) {
     throw new Error('historical review ignored current review-required state');
   }
+
+  await page.getByRole('button', { name: 'Published · 1', exact: true }).click();
+  await expectVisible(
+    page.getByText('E2E automatic report A', { exact: true }).first(),
+    'historical run hid the published report from Raw News history'
+  );
+
+  await page.getByRole('button', { name: 'Needs review · 2', exact: true }).click();
   await expectVisible(
     page.getByText('Needs review', { exact: true }).first(),
     'historical review did not preserve current review status'
