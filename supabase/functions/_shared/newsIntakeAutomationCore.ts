@@ -470,7 +470,7 @@ const relativeIncidentDateFromText = (text: string, publishedDate?: string | nul
   }
 
   const weekdayNames: Array<[number, RegExp]> = [
-    [0, /(গত\s*)?রবিবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?sunday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [0, /(গত\s*)?(?:রবিবার|রোববার)(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?sunday(?:\s+(?:night|morning|afternoon|evening))?/iu],
     [1, /(গত\s*)?সোমবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?monday(?:\s+(?:night|morning|afternoon|evening))?/iu],
     [2, /(গত\s*)?মঙ্গলবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?tuesday(?:\s+(?:night|morning|afternoon|evening))?/iu],
     [3, /(গত\s*)?বুধবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?wednesday(?:\s+(?:night|morning|afternoon|evening))?/iu],
