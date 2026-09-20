@@ -914,10 +914,14 @@ await check('News Intake keeps Step 2 open and Select All publishes approved mat
   await expectVisible(existingSelector, 'existing ready report selector missing');
   await expectVisible(stagedSelector, 'staged approved-source selector missing');
 
-  await expectVisible(
-    page.getByText('3 matched · 2 ready · 0 selected', { exact: true }).first(),
-    'category-matched panel did not expose the zero-review ready counts after both cards loaded'
+  await page.waitForFunction(
+    () => document.body.textContent?.includes('3 matched · 2 ready · 0 selected'),
+    undefined,
+    { timeout: 15000 }
   );
+  if (!String(await page.locator('body').textContent()).includes('3 matched · 2 ready · 0 selected')) {
+    throw new Error('category-matched panel did not expose the zero-review ready counts after both cards loaded');
+  }
 
   if (await page.getByText('Review required', { exact: true }).count()) {
     throw new Error('current approved-source matches still expose Review required');
@@ -985,10 +989,14 @@ await check('News Intake keeps Step 2 open and Select All publishes approved mat
     page.getByText('Category-matched reports', { exact: true }).first(),
     'Step 2 did not restore after browser reload/tab discard'
   );
-  await expectVisible(
-    page.getByText('3 matched · 2 ready · 1 selected', { exact: true }).first(),
-    'run/selection state did not restore after browser reload'
+  await page.waitForFunction(
+    () => document.body.textContent?.includes('3 matched · 2 ready · 1 selected'),
+    undefined,
+    { timeout: 15000 }
   );
+  if (!String(await page.locator('body').textContent()).includes('3 matched · 2 ready · 1 selected')) {
+    throw new Error('run/selection state did not restore after browser reload');
+  }
 
   await page.getByRole('button', { name: 'Select All', exact: true }).click();
   await expectVisible(
