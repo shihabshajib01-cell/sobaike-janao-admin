@@ -193,10 +193,17 @@ const DISTRICT_CONTEXT_CUE_RE =
   /(জেলা|উপজেলা|থানা|এলাকা|কোটবাড়ি|কোটবাড়ি|শহর|নগরী|ঘটনাস্থল|ঘটেছে|ঘটে|সংঘর্ষ|অবরোধ|হত্যা|অপহরণ|ছিনতাই|ডাকাতি|চুরি|district|upazila|thana|area|city|incident|occurred|happened|crash|collision|blockade|murder|abduct|snatch|robbery|theft)/iu;
 
 const highwayEndpointPenalty = (text: string, index: number, alias: string) => {
-  const left=Math.max(0,index-40);
-  const right=Math.min(text.length,index+alias.length+60);
-  const window=text.slice(left,right);
-  return /(?:-|–|—|থেকে|to).{0,40}(?:মহাসড়ক|মহাসড়ক|highway)|(?:মহাসড়ক|মহাসড়ক|highway).{0,40}(?:-|–|—|থেকে|to)/iu.test(window);
+  const immediate=text.slice(
+    Math.max(0,index-3),
+    Math.min(text.length,index+alias.length+3)
+  );
+  if(!/[-–—]/u.test(immediate)) return false;
+
+  const routeWindow=text.slice(
+    Math.max(0,index-45),
+    Math.min(text.length,index+alias.length+70)
+  );
+  return /(মহাসড়ক|মহাসড়ক|highway)/iu.test(routeWindow);
 };
 
 export const findLocation = (value: unknown) => {
