@@ -1941,7 +1941,20 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
 
               {dynamicCustomFields.length > 0 && (
                 <div className="grid gap-4 md:grid-cols-2">
-                  {dynamicCustomFields.map(renderDynamicField)}
+                  {dynamicCustomFields.map((field) => {
+                    const key = dynamicStorageKey(field);
+                    const fieldNeedsReview = needsReview(key, field.fieldKey);
+                    const control = renderDynamicField(field);
+                    if (!fieldNeedsReview) return control;
+                    return (
+                      <div key={`review-${key}`} className={reviewBoxClass(true)}>
+                        <p className="mb-2 type-helper font-semibold text-amber-800 dark:text-amber-300">
+                          {isBn ? 'এই ফিল্ডটি যাচাই করুন' : 'Review this field'}
+                        </p>
+                        {control}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
