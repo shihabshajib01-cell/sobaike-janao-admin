@@ -450,6 +450,8 @@ for (const needle of [
   'isLegalFollowUpOnly',
   'isFactCheckOrMisinformationStory',
   'serialized_article_body',
+  'semantic_article_paragraphs',
+  'details-brief',
   'articleTitleTokens',
   '__NEXT_DATA__',
   "hostKey==='bdnews24.com' || hostKey==='bangla.bdnews24.com'",
