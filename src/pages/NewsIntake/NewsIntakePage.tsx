@@ -1234,12 +1234,12 @@ export const NewsIntakePage: React.FC = () => {
                   >
                     <div>
                       <p className="type-label font-semibold text-slate-900 dark:text-slate-100">
-                        {isBn ? 'ফিড-রেডি রিপোর্ট' : 'Feed-ready reports'}
+                        {isBn ? 'ক্যাটাগরি-ম্যাচড রিপোর্ট' : 'Category-matched reports'}
                       </p>
                       <p className="type-helper text-slate-500 dark:text-slate-400">
                         {isBn
-                          ? `${eligibleReportIds.length}টি প্রস্তুত · ${selectedReportIds.length}টি নির্বাচিত`
-                          : `${eligibleReportIds.length} ready · ${selectedReportIds.length} selected`}
+                          ? `${matchedItems.length}টি ম্যাচ · ${workspaceCounts.ready}টি প্রস্তুত · ${selectedReportIds.length}টি নির্বাচিত`
+                          : `${matchedItems.length} matched · ${workspaceCounts.ready} ready · ${selectedReportIds.length} selected`}
                       </p>
                     </div>
                     <ChevronDown
