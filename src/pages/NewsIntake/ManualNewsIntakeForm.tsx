@@ -13,6 +13,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Input } from '@/components/ui/Input';
+import { Modal } from '@/components/ui/Modal';
+import { Radio, RadioGroup } from '@/components/ui/Radio';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { FeedbackNotice } from '@/components/ui/FeedbackNotice';
@@ -230,6 +232,15 @@ const MANUAL_INTAKE_SYSTEM_FIELDS = new Set([
 const dynamicStorageKey = (field: ReportingFormField) =>
   field.storageKey?.trim() || field.fieldKey;
 
+const NEWS_INTAKE_PRIVACY_REVIEW_SUBCATEGORIES = new Set([
+  'child_abduction_murder',
+  'rape-sexual-violence',
+  'sexual-harassment',
+  'domestic-violence',
+  'blackmail-coercion',
+  'honeytrap',
+]);
+
 const isEmptyDynamicValue = (value: unknown) =>
   value === null ||
   value === undefined ||
@@ -238,6 +249,81 @@ const isEmptyDynamicValue = (value: unknown) =>
   (typeof value === 'object' &&
     !Array.isArray(value) &&
     Object.keys(value as Record<string, unknown>).length === 0);
+
+const isValidDynamicEmail = (value: string) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
+const isValidDynamicPhone = (value: string) => {
+  const digits = value.replace(/\D/g, '');
+  return digits.length >= 7 && digits.length <= 15;
+};
+
+const isValidDynamicUrl = (value: string) => {
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
+const dynamicValidationError = (
+  field: ReportingFormField,
+  value: unknown,
+  isBn: boolean
+): string | null => {
+  if (field.required && field.fieldType === 'checkbox' && value !== true) {
+    return isBn ? 'চালিয়ে যেতে এই অপশনটি নির্বাচন করুন।' : 'Select this option to continue.';
+  }
+  if (field.required && isEmptyDynamicValue(value)) {
+    return isBn ? 'এই তথ্যটি আবশ্যক।' : 'This field is required.';
+  }
+  if (isEmptyDynamicValue(value)) return null;
+
+  const minLength = Number(field.validation?.minLength || 0);
+  const maxLength = Number(field.validation?.maxLength || 0);
+  if (minLength > 0 && typeof value === 'string' && value.trim().length < minLength) {
+    return isBn ? `কমপক্ষে ${minLength} অক্ষর লিখুন।` : `Use at least ${minLength} characters.`;
+  }
+  if (maxLength > 0 && typeof value === 'string' && value.length > maxLength) {
+    return isBn ? `সর্বোচ্চ ${maxLength} অক্ষর লিখুন।` : `Use at most ${maxLength} characters.`;
+  }
+  if (field.fieldType === 'email' && typeof value === 'string' && !isValidDynamicEmail(value)) {
+    return isBn ? 'সঠিক ইমেইল ঠিকানা লিখুন।' : 'Enter a valid email address.';
+  }
+  if (field.fieldType === 'url' && typeof value === 'string' && !isValidDynamicUrl(value)) {
+    return isBn ? 'http:// অথবা https:// সহ সঠিক URL লিখুন।' : 'Enter a valid URL beginning with http:// or https://.';
+  }
+  if (field.fieldType === 'phone' && typeof value === 'string' && !isValidDynamicPhone(value)) {
+    return isBn ? '৭–১৫ সংখ্যার সঠিক ফোন নম্বর লিখুন।' : 'Enter a valid phone number containing 7–15 digits.';
+  }
+  if (field.fieldType === 'number' || field.fieldType === 'currency') {
+    const numberValue = Number(value);
+    if (!Number.isFinite(numberValue)) {
+      return isBn ? 'সঠিক সংখ্যা লিখুন।' : 'Enter a valid number.';
+    }
+    if (field.validation?.min !== undefined && numberValue < Number(field.validation.min)) {
+      return isBn ? `সর্বনিম্ন মান ${field.validation.min}।` : `Minimum value is ${field.validation.min}.`;
+    }
+    if (field.validation?.max !== undefined && numberValue > Number(field.validation.max)) {
+      return isBn ? `সর্বোচ্চ মান ${field.validation.max}।` : `Maximum value is ${field.validation.max}.`;
+    }
+  }
+  if (
+    (field.fieldType === 'date' || field.fieldType === 'time' || field.fieldType === 'month') &&
+    typeof value === 'string'
+  ) {
+    const minValue = field.validation?.min !== undefined ? String(field.validation.min) : '';
+    const maxValue = field.validation?.max !== undefined ? String(field.validation.max) : '';
+    if (minValue && value < minValue) {
+      return isBn ? `সর্বনিম্ন অনুমোদিত মান ${minValue}।` : `Earliest allowed value is ${minValue}.`;
+    }
+    if (maxValue && value > maxValue) {
+      return isBn ? `সর্বোচ্চ অনুমোদিত মান ${maxValue}।` : `Latest allowed value is ${maxValue}.`;
+    }
+  }
+  return null;
+};
 
 const isManualFieldSupported = (field: ReportingFormField) => {
   const storageKey = dynamicStorageKey(field);
@@ -294,6 +380,7 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
   const [creating, setCreating] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [mergingId, setMergingId] = useState<string | null>(null);
+  const [pendingMergeId, setPendingMergeId] = useState<string | null>(null);
   const [createdReportId, setCreatedReportId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -387,9 +474,8 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
     [taxonomy.subcategories, report.segmentId]
   );
 
-  const selectedSubcategory = taxonomy.subcategories.find(
-    (item) => item.id === report.subcategoryId
-  );
+  const requiresPrivacyReview =
+    NEWS_INTAKE_PRIVACY_REVIEW_SUBCATEGORIES.has(report.subcategoryId);
 
   const selectedDivision = locationTaxonomy.divisions.find(
     (item) => item.nameEn === report.division || item.nameBn === report.division || item.id === report.division
@@ -517,8 +603,11 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
         ? `বর্তমান প্রকাশিত ফর্মে এমন আবশ্যক ফিল্ড আছে যা নিউজ ইনটেক এখনো নিরাপদভাবে পূরণ করতে পারে না: ${labels}। রিপোর্টটি সাধারণ রিপোর্ট ফ্লো দিয়ে সম্পন্ন করুন।`
         : `The current published form contains required fields that News Intake cannot safely populate yet: ${labels}. Complete this report through the standard report workflow.`;
     }
-    const missingDynamicFields = dynamicCustomFields.filter(
-      (field) => field.required && isEmptyDynamicValue(dynamicAnswer(field))
+    const missingDynamicFields = dynamicCustomFields.filter((field) =>
+      field.required &&
+      (field.fieldType === 'checkbox'
+        ? dynamicAnswer(field) !== true
+        : isEmptyDynamicValue(dynamicAnswer(field)))
     );
     if (missingDynamicFields.length > 0) {
       const labels = missingDynamicFields
@@ -528,6 +617,18 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
       return isBn
         ? `প্রকাশিত ফর্মের আবশ্যক তথ্য দিন: ${labels}।`
         : `Complete the required published-form fields: ${labels}.`;
+    }
+    for (const field of dynamicCustomFields) {
+      const validationError = dynamicValidationError(field, dynamicAnswer(field), isBn);
+      if (validationError) {
+        const label = isBn ? field.labelBn || field.labelEn : field.labelEn || field.labelBn;
+        return label ? `${label}: ${validationError}` : validationError;
+      }
+    }
+    if (requiresPrivacyReview && report.customFieldAnswers?.sensitiveContentReviewed !== true) {
+      return isBn
+        ? 'সংবেদনশীল রিপোর্টের পাবলিক শিরোনাম, সারাংশ, অবস্থান ও পরিচয়সংক্রান্ত তথ্য রিভিউ করে নিশ্চিত করুন।'
+        : 'Review and confirm the public title, summary, location, and identifying details for this sensitive report.';
     }
     if (!report.titleBn.trim() || !report.descriptionBn.trim()) {
       return isBn
@@ -740,14 +841,15 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
     }
   };
 
-  const handleMerge = async (complaintId: string) => {
-    const confirmed = window.confirm(
-      isBn
-        ? `এই যাচাইকৃত উৎসটি ${complaintId} রিপোর্টে মার্জ করবেন? এতে বিদ্যমান রিপোর্টের উৎস ইতিহাস পরিবর্তন হবে।`
-        : `Merge this verified source into report ${complaintId}? This changes the existing report's source history.`
-    );
-    if (!confirmed) return;
+  const handleMerge = (complaintId: string) => {
+    setPendingMergeId(complaintId);
+  };
 
+  const confirmMerge = async () => {
+    const complaintId = pendingMergeId;
+    if (!complaintId) return;
+
+    setPendingMergeId(null);
     setMergingId(complaintId);
     setError(null);
     setSuccess(null);
@@ -777,6 +879,16 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
           label={label}
           helperText={helperText}
           value={typeof value === 'string' ? value : ''}
+          minLength={
+            field.validation?.minLength !== undefined
+              ? Number(field.validation.minLength)
+              : undefined
+          }
+          maxLength={
+            field.validation?.maxLength !== undefined
+              ? Number(field.validation.maxLength)
+              : undefined
+          }
           onChange={(event) => updateDynamicAnswer(field, event.target.value)}
         />
       );
@@ -834,7 +946,7 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
       );
     }
 
-    if (field.fieldType === 'select' || field.fieldType === 'radio') {
+    if (field.fieldType === 'select') {
       return (
         <Select
           key={key}
@@ -855,6 +967,38 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
       );
     }
 
+    if (field.fieldType === 'radio') {
+      return (
+        <fieldset
+          key={key}
+          className="space-y-2 rounded-lg border border-slate-200 p-3 dark:border-slate-800"
+        >
+          <legend className="px-1 type-label font-medium text-slate-700 dark:text-slate-300">
+            {label}
+          </legend>
+          {helperText && (
+            <p className="type-helper text-slate-500 dark:text-slate-400">{helperText}</p>
+          )}
+          <RadioGroup
+            name={`news-intake-dynamic-${field.fieldKey}`}
+            value={typeof value === 'string' ? value : ''}
+            onChange={(event) => updateDynamicAnswer(field, event.target.value)}
+          >
+            {field.options.map((option) => (
+              <Radio
+                key={option.value}
+                value={option.value}
+                label={
+                  (isBn ? option.labelBn || option.labelEn : option.labelEn || option.labelBn) ||
+                  option.value
+                }
+              />
+            ))}
+          </RadioGroup>
+        </fieldset>
+      );
+    }
+
     const inputType =
       field.fieldType === 'currency' || field.fieldType === 'number'
         ? 'number'
@@ -868,6 +1012,30 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
         type={inputType}
         label={label}
         helperText={helperText}
+        minLength={
+          field.validation?.minLength !== undefined
+            ? Number(field.validation.minLength)
+            : undefined
+        }
+        maxLength={
+          field.validation?.maxLength !== undefined
+            ? Number(field.validation.maxLength)
+            : undefined
+        }
+        min={
+          field.validation?.min !== undefined
+            ? field.fieldType === 'number' || field.fieldType === 'currency'
+              ? Number(field.validation.min)
+              : String(field.validation.min)
+            : undefined
+        }
+        max={
+          field.validation?.max !== undefined
+            ? field.fieldType === 'number' || field.fieldType === 'currency'
+              ? Number(field.validation.max)
+              : String(field.validation.max)
+            : undefined
+        }
         value={
           typeof value === 'string' || typeof value === 'number'
             ? String(value)
@@ -1051,13 +1219,37 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
             />
           </div>
 
-          {selectedSubcategory?.isSensitive && (
+          {requiresPrivacyReview && (
             <FeedbackNotice tone="warning" compact>
-              <p>
-                {isBn
-                  ? 'এটি সংবেদনশীল রিপোর্টিং বিভাগ। উৎসে নেই এমন পরিচয়, সম্পর্ক বা অভিযোগ যোগ করবেন না।'
-                  : 'This is a sensitive reporting category. Do not add identities, relationships, or allegations that are not present in the source.'}
-              </p>
+              <div className="space-y-3">
+                <p>
+                  {isBn
+                    ? 'এটি সংবেদনশীল রিপোর্টিং বিভাগ। উৎসে নেই এমন পরিচয়, সম্পর্ক বা অভিযোগ যোগ করবেন না। প্রকাশের আগে এমন পরিচয়ও সরান যা অপ্রয়োজনে ভুক্তভোগী বা শিশুকে শনাক্ত করতে পারে।'
+                    : 'This is a sensitive reporting category. Do not add identities, relationships, or allegations that are not present in the source. Before publishing, remove identifying detail that could unnecessarily identify a victim or child.'}
+                </p>
+                <Checkbox
+                  id="news-intake-sensitive-content-reviewed"
+                  checked={report.customFieldAnswers?.sensitiveContentReviewed === true}
+                  onChange={(event) =>
+                    updateReport({
+                      customFieldAnswers: {
+                        ...report.customFieldAnswers,
+                        sensitiveContentReviewed: event.target.checked,
+                      },
+                    })
+                  }
+                  label={
+                    isBn
+                      ? 'আমি পাবলিক শিরোনাম, সারাংশ, অবস্থান ও পরিচয়সংক্রান্ত তথ্য রিভিউ করেছি'
+                      : 'I reviewed the public title, summary, location, and identifying details'
+                  }
+                  description={
+                    isBn
+                      ? 'এই নিশ্চিতকরণ ছাড়া সংবেদনশীল sourced report তৈরি বা প্রকাশ করা যাবে না।'
+                      : 'Privacy-sensitive sourced reports cannot be created or published without this confirmation.'
+                  }
+                />
+              </div>
             </FeedbackNotice>
           )}
 
@@ -1813,6 +2005,34 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
           </p>
         </div>
       </FeedbackNotice>
+
+      <Modal
+        isOpen={Boolean(pendingMergeId)}
+        onClose={() => setPendingMergeId(null)}
+        size="sm"
+        title={isBn ? 'উৎস মার্জ নিশ্চিত করুন' : 'Confirm source merge'}
+        description={
+          isBn
+            ? 'এটি বিদ্যমান রিপোর্টের যাচাইকৃত উৎস ইতিহাস পরিবর্তন করবে।'
+            : 'This changes the verified source history of the existing report.'
+        }
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setPendingMergeId(null)}>
+              {isBn ? 'বাতিল' : 'Cancel'}
+            </Button>
+            <Button variant="primary" onClick={() => void confirmMerge()}>
+              {isBn ? 'উৎস মার্জ করুন' : 'Merge source'}
+            </Button>
+          </>
+        }
+      >
+        <p>
+          {isBn
+            ? `যাচাইকৃত উৎসটি ${pendingMergeId || ''} রিপোর্টে মার্জ করবেন?`
+            : `Merge this verified source into report ${pendingMergeId || ''}?`}
+        </p>
+      </Modal>
     </div>
   );
 };

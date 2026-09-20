@@ -33,7 +33,7 @@ const e2eNewsIntakeComplaint = {
   updated_at: '2026-09-18T12:00:00Z',
 };
 
-const autoComplaint = (id, title, status = 'submitted') => ({
+const autoComplaint = (id, title, status = 'submitted', reviewRequired = false) => ({
   id,
   segment_id: 'public_safety',
   subcategory_id: 'theft',
@@ -54,6 +54,12 @@ const autoComplaint = (id, title, status = 'submitted') => ({
     sourceLanguage: 'bn',
     automatedIntake: true,
     locationScope: 'specific',
+    ...(reviewRequired
+      ? {
+          newsIntakeReviewRequired: true,
+          newsIntakeReviewReason: 'Current-state review regression fixture',
+        }
+      : {}),
   },
   division: 'Dhaka',
   district: 'Dhaka',
@@ -379,6 +385,14 @@ async function installSupabaseFixtures(page) {
             order: 2,
             isSensitive: false,
           },
+          {
+            id: 'rape-sexual-violence',
+            segmentId: 'public_safety',
+            nameEn: 'Sensitive Intake Test',
+            nameBn: 'সংবেদনশীল ইনটেক টেস্ট',
+            order: 3,
+            isSensitive: true,
+          },
         ],
       };
     } else if (path.includes('/rest/v1/rpc/get_public_reporting_configuration')) {
@@ -410,10 +424,36 @@ async function installSupabaseFixtures(page) {
                 active: true,
                 sortOrder: 70,
                 options: [],
+                validation: { minLength: 10, maxLength: 100 },
+                config: {},
+              },
+              {
+                fieldKey: 'source_confidence',
+                fieldType: 'radio',
+                storageMode: 'custom_json',
+                storageKey: 'sourceConfidence',
+                labelEn: 'Source confidence',
+                labelBn: 'উৎসের নির্ভরযোগ্যতা',
+                helperEn: 'Choose the source confidence level.',
+                helperBn: 'উৎসের নির্ভরযোগ্যতার মাত্রা নির্বাচন করুন।',
+                required: true,
+                active: true,
+                sortOrder: 80,
+                options: [
+                  { value: 'high', labelEn: 'High confidence', labelBn: 'উচ্চ নির্ভরযোগ্যতা' },
+                  { value: 'medium', labelEn: 'Medium confidence', labelBn: 'মাঝারি নির্ভরযোগ্যতা' },
+                ],
                 validation: {},
                 config: {},
               },
             ],
+          },
+          {
+            subcategoryId: 'rape-sexual-violence',
+            schemaId: 'e2e-rape-sensitive-legacy',
+            version: 1,
+            engineMode: 'legacy',
+            fields: [],
           },
         ],
       };
@@ -538,7 +578,8 @@ async function installSupabaseFixtures(page) {
               ? autoComplaint(
                   E2E_AUTO_REPORT_B,
                   'স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট B',
-                  publishedIds.has(E2E_AUTO_REPORT_B) ? 'published' : 'submitted'
+                  publishedIds.has(E2E_AUTO_REPORT_B) ? 'published' : 'submitted',
+                  !publishedIds.has(E2E_AUTO_REPORT_B)
                 )
               : [];
     } else if (path.includes('/rest/v1/rpc/')) {
@@ -749,24 +790,28 @@ await check('News Intake automatic review selects only intended reports and keep
     timeout: 30000,
   });
 
-  await page.getByRole('button', { name: 'Check Now', exact: true }).click();
+  await page.getByRole('button', { name: 'Find News', exact: true }).click();
   await page.getByRole('button', { name: 'Scan All Sources Now', exact: true }).click();
 
   await expectVisible(
-    page.getByText('2 ready · 0 selected', { exact: true }).first(),
-    'automatic review did not expose the two safe feed-ready reports'
+    page.getByText('3 matched · 1 ready · 2 review · 0 selected', { exact: true }).first(),
+    'automatic review did not reconcile category matches with current feed eligibility'
   );
   await expectVisible(
-    page.getByText('Scan summary:', { exact: true }),
+    page.getByText('Scan:', { exact: true }),
     'automatic review scan summary missing'
   );
 
-  const reviewFilter = page.getByRole('button', { name: 'Needs review · 1', exact: true });
+  const reviewFilter = page.getByRole('button', { name: 'Needs review · 2', exact: true });
   await expectVisible(reviewFilter, 'automatic review filter missing');
   await reviewFilter.click();
   await expectVisible(
     page.getByText('E2E source requiring review', { exact: true }),
-    'needs-review filter did not retain the review item'
+    'needs-review filter did not retain the unmatched review item'
+  );
+  await expectVisible(
+    page.getByText('E2E automatic report B', { exact: true }),
+    'historical created_draft flagged for current review was incorrectly hidden'
   );
   if (await page.getByText('E2E automatic report A', { exact: true }).isVisible()) {
     throw new Error('needs-review filter left a feed-ready raw item visible');
@@ -774,9 +819,18 @@ await check('News Intake automatic review selects only intended reports and keep
   await page.getByRole('button', { name: 'All · 3', exact: true }).click();
 
   const reportA = page.getByLabel('Select স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট A for publishing');
-  const reportB = page.getByLabel('Select স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট B for publishing');
-  await expectVisible(reportA, 'first automatic report selector missing');
-  await expectVisible(reportB, 'second automatic report selector missing');
+  await expectVisible(reportA, 'feed-ready automatic report selector missing');
+  if (await page.getByLabel('Select স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট B for publishing').count()) {
+    throw new Error('current review-required report remained selectable for publication');
+  }
+  await expectVisible(
+    page.getByText('Category-matched news', { exact: true }),
+    'category-matched right panel heading missing'
+  );
+  await expectVisible(
+    page.getByText('E2E source requiring review', { exact: true }),
+    'category-matched review-only item was missing from the right panel'
+  );
 
   await reportA.check({ force: true });
   await expectVisible(
@@ -803,15 +857,18 @@ await check('News Intake automatic review selects only intended reports and keep
     page.getByRole('paragraph').filter({ hasText: /^Published$/ }).first(),
     'historical run hid the already-published feed-ready report'
   );
+  if (await page.getByLabel('Select স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট B for publishing').count()) {
+    throw new Error('historical review ignored current review-required state');
+  }
   await expectVisible(
-    page.getByLabel('Select স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট B for publishing'),
-    'remaining submitted report did not stay selectable in historical review'
+    page.getByText('Needs review', { exact: true }).first(),
+    'historical review did not preserve current review status'
   );
 
   await context.close();
 });
 
-await check('News Intake mobile raw and feed-ready panels collapse independently', async () => {
+await check('News Intake mobile workspace is full-screen and review panels collapse independently', async () => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
   attachPageGuards(page, 'local-news-intake-mobile-review');
@@ -824,8 +881,16 @@ await check('News Intake mobile raw and feed-ready panels collapse independently
 
   await page.getByRole('button', { name: 'Review', exact: true }).first().click();
 
+  const dialog = page.getByRole('dialog');
+  const dialogBox = await dialog.boundingBox();
+  if (!dialogBox || Math.abs(dialogBox.width - 390) > 2 || Math.abs(dialogBox.height - 844) > 2) {
+    throw new Error(
+      `mobile News Intake workspace is not full-screen: ${dialogBox?.width || 0}x${dialogBox?.height || 0}`
+    );
+  }
+
   const rawToggle = page.getByRole('button', { name: /Raw news found/ });
-  const readyToggle = page.getByRole('button', { name: /Feed-ready report/ });
+  const readyToggle = page.getByRole('button', { name: /Category-matched news/ });
   await expectVisible(rawToggle, 'mobile raw-news collapse control missing');
   await expectVisible(readyToggle, 'mobile feed-ready collapse control missing');
 
@@ -861,7 +926,7 @@ await check('News Intake clear source reaches one-click publication', async () =
     'News Intake page title missing'
   );
 
-  await page.getByRole('button', { name: 'Check Now', exact: true }).click();
+  await page.getByRole('button', { name: 'Find News', exact: true }).click();
   await expectVisible(
     page.getByRole('heading', { name: 'News Intake Workspace', exact: true }),
     'News Intake workspace modal did not open'
@@ -934,7 +999,7 @@ await check('News Intake manual form follows the published dynamic schema and fa
     waitUntil: 'domcontentloaded',
     timeout: 30000,
   });
-  await page.getByRole('button', { name: 'Check Now', exact: true }).click();
+  await page.getByRole('button', { name: 'Find News', exact: true }).click();
   await page.getByText('Manual intake', { exact: true }).click();
   await page.getByRole('button', { name: 'Open Manual Intake', exact: true }).click();
 
@@ -952,6 +1017,8 @@ await check('News Intake manual form follows the published dynamic schema and fa
   );
   const dynamicField = page.getByLabel('Source verification note *', { exact: true });
   await expectVisible(dynamicField, 'required published-schema custom field did not render');
+  const confidenceRadio = page.getByLabel('High confidence', { exact: true });
+  await expectVisible(confidenceRadio, 'published-schema radio field did not render as radio controls');
 
   await page.getByLabel('Report title (source language) *', { exact: true }).fill(
     'Dynamic schema intake report'
@@ -968,8 +1035,18 @@ await check('News Intake manual form follows the published dynamic schema and fa
     .getByRole('button', { name: 'Check Source & Duplicates', exact: true })
     .click();
   await expectVisible(
-    page.getByText(/Complete the required published-form fields: Source verification note/),
-    'missing required published-schema field did not block duplicate preview'
+    page.getByText(/Complete the required published-form fields: Source verification note, Source confidence/),
+    'missing required published-schema fields did not block duplicate preview'
+  );
+
+  await dynamicField.fill('short');
+  await confidenceRadio.check({ force: true });
+  await page
+    .getByRole('button', { name: 'Check Source & Duplicates', exact: true })
+    .click();
+  await expectVisible(
+    page.getByText(/Source verification note: Use at least 10 characters/),
+    'published-schema minLength validation was not mirrored in Manual News Intake'
   );
 
   await dynamicField.fill('Verified against the final source article.');
@@ -991,6 +1068,62 @@ await check('News Intake manual form follows the published dynamic schema and fa
       `mobile News Intake small action target is below 44px: ${smallActionBox?.height || 0}px`
     );
   }
+
+  await context.close();
+});
+
+await check('News Intake sensitive manual intake requires explicit privacy review', async () => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const page = await context.newPage();
+  attachPageGuards(page, 'local-news-intake-sensitive-review');
+  await installSupabaseFixtures(page);
+
+  await page.goto(hashUrl(LOCAL_URL, '/news-intake'), {
+    waitUntil: 'domcontentloaded',
+    timeout: 30000,
+  });
+  await page.getByRole('button', { name: 'Find News', exact: true }).click();
+  await page.getByText('Manual intake', { exact: true }).click();
+  await page.getByRole('button', { name: 'Open Manual Intake', exact: true }).click();
+
+  await page.locator('#news-intake-source-url').fill(
+    'https://www.thedailystar.net/e2e-news-intake'
+  );
+  await page.getByRole('button', { name: 'Fetch Metadata', exact: true }).click();
+
+  await page.getByLabel('Category *', { exact: true }).selectOption('public_safety');
+  await page.getByLabel('Subcategory *', { exact: true }).selectOption('rape-sexual-violence');
+  await page.getByLabel('Report title (source language) *', { exact: true }).fill(
+    'Sensitive source-backed report'
+  );
+  await page.getByLabel('Incident context (source language) *', { exact: true }).fill(
+    'Source-backed context with identifying details that require explicit privacy review.'
+  );
+  await page.getByLabel('Incident date *').fill('2026-09-18');
+  await page.getByLabel('Division *').selectOption({ label: 'Dhaka' });
+  await page.getByLabel('District *').selectOption({ label: 'Dhaka' });
+  await page.getByLabel('Area', { exact: true }).fill('E2E Intake Area');
+
+  await page
+    .getByRole('button', { name: 'Check Source & Duplicates', exact: true })
+    .click();
+  await expectVisible(
+    page.getByText(/Review and confirm the public title, summary, location, and identifying details/),
+    'sensitive manual intake did not fail closed before privacy review'
+  );
+
+  const privacyReview = page.getByLabel(
+    'I reviewed the public title, summary, location, and identifying details',
+    { exact: true }
+  );
+  await privacyReview.check({ force: true });
+  await page
+    .getByRole('button', { name: 'Check Source & Duplicates', exact: true })
+    .click();
+  await expectVisible(
+    page.getByText('Clear as a new incident', { exact: true }),
+    'sensitive manual intake did not proceed after explicit privacy review'
+  );
 
   await context.close();
 });

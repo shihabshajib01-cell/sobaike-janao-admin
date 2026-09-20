@@ -7,6 +7,33 @@ export const clip = (value: unknown, max: number) => {
 export const normalizeText = (value: unknown) =>
   String(value ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
 
+
+export const buildIncidentFocusedLocationText = (article: {
+  title?: string;
+  excerpt?: string;
+  body?: string;
+}) => {
+  const title=String(article.title||'').trim();
+  const excerpt=String(article.excerpt||'').trim();
+  const body=String(article.body||'').trim();
+  const full=`${title}. ${excerpt}. ${body}`;
+  const sentences=full
+    .split(/(?<=[.!?।])\s+|\n+/u)
+    .map((value)=>value.trim())
+    .filter((value)=>value.length>=20 && value.length<=700);
+
+  const incidentAnchor=
+    /(এ ঘটনা|এই ঘটনা|ঘটনাটি|দুর্ঘটনা(?:টি|য়|য়)?|সংঘর্ষ|হামলা|ধর্ষণ|ছিনতাই|ডাকাতি|অপহরণ|আগুন|ঘটে|ঘটেছে|ঘটেছিল|নিহত|আহত|incident|accident|collision|crash|attack|rape|robbery|snatching|kidnap|fire|occurred|happened|killed|injured)/iu;
+  const transferOrResidenceOnly=
+    /(হাসপাতালে|হাসপাতাল|চিকিৎসার জন্য|নেওয়া হয়|নেয়া হয়|স্থানান্তর|বাসিন্দা|বাড়ি|বাড়ি|গ্রামের বাসিন্দা|hospital|medical college|transferred|referred|taken to|resident of|lives in|home in)/iu;
+
+  const anchored=sentences.filter((sentence)=>incidentAnchor.test(sentence));
+  const incidentOnly=anchored.filter((sentence)=>!transferOrResidenceOnly.test(sentence));
+  const selected=(incidentOnly.length>0 ? incidentOnly : anchored).slice(0,6);
+
+  return clip(`${title} ${selected.join(' ') || excerpt}`,7000);
+};
+
 export const detectLanguage = (value: unknown) => {
   const text = String(value ?? '');
   const bn = (text.match(/[\u0980-\u09FF]/g) || []).length;
@@ -210,7 +237,7 @@ const locationFromScope = (scope: string, district?: string | null) => {
   // in reading order, but ignore medical/destination phrases such as
   // "died at RMCH" so they cannot beat the actual incident place.
   const englishIncidentPlacePattern =
-    /\b(?:at|near)\s+([A-Z][A-Za-z0-9.'’\-]*(?:\s+[A-Z][A-Za-z0-9.'’\-]*){0,5})(?=\s+(?:around|about|at|in|on|when|where|while|after|before|and|but)|[,.!?]|$)/gu;
+    /\b(?:at|near)\s+([A-Z][A-Za-z0-9.'’\-]*(?:\s+[A-Z][A-Za-z0-9.'’\-]*){0,5})(?=\s+(?:around|about|at|on|in|when|where|while|after|before|and|but)|[,.!?]|$)/gu;
   for (const match of scope.matchAll(englishIncidentPlacePattern)) {
     const matchIndex=match.index ?? 0;
     const prefix=scope.slice(Math.max(0,matchIndex-48),matchIndex);
