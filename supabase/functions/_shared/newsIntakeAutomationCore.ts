@@ -33,12 +33,22 @@ export const isSubstantiveIncidentContext = (
 };
 
 const LEGAL_FOLLOW_UP_HEADLINE_RE =
-  /(?:জামিন(?:\s+বাতিল)?|রিমান্ড|আদালত|শুনানি|চার্জশিট|চার্জ\s*শিট|অভিযোগপত্র|রায়|রায়|দণ্ড|সাজা|আপিল|বিচার\s+শুরু|সাক্ষ্যগ্রহণ|\bbail\b|\bremand\b|\bcourt\b|\bhearing\b|charge\s*sheet|chargesheet|\bverdict\b|\bsentenced?\b|\bappeal\b|\btrial\b)/iu;
+  /(?:জামিন(?:\s+বাতিল)?|রিমান্ড|আদালত|শুনানি|চার্জশিট|চার্জ\s*শিট|অভিযোগপত্র|রায়|রায়|দণ্ড|সাজা|আপিল|বিচার\s+শুরু|সাক্ষ্যগ্রহণ|জবানবন্দি|স্বীকারোক্তি|দায়\s+স্বীকার|দায়\s+স্বীকার|\bbail\b|\bremand\b|\bcourt\b|\bhearing\b|charge\s*sheet|chargesheet|\bverdict\b|\bsentenced?\b|\bappeal\b|\btrial\b|\bconfess(?:ed|es|ion)?\b|\bconfession\b|\bplead(?:s|ed)?\s+guilty\b)/iu;
 
 export const isLegalFollowUpOnly = (
   title: unknown,
   _context?: unknown
 ) => LEGAL_FOLLOW_UP_HEADLINE_RE.test(normalizeText(title));
+
+const MULTI_INCIDENT_ARTICLE_RE =
+  /(?:(?:পৃথক|আলাদা)\s*(?:দুই|দুটি|তিন|তিনটি|একাধিক)?\s*(?:সড়ক|সড়ক)?\s*(?:দুর্ঘটনা|ঘটনা|হামলা|ছিনতাই|ডাকাতি|অগ্নিকাণ্ড)|(?:দুই|দুটি|তিন|তিনটি|একাধিক)\s*(?:পৃথক|আলাদা)\s*(?:সড়ক|সড়ক)?\s*(?:দুর্ঘটনা|ঘটনা|হামলা|ছিনতাই|ডাকাতি|অগ্নিকাণ্ড)|(?:দুই|দুটি|একাধিক)\s*(?:স্থানে|এলাকায়|এলাকায়).{0,80}(?:দুর্ঘটনা|ঘটনা|হামলা|ছিনতাই|ডাকাতি)|(?:two|three|multiple|several)\s+separate\s+(?:road\s+)?(?:accidents?|incidents?|attacks?|robberies|snatchings?|fires?)|separate\s+(?:road\s+)?(?:accidents?|incidents?|attacks?|robberies|snatchings?|fires?).{0,60}(?:two|three|multiple|several))/iu;
+
+export const isMultiIncidentArticle = (
+  title: unknown,
+  context?: unknown
+) => MULTI_INCIDENT_ARTICLE_RE.test(
+  `${normalizeText(title)} ${normalizeText(context)}`
+);
 
 
 const FACT_CHECK_STORY_RE =
@@ -406,6 +416,9 @@ export const isSafeSpecificLocationText = (
   if (/^(এলাকা|বাজার|মার্কেট|থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|গ্রাম|শহর|নগরী|মহানগরী|রোড|লেন|গলি|মোড়|মোড়|স্টেশন|area|market|bazaar|thana|upazila|union|village|city|road|street|lane|station)$/iu.test(normalized)) return false;
   if (/^(?:on|at|in|near)\s+(?:the\s+)?(?:road|street|lane|area|city|district|station)(?:\s+\d+)?$/iu.test(normalized)) return false;
   if (/(বিভিন্ন|various|several)\s+(এলাকা|areas?)/iu.test(normalized)) return false;
+  if (/^(?:(?:\d{1,2}\s+)?(?:জানুয়ারি|জানুয়ারি|ফেব্রুয়ারি|ফেব্রুয়ারি|মার্চ|এপ্রিল|মে|জুন|জুলাই|আগস্ট|সেপ্টেম্বর|অক্টোবর|নভেম্বর|ডিসেম্বর|january|february|march|april|may|june|july|august|september|october|november|december)|(?:সকাল|দুপুর|বিকেল|সন্ধ্যা|রাত|morning|afternoon|evening|night)\b)/iu.test(normalized)) return false;
+  if (/(?:জেলার|district(?:'s)?).{0,90}(?:\sও\s|\sএবং\s|\sand\s|,).{0,90}(?:উপজেলা|থানা|upazila|thana)/iu.test(normalized)) return false;
+  if (/(?:উপজেলা|থানা|upazila|thana).{0,70}(?:\sও\s|\sএবং\s|\sand\s|,).{0,70}(?:উপজেলা|থানা|upazila|thana)/iu.test(normalized)) return false;
 
   // Narrative/action fragments must never be promoted to an incident place.
   if (/(?:collected\s+evidence|cordoned\s+off|investigat(?:e|ed|ing|ion)|police\s+said|officials?\s+said|victim(?:s)?|the\s+victim|was\s+arrested|were\s+arrested|detained|reported\s+the\s+incident|went\s+to\s+the\s+area|visited\s+the\s+area)/iu.test(normalized)) return false;
