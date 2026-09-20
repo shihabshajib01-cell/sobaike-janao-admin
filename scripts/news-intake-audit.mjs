@@ -26,6 +26,7 @@ const groundingGuardAlignment = read('supabase/migrations/20260919083754_news_in
 const adminLocationRpcHardening = read('supabase/migrations/20260919085346_news_intake_admin_location_rpc_hardening.sql');
 const sourceLanguageGroundingCleanup = read('supabase/migrations/20260919093100_news_intake_source_language_grounding_cleanup.sql');
 const misclassifiedReportQuarantine = read('supabase/migrations/20260919184200_quarantine_misclassified_automated_news_report.sql');
+const sensitiveContentReviewGate = read('supabase/migrations/20260920005500_news_intake_sensitive_content_review_gate.sql');
 const automationCore = read('supabase/functions/_shared/newsIntakeAutomationCore.ts');
 const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
 const edge = read('supabase/functions/news-intake-fetch/index.ts');
@@ -252,7 +253,7 @@ for (const needle of [
 }
 
 for (const needle of [
-  'Check Now',
+  'Find News',
   'newsIntakeApi.scanSources()',
   'getAutomationDashboard()',
   'created_draft',
@@ -304,49 +305,83 @@ for (const needle of [
   'dynamicCustomFields',
   'unsupportedRequiredFields',
   'Published form fields',
-  'window.confirm',
+  'dynamicValidationError',
+  'RadioGroup',
+  'sensitiveContentReviewed',
+  'pendingMergeId',
+  '<Modal',
 ]) {
   requireText(manualForm, needle, 'Manual News Intake UI safety flow');
 }
 
 for (const needle of [
   'News Intake Workspace',
+  'Find News',
   'Scan All Sources Now',
   'Raw news found',
-  'Feed-ready report',
+  'Category-matched news',
   'Select All',
   'Clear Selection',
   'Publish Selected to Feed',
   'FeedReadyReportPreview',
-  'feedDisplayItems.map',
+  'matchedItems.map',
   'rawFilterCounts',
+  'rawFilterCounts.published',
   "'excluded'",
   "'ready'",
+  "'published'",
   'reasonLabel',
   'segmentLabel',
   'subcategoryLabel',
   'confidenceLabel',
   'filteredRawItems',
-  'Scan summary:',
+  'Outcome:',
   'aria-pressed={rawFilter === value}',
   "item.duplicateStatus === 'clear'",
+  'isCurrentFeedReady',
+  'isCurrentReviewItem',
+  'complaintNeedsReview',
   'reportLoadErrors',
   'reviewItemManually',
   'requestWorkspaceClose',
   'publishable={eligibleReportIds.includes(reportId)}',
-  'No feed-ready reports',
+  'No category-matched news',
   'rawNewsExpanded',
   'feedReadyExpanded',
   'scrollbar-gutter:stable',
-  'lg:max-h-[calc(94vh-22rem)]',
+  'lg:min-h-0 lg:flex-1',
+  'mobileFullscreen',
   'max-sm:[&_[data-button-size=sm]]:min-h-11',
-  'Show items needing review',
   'aria-expanded',
   'ManualNewsIntakeForm',
   'complaintApi.publishComplaint(reportId)',
   "result.complaint.status !== 'published'",
 ]) {
   requireText(page, needle, 'News Intake dashboard workspace');
+}
+
+for (const needle of [
+  'sensitiveContentReviewed',
+  'SOURCE_SENSITIVE_CONTENT_REVIEW_REQUIRED',
+  'sensitive_content_privacy_review_required',
+  'news_intake_privacy_review_required',
+  'sourced_report_schema_validation_errors_internal',
+  'SOURCE_SCHEMA_VALIDATION_FAILED',
+]) {
+  requireText(sensitiveContentReviewGate, needle, 'News Intake sensitive-content review gate');
+}
+
+if (manualForm.includes('window.confirm')) {
+  errors.push('Manual News Intake must use the shared confirmation modal instead of window.confirm.');
+}
+
+for (const needle of [
+  'buildIncidentFocusedLocationText',
+  'focusedLocationText',
+  'Privacy-sensitive category detected.',
+  'privacyReviewRequired',
+]) {
+  requireText(scanner, needle, 'News Intake incident-location and sensitive-review scanner');
 }
 
 for (const needle of [
@@ -425,5 +460,5 @@ if (errors.length) {
 }
 
 console.log(
-  'News Intake audit passed: trusted-source modes, false-positive classification guards, article-document filtering, source-grounded date/location extraction, published-form synchronization, acknowledged 36-hour scheduling, retry-safe dispatch, manual Check Now, overlap prevention, source-language handling, final server duplicate clearance, reconciled review states, accessible modal focus, mobile review controls, draft-first creation, source merge, and security checks are protected.'
+  'News Intake audit passed: trusted-source modes, false-positive classification guards, article-document filtering, incident-focused date/location extraction, sensitive-content publication gating, published-form validation parity, acknowledged 36-hour scheduling, retry-safe dispatch, Find News entry, overlap prevention, source-language handling, final server duplicate clearance, current-state readiness, category-matched review visibility, accessible nested modal focus, mobile full-screen review controls, draft-first creation, source merge, and security checks are protected.'
 );
