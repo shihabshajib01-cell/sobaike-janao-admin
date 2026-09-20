@@ -794,8 +794,8 @@ await check('News Intake automatic review selects only intended reports and keep
   await page.getByRole('button', { name: 'Scan All Sources Now', exact: true }).click();
 
   await expectVisible(
-    page.getByText('3 matched · 1 ready · 2 review · 0 selected', { exact: true }).first(),
-    'automatic review did not reconcile category matches with current feed eligibility'
+    page.getByText('1 ready · 0 selected', { exact: true }).first(),
+    'feed-ready publish panel did not expose the current publishable count'
   );
   await expectVisible(
     page.getByText('Scan:', { exact: true }),
@@ -824,19 +824,21 @@ await check('News Intake automatic review selects only intended reports and keep
     throw new Error('current review-required report remained selectable for publication');
   }
   await expectVisible(
-    page.getByText('Category-matched news', { exact: true }).first(),
-    'category-matched right panel heading missing'
+    page.getByText('Feed-ready reports', { exact: true }).first(),
+    'feed-ready publish panel heading missing'
   );
   const reviewCopies = page.getByText('E2E source requiring review', { exact: true });
-  if ((await reviewCopies.count()) !== 2) {
+  if ((await reviewCopies.count()) !== 1) {
     throw new Error(
-      `category-matched review item should appear once in Raw News and once in Category-matched news; found ${await reviewCopies.count()}`
+      `review-only item leaked into the feed-ready publish panel; found ${await reviewCopies.count()} copies`
     );
   }
-  await expectVisible(
-    reviewCopies.last(),
-    'category-matched review-only item was missing from the right panel'
-  );
+  const feedPreviews = page.getByLabel('Public feed preview');
+  if ((await feedPreviews.count()) !== 1) {
+    throw new Error(
+      `feed-ready publish panel should show exactly one public-feed preview; found ${await feedPreviews.count()}`
+    );
+  }
 
   await reportA.check({ force: true });
   await expectVisible(
@@ -896,7 +898,7 @@ await check('News Intake mobile workspace is full-screen and review panels colla
   }
 
   const rawToggle = page.getByRole('button', { name: /Raw news found/ });
-  const readyToggle = page.getByRole('button', { name: /Category-matched news/ });
+  const readyToggle = page.getByRole('button', { name: /Feed-ready reports/ });
   await expectVisible(rawToggle, 'mobile raw-news collapse control missing');
   await expectVisible(readyToggle, 'mobile feed-ready collapse control missing');
 

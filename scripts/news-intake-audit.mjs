@@ -313,17 +313,23 @@ for (const needle of [
   requireText(manualForm, needle, 'Manual News Intake UI safety flow');
 }
 
+if (page.includes("matchedItems.map((item)")) {
+  errors.push(
+    'The right publish panel must not render all category-matched items; only feedReadyItems may appear there.'
+  );
+}
+
 for (const needle of [
   'News Intake Workspace',
   'Find News',
   'Scan All Sources Now',
   'Raw news found',
-  'Category-matched news',
+  'Feed-ready reports',
   'Select All',
   'Clear Selection',
   'Publish Selected to Feed',
   'FeedReadyReportPreview',
-  'matchedItems.map',
+  'feedReadyItems.map',
   'rawFilterCounts',
   'rawFilterCounts.published',
   "'excluded'",
@@ -343,8 +349,8 @@ for (const needle of [
   'reportLoadErrors',
   'reviewItemManually',
   'requestWorkspaceClose',
-  'publishable={eligibleReportIds.includes(reportId)}',
-  'No category-matched news',
+  'publishable',
+  'No feed-ready reports',
   'rawNewsExpanded',
   'feedReadyExpanded',
   'scrollbar-gutter:stable',
