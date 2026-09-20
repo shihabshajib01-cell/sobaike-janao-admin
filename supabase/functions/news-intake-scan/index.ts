@@ -417,23 +417,31 @@ const extractArticle = (html: string, finalUrl: string, publisherFallback: strin
   let body = String(jsonLd?.articleBody || '').trim();
   let extractionMethod = body ? 'json_ld_article_body' : '';
 
-  if (!body) {
-    const semanticBodyMatch=html.match(
-      /<(?:div|section)\b[^>]*(?:class|id)\s*=\s*(?:"[^"]*(?:article-body|story-body|story-content|news-content|details-body|details-brief|content-body)[^"]*"|'[^']*(?:article-body|story-body|story-content|news-content|details-body|details-brief|content-body)[^']*')[^>]*>([\s\S]*?)<\/(?:div|section)>/i
-    );
-    const scope = semanticBodyMatch?.[1] || articleMatch?.[1] || html;
-    body = [...scope.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)]
-      .map((m)=>stripTags(m[1]))
-      .filter((text)=>text.length>=35)
-      .slice(0,30)
-      .join(' ');
-    if(body) {
-      extractionMethod = semanticBodyMatch
-        ? 'semantic_article_paragraphs'
-        : articleMatch
-          ? 'article_paragraphs'
-          : 'page_paragraphs';
-    }
+  const semanticBodyMatch=html.match(
+    /<(?:div|section)\b[^>]*(?:class|id)\s*=\s*(?:"[^"]*(?:article-body|story-body|story-content|news-content|details-body|details-brief|content-body)[^"]*"|'[^']*(?:article-body|story-body|story-content|news-content|details-body|details-brief|content-body)[^']*')[^>]*>([\s\S]*?)<\/(?:div|section)>/i
+  );
+  const paragraphScope = semanticBodyMatch?.[1] || articleMatch?.[1] || (!body ? html : '');
+  const paragraphBody = paragraphScope
+    ? [...paragraphScope.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)]
+        .map((m)=>stripTags(m[1]))
+        .filter((text)=>text.length>=35)
+        .slice(0,30)
+        .join(' ')
+    : '';
+
+  if(
+    paragraphBody
+    && (
+      !body
+      || paragraphBody.length > Math.max(300,body.length+120)
+    )
+  ){
+    body=paragraphBody;
+    extractionMethod = semanticBodyMatch
+      ? 'semantic_article_paragraphs'
+      : articleMatch
+        ? 'article_paragraphs'
+        : 'page_paragraphs';
   }
 
   // Several publishers expose the complete article in serialized page state.
