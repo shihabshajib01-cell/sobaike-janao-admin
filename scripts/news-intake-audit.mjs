@@ -96,6 +96,7 @@ for (const needle of [
 for (const needle of [
   'inferIncidentDate',
   'inferSpecificLocationPhrase',
+  'isKnownPublisherArticlePath',
   'inferDistrictWideScope',
   'buildSourceLanguageFields',
   'scoreDiscoveryLink',
@@ -112,6 +113,9 @@ requireText(behaviorAudit, 'English content must not be duplicated', 'News Intak
 requireText(behaviorAudit, 'Incident-anchored date must win over page publication metadata', 'News Intake incident-date grounding regression');
 requireText(behaviorAudit, 'Incident location must win over later narrative text ending in এলাকা', 'News Intake location grounding regression');
 requireText(behaviorAudit, 'Bangla weekday plus bare সকাল must resolve against same-day publication date', 'News Intake Bangla daypart incident-date regression');
+requireText(behaviorAudit, 'An earlier incident sentence may inherit the immediately preceding factual date', 'News Intake adjacent-date grounding regression');
+requireText(behaviorAudit, 'Publication metadata must never be inherited as the incident date', 'News Intake publication-date isolation regression');
+requireText(behaviorAudit, 'Banglanews final-detail article paths must be recognized even without semantic article wrappers', 'News Intake Banglanews final-detail article regression');
 requireText(behaviorAudit, 'Excerpt/body overlap must not duplicate the same incident sentence', 'News Intake context de-duplication regression');
 requireText(behaviorAudit, 'Near-identical excerpt/body incident sentences must not be repeated', 'News Intake near-duplicate context regression');
 requireText(behaviorAudit, 'Bare proper incident place after at must be retained', 'News Intake bare-place grounding regression');
