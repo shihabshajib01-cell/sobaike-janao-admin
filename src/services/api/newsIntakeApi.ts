@@ -212,6 +212,39 @@ export class NewsIntakeApi {
     return data as NewsIntakePreview;
   }
 
+  async publishTrustedCandidate(payload: NewsIntakePayload): Promise<{
+    success: boolean;
+    action: string;
+    reportId: string;
+    status: string;
+    published: boolean;
+    duplicateStatus?: string | null;
+  }> {
+    assertConfigured();
+
+    const { data, error } = await supabase.rpc(
+      'process_trusted_news_intake_candidate',
+      { p_payload: payload }
+    );
+
+    if (error) {
+      throw new Error(error.message || 'Failed to publish approved-source report.');
+    }
+
+    const raw = (data || {}) as any;
+    return {
+      success: Boolean(raw.success),
+      action: String(raw.action || ''),
+      reportId: String(raw.reportId || ''),
+      status: String(raw.status || ''),
+      published: Boolean(raw.published),
+      duplicateStatus:
+        raw.duplicateStatus === null || raw.duplicateStatus === undefined
+          ? null
+          : String(raw.duplicateStatus),
+    };
+  }
+
   async createDraft(payload: NewsIntakePayload): Promise<NewsIntakeCreateResult> {
     assertConfigured();
 
