@@ -519,8 +519,7 @@ const buildReportPayload = (
   const fields=buildSourceLanguageFields(
     article.title,
     feedContext || buildFeedReadyIncidentContext(article),
-    language,
-    buildFeedReadyIncidentContext(article)
+    language
   );
 
   return {
