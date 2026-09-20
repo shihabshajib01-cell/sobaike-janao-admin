@@ -54,6 +54,8 @@ const autoComplaint = (id, title, status = 'submitted', reviewRequired = false) 
   custom_field_answers: {
     sourceLanguage: 'bn',
     automatedIntake: true,
+    trustedSourceAuto: true,
+    sourceTruthMode: 'approved_publisher',
     locationScope: 'specific',
     ...(reviewRequired
       ? {
@@ -896,12 +898,25 @@ await check('News Intake keeps Step 2 open and Select All publishes approved mat
   await page.getByRole('button', { name: 'Scan All Sources Now', exact: true }).click();
 
   await expectVisible(
-    page.getByText('3 matched · 2 ready · 0 selected', { exact: true }).first(),
-    'category-matched panel did not expose the zero-review ready counts'
-  );
-  await expectVisible(
     page.getByText('Category-matched reports', { exact: true }).first(),
     'category-matched panel heading missing'
+  );
+
+  const existingSelector = page.getByLabel(
+    'Select স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট A for publishing'
+  );
+  const stagedSelector = page.getByLabel(
+    'Select E2E staged approved-source report for publishing'
+  );
+  // The staged source renders immediately; the existing report card is loaded
+  // asynchronously. Wait for both selectors before asserting the aggregate
+  // ready count so this smoke tests behavior rather than network timing.
+  await expectVisible(existingSelector, 'existing ready report selector missing');
+  await expectVisible(stagedSelector, 'staged approved-source selector missing');
+
+  await expectVisible(
+    page.getByText('3 matched · 2 ready · 0 selected', { exact: true }).first(),
+    'category-matched panel did not expose the zero-review ready counts after both cards loaded'
   );
 
   if (await page.getByText('Review required', { exact: true }).count()) {
@@ -910,15 +925,6 @@ await check('News Intake keeps Step 2 open and Select All publishes approved mat
   if (await page.getByText('Review before selection', { exact: true }).count()) {
     throw new Error('current approved-source matches still require review before selection');
   }
-
-  const existingSelector = page.getByLabel(
-    'Select স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট A for publishing'
-  );
-  const stagedSelector = page.getByLabel(
-    'Select E2E staged approved-source report for publishing'
-  );
-  await expectVisible(existingSelector, 'existing ready report selector missing');
-  await expectVisible(stagedSelector, 'staged approved-source selector missing');
   if (await existingSelector.isDisabled()) throw new Error('existing ready report checkbox is disabled');
   if (await stagedSelector.isDisabled()) throw new Error('staged approved-source checkbox is disabled');
 
