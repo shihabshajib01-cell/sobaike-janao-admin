@@ -544,6 +544,11 @@ for (const needle of [
   'stopImmediatePropagation',
   'reportLoadErrors',
   'reviewItemManually',
+  'canManuallyReviewItem',
+  'if (!canManuallyReviewItem(item))',
+  'Automatic excluded matches are diagnostic results, not a manual-data-entry',
+  'Review required',
+  'Needs review',
   'reviewingItem',
   'handleReviewSaved',
   'newsIntakeApi.completeItemReview',
@@ -579,6 +584,13 @@ for (const needle of [
 
 if (!page.includes('matchedItems.map((item)')) {
   errors.push('Every category-matched item must render in the right review panel.');
+}
+
+if (/const canReview[\s\S]{0,260}isExcludedItem\(item\)/.test(page)) {
+  errors.push('Automatic excluded News Intake items must remain read-only and must not enter the manual review workflow.');
+}
+if (page.includes('Historical review item') || page.includes('Historical review')) {
+  errors.push('News Intake must not label current excluded matches as historical review work.');
 }
 requireText(page, 'feedReadyItems.map(selectionKeyForItem)', 'ready matched selection eligibility');
 requireText(page, "item.reportId ? `report:${String(item.reportId)}` : `item:${item.id}`", 'staged trusted candidate selection key');
