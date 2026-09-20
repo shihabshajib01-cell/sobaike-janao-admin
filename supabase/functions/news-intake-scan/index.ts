@@ -14,6 +14,7 @@ import {
   inferChildIncidentType,
   inferIncidentDate,
   inferSpecificLocationPhrase,
+  isKnownPublisherArticlePath,
   isUnsupportedArticleType,
   scoreDiscoveryLink,
 } from "../_shared/newsIntakeAutomationCore.ts";
@@ -701,7 +702,14 @@ const processNewsIntakeRun = async (
           return;
         }
 
-        if(!article.articleDocumentSignal){
+        const knownPublisherDocumentFallback=Boolean(
+          isKnownPublisherArticlePath(article.canonicalUrl)
+          && article.sourcePublishedDate
+          && article.title.length>=20
+          && (article.excerpt.length>=80 || article.body.length>=120)
+        );
+
+        if(!article.articleDocumentSignal && !knownPublisherDocumentFallback){
           await record({
             itemKind:'article',
             sourceHostname:source.hostname,
