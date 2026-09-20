@@ -906,7 +906,7 @@ await check('News Intake shows every category match on the right and completes g
   const reportA = page.getByLabel('Select স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট A for publishing');
   await expectVisible(reportA, 'ready automatic report selector missing');
   const reviewRequiredDraftSelector = page.getByLabel(
-    'Review স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট B before selection'
+    'Review E2E automatic report B before selection'
   );
   await expectVisible(
     reviewRequiredDraftSelector,
@@ -1043,7 +1043,7 @@ await check('News Intake shows every category match on the right and completes g
     throw new Error('already-published report remained selectable');
   }
   const historicalReviewSelector = page.getByLabel(
-    'Review স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট B before selection'
+    'Review E2E automatic report B before selection'
   );
   await expectVisible(
     historicalReviewSelector,
