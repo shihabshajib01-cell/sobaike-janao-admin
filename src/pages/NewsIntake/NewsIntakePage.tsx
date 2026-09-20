@@ -1577,6 +1577,7 @@ export const NewsIntakePage: React.FC = () => {
                           const complaint = reportId ? reportMap[reportId] : null;
                           const ready = isCurrentFeedReady(item);
                           const published = isCurrentPublishedItem(item);
+                          const selectionKey = selectionKeyForItem(item);
 
                           if (complaint && (ready || published)) {
                             return (
@@ -1584,9 +1585,9 @@ export const NewsIntakePage: React.FC = () => {
                                 key={item.id}
                                 complaint={complaint}
                                 isBn={isBn}
-                                selected={ready && selectedReportIds.includes(reportId)}
+                                selected={ready && selectedReportIds.includes(selectionKey)}
                                 publishable={ready}
-                                onToggle={() => ready && toggleReport(reportId)}
+                                onToggle={() => ready && toggleSelection(selectionKey)}
                                 disabled={publishing || !ready}
                                 categoryLabelBn={
                                   taxonomy.segments.find((segment) => segment.id === complaint.categoryId)?.nameBn
@@ -1599,9 +1600,12 @@ export const NewsIntakePage: React.FC = () => {
                           }
 
                           const canReview =
-                            item.action === 'needs_review' ||
-                            isExcludedItem(item) ||
-                            (item.action === 'created_draft' && isCurrentReviewItem(item));
+                            !ready &&
+                            (
+                              item.action === 'needs_review' ||
+                              isExcludedItem(item) ||
+                              (item.action === 'created_draft' && isCurrentReviewItem(item))
+                            );
 
                           return (
                             <Card key={item.id} padding="sm">
@@ -1610,31 +1614,41 @@ export const NewsIntakePage: React.FC = () => {
                                   <Checkbox
                                     id={`news-intake-match-${item.id}`}
                                     label={
-                                      canReview
+                                      ready
                                         ? isBn
-                                          ? 'রিভিউ শেষে নির্বাচন করা যাবে'
-                                          : 'Review before selection'
-                                        : isBn
-                                          ? 'এই আইটেম নির্বাচনযোগ্য নয়'
-                                          : 'Not selectable'
+                                          ? 'প্রকাশের জন্য নির্বাচন করুন'
+                                          : 'Select for publishing'
+                                        : canReview
+                                          ? isBn
+                                            ? 'ঐতিহাসিক রিভিউ আইটেম'
+                                            : 'Historical review item'
+                                          : isBn
+                                            ? 'এই আইটেম নির্বাচনযোগ্য নয়'
+                                            : 'Not selectable'
                                     }
-                                    checked={false}
-                                    onChange={() => undefined}
-                                    disabled
+                                    checked={ready && selectedReportIds.includes(selectionKey)}
+                                    onChange={() => ready && toggleSelection(selectionKey)}
+                                    disabled={publishing || !ready}
                                     aria-label={
-                                      canReview
+                                      ready
                                         ? isBn
-                                          ? `${item.sourceTitle || 'রিপোর্ট'} রিভিউ শেষে নির্বাচন করা যাবে`
-                                          : `Review ${item.sourceTitle || 'report'} before selection`
-                                        : isBn
-                                          ? `${item.sourceTitle || 'রিপোর্ট'} নির্বাচনযোগ্য নয়`
-                                          : `${item.sourceTitle || 'Report'} is not selectable`
+                                          ? `${item.sourceTitle || 'রিপোর্ট'} প্রকাশের জন্য নির্বাচন করুন`
+                                          : `Select ${item.sourceTitle || 'report'} for publishing`
+                                        : canReview
+                                          ? isBn
+                                            ? `${item.sourceTitle || 'রিপোর্ট'} পুরোনো রিভিউ আইটেম`
+                                            : `${item.sourceTitle || 'report'} is a historical review item`
+                                          : isBn
+                                            ? `${item.sourceTitle || 'রিপোর্ট'} নির্বাচনযোগ্য নয়`
+                                            : `${item.sourceTitle || 'Report'} is not selectable`
                                     }
                                   />
-                                  <Tag tone={canReview ? 'warning' : 'neutral'}>
-                                    {canReview
-                                      ? isBn ? 'রিভিউ প্রয়োজন' : 'Review required'
-                                      : isBn ? 'নির্বাচনযোগ্য নয়' : 'Not selectable'}
+                                  <Tag tone={ready ? 'success' : canReview ? 'warning' : 'neutral'}>
+                                    {ready
+                                      ? isBn ? 'প্রকাশের জন্য প্রস্তুত' : 'Ready to publish'
+                                      : canReview
+                                        ? isBn ? 'পুরোনো রিভিউ' : 'Historical review'
+                                        : isBn ? 'নির্বাচনযোগ্য নয়' : 'Not selectable'}
                                   </Tag>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2">
@@ -1656,7 +1670,7 @@ export const NewsIntakePage: React.FC = () => {
                                 </div>
                                 {item.reason && (
                                   <FeedbackNotice
-                                    tone={canReview ? 'warning' : 'neutral'}
+                                    tone={ready ? 'success' : canReview ? 'warning' : 'neutral'}
                                     compact
                                   >
                                     <p>{reasonLabel(item.reason)}</p>
@@ -1672,7 +1686,7 @@ export const NewsIntakePage: React.FC = () => {
                                     <ExternalLink className="size-3.5" />
                                     {isBn ? 'মূল সংবাদ খুলুন' : 'Open source'}
                                   </a>
-                                  {canReview && (
+                                  {canReview && !ready && (
                                     <Button
                                       variant="primary"
                                       size="sm"
@@ -1710,8 +1724,8 @@ export const NewsIntakePage: React.FC = () => {
                               </h3>
                               <p className="mt-1 type-secondary text-slate-500 dark:text-slate-400">
                                 {isBn
-                                  ? 'ক্যাটাগরি মিললে রিপোর্টটি এখানে দেখাবে। রিভিউ প্রয়োজন হলে এখান থেকেই প্রিফিলড ফর্ম খুলবে।'
-                                  : 'Any category match appears here. Items needing review open a prefilled review form from this panel.'}
+                                  ? 'ক্যাটাগরি মিললে অনুমোদিত সোর্সের রিপোর্ট এখানে সরাসরি নির্বাচন ও প্রকাশ করা যাবে।'
+                                  : 'Approved-source category matches appear here ready for direct selection and publication.'}
                               </p>
                             </div>
                           </div>
