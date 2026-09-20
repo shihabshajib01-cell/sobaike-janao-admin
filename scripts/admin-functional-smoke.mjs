@@ -905,8 +905,26 @@ await check('News Intake shows every category match on the right and completes g
 
   const reportA = page.getByLabel('Select স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট A for publishing');
   await expectVisible(reportA, 'ready automatic report selector missing');
-  if (await page.getByLabel('Select স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট B for publishing').count()) {
-    throw new Error('review-required report remained selectable for publication');
+  const reviewRequiredDraftSelector = page.getByLabel(
+    'Review স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট B before selection'
+  );
+  await expectVisible(
+    reviewRequiredDraftSelector,
+    'review-required matched draft did not expose its checkbox state'
+  );
+  if (!(await reviewRequiredDraftSelector.isDisabled())) {
+    throw new Error('review-required matched draft checkbox must stay disabled until review clears');
+  }
+
+  const stagedReviewSelector = page.getByLabel(
+    'Review E2E source requiring review before selection'
+  );
+  await expectVisible(
+    stagedReviewSelector,
+    'review-required category match did not expose its checkbox state'
+  );
+  if (!(await stagedReviewSelector.isDisabled())) {
+    throw new Error('review-required category match checkbox must stay disabled until review clears');
   }
 
   const dialog = page.getByRole('dialog').first();
@@ -920,6 +938,32 @@ await check('News Intake shows every category match on the right and completes g
     page.getByText('Category-matched reports', { exact: true }).first(),
     'workspace closed after Keep Working'
   );
+
+  // Real Admin navigation must be intercepted, not just browser-history changes.
+  await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
+  await expectVisible(
+    page.getByRole('heading', { name: 'Close News Intake?', exact: true }),
+    'clicking another Admin tab did not ask for confirmation'
+  );
+  if (!page.url().includes('/news-intake')) {
+    throw new Error('Admin tab click navigated away before News Intake confirmation');
+  }
+  await page.getByRole('button', { name: 'Keep Working', exact: true }).click();
+  await expectVisible(
+    page.getByText('Category-matched reports', { exact: true }).first(),
+    'Step 2 closed after cancelling Admin tab navigation'
+  );
+
+  // Switching browser tabs must never reset the active workspace.
+  const secondTab = await context.newPage();
+  await secondTab.goto('about:blank');
+  await secondTab.bringToFront();
+  await page.bringToFront();
+  await expectVisible(
+    page.getByText('Category-matched reports', { exact: true }).first(),
+    'browser tab switching closed the active News Intake workspace'
+  );
+  await secondTab.close();
 
   await page.evaluate(() => window.history.back());
   await expectVisible(
@@ -998,8 +1042,15 @@ await check('News Intake shows every category match on the right and completes g
   if (await page.getByLabel('Select স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট A for publishing').count()) {
     throw new Error('already-published report remained selectable');
   }
-  if (await page.getByLabel('Select স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট B for publishing').count()) {
-    throw new Error('historical review ignored the current review-required state');
+  const historicalReviewSelector = page.getByLabel(
+    'Review স্বয়ংক্রিয় নিউজ ইনটেক রিপোর্ট B before selection'
+  );
+  await expectVisible(
+    historicalReviewSelector,
+    'historical review-required item did not expose its checkbox state'
+  );
+  if (!(await historicalReviewSelector.isDisabled())) {
+    throw new Error('historical review-required item became publish-selectable');
   }
   await expectVisible(
     page.getByLabel('Select E2E staged matched report title for publishing'),
