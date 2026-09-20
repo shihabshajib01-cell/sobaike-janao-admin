@@ -660,15 +660,38 @@ const safeScanFetch = async (
         ? 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36'
         : 'SobaiKeJanao-NewsIntake/3.0 (+https://shobaikejanao.com/)';
 
-    response=await fetch(current.toString(),{
-      redirect:'manual',
-      headers:{
-        'User-Agent':requestUserAgent,
-        'Accept':accept,
-        'Accept-Language':'bn-BD,bn;q=0.9,en;q=0.8',
-      },
-      signal:AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    });
+    const maxAttempts=hostKey==='tbsnews.net' ? 2 : 1;
+    const timeoutMs=hostKey==='tbsnews.net' ? 12000 : FETCH_TIMEOUT_MS;
+    let lastFetchError:unknown=null;
+
+    for(let attempt=0;attempt<maxAttempts;attempt+=1){
+      try{
+        response=await fetch(current.toString(),{
+          redirect:'manual',
+          headers:{
+            'User-Agent':requestUserAgent,
+            'Accept':accept,
+            'Accept-Language':'bn-BD,bn;q=0.9,en;q=0.8',
+          },
+          signal:AbortSignal.timeout(timeoutMs),
+        });
+
+        if(response.status>=500 && attempt<maxAttempts-1){
+          try{ await response.body?.cancel(); }catch{}
+          await new Promise((resolve)=>setTimeout(resolve,250));
+          response=null;
+          continue;
+        }
+        lastFetchError=null;
+        break;
+      }catch(error){
+        lastFetchError=error;
+        if(attempt>=maxAttempts-1) throw error;
+        await new Promise((resolve)=>setTimeout(resolve,250));
+      }
+    }
+
+    if(!response && lastFetchError) throw lastFetchError;
 
     const postFetchAddresses=await resolvePublicHost(current.hostname);
     if(!addressSetsOverlap(validatedAddresses,postFetchAddresses)){
