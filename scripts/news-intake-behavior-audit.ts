@@ -9,6 +9,7 @@ import {
   inferIncidentDate,
   inferSpecificLocationPhrase,
   isKnownPublisherArticlePath,
+  isLikelyForeignIncident,
   isUnsupportedArticleType,
 } from '../supabase/functions/_shared/newsIntakeAutomationCore.ts';
 
@@ -28,6 +29,25 @@ assert.doesNotMatch(
   munshiganjFocusedLocation,
   /ঢাকা মেডিকেল|ঢাকার বাসিন্দা/u,
   'Residence and hospital-transfer locations must be excluded when incident-location evidence exists'
+);
+
+assert.equal(
+  isLikelyForeignIncident(
+    'BMW crashes into 4 pedestrians in Mumbai, killing three',
+    'https://example.com/world/mumbai-crash',
+    'The incident happened in Mumbai, India.'
+  ),
+  true,
+  'Clear foreign incidents must be excluded from the Bangladesh reporting feed'
+);
+assert.equal(
+  isLikelyForeignIncident(
+    'অপ্রতিম হত্যার বিচার দাবিতে ঢাকা-চট্টগ্রাম মহাসড়ক অবরোধ',
+    'https://example.com/bangladesh/cumilla-road-block',
+    'কুমিল্লার কোটবাড়ি এলাকায় ঢাকা-চট্টগ্রাম মহাসড়ক অবরোধ করেন শিক্ষার্থীরা।'
+  ),
+  false,
+  'A Bangladesh incident must not be excluded because a highway name contains Dhaka and Chattogram'
 );
 
 const classificationCases: Array<[string, string, string]> = [
