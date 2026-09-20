@@ -375,6 +375,7 @@ interface ManualNewsIntakeFormProps {
   initialReviewItem?: NewsIntakeAutomationItem | null;
   reviewMode?: boolean;
   onReviewSaved?: (reportId: string) => void | Promise<void>;
+  onNavigateToReport?: (reportId: string) => void;
 }
 
 export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
@@ -382,10 +383,19 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
   initialReviewItem = null,
   reviewMode = false,
   onReviewSaved,
+  onNavigateToReport,
 }) => {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const isBn = language === 'bn';
+
+  const openReport = (reportId: string) => {
+    if (onNavigateToReport) {
+      onNavigateToReport(reportId);
+      return;
+    }
+    navigate(`/complaints/${encodeURIComponent(reportId)}`);
+  };
 
   const [source, setSource] = useState<NewsIntakeSource>({
     ...EMPTY_SOURCE,
@@ -913,7 +923,7 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
           );
           return;
         }
-        navigate(`/complaints/${encodeURIComponent(created.reportId)}`);
+        openReport(created.reportId);
         return;
       }
 
@@ -932,7 +942,7 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
       }
 
       await complaintApi.publishComplaint(created.reportId);
-      navigate(`/complaints/${encodeURIComponent(created.reportId)}`);
+      openReport(created.reportId);
     } catch (err: unknown) {
       setError(
         err instanceof Error ? err.message : 'Failed to create or publish the sourced report.'
@@ -957,7 +967,7 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
     setSuccess(null);
     try {
       await newsIntakeApi.mergeSource(complaintId, source);
-      navigate(`/complaints/${encodeURIComponent(complaintId)}`);
+      openReport(complaintId);
     } catch (err: unknown) {
       setError(
         err instanceof Error ? err.message : 'Failed to merge the source.'
@@ -1198,7 +1208,7 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
               variant="secondary"
               size="sm"
               className="mt-2"
-              onClick={() => navigate(`/complaints/${encodeURIComponent(createdReportId)}`)}
+              onClick={() => openReport(createdReportId)}
               leftIcon={<ExternalLink />}
             >
               <span>{isBn ? 'তৈরি হওয়া Draft খুলুন' : 'Open Created Draft'}</span>
@@ -2062,7 +2072,7 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() => navigate(`/complaints/${encodeURIComponent(item.complaintId)}`)}
+                      onClick={() => openReport(item.complaintId)}
                       leftIcon={<ExternalLink />}
                     >
                       <span>{isBn ? 'বিদ্যমান রিপোর্ট খুলুন' : 'Open Existing Report'}</span>
@@ -2110,7 +2120,7 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
                       <Button
                         variant="secondary"
                         size="sm"
-                        onClick={() => navigate(`/complaints/${encodeURIComponent(candidate.complaintId)}`)}
+                        onClick={() => openReport(candidate.complaintId)}
                         leftIcon={<ExternalLink />}
                       >
                         <span>{isBn ? 'রিপোর্ট খুলুন' : 'Open Report'}</span>
