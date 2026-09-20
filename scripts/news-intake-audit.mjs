@@ -338,7 +338,7 @@ for (const needle of [
   'articleDocumentSignal',
   'knownPublisherDocumentFallback',
   'requestUserAgent',
-  "canonicalHostKey(current.hostname)==='unb.com.bd'",
+  "hostKey==='unb.com.bd' || hostKey==='bdnews24.com' || hostKey==='bangla.bdnews24.com'",
   'const MAX_ARTICLES_PER_SOURCE = 10;',
   'const MAX_TOTAL_ARTICLES = 70;',
   'isLikelyForeignIncident',
