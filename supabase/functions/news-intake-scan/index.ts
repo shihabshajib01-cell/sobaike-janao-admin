@@ -1302,10 +1302,10 @@ const processNewsIntakeRun = async (
           return;
         }
 
-        // Manual Find News remains a one-click review/select workspace: every
-        // approved-source category match is staged as feed-ready without
-        // forcing date/location/privacy review. Publication happens only after
-        // the admin selects it. Scheduled runs continue to auto-publish.
+        // Manual Find News remains a one-click select/publish workspace.
+        // Only candidates that already satisfy freshness, 400-800 source context,
+        // semantic location quality, and the current report-form contract reach
+        // Feed Ready. Excluded candidates stay diagnostic/read-only.
         if(triggerType==='manual'){
           const {data:sourceDuplicate,error:sourceDuplicateError}=await supabase.rpc(
             'admin_check_source_duplicate',
