@@ -480,7 +480,9 @@ const buildReportPayload = (
           ? 'source_unspecified'
           : location.locationScope === 'district_wide'
             ? 'district_wide'
-            : 'specific',
+            : location.locationScope === 'district_only'
+              ? 'district_only'
+              : 'specific',
         ...(classification.subcategoryId === 'child_abduction_murder'
           ? {
               childIncidentType:childIncidentType || 'unknown_not_stated',
