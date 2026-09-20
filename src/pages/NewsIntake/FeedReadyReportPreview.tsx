@@ -15,9 +15,12 @@ import {
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Tag } from '@/components/ui/Tag';
 import { Complaint } from '@/types/Complaint';
+import { NewsIntakeReport } from '@/types/NewsIntake';
 
 interface FeedReadyReportPreviewProps {
-  complaint: Complaint;
+  complaint?: Complaint;
+  stagedReport?: NewsIntakeReport;
+  previewId?: string;
   isBn: boolean;
   selected: boolean;
   publishable?: boolean;
@@ -115,7 +118,7 @@ const getPublicTitle = (complaint: Complaint, isBn: boolean) => {
       complaint.titleBn ||
       preferences?.publicTitleEn ||
       complaint.titleEn ||
-      complaint.id
+      id
     );
   }
   return (
@@ -123,7 +126,7 @@ const getPublicTitle = (complaint: Complaint, isBn: boolean) => {
     complaint.titleEn ||
     preferences?.publicTitleBn ||
     complaint.titleBn ||
-    complaint.id
+    id
   );
 };
 
@@ -225,6 +228,8 @@ const getPreviewPublishedTime = (complaint: Complaint, isBn: boolean) => {
 
 export const FeedReadyReportPreview: React.FC<FeedReadyReportPreviewProps> = ({
   complaint,
+  stagedReport,
+  previewId,
   isBn,
   selected,
   publishable = true,
@@ -233,21 +238,44 @@ export const FeedReadyReportPreview: React.FC<FeedReadyReportPreviewProps> = ({
   categoryLabelEn,
   onToggle,
 }) => {
-  const category =
-    CATEGORY_STYLES[complaint.categoryId] || DEFAULT_CATEGORY_STYLE;
+  const id = complaint?.id || previewId || `staged-${stagedReport?.subcategoryId || 'report'}`;
+  const categoryId = complaint?.categoryId || stagedReport?.segmentId || '';
+  const subcategoryId = complaint?.subcategoryId || stagedReport?.subcategoryId || '';
+  const category = CATEGORY_STYLES[categoryId] || DEFAULT_CATEGORY_STYLE;
   const CategoryIcon = category.icon;
-  const title = getPublicTitle(complaint, isBn);
-  const summary = getPublicSummary(complaint, isBn);
-  const location = getPublicLocation(complaint, isBn);
-  const reportedSubject = getReportedSubject(complaint);
-  const reportedOrganization = getReportedOrganization(complaint);
-  const previewPublishedTime = getPreviewPublishedTime(complaint, isBn);
+
+  const title = complaint
+    ? getPublicTitle(complaint, isBn)
+    : stagedReport?.titleBn || stagedReport?.titleEn || id;
+  const summary = complaint
+    ? getPublicSummary(complaint, isBn)
+    : stagedReport?.descriptionBn || stagedReport?.descriptionEn || '';
+  const stagedLocation = [
+    stagedReport?.formattedAddress,
+    stagedReport?.road,
+    stagedReport?.area,
+    stagedReport?.upazilaOrThana,
+    stagedReport?.district,
+  ].find((value) => Boolean(value?.trim())) || '';
+  const location = complaint
+    ? getPublicLocation(complaint, isBn)
+    : stagedLocation || (isBn ? 'অবস্থান গোপন' : 'Location withheld');
+
+  const reportedSubject = complaint ? getReportedSubject(complaint) : '';
+  const reportedOrganization = complaint ? getReportedOrganization(complaint) : '';
+  const previewPublishedTime = complaint
+    ? getPreviewPublishedTime(complaint, isBn)
+    : isBn ? 'এখনই' : 'Just now';
   const shouldShowSummary =
     summary.trim().length > 0 && summary.trim() !== title.trim();
+  const recentBillAmount = complaint?.recentBillAmount ??
+    (stagedReport?.recentBillAmount ? Number(stagedReport.recentBillAmount) : null);
+  const previousBillAmount = complaint?.previousBillAmount ??
+    (stagedReport?.previousBillAmount ? Number(stagedReport.previousBillAmount) : null);
   const shouldShowBill =
-    complaint.subcategoryId === 'excess-electricity-bill' ||
-    complaint.recentBillAmount !== null && complaint.recentBillAmount !== undefined;
-  const status = String(complaint.status || '');
+    subcategoryId === 'excess-electricity-bill' ||
+    recentBillAmount !== null && recentBillAmount !== undefined;
+  const status = String(complaint?.status || 'submitted');
   const statusLabel = publishable
     ? (isBn ? 'ফিড-রেডি' : 'Feed ready')
     : status === 'published'
@@ -267,7 +295,7 @@ export const FeedReadyReportPreview: React.FC<FeedReadyReportPreviewProps> = ({
       <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 dark:border-emerald-900/70 dark:bg-emerald-950/25">
         <div className="min-w-0">
           <Checkbox
-            id={`news-intake-publish-${complaint.id}`}
+            id={`news-intake-publish-${id}`}
             label={
               publishable
                 ? isBn ? 'প্রকাশের জন্য নির্বাচন করুন' : 'Select for publishing'
@@ -321,14 +349,14 @@ export const FeedReadyReportPreview: React.FC<FeedReadyReportPreviewProps> = ({
           </div>
         )}
 
-        {shouldShowBill && complaint.recentBillAmount !== null && complaint.recentBillAmount !== undefined && (
+        {shouldShowBill && recentBillAmount !== null && recentBillAmount !== undefined && (
           <div className="flex max-w-full flex-wrap items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
             <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-              {isBn ? 'সাম্প্রতিক বিল' : 'Recent bill'}: ৳{formatAmount(complaint.recentBillAmount, isBn)}
+              {isBn ? 'সাম্প্রতিক বিল' : 'Recent bill'}: ৳{formatAmount(recentBillAmount, isBn)}
             </p>
-            {complaint.previousBillAmount !== null && complaint.previousBillAmount !== undefined && (
+            {previousBillAmount !== null && previousBillAmount !== undefined && (
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                ({isBn ? 'পূর্বে: ' : 'prev: '}৳{formatAmount(complaint.previousBillAmount, isBn)})
+                ({isBn ? 'পূর্বে: ' : 'prev: '}৳{formatAmount(previousBillAmount, isBn)})
               </p>
             )}
           </div>
