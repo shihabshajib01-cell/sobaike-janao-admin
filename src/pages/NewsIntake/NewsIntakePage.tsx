@@ -530,6 +530,30 @@ export const NewsIntakePage: React.FC = () => {
     [matchedItems, reportMap]
   );
 
+  const orderedMatchedItems = useMemo(
+    () =>
+      [...matchedItems].sort((left, right) => {
+        const readyDelta =
+          Number(isCurrentFeedReady(right)) - Number(isCurrentFeedReady(left));
+        if (readyDelta !== 0) return readyDelta;
+
+        const leftDiagnostic =
+          left.action === 'skip_duplicate' || left.action === 'merged_source'
+            ? 0
+            : isExcludedItem(left)
+              ? 1
+              : 2;
+        const rightDiagnostic =
+          right.action === 'skip_duplicate' || right.action === 'merged_source'
+            ? 0
+            : isExcludedItem(right)
+              ? 1
+              : 2;
+        return leftDiagnostic - rightDiagnostic;
+      }),
+    [matchedItems, reportMap]
+  );
+
   const workspaceCounts = useMemo(() => {
     const ready = matchedItems.filter(isCurrentFeedReady).length;
     const review = matchedItems.filter(isCurrentReviewItem).length;
@@ -1454,8 +1478,8 @@ export const NewsIntakePage: React.FC = () => {
                     </div>
                     <div className="space-y-3 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:pr-2 lg:[scrollbar-gutter:stable]">
                     {filteredRawItems.map((item) => (
-                      <Card key={item.id} padding="sm" className="h-full">
-                        <div className="flex h-full flex-col gap-3">
+                      <Card key={item.id} padding="sm" className="w-full" data-news-intake-raw-item>
+                        <div className="flex flex-col gap-3">
                           <div className="flex flex-wrap items-center gap-2">
                             <Tag tone="neutral">{item.contentLanguage.toUpperCase()}</Tag>
                             <Tag tone={actionTone(item)}>{actionLabel(item)}</Tag>
@@ -1483,7 +1507,7 @@ export const NewsIntakePage: React.FC = () => {
                               {reasonLabel(item.reason)}
                             </p>
                           )}
-                          <div className="mt-auto flex flex-wrap items-center gap-2">
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
                             <a
                               href={item.canonicalUrl}
                               target="_blank"
@@ -1563,6 +1587,15 @@ export const NewsIntakePage: React.FC = () => {
                     </div>
 
                     <div className="space-y-3">
+                      {workspaceCounts.ready === 0 && matchedItems.length > 0 && (
+                        <FeedbackNotice tone="neutral" compact>
+                          <p>
+                            {isBn
+                              ? 'এই রানে কোনো Feed Ready রিপোর্ট নেই। নিচের আইটেমগুলো ডুপ্লিকেট বা বাদ দেওয়া ডায়াগনস্টিক ফলাফল।'
+                              : 'No Feed Ready reports in this run. Items below are duplicate or excluded diagnostics.'}
+                          </p>
+                        </FeedbackNotice>
+                      )}
                       {reportLoadErrors.length > 0 && (
                         <FeedbackNotice tone="warning">
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -1591,7 +1624,7 @@ export const NewsIntakePage: React.FC = () => {
                           </div>
                         </Card>
                       ) : matchedItems.length > 0 ? (
-                        matchedItems.map((item) => {
+                        orderedMatchedItems.map((item) => {
                           const reportId = item.reportId ? String(item.reportId) : '';
                           const complaint = reportId ? reportMap[reportId] : null;
                           const ready = isCurrentFeedReady(item);
@@ -1603,8 +1636,8 @@ export const NewsIntakePage: React.FC = () => {
 
                           if ((complaint && (ready || published)) || (ready && stagedReport)) {
                             return (
+                              <div key={item.id} data-news-intake-feed-preview>
                               <FeedReadyReportPreview
-                                key={item.id}
                                 complaint={complaint || undefined}
                                 stagedReport={stagedReport || undefined}
                                 previewId={`staged-${item.id}`}
@@ -1620,6 +1653,7 @@ export const NewsIntakePage: React.FC = () => {
                                   taxonomy.segments.find((segment) => segment.id === previewCategoryId)?.nameEn
                                 }
                               />
+                              </div>
                             );
                           }
 
@@ -1627,57 +1661,26 @@ export const NewsIntakePage: React.FC = () => {
                             !ready && canManuallyReviewItem(item);
 
                           return (
-                            <Card key={item.id} padding="sm">
-                              <div className="flex flex-col gap-3">
-                                <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-900/60">
-                                  <Checkbox
-                                    id={`news-intake-match-${item.id}`}
-                                    label={
-                                      ready
-                                        ? isBn
-                                          ? 'প্রকাশের জন্য নির্বাচন করুন'
-                                          : 'Select for publishing'
-                                        : canReview
-                                          ? isBn
-                                            ? 'রিভিউ প্রয়োজন'
-                                            : 'Review required'
-                                          : isBn
-                                            ? 'এই আইটেম নির্বাচনযোগ্য নয়'
-                                            : 'Not selectable'
-                                    }
-                                    checked={ready && selectedReportIds.includes(selectionKey)}
-                                    onChange={() => ready && toggleSelection(selectionKey)}
-                                    disabled={publishing || !ready}
-                                    aria-label={
-                                      ready
-                                        ? isBn
-                                          ? `${item.sourceTitle || 'রিপোর্ট'} প্রকাশের জন্য নির্বাচন করুন`
-                                          : `Select ${item.sourceTitle || 'report'} for publishing`
-                                        : canReview
-                                          ? isBn
-                                            ? `${item.sourceTitle || 'রিপোর্ট'} রিভিউ প্রয়োজন`
-                                            : `${item.sourceTitle || 'report'} requires review`
-                                          : isBn
-                                            ? `${item.sourceTitle || 'রিপোর্ট'} নির্বাচনযোগ্য নয়`
-                                            : `${item.sourceTitle || 'Report'} is not selectable`
-                                    }
-                                  />
-                                  <Tag tone={ready ? 'success' : canReview ? 'warning' : 'neutral'}>
-                                    {ready
-                                      ? isBn ? 'প্রকাশের জন্য প্রস্তুত' : 'Ready to publish'
-                                      : canReview
-                                        ? isBn ? 'রিভিউ প্রয়োজন' : 'Needs review'
-                                        : isBn ? 'নির্বাচনযোগ্য নয়' : 'Not selectable'}
+                            <Card key={item.id} padding="sm" data-news-intake-diagnostic>
+                              <div className="flex flex-col gap-2.5">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <Tag tone={actionTone(item)}>{actionLabel(item)}</Tag>
+                                    {item.segmentId && <Tag tone="info">{segmentLabel(item.segmentId)}</Tag>}
+                                    {item.subcategoryId && <Tag tone="neutral">{subcategoryLabel(item.subcategoryId)}</Tag>}
+                                    {confidenceLabel(item.confidence) && (
+                                      <Tag tone="neutral">{confidenceLabel(item.confidence)}</Tag>
+                                    )}
+                                  </div>
+                                  <Tag tone={canReview ? 'warning' : 'neutral'}>
+                                    {canReview
+                                      ? isBn ? 'রিভিউ প্রয়োজন' : 'Needs review'
+                                      : item.action === 'skip_duplicate' || item.action === 'merged_source'
+                                        ? isBn ? 'ডুপ্লিকেট' : 'Duplicate'
+                                        : isBn ? 'বাদ দেওয়া হয়েছে' : 'Excluded'}
                                   </Tag>
                                 </div>
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <Tag tone={actionTone(item)}>{actionLabel(item)}</Tag>
-                                  {item.segmentId && <Tag tone="info">{segmentLabel(item.segmentId)}</Tag>}
-                                  {item.subcategoryId && <Tag tone="neutral">{subcategoryLabel(item.subcategoryId)}</Tag>}
-                                  {confidenceLabel(item.confidence) && (
-                                    <Tag tone="neutral">{confidenceLabel(item.confidence)}</Tag>
-                                  )}
-                                </div>
+
                                 <div>
                                   <h3 className="type-card-title">
                                     {item.sourceTitle || (isBn ? 'শিরোনাম পাওয়া যায়নি' : 'Untitled source')}
@@ -1687,14 +1690,13 @@ export const NewsIntakePage: React.FC = () => {
                                     {item.sourcePublishedDate ? ` · ${item.sourcePublishedDate}` : ''}
                                   </p>
                                 </div>
+
                                 {item.reason && (
-                                  <FeedbackNotice
-                                    tone={ready ? 'success' : canReview ? 'warning' : 'neutral'}
-                                    compact
-                                  >
+                                  <FeedbackNotice tone={canReview ? 'warning' : 'neutral'} compact>
                                     <p>{reasonLabel(item.reason)}</p>
                                   </FeedbackNotice>
                                 )}
+
                                 <div className="flex flex-wrap items-center gap-2">
                                   <a
                                     href={item.canonicalUrl}
