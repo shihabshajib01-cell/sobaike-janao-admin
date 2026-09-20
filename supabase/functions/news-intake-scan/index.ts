@@ -907,7 +907,7 @@ const processNewsIntakeRun = async (
             contentLanguage:language,
             action:'discovered',
             duplicateStatus:'unavailable',
-            reason:'Court, bail, remand, hearing, verdict, appeal, or trial follow-up was excluded because it does not report a new incident.',
+            reason:'Court, bail, remand, confession, hearing, verdict, appeal, or trial follow-up was excluded because it does not report a new incident.',
           });
           return;
         }
@@ -925,6 +925,25 @@ const processNewsIntakeRun = async (
             action:'discovered',
             duplicateStatus:'unavailable',
             reason:'No supported incident category matched in the article headline or summary with enough confidence.',
+          });
+          return;
+        }
+
+        if(isMultiIncidentArticle(article.title,`${article.excerpt} ${article.body.slice(0,5000)}`)){
+          await record({
+            itemKind:'article',
+            sourceHostname:source.hostname,
+            publisherName:article.publisherName,
+            canonicalUrl:article.canonicalUrl,
+            sourceTitle:article.title,
+            sourcePublishedDate:article.sourcePublishedDate||'',
+            contentLanguage:language,
+            segmentId:classification.segmentId,
+            subcategoryId:classification.subcategoryId,
+            confidence:classification.confidence,
+            action:'discovered',
+            duplicateStatus:'unavailable',
+            reason:'Source contains multiple distinct incidents; candidate was blocked from Feed Ready so separate incidents are never merged into one report.',
           });
           return;
         }
@@ -1022,16 +1041,56 @@ const processNewsIntakeRun = async (
           if(focusedLocationError) throw new Error(focusedLocationError.message);
 
           if(
-            focusedLocation &&
-            String(focusedLocation.quality||'') !== 'multiple_locations'
+            focusedLocation?.quality === 'multiple_locations'
+            || focusedLocation?.locationScope === 'multi_location'
           ){
+            await record({
+              itemKind:'article',
+              sourceHostname:source.hostname,
+              publisherName:article.publisherName,
+              canonicalUrl:article.canonicalUrl,
+              sourceTitle:article.title,
+              sourcePublishedDate:article.sourcePublishedDate||'',
+              contentLanguage:language,
+              segmentId:classification.segmentId,
+              subcategoryId:classification.subcategoryId,
+              confidence:classification.confidence,
+              action:'discovered',
+              duplicateStatus:'unavailable',
+              reason:'Multiple distinct incident locations were detected; candidate was blocked from Feed Ready rather than guessing one location.',
+            });
+            return;
+          }
+
+          if(focusedLocation){
             location=focusedLocation;
-          } else {
+          }else{
             const {data:resolvedLocation,error:locationError}=await supabase.rpc(
               'admin_resolve_news_intake_location',
               {p_text:locationText,p_language:language}
             );
             if(locationError) throw new Error(locationError.message);
+            if(
+              resolvedLocation?.quality === 'multiple_locations'
+              || resolvedLocation?.locationScope === 'multi_location'
+            ){
+              await record({
+                itemKind:'article',
+                sourceHostname:source.hostname,
+                publisherName:article.publisherName,
+                canonicalUrl:article.canonicalUrl,
+                sourceTitle:article.title,
+                sourcePublishedDate:article.sourcePublishedDate||'',
+                contentLanguage:language,
+                segmentId:classification.segmentId,
+                subcategoryId:classification.subcategoryId,
+                confidence:classification.confidence,
+                action:'discovered',
+                duplicateStatus:'unavailable',
+                reason:'Multiple distinct incident locations were detected; candidate was blocked from Feed Ready rather than guessing one location.',
+              });
+              return;
+            }
             location=resolvedLocation;
           }
         }catch{
@@ -1061,7 +1120,22 @@ const processNewsIntakeRun = async (
           || findLocation(locationText);
 
         if(location?.quality === 'multiple_locations' || location?.locationScope === 'multi_location'){
-          location=null;
+          await record({
+            itemKind:'article',
+            sourceHostname:source.hostname,
+            publisherName:article.publisherName,
+            canonicalUrl:article.canonicalUrl,
+            sourceTitle:article.title,
+            sourcePublishedDate:article.sourcePublishedDate||'',
+            contentLanguage:language,
+            segmentId:classification.segmentId,
+            subcategoryId:classification.subcategoryId,
+            confidence:classification.confidence,
+            action:'discovered',
+            duplicateStatus:'unavailable',
+            reason:'Multiple distinct incident locations were detected; candidate was blocked from Feed Ready rather than guessing one location.',
+          });
+          return;
         }else if(
           contextualDistrict?.district
           && location?.district
