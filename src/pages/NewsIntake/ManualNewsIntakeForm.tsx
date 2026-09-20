@@ -27,6 +27,7 @@ import {
   ReportingFormField,
 } from '@/types/ReportingForm';
 import {
+  NewsIntakeAutomationItem,
   NewsIntakePayload,
   NewsIntakePreview,
   NewsIntakeReport,
@@ -347,12 +348,40 @@ const isManualFieldSupported = (field: ReportingFormField) => {
   return true;
 };
 
+const inferredReviewFields = (item?: NewsIntakeAutomationItem | null): string[] => {
+  const staged = item?.reviewPayload?.reviewFields;
+  if (Array.isArray(staged) && staged.length > 0) return staged;
+
+  const reason = String(item?.reason || '').toLowerCase();
+  const fields = new Set<string>();
+
+  if (reason.includes('publication date')) fields.add('sourcePublishedDate');
+  if (reason.includes('incident date')) fields.add('incidentDate');
+  if (reason.includes('location')) fields.add('location');
+  if (reason.includes('incident context')) fields.add('description');
+  if (reason.includes('category') || reason.includes('mob violence')) fields.add('category');
+  if (reason.includes('privacy') || reason.includes('sensitive')) fields.add('sensitiveContent');
+  if (reason.includes('duplicate') || reason.includes('same incident')) fields.add('duplicate');
+  if (reason.includes('department and service')) {
+    fields.add('briberyDepartment');
+    fields.add('briberyService');
+  }
+
+  return Array.from(fields);
+};
+
 interface ManualNewsIntakeFormProps {
   initialSourceUrl?: string;
+  initialReviewItem?: NewsIntakeAutomationItem | null;
+  reviewMode?: boolean;
+  onReviewSaved?: (reportId: string) => void | Promise<void>;
 }
 
 export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
   initialSourceUrl = '',
+  initialReviewItem = null,
+  reviewMode = false,
+  onReviewSaved,
 }) => {
   const navigate = useNavigate();
   const { language } = useLanguage();
@@ -388,7 +417,71 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
   const [loadingPublishedForm, setLoadingPublishedForm] = useState(false);
   const [publishedFormError, setPublishedFormError] = useState<string | null>(null);
 
+  const reviewFields = useMemo(
+    () => inferredReviewFields(initialReviewItem),
+    [initialReviewItem]
+  );
+
+  const needsReview = (...keys: string[]) =>
+    reviewMode && keys.some((key) => reviewFields.includes(key));
+
+  const reviewBoxClass = (active: boolean) =>
+    active
+      ? 'rounded-lg border border-amber-300 bg-amber-50/70 p-3 dark:border-amber-800 dark:bg-amber-950/20'
+      : '';
+
   useEffect(() => {
+    const staged = initialReviewItem?.reviewPayload;
+    if (staged) {
+      setSource({
+        ...EMPTY_SOURCE,
+        ...staged.source,
+      });
+      setReport({
+        ...EMPTY_REPORT,
+        ...staged.report,
+        customFieldAnswers: {
+          ...EMPTY_REPORT.customFieldAnswers,
+          ...(staged.report.customFieldAnswers || {}),
+        },
+      });
+      setMetadataPreview('');
+      setPreview(null);
+      setCreatedReportId(null);
+      setError(null);
+      setSuccess(null);
+      return;
+    }
+
+    if (initialReviewItem) {
+      const title = String(initialReviewItem.sourceTitle || '');
+      setSource({
+        ...EMPTY_SOURCE,
+        publisherName: initialReviewItem.publisherName || '',
+        sourceTitle: title,
+        canonicalUrl: initialReviewItem.canonicalUrl || initialSourceUrl,
+        sourcePublishedDate: initialReviewItem.sourcePublishedDate || '',
+      });
+      setReport({
+        ...EMPTY_REPORT,
+        segmentId: initialReviewItem.segmentId || '',
+        subcategoryId: initialReviewItem.subcategoryId || '',
+        titleBn: title,
+        descriptionBn: title,
+        customFieldAnswers: {
+          ...EMPTY_REPORT.customFieldAnswers,
+          sourceLanguage: initialReviewItem.contentLanguage,
+          automatedIntake: true,
+        },
+      });
+      setMetadataPreview('');
+      setPreview(null);
+      setCreatedReportId(null);
+      setError(null);
+      setSuccess(null);
+      return;
+    }
+
     if (!initialSourceUrl) return;
     setSource((current) => ({
       ...current,
@@ -398,7 +491,7 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
     setCreatedReportId(null);
     setError(null);
     setSuccess(null);
-  }, [initialSourceUrl]);
+  }, [initialSourceUrl, initialReviewItem]);
 
   useEffect(() => {
     let mounted = true;
@@ -811,6 +904,15 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
       setCreatedReportId(created.reportId);
 
       if (!publishAfterCreate) {
+        if (reviewMode && onReviewSaved) {
+          await onReviewSaved(created.reportId);
+          setSuccess(
+            isBn
+              ? 'রিভিউ সংরক্ষণ হয়েছে। রিপোর্টটি সার্ভার দিয়ে আবার যাচাই করা হয়েছে।'
+              : 'Review saved. The report was revalidated by the server.'
+          );
+          return;
+        }
         navigate(`/complaints/${encodeURIComponent(created.reportId)}`);
         return;
       }
@@ -1058,7 +1160,23 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
 
   return (
     <div className="space-y-6 pb-10 max-sm:[&_[data-button-size=sm]]:min-h-11">
-
+      {reviewMode && initialReviewItem && (
+        <FeedbackNotice
+          tone="warning"
+          title={isBn ? 'এই রিপোর্টে রিভিউ প্রয়োজন' : 'This report needs review'}
+        >
+          <p>{initialReviewItem.reason || (isBn ? 'চিহ্নিত ফিল্ডগুলো যাচাই করুন।' : 'Verify the highlighted fields.')}</p>
+          {reviewFields.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {reviewFields.map((field) => (
+                <Tag key={field} tone="warning">
+                  {field}
+                </Tag>
+              ))}
+            </div>
+          )}
+        </FeedbackNotice>
+      )}
 
       <FeedbackNotice tone="info" title={isBn ? 'নিরাপদ প্রকাশ নীতি' : 'Safe publishing policy'}>
         <p>
@@ -1156,14 +1274,21 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
             onChange={(event) => updateSource({ sourceTitle: event.target.value })}
           />
 
-          <Input
-            type="date"
-            label={isBn ? 'উৎস প্রকাশের তারিখ' : 'Source publication date'}
-            value={source.sourcePublishedDate}
-            onChange={(event) =>
-              updateSource({ sourcePublishedDate: event.target.value })
-            }
-          />
+          <div className={reviewBoxClass(needsReview('sourcePublishedDate'))}>
+            {needsReview('sourcePublishedDate') && (
+              <p className="mb-2 type-helper font-semibold text-amber-800 dark:text-amber-300">
+                {isBn ? 'এই তারিখটি যাচাই করুন' : 'Review this source date'}
+              </p>
+            )}
+            <Input
+              type="date"
+              label={isBn ? 'উৎস প্রকাশের তারিখ' : 'Source publication date'}
+              value={source.sourcePublishedDate}
+              onChange={(event) =>
+                updateSource({ sourcePublishedDate: event.target.value })
+              }
+            />
+          </div>
 
           {metadataPreview && (
             <FeedbackNotice tone="neutral" compact title={isBn ? 'উৎসের মেটা বর্ণনা' : 'Source meta description'}>
@@ -1183,7 +1308,13 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className={reviewBoxClass(needsReview('category'))}>
+            {needsReview('category') && (
+              <p className="mb-2 type-helper font-semibold text-amber-800 dark:text-amber-300">
+                {isBn ? 'ক্যাটাগরি ও সাবক্যাটাগরি নিশ্চিত করুন' : 'Confirm the category and subcategory'}
+              </p>
+            )}
+            <div className="grid gap-3 md:grid-cols-2">
             <Select
               label={isBn ? 'ক্যাটাগরি *' : 'Category *'}
               value={report.segmentId}
@@ -1217,9 +1348,11 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
                 })),
               ]}
             />
+            </div>
           </div>
 
           {requiresPrivacyReview && (
+            <div className={reviewBoxClass(needsReview('sensitiveContent'))}>
             <FeedbackNotice tone="warning" compact>
               <div className="space-y-3">
                 <p>
@@ -1251,6 +1384,7 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
                 />
               </div>
             </FeedbackNotice>
+            </div>
           )}
 
           <FeedbackNotice tone="neutral" compact>
@@ -1261,34 +1395,55 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
             </p>
           </FeedbackNotice>
 
-          <Input
-            label={isBn ? 'রিপোর্ট শিরোনাম (উৎসের ভাষা) *' : 'Report title (source language) *'}
-            maxLength={100}
-            value={report.titleBn}
-            onChange={(event) =>
-              updateReport({ titleBn: event.target.value, titleEn: '' })
-            }
-          />
-
-          <Textarea
-            label={isBn ? 'ঘটনার প্রেক্ষাপট (উৎসের ভাষা) *' : 'Incident context (source language) *'}
-            rows={6}
-            maxLength={2000}
-            value={report.descriptionBn}
-            onChange={(event) =>
-              updateReport({ descriptionBn: event.target.value, descriptionEn: '' })
-            }
-          />
-
-          <div className="grid gap-3 md:grid-cols-4">
+          <div className={reviewBoxClass(needsReview('title'))}>
+            {needsReview('title') && (
+              <p className="mb-2 type-helper font-semibold text-amber-800 dark:text-amber-300">
+                {isBn ? 'শিরোনামটি উৎসের সাথে যাচাই করুন' : 'Review the title against the source'}
+              </p>
+            )}
             <Input
-              type="date"
-              label={isBn ? 'ঘটনার তারিখ *' : 'Incident date *'}
-              value={report.incidentDate}
+              label={isBn ? 'রিপোর্ট শিরোনাম (উৎসের ভাষা) *' : 'Report title (source language) *'}
+              maxLength={100}
+              value={report.titleBn}
               onChange={(event) =>
-                updateReport({ incidentDate: event.target.value })
+                updateReport({ titleBn: event.target.value, titleEn: '' })
               }
             />
+          </div>
+
+          <div className={reviewBoxClass(needsReview('description'))}>
+            {needsReview('description') && (
+              <p className="mb-2 type-helper font-semibold text-amber-800 dark:text-amber-300">
+                {isBn ? 'ঘটনার প্রেক্ষাপট যাচাই করুন' : 'Review the incident context'}
+              </p>
+            )}
+            <Textarea
+              label={isBn ? 'ঘটনার প্রেক্ষাপট (উৎসের ভাষা) *' : 'Incident context (source language) *'}
+              rows={6}
+              maxLength={2000}
+              value={report.descriptionBn}
+              onChange={(event) =>
+                updateReport({ descriptionBn: event.target.value, descriptionEn: '' })
+              }
+            />
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-4">
+            <div className={reviewBoxClass(needsReview('incidentDate'))}>
+              {needsReview('incidentDate') && (
+                <p className="mb-2 type-helper font-semibold text-amber-800 dark:text-amber-300">
+                  {isBn ? 'ঘটনার তারিখ নিশ্চিত করুন' : 'Confirm the incident date'}
+                </p>
+              )}
+              <Input
+                type="date"
+                label={isBn ? 'ঘটনার তারিখ *' : 'Incident date *'}
+                value={report.incidentDate}
+                onChange={(event) =>
+                  updateReport({ incidentDate: event.target.value })
+                }
+              />
+            </div>
             <Input
               type="time"
               label={isBn ? 'ঘটনার সময়' : 'Incident time'}
@@ -1329,6 +1484,12 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
             />
           </div>
 
+          <div className={reviewBoxClass(needsReview('location'))}>
+            {needsReview('location') && (
+              <p className="mb-2 type-helper font-semibold text-amber-800 dark:text-amber-300">
+                {isBn ? 'ঘটনার লোকেশন নিশ্চিত বা সংশোধন করুন' : 'Confirm or correct the incident location'}
+              </p>
+            )}
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
             <Select
               label={isBn ? 'বিভাগ *' : 'Division *'}
@@ -1424,6 +1585,7 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
                 updateReport({ formattedAddress: event.target.value })
               }
             />
+          </div>
           </div>
 
 
@@ -1966,18 +2128,22 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
                     leftIcon={<FilePlus2 />}
                   >
                     <span>
-                      {preview.canPublishImmediately
+                      {reviewMode
                         ? isBn
-                          ? 'শুধু Draft তৈরি করুন'
-                          : 'Create Draft Only'
-                        : isBn
-                          ? 'রিভিউয়ের জন্য Draft তৈরি করুন'
-                          : 'Create Draft for Review'}
+                          ? 'রিভিউ সংরক্ষণ করুন'
+                          : 'Save Review'
+                        : preview.canPublishImmediately
+                          ? isBn
+                            ? 'শুধু Draft তৈরি করুন'
+                            : 'Create Draft Only'
+                          : isBn
+                            ? 'রিভিউয়ের জন্য Draft তৈরি করুন'
+                            : 'Create Draft for Review'}
                     </span>
                   </Button>
                 )}
 
-                {preview.canPublishImmediately && (
+                {preview.canPublishImmediately && !reviewMode && (
                   <Button
                     variant="success"
                     size="md"
