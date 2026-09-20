@@ -108,6 +108,7 @@ for (const needle of [
   'NON_PROPERTY_SNATCHING_RE',
   'THEFT_ALLEGATION_VIOLENCE_RE',
   'isLikelyForeignIncident',
+  'isNonIncidentHeadline',
 ]) {
   requireText(automationCore, needle, 'News Intake automation core');
 }
@@ -128,6 +129,10 @@ requireText(behaviorAudit, 'Near-identical excerpt/body incident sentences must 
 requireText(behaviorAudit, 'Bare proper incident place after at must be retained', 'News Intake bare-place grounding regression');
 requireText(behaviorAudit, 'Theft-accusation violence must not fall through to the broad theft rule', 'News Intake theft-accusation classification regression');
 requireText(behaviorAudit, 'Taking a detainee/suspect from police must not be classified as property snatching', 'News Intake non-property snatching regression');
+requireText(behaviorAudit, 'Future strike warnings must be excluded before category matching', 'News Intake non-incident strike regression');
+requireText(behaviorAudit, 'Evidence recovery during a murder investigation must not become a standalone theft report', 'News Intake evidence-recovery regression');
+requireText(behaviorAudit, 'Same-day Bangla weekday plus বেলা must resolve to the publication day', 'News Intake Bangla বেলা date regression');
+requireText(behaviorAudit, 'Exact production road-block wording must ground Cumilla', 'News Intake production location regression');
 requireText(collisionErrorContract, "errcode='P0001'", 'News Intake collision error contract');
 requireText(collisionErrorContract, 'DUPLICATE_REVIEW_REQUIRED', 'News Intake collision error contract');
 requireText(explicitDenyPolicies, 'news_intake_runs_authenticated_deny', 'News Intake run-table deny policy');
@@ -246,6 +251,10 @@ for (const needle of [
   'finalPathLooksLikeArticle',
   'articleDocumentSignal',
   'isLikelyForeignIncident',
+  'isNonIncidentHeadline',
+  'admin_check_source_duplicate',
+  "triggerType==='manual'",
+  'Approved-source report is ready for one-click publication.',
   'trustedSourceAuto',
   'sourceTruthMode',
   'sourceOmittedFields',
@@ -282,6 +291,7 @@ requireText(api, "supabase.functions.invoke('news-intake-scan'", 'News Automatio
 requireText(api, "supabase.rpc(\n      'admin_get_news_intake_automation_dashboard'", 'News Automation dashboard API');
 requireText(api, "'admin_set_news_intake_auto_update'", 'News Automation schedule control API');
 requireText(api, "'admin_complete_news_intake_item_review'", 'News Intake guided review completion API');
+requireText(api, "'process_trusted_news_intake_candidate'", 'News Intake trusted one-click publish API');
 
 if (/articleBody|fullArticle|bodyText|innerText/.test(edge)) {
   errors.push('secure metadata fetcher: article body must not be returned to the Admin client.');
@@ -403,6 +413,14 @@ for (const needle of [
   'isCurrentFeedReady',
   'isCurrentReviewItem',
   'complaintNeedsReview',
+  'isStagedTrustedCandidate',
+  'selectionKeyForItem',
+  'eligibleSelectionKeys',
+  'toggleSelection',
+  'publishTrustedCandidate',
+  'NEWS_INTAKE_WORKSPACE_SESSION_KEY',
+  'window.sessionStorage',
+  'stopImmediatePropagation',
   'reportLoadErrors',
   'reviewItemManually',
   'reviewingItem',
@@ -441,7 +459,8 @@ for (const needle of [
 if (!page.includes('matchedItems.map((item)')) {
   errors.push('Every category-matched item must render in the right review panel.');
 }
-requireText(page, 'feedReadyItems.map((item) => String(item.reportId))', 'feed-ready-only selection eligibility');
+requireText(page, 'feedReadyItems.map(selectionKeyForItem)', 'ready matched selection eligibility');
+requireText(page, "item.reportId ? `report:${String(item.reportId)}` : `item:${item.id}`", 'staged trusted candidate selection key');
 
 for (const needle of [
   'sensitiveContentReviewed',
@@ -541,5 +560,5 @@ if (errors.length) {
 }
 
 console.log(
-  'News Intake audit passed: approved-source atomic auto-publish, zero allegation-ambiguity review, source-omission preservation, Bangladesh scope filtering, context-grounded date/location resolution, exact-source de-duplication, strong source merging, 36-hour scheduling, manual/citizen safety boundaries, guided historical review, mobile workspace behavior, and security checks are protected.'
+  'News Intake audit passed: approved-source manual select/publish, scheduled atomic auto-publish, zero allegation-ambiguity review, non-incident false-positive guards, source-omission preservation, Bangladesh scope filtering, context-grounded date/location resolution, exact-source de-duplication, strong source merging, 36-hour scheduling, persisted Step-2 workspace state, mobile behavior, and security checks are protected.'
 );
