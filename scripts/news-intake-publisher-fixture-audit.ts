@@ -4,6 +4,7 @@ import {
   findLocation,
   inferIncidentDate,
   inferSpecificLocationPhrase,
+  isFactCheckOrMisinformationStory,
   isLegalFollowUpOnly,
   isSubstantiveIncidentContext,
 } from '../supabase/functions/_shared/newsIntakeAutomationCore.ts';
@@ -102,6 +103,15 @@ const fixtures: Fixture[] = [
     expectedIncidentDate: null,
   },
   {
+    name: 'Prothom Alo fact-check about child deaths is not a child-murder report',
+    title: 'সুনামগঞ্জে তিন শিশুর মৃত্যুর ঘটনাকে রাজনৈতিক হত্যা বলে প্রচার',
+    context:
+      'ভাইরাল ছবি ও ভিডিও যাচাই করে দেখা গেছে রাজনৈতিক হত্যার দাবিটি সত্য নয়; এটি একটি তথ্য যাচাই প্রতিবেদন।',
+    publishedDate: '2026-09-20',
+    expectedCategory: null,
+    expectedIncidentDate: null,
+  },
+  {
     name: 'Child abduction report is classified under public safety child protection',
     title: 'ঢাকায় ৯ বছরের শিশু অপহরণ, থানায় মামলা',
     context:
@@ -137,7 +147,8 @@ const fixtures: Fixture[] = [
 for (const fixture of fixtures) {
   const fullText = `${fixture.title} ${fixture.context}`;
   const legalFollowUp = isLegalFollowUpOnly(fixture.title, fixture.context);
-  const classification = legalFollowUp ? null : classifyArticle(fullText);
+  const factCheck = isFactCheckOrMisinformationStory(fixture.title, fixture.context);
+  const classification = legalFollowUp || factCheck ? null : classifyArticle(fullText);
 
   if (fixture.expectedCategory === null) {
     assert.equal(
