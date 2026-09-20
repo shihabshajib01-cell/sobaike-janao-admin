@@ -41,6 +41,17 @@ export const isLegalFollowUpOnly = (
 ) => LEGAL_FOLLOW_UP_HEADLINE_RE.test(normalizeText(title));
 
 
+const FACT_CHECK_STORY_RE =
+  /(?:বলে\s+প্রচার|দাবিটি\s+সত্য\s+নয়|দাবিটি\s+সত্য\s+নয়|ভুয়া\s+দাবি|ভুয়া\s+দাবি|ফ্যাক্ট\s*চেক|তথ্য\s+যাচাই|যাচাই\s+করে\s+দেখা\s+গেছে|মিথ্যা\s+দাবি|ভুল\s+তথ্য|\bfact[- ]?check\b|\bfalse\s+claim\b|\bmisinformation\b|\bmisleading\s+claim\b|\bdebunk(?:ed|ing)?\b)/iu;
+
+export const isFactCheckOrMisinformationStory = (
+  title: unknown,
+  context?: unknown
+) => FACT_CHECK_STORY_RE.test(
+  `${normalizeText(title)} ${normalizeText(context)}`
+);
+
+
 export const buildIncidentFocusedLocationText = (article: {
   title?: string;
   excerpt?: string;
@@ -363,6 +374,7 @@ const locationCandidateIsUsable = (candidate: string, district?: string | null) 
   if (!normalized || normalized.length<4) return false;
   if (/^(এলাকা|বাজার|মার্কেট|থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|গ্রাম|শহর|নগরী|মহানগরী|রোড|লেন|গলি|area|market|bazaar|thana|upazila|union|village|city|road|street|lane)$/iu.test(normalized)) return false;
   if (/(বিভিন্ন|various|several)\s+(এলাকা|areas?)/iu.test(normalized)) return false;
+  if (/(?:^|\s)(?:এদিকে|অন্যদিকে|এ\s+ঘটনায়|এ\s+ঘটনায়|এই\s+ঘটনায়|এই\s+ঘটনায়|এ\s+বিষয়ে|এ\s+বিষয়ে|করে\s+(?:তাহিরপুর|থানা|উপজেলা))(?=\s|$)/iu.test(normalized)) return false;
   if (/(বিষয়টি|বিষয়টি|জানার পর|জানতে পেরে|আমরা|তিনি|তারা|পুলিশ জানায়|পুলিশ জানায়|কর্তৃপক্ষ|সন্ধান না পেয়ে|সন্ধান না পেয়ে|খোঁজ করেও|নিহত|আহত|উদ্ধার|গ্রেপ্তার|জানান|বলেন|we learned|we found|police said|officials said|was killed|were killed|was injured|were injured|was rescued|were rescued)/iu.test(normalized)) return false;
   if (normalized.length>90) return false;
   if (district) {
