@@ -15,6 +15,7 @@ import {
   inferIncidentDate,
   inferSpecificLocationPhrase,
   isKnownPublisherArticlePath,
+  isLikelyForeignIncident,
   isUnsupportedArticleType,
   scoreDiscoveryLink,
 } from "../_shared/newsIntakeAutomationCore.ts";
@@ -351,8 +352,8 @@ const mapLimit = async <T,R>(items: T[], limit: number, worker: (item:T,index:nu
 const buildReportPayload = (
   article: any,
   classification: any,
-  location: any,
-  incidentDate: string,
+  location: any | null,
+  incidentDate: string | null,
   language: string
 ) => {
   const source = {
@@ -401,18 +402,18 @@ const buildReportPayload = (
       titleEn:'',
       descriptionBn:fields.descriptionPrimary,
       descriptionEn:'',
-      incidentDate,
+      incidentDate:incidentDate || '',
       incidentTime:'',
       utilityEndTime:'',
       frequency:'one-time',
       priority:'medium',
-      division:location.division,
-      district:location.district,
-      upazilaOrThana:location.upazilaOrThana || '',
-      area:location.area || '',
-      road:location.road || '',
-      landmark:location.landmark || '',
-      formattedAddress:location.formattedAddress || '',
+      division:location?.division || '',
+      district:location?.district || '',
+      upazilaOrThana:location?.upazilaOrThana || '',
+      area:location?.area || '',
+      road:location?.road || '',
+      landmark:location?.landmark || '',
+      formattedAddress:location?.formattedAddress || '',
       relationshipContext:'',
       recentBillMonth:'',
       recentBillAmount:'',
@@ -435,7 +436,17 @@ const buildReportPayload = (
       customFieldAnswers:{
         sourceLanguage:fields.sourceLanguage,
         automatedIntake:true,
-        locationScope:location.locationScope === 'district_wide' ? 'district_wide' : 'specific',
+        trustedSourceAuto:true,
+        sourceTruthMode:'approved_publisher',
+        sourceOmittedFields:[
+          ...(!incidentDate ? ['incidentDate'] : []),
+          ...(!location ? ['location'] : []),
+        ],
+        locationScope:!location
+          ? 'source_unspecified'
+          : location.locationScope === 'district_wide'
+            ? 'district_wide'
+            : 'specific',
         ...(classification.subcategoryId === 'child_abduction_murder'
           ? {
               childIncidentType:childIncidentType || 'unknown_not_stated',
@@ -823,7 +834,7 @@ const processNewsIntakeRun = async (
           return;
         }
 
-        if(classification.reviewReason){
+        if(isLikelyForeignIncident(article.title,article.canonicalUrl,fullText)){
           await record({
             itemKind:'article',
             sourceHostname:source.hostname,
@@ -835,44 +846,14 @@ const processNewsIntakeRun = async (
             segmentId:classification.segmentId,
             subcategoryId:classification.subcategoryId,
             confidence:classification.confidence,
-            action:'needs_review',
+            action:'discovered',
             duplicateStatus:'unavailable',
-            reason:classification.reviewReason,
-            reviewPayload:buildAutomationReviewPayload(
-              article,
-              classification,
-              language,
-              ['category','incidentDate','location']
-            ),
+            reason:'Incident is outside the Bangladesh reporting scope.',
           });
           return;
         }
 
         const ageDays=articleAgeDays(article.sourcePublishedDate);
-        if(ageDays===null){
-          await record({
-            itemKind:'article',
-            sourceHostname:source.hostname,
-            publisherName:article.publisherName,
-            canonicalUrl:article.canonicalUrl,
-            sourceTitle:article.title,
-            sourcePublishedDate:'',
-            contentLanguage:language,
-            segmentId:classification.segmentId,
-            subcategoryId:classification.subcategoryId,
-            confidence:classification.confidence,
-            action:'needs_review',
-            duplicateStatus:'unavailable',
-            reason:'Category detected, but the source publication date could not be verified safely.',
-            reviewPayload:buildAutomationReviewPayload(
-              article,
-              classification,
-              language,
-              ['sourcePublishedDate','incidentDate','location']
-            ),
-          });
-          return;
-        }
         if(ageDays>MAX_ARTICLE_AGE_DAYS){
           await record({
             itemKind:'article',
@@ -897,7 +878,7 @@ const processNewsIntakeRun = async (
           });
           return;
         }
-        if(ageDays < -1){
+        if(ageDays !== null && ageDays < -1){
           await record({
             itemKind:'article',
             sourceHostname:source.hostname,
@@ -909,15 +890,9 @@ const processNewsIntakeRun = async (
             segmentId:classification.segmentId,
             subcategoryId:classification.subcategoryId,
             confidence:classification.confidence,
-            action:'needs_review',
+            action:'discovered',
             duplicateStatus:'unavailable',
-            reason:'Source publication date is unexpectedly in the future.',
-            reviewPayload:buildAutomationReviewPayload(
-              article,
-              classification,
-              language,
-              ['sourcePublishedDate','incidentDate','location']
-            ),
+            reason:'Source publication date is unexpectedly in the future; article excluded from this run.',
           });
           return;
         }
@@ -986,8 +961,7 @@ const processNewsIntakeRun = async (
           };
         }
 
-        // A canonical multi-location result is authoritative. Never downgrade it
-        // to one inferred phrase; those articles must stay in manual review.
+        // Preserve canonical multi-location results without inventing one specific place.
         if(
           location
           && location.quality !== 'multiple_locations'
@@ -1040,12 +1014,7 @@ const processNewsIntakeRun = async (
 
         const incidentDate=inferIncidentDate(locationText,article.sourcePublishedDate);
         const context=buildIncidentContext(article);
-        if(!location||!incidentDate||!context){
-          const missing=[
-            !location?'location':'',
-            !incidentDate?'incident date':'',
-            !context?'incident context':'',
-          ].filter(Boolean).join(', ');
+        if(!context){
           await record({
             itemKind:'article',
             sourceHostname:source.hostname,
@@ -1057,79 +1026,9 @@ const processNewsIntakeRun = async (
             segmentId:classification.segmentId,
             subcategoryId:classification.subcategoryId,
             confidence:classification.confidence,
-            action:'needs_review',
+            action:'discovered',
             duplicateStatus:'unavailable',
-            reason:`Category detected, but ${missing} could not be established safely from the source.`,
-            reviewPayload:buildAutomationReviewPayload(
-              article,
-              classification,
-              language,
-              [
-                !location ? 'location' : '',
-                !incidentDate ? 'incidentDate' : '',
-                !context ? 'description' : '',
-              ],
-              location,
-              incidentDate
-            ),
-          });
-          return;
-        }
-
-        if(location.quality !== 'specific' && location.locationScope !== 'district_wide'){
-          const locationReason =
-            location.quality === 'multiple_locations'
-              ? 'Multiple source-backed locations were detected. Review the incident scope before creating a feed-ready report.'
-              : 'Category and district were detected, but a specific source-backed upazila/thana could not be established. Review the location before creating a feed-ready report.';
-          await record({
-            itemKind:'article',
-            sourceHostname:source.hostname,
-            publisherName:article.publisherName,
-            canonicalUrl:article.canonicalUrl,
-            sourceTitle:article.title,
-            sourcePublishedDate:article.sourcePublishedDate||'',
-            contentLanguage:language,
-            segmentId:classification.segmentId,
-            subcategoryId:classification.subcategoryId,
-            confidence:classification.confidence,
-            action:'needs_review',
-            duplicateStatus:'unavailable',
-            reason:locationReason,
-            reviewPayload:buildAutomationReviewPayload(
-              article,
-              classification,
-              language,
-              ['location'],
-              location,
-              incidentDate
-            ),
-          });
-          return;
-        }
-
-        if(classification.subcategoryId==='bribe-demanded-service'){
-          await record({
-            itemKind:'article',
-            sourceHostname:source.hostname,
-            publisherName:article.publisherName,
-            canonicalUrl:article.canonicalUrl,
-            sourceTitle:article.title,
-            sourcePublishedDate:article.sourcePublishedDate||'',
-            contentLanguage:language,
-            segmentId:classification.segmentId,
-            subcategoryId:classification.subcategoryId,
-            confidence:classification.confidence,
-            action:'needs_review',
-            duplicateStatus:'unavailable',
-            reason:'Bribery category detected, but department and service fields require source-specific verification.',
-            reviewPayload:buildAutomationReviewPayload(
-              article,
-              classification,
-              language,
-              ['briberyDepartment','briberyService'],
-              location,
-              incidentDate
-            ),
+            reason:'Article did not expose enough readable incident text to create a source-grounded report.',
           });
           return;
         }
@@ -1145,64 +1044,9 @@ const processNewsIntakeRun = async (
         const exact=Array.isArray(preview?.duplicate?.exactSourceDuplicates)
           ? preview.duplicate.exactSourceDuplicates
           : [];
-        const privacyReviewRequired=preview?.privacyReviewRequired===true;
-        const schemaReady=preview?.schemaValidation?.ready !== false;
-        const missingSchemaFields=Array.isArray(preview?.schemaValidation?.missingFields)
-          ? preview.schemaValidation.missingFields
-          : [];
-
-        if(privacyReviewRequired){
-          await record({
-            itemKind:'article',
-            sourceHostname:source.hostname,
-            publisherName:article.publisherName,
-            canonicalUrl:article.canonicalUrl,
-            sourceTitle:article.title,
-            sourcePublishedDate:article.sourcePublishedDate||'',
-            contentLanguage:language,
-            segmentId:classification.segmentId,
-            subcategoryId:classification.subcategoryId,
-            confidence:classification.confidence,
-            action:'needs_review',
-            duplicateStatus,
-            reason:'Privacy-sensitive category detected. Review the public title, summary, location, and identifying details before creating or publishing a report.',
-            reviewPayload:{
-              ...payload,
-              reviewFields:['sensitiveContent'],
-            },
-          });
-          return;
-        }
-
-        if(!schemaReady){
-          const missingLabels=missingSchemaFields
-            .map((field:any)=>String(field?.labelEn||field?.fieldKey||'required field'))
-            .filter(Boolean)
-            .join(', ');
-          await record({
-            itemKind:'article',
-            sourceHostname:source.hostname,
-            publisherName:article.publisherName,
-            canonicalUrl:article.canonicalUrl,
-            sourceTitle:article.title,
-            sourcePublishedDate:article.sourcePublishedDate||'',
-            contentLanguage:language,
-            segmentId:classification.segmentId,
-            subcategoryId:classification.subcategoryId,
-            confidence:classification.confidence,
-            action:'needs_review',
-            duplicateStatus,
-            reason:`The current published report form requires source facts that could not be established safely: ${missingLabels||'required fields'}.`,
-            reviewPayload:{
-              ...payload,
-              reviewFields:missingSchemaFields.map(
-                (field:any)=>String(field?.storageKey||field?.fieldKey||'schema')
-              ),
-            },
-          });
-          return;
-        }
-
+        // In trusted-source automation, the approved article itself is the source
+        // of truth. Missing optional structured facts are retained as omissions
+        // instead of becoming a manual-review queue.
         if(exact.length){
           await record({
             itemKind:'article',
@@ -1256,38 +1100,24 @@ const processNewsIntakeRun = async (
           }
         }
 
-        if(duplicateStatus==='match'||duplicateStatus==='review'){
-          await record({
-            itemKind:'article',
-            sourceHostname:source.hostname,
-            publisherName:article.publisherName,
-            canonicalUrl:article.canonicalUrl,
-            sourceTitle:article.title,
-            sourcePublishedDate:article.sourcePublishedDate||'',
-            contentLanguage:language,
-            segmentId:classification.segmentId,
-            subcategoryId:classification.subcategoryId,
-            confidence:classification.confidence,
-            action:'needs_review',
-            duplicateStatus,
-            reason:'Possible same incident detected. No new report was created automatically.',
-            reviewPayload:{
-              ...payload,
-              reviewFields:['duplicate'],
-            },
-          });
-          return;
-        }
-
         const {data:created,error:createError}=await supabase.rpc(
           'admin_create_sourced_report_from_intake',
           {p_payload:payload}
         );
         if(createError)throw new Error(createError.message);
 
-        const createdDuplicateStatus=String(created?.duplicate?.status||'unavailable');
-        const createdCanPublish=
-          created?.canPublishImmediately===true && createdDuplicateStatus==='clear';
+        const createdDuplicateStatus=String(created?.duplicate?.status||'clear');
+        const reportId=String(created?.reportId||'');
+        if(!reportId) throw new Error('Trusted News Intake created a report without an id.');
+
+        const {data:published,error:publishError}=await supabase.rpc(
+          'publish_trusted_news_intake_report',
+          {p_report_id:reportId}
+        );
+        if(publishError) throw new Error(publishError.message);
+        if(published?.published!==true){
+          throw new Error(String(published?.reason||'Trusted report could not be auto-published.'));
+        }
 
         await record({
           itemKind:'article',
@@ -1300,18 +1130,11 @@ const processNewsIntakeRun = async (
           segmentId:classification.segmentId,
           subcategoryId:classification.subcategoryId,
           confidence:classification.confidence,
-          action:createdCanPublish?'created_draft':'needs_review',
+          action:'created_draft',
           duplicateStatus:createdDuplicateStatus,
-          reportId:String(created?.reportId||''),
-          reason:createdCanPublish
-            ? 'Source-grounded draft created; publication remains a separate admin action.'
-            : 'Draft created, but the final server duplicate evaluation requires review before publication.',
-          reviewPayload:createdCanPublish
-            ? null
-            : {
-                ...payload,
-                reviewFields:['duplicate'],
-              },
+          reportId,
+          reason:'Approved-source report created and automatically published to the public feed.',
+          reviewPayload:null,
         });
       } catch(error) {
         processingErrors+=1;
