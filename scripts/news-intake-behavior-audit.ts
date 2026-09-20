@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   buildIncidentContext,
+  buildIncidentFocusedLocationText,
   buildSourceLanguageFields,
   classifyArticle,
   findLocation,
@@ -9,6 +10,24 @@ import {
   inferSpecificLocationPhrase,
   isUnsupportedArticleType,
 } from '../supabase/functions/_shared/newsIntakeAutomationCore.ts';
+
+// Munshiganj incident-focused location regression: residence/hospital destinations
+// must not outrank the actual crash location.
+const munshiganjFocusedLocation = buildIncidentFocusedLocationText({
+  title: 'মুন্সীগঞ্জে বাস-প্রাইভেটকার সংঘর্ষে নিহত ৪',
+  excerpt: 'গজারিয়া উপজেলার জামালদি বাসস্ট্যান্ড এলাকায় এ দুর্ঘটনা ঘটে।',
+  body: 'শুক্রবার দুপুর ২টা ৩৮ মিনিটে গজারিয়া উপজেলার জামালদি বাসস্ট্যান্ড এলাকায় এ দুর্ঘটনা ঘটে। নিহতরা ঢাকার বাসিন্দা। একজন আহত ব্যক্তিকে ঢাকা মেডিকেল কলেজ হাসপাতালে নেওয়া হয়।',
+});
+assert.match(
+  munshiganjFocusedLocation,
+  /মুন্সীগঞ্জ|গজারিয়া|জামালদি/u,
+  'Incident-focused location text must retain the crash location'
+);
+assert.doesNotMatch(
+  munshiganjFocusedLocation,
+  /ঢাকা মেডিকেল|ঢাকার বাসিন্দা/u,
+  'Residence and hospital-transfer locations must be excluded when incident-location evidence exists'
+);
 
 const classificationCases: Array<[string, string, string]> = [
   ['rape-sexual-violence', 'ধর্ষণের অভিযোগে একজনকে গ্রেপ্তার করেছে পুলিশ', 'harassment'],
