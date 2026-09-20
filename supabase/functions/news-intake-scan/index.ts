@@ -747,7 +747,6 @@ const processNewsIntakeRun = async (
 
         const knownPublisherDocumentFallback=Boolean(
           isKnownPublisherArticlePath(article.canonicalUrl)
-          && article.sourcePublishedDate
           && article.title.length>=20
           && (article.excerpt.length>=80 || article.body.length>=120)
         );

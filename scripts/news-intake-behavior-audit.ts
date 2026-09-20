@@ -179,6 +179,22 @@ assert.equal(
 );
 
 assert.equal(
+  classifyArticle('শিশুর মুখে বিষ ঢেলে হত্যাচেষ্টার অভিযোগ, মা আটক'),
+  null,
+  'Attempted child murder without abduction or a reported death must not be published as Child Abduction / Murder'
+);
+assert.equal(
+  classifyArticle('শিশুকে অপহরণের পর হত্যাচেষ্টা, পুলিশ উদ্ধার করেছে')?.subcategoryId,
+  'child_abduction_murder',
+  'An abduction remains in Child Abduction / Murder even if the later killing was only attempted'
+);
+assert.equal(
+  classifyArticle('শিশুকে হত্যার চেষ্টা, পরে হাসপাতালে মৃত্যু')?.subcategoryId,
+  'child_abduction_murder',
+  'A reported death after an attempted killing must remain a child murder report'
+);
+
+assert.equal(
   inferIncidentDate('ঘটনাটি ১৮ সেপ্টেম্বর ২০২৬ সকালে ঘটে', '2026-09-19'),
   '2026-09-18',
   'Bangla named date must parse without regex errors'

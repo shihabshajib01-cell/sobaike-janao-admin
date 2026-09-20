@@ -133,6 +133,9 @@ requireText(behaviorAudit, 'Future strike warnings must be excluded before categ
 requireText(behaviorAudit, 'Evidence recovery during a murder investigation must not become a standalone theft report', 'News Intake evidence-recovery regression');
 requireText(behaviorAudit, 'Same-day Bangla weekday plus বেলা must resolve to the publication day', 'News Intake Bangla বেলা date regression');
 requireText(behaviorAudit, 'Exact production road-block wording must ground Cumilla', 'News Intake production location regression');
+requireText(behaviorAudit, 'Attempted child murder without abduction or a reported death must not be published as Child Abduction / Murder', 'News Intake child attempted-murder regression');
+requireText(behaviorAudit, 'An abduction remains in Child Abduction / Murder even if the later killing was only attempted', 'News Intake child abduction/attempt regression');
+requireText(behaviorAudit, 'A reported death after an attempted killing must remain a child murder report', 'News Intake child death-after-attempt regression');
 requireText(collisionErrorContract, "errcode='P0001'", 'News Intake collision error contract');
 requireText(collisionErrorContract, 'DUPLICATE_REVIEW_REQUIRED', 'News Intake collision error contract');
 requireText(explicitDenyPolicies, 'news_intake_runs_authenticated_deny', 'News Intake run-table deny policy');
@@ -250,6 +253,7 @@ for (const needle of [
   'datePublished',
   'finalPathLooksLikeArticle',
   'articleDocumentSignal',
+  'knownPublisherDocumentFallback',
   'isLikelyForeignIncident',
   'isNonIncidentHeadline',
   'admin_check_source_duplicate',

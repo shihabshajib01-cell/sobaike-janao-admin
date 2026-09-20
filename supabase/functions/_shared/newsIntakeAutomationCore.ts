@@ -92,11 +92,20 @@ export type Classification = {
 
 const CHILD_ABDUCTION_RE = /(?:(?:শিশু|বালক|বালিকা|কিশোর|কিশোরী|নাবালক|নাবালিকা|\bminor\b|\bchild\b|\bboy\b|\bgirl\b).{0,100}(?:অপহরণ|অপহৃত|kidnap(?:ped|ping)?|abduct(?:ed|ion)?)|(?:অপহরণ|অপহৃত|kidnap(?:ped|ping)?|abduct(?:ed|ion)?).{0,100}(?:শিশু|বালক|বালিকা|কিশোর|কিশোরী|নাবালক|নাবালিকা|\bminor\b|\bchild\b|\bboy\b|\bgirl\b))/iu;
 const CHILD_MURDER_RE = /(?:(?:শিশু|বালক|বালিকা|কিশোর|কিশোরী|নাবালক|নাবালিকা|\bminor\b|\bchild\b|\bboy\b|\bgirl\b).{0,100}(?:হত্যা|খুন|murder(?:ed)?|homicide)|(?:হত্যা|খুন|murder(?:ed)?|homicide).{0,100}(?:শিশু|বালক|বালিকা|কিশোর|কিশোরী|নাবালক|নাবালিকা|\bminor\b|\bchild\b|\bboy\b|\bgirl\b))/iu;
+const CHILD_MURDER_ATTEMPT_RE = /(?:হত্যাচেষ্টা|হত্যার\s*চেষ্টা|খুনের\s*চেষ্টা|attempt(?:ed)?\s+murder|attempt(?:ed)?\s+to\s+kill)/iu;
+const CHILD_MURDER_COMPLETION_RE = /(?:নিহত|মৃত্যু|মারা\s+(?:গেছে|যায়|যায়)|\bdead\b|\bdied\b|\bdies\b|\bkilled\b)/iu;
+
+const isChildMurderAttemptOnly = (value: unknown) => {
+  const text = normalizeText(value);
+  return CHILD_MURDER_ATTEMPT_RE.test(text)
+    && !CHILD_ABDUCTION_RE.test(text)
+    && !CHILD_MURDER_COMPLETION_RE.test(text);
+};
 
 export const inferChildIncidentType = (value: unknown) => {
   const text = normalizeText(value);
   const hasAbduction = CHILD_ABDUCTION_RE.test(text);
-  const hasMurder = CHILD_MURDER_RE.test(text);
+  const hasMurder = CHILD_MURDER_RE.test(text) && !isChildMurderAttemptOnly(text);
   if (hasAbduction && hasMurder) return 'abduction_and_murder';
   if (hasAbduction) return 'abduction';
   if (hasMurder) return 'murder';
@@ -168,7 +177,9 @@ export const classifyArticle = (value: unknown): Classification | null => {
       confidence:0.96,
     };
   }
+  const childAttemptOnly = isChildMurderAttemptOnly(text);
   for (const [segmentId, subcategoryId, confidence, patterns] of ARTICLE_RULES) {
+    if (subcategoryId === 'child_abduction_murder' && childAttemptOnly) continue;
     if (patterns.some((pattern) => pattern.test(text))) {
       return { segmentId, subcategoryId, confidence };
     }
