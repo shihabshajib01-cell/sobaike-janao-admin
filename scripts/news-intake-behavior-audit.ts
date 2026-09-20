@@ -8,9 +8,12 @@ import {
   inferDistrictWideScope,
   inferIncidentDate,
   inferSpecificLocationPhrase,
+  isFactCheckOrMisinformationStory,
   isKnownPublisherArticlePath,
+  isLegalFollowUpOnly,
   isLikelyForeignIncident,
   isNonIncidentHeadline,
+  isSubstantiveIncidentContext,
   isUnsupportedArticleType,
 } from '../supabase/functions/_shared/newsIntakeAutomationCore.ts';
 
@@ -55,6 +58,52 @@ assert.equal(
   isNonIncidentHeadline('৩০ সেপ্টেম্বরের পর অনির্দিষ্টকালের ধর্মঘটের হুঁশিয়ারি বাল্কহেড মালিকদের'),
   true,
   'Future strike warnings must be excluded before category matching even if the article mentions robbery prevention'
+);
+
+
+assert.equal(
+  isLegalFollowUpOnly('প্রধানমন্ত্রীর লাল টেলিফোনের তার চুরি: সেই রঞ্জনের জামিন বাতিল'),
+  true,
+  'Court/bail follow-up headlines about older incidents must not create a fresh incident report'
+);
+assert.equal(
+  isLegalFollowUpOnly('সাতকানিয়ায় ট্রেনের ধাক্কায় নিহত ২'),
+  false,
+  'A current incident headline must not be rejected as a legal follow-up'
+);
+
+assert.equal(
+  isFactCheckOrMisinformationStory(
+    'সুনামগঞ্জে তিন শিশুর মৃত্যুর ঘটনাকে রাজনৈতিক হত্যা বলে প্রচার',
+    'যাচাই করে দেখা গেছে দাবিটি সত্য নয়।'
+  ),
+  true,
+  'Fact-check/debunk stories must not be converted into fresh incident reports'
+);
+assert.equal(
+  isFactCheckOrMisinformationStory(
+    'কিশোরীকে অপহরণের পর হত্যা, মরদেহ উদ্ধার',
+    'পুলিশ ঘটনাটি তদন্ত করছে।'
+  ),
+  false,
+  'A direct incident report must not be rejected as misinformation content'
+);
+
+assert.equal(
+  isSubstantiveIncidentContext(
+    'সাতকানিয়ায় ট্রেনের ধাক্কায় নিহত ২',
+    'সাতকানিয়ায় ট্রেনের ধাক্কায় নিহত ২'
+  ),
+  false,
+  'Title-only extraction must never become Feed Ready'
+);
+assert.equal(
+  isSubstantiveIncidentContext(
+    'ছিনতাই: একজনের হাতে ছুরি, আরেকজন রিকশাযাত্রীর পকেট কাটল',
+    'চট্টগ্রাম নগরীর কোতোয়ালী থানার অদূরে সতীশ বাবু লেইনে এক রিকশাআরোহীকে ছুরি দেখিয়ে তার জিনিসপত্র কেড়ে নেয় দুই ছিনতাইকারী। ঘটনার ভিডিও শনিবার সকাল থেকে সামাজিক যোগাযোগমাধ্যমে ছড়িয়ে পড়ে এবং পুলিশ জড়িতদের ধরতে কাজ করছে।'
+  ),
+  true,
+  'A substantive multi-sentence incident context must remain eligible'
 );
 
 assert.equal(
@@ -343,6 +392,23 @@ assert.equal(
   ),
   'চট্টগ্রামের কোতোয়ালি থানার পেছনের সতীশ বাবু লেন',
   'Incident location must win over later narrative text ending in এলাকা'
+);
+
+assert.notEqual(
+  inferSpecificLocationPhrase(
+    'খুলনার ইসলামনগর এলাকার হল রোডে ঘটনাটি ঘটে। এদিকে এ ঘটনায় খুলনার হরিণটানা থানা পুলিশ তদন্ত করছে।',
+    'Khulna'
+  ),
+  'এদিকে এ ঘটনায় খুলনার হরিণটানা থানা',
+  'Narrative police-jurisdiction fragments must never become the public incident location'
+);
+assert.notEqual(
+  inferSpecificLocationPhrase(
+    'সুনামগঞ্জের তাহিরপুরে তিন শিশুর মৃত্যুর বিষয়ে যাচাই করে তাহিরপুর উপজেলা প্রশাসনের সঙ্গে কথা বলা হয়।',
+    'Sunamganj'
+  ),
+  'করে তাহিরপুর উপজেলা',
+  'Narrative verification fragments must not become a specific incident location'
 );
 
 assert.equal(

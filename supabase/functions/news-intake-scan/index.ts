@@ -14,9 +14,12 @@ import {
   inferChildIncidentType,
   inferIncidentDate,
   inferSpecificLocationPhrase,
+  isFactCheckOrMisinformationStory,
   isKnownPublisherArticlePath,
+  isLegalFollowUpOnly,
   isLikelyForeignIncident,
   isNonIncidentHeadline,
+  isSubstantiveIncidentContext,
   isUnsupportedArticleType,
   scoreDiscoveryLink,
 } from "../_shared/newsIntakeAutomationCore.ts";
@@ -234,6 +237,29 @@ const extractPublishedDate = (html: string, jsonLd: any) => {
   return null;
 };
 
+const decodeSerializedString = (raw: string) => {
+  try {
+    return JSON.parse(`"${raw.replace(/"/g,'\\\"')}"`);
+  } catch {
+    return decodeEntities(raw.replace(/\\n/g,' ').replace(/\\u003c/gi,'<').replace(/\\u003e/gi,'>'));
+  }
+};
+
+const extractSerializedArticleBody = (html: string, finalUrl: string) => {
+  let host='';
+  try { host=canonicalHostKey(new URL(finalUrl).hostname); } catch {}
+  if(host!=='bdnews24.com' && host!=='bangla.bdnews24.com') return '';
+
+  const candidates:string[]=[];
+  for(const match of String(html||'').matchAll(
+    /"(?:articleBody|article_body|body|content|details|newsDetails|news_details)"\s*:\s*"((?:\\.|[^"\\]){120,})"/gi
+  )){
+    const decoded=stripTags(decodeSerializedString(match[1]));
+    if(decoded.length>=120) candidates.push(decoded);
+  }
+  return candidates.sort((a,b)=>b.length-a.length)[0] || '';
+};
+
 const extractArticle = (html: string, finalUrl: string, publisherFallback: string) => {
   const jsonLd = extractJsonLdArticle(html);
   const title = String(
@@ -259,6 +285,7 @@ const extractArticle = (html: string, finalUrl: string, publisherFallback: strin
   const sourcePublishedDate = extractPublishedDate(html,jsonLd);
   const articleMatch = html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i);
   let body = String(jsonLd?.articleBody || '').trim();
+  let extractionMethod = body ? 'json_ld_article_body' : '';
   if (!body) {
     const scope = articleMatch?.[1] || html;
     body = [...scope.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)]
@@ -266,6 +293,11 @@ const extractArticle = (html: string, finalUrl: string, publisherFallback: strin
       .filter((text)=>text.length>=35)
       .slice(0,20)
       .join(' ');
+    if(body) extractionMethod = articleMatch ? 'article_paragraphs' : 'page_paragraphs';
+  }
+  if(!body){
+    body=extractSerializedArticleBody(html,finalUrl);
+    if(body) extractionMethod='serialized_article_body';
   }
   body = clip(stripTags(body),12000);
   const excerpt = clip(description || body,1800);
@@ -285,6 +317,7 @@ const extractArticle = (html: string, finalUrl: string, publisherFallback: strin
     body,
     excerpt,
     articleDocumentSignal,
+    extractionMethod: extractionMethod || (description ? 'metadata_only' : 'unknown'),
   };
 };
 
@@ -441,9 +474,9 @@ const buildReportPayload = (
         sourceTruthMode:'approved_publisher',
         sourceOmittedFields:[
           ...(!incidentDate ? ['incidentDate'] : []),
-          ...(!location ? ['location'] : []),
+          ...(!location || location.locationScope === 'district_only' ? ['location'] : []),
         ],
-        locationScope:!location
+        locationScope:!location || location.locationScope === 'district_only'
           ? 'source_unspecified'
           : location.locationScope === 'district_wide'
             ? 'district_wide'
@@ -612,8 +645,9 @@ const safeScanFetch = async (
 
   let response: Response | null=null;
   for(let redirectCount=0;redirectCount<=3;redirectCount+=1){
+    const hostKey=canonicalHostKey(current.hostname);
     const requestUserAgent=
-      canonicalHostKey(current.hostname)==='unb.com.bd'
+      hostKey==='unb.com.bd' || hostKey==='bdnews24.com' || hostKey==='bangla.bdnews24.com'
         ? 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36'
         : 'SobaiKeJanao-NewsIntake/3.0 (+https://shobaikejanao.com/)';
 
@@ -833,6 +867,38 @@ const processNewsIntakeRun = async (
             action:'discovered',
             duplicateStatus:'unavailable',
             reason:'Headline describes a future programme, strike warning, or announcement rather than a reportable incident.',
+          });
+          return;
+        }
+
+        if(isFactCheckOrMisinformationStory(article.title,fullText)){
+          await record({
+            itemKind:'article',
+            sourceHostname:source.hostname,
+            publisherName:article.publisherName,
+            canonicalUrl:article.canonicalUrl,
+            sourceTitle:article.title,
+            sourcePublishedDate:article.sourcePublishedDate||'',
+            contentLanguage:language,
+            action:'discovered',
+            duplicateStatus:'unavailable',
+            reason:'Fact-check, misinformation, or debunking article was excluded because it does not establish a new reportable incident.',
+          });
+          return;
+        }
+
+        if(isLegalFollowUpOnly(article.title,fullText)){
+          await record({
+            itemKind:'article',
+            sourceHostname:source.hostname,
+            publisherName:article.publisherName,
+            canonicalUrl:article.canonicalUrl,
+            sourceTitle:article.title,
+            sourcePublishedDate:article.sourcePublishedDate||'',
+            contentLanguage:language,
+            action:'discovered',
+            duplicateStatus:'unavailable',
+            reason:'Court, bail, remand, hearing, verdict, appeal, or trial follow-up was excluded because it does not report a new incident.',
           });
           return;
         }
@@ -1059,7 +1125,7 @@ const processNewsIntakeRun = async (
 
         const incidentDate=inferIncidentDate(locationText,article.sourcePublishedDate);
         const context=buildIncidentContext(article);
-        if(!context){
+        if(!isSubstantiveIncidentContext(article.title,context)){
           await record({
             itemKind:'article',
             sourceHostname:source.hostname,
@@ -1073,12 +1139,22 @@ const processNewsIntakeRun = async (
             confidence:classification.confidence,
             action:'discovered',
             duplicateStatus:'unavailable',
-            reason:'Article did not expose enough readable incident text to create a source-grounded report.',
+            reason:'Article extraction was incomplete or did not expose substantive incident context; candidate was blocked from Feed Ready.',
           });
           return;
         }
 
-        const payload=buildReportPayload(article,classification,location,incidentDate,language);
+        const payload={
+          ...buildReportPayload(article,classification,location,incidentDate,language),
+          quality:{
+            extractionStatus:'complete',
+            extractionMethod:article.extractionMethod || 'unknown',
+            substantiveContext:true,
+            contextLength:context.length,
+            currentIncident:true,
+            followUpOnly:false,
+          },
+        };
 
         // Manual Find News remains a one-click review/select workspace: every
         // approved-source category match is staged as feed-ready without
