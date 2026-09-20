@@ -307,6 +307,8 @@ export interface Complaint {
   privacyChoice?: ComplaintPrivacyChoice;
   confirmPublicIdentity?: boolean;
   publicationPreferences?: ComplaintPublicationPreferences;
+  /** Published-form/custom answers preserved for Admin review and News Intake safety gates. */
+  customFieldAnswers?: Record<string, unknown>;
   assignedDepartment?: string;
   upvotesCount: number;
   commentsCount: number;

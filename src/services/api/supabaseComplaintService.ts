@@ -106,6 +106,7 @@ export interface SupabaseComplaintRow {
   sexual_harassment_context?: string | null;
   sexual_harassment_institution?: string | null;
   publication_preferences: Record<string, unknown> | null;
+  custom_field_answers?: Record<string, unknown> | null;
   recent_bill_month?: string | null;
   recent_bill_amount?: number | null;
   previous_bill_month?: string | null;
@@ -413,6 +414,12 @@ export function mapSupabaseRowToComplaint(
         ? row.confirm_public_identity
         : undefined,
     publicationPreferences,
+    customFieldAnswers:
+      row.custom_field_answers &&
+      typeof row.custom_field_answers === 'object' &&
+      !Array.isArray(row.custom_field_answers)
+        ? { ...row.custom_field_answers }
+        : {},
     hasSupportingInfo: Boolean(
       row.has_supporting_info ||
       (Array.isArray(row.evidence_types) && row.evidence_types.length > 0)

@@ -1112,9 +1112,10 @@ await check('News Intake sensitive manual intake requires explicit privacy revie
     'sensitive manual intake did not fail closed before privacy review'
   );
 
-  const privacyReview = page.getByLabel(
-    'I reviewed the public title, summary, location, and identifying details',
-    { exact: true }
+  const privacyReview = page.locator('#news-intake-sensitive-content-reviewed');
+  await expectVisible(
+    privacyReview,
+    'sensitive manual intake privacy-review checkbox did not render'
   );
   await privacyReview.check({ force: true });
   await page
