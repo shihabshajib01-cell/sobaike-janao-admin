@@ -210,16 +210,34 @@ const inferSexualType=(text:string)=>{
   return "unknown_not_stated";
 };
 
+const sexualContextFromScope=(scope:string)=>{
+  if(/(স্কুল|কলেজ|বিশ্ববিদ্যালয়|বিশ্ববিদ্যালয়|ক্যাম্পাস|\bschool\b|\bcollege\b|\buniversity\b|\bcampus\b)/iu.test(scope)) return "educational_institution";
+  if(/(বাস|ট্রেন|লঞ্চ|গণপরিবহন|\bpublic transport\b|\bbus\b|\btrain\b)/iu.test(scope)) return "public_transport";
+  if(/(হাসপাতাল|ক্লিনিক|\bhealthcare\b|\bhospital\b|\bclinic\b)/iu.test(scope)) return "healthcare";
+  if(/(অফিস|কর্মক্ষেত্র|\bworkplace\b|\boffice\b)/iu.test(scope)) return "workplace";
+  if(/(অনলাইন|ফেসবুক|মেসেঞ্জার|সোশ্যাল|\bonline\b|\bfacebook\b|\bmessenger\b|\bsocial media\b)/iu.test(scope)) return "online_social_media";
+  if(/(সরকারি অফিস|\bservice office\b|\bgovernment office\b)/iu.test(scope)) return "government_service";
+  if(/(রাস্তা|পার্ক|উদ্যান|বাজার|\bpublic space\b|\broad\b|\bstreet\b|\bpark\b|\bmarket\b)/iu.test(scope)) return "road_public_space";
+  if(/(বাসা|বাড়ি|বাড়ি|ফ্ল্যাট|\bhome\b|\bhouse\b|\bflat\b|\bresidence\b)/iu.test(scope)) return "home_private_space";
+  return "";
+};
+
 const inferSexualContext=(text:string)=>{
-  if(/(স্কুল|কলেজ|বিশ্ববিদ্যালয়|বিশ্ববিদ্যালয়|ক্যাম্পাস|\bschool\b|\bcollege\b|\buniversity\b|\bcampus\b)/iu.test(text)) return "educational_institution";
-  if(/(বাস|ট্রেন|লঞ্চ|গণপরিবহন|\bpublic transport\b|\bbus\b|\btrain\b)/iu.test(text)) return "public_transport";
-  if(/(হাসপাতাল|ক্লিনিক|\bhealthcare\b|\bhospital\b|\bclinic\b)/iu.test(text)) return "healthcare";
-  if(/(অফিস|কর্মক্ষেত্র|\bworkplace\b|\boffice\b)/iu.test(text)) return "workplace";
-  if(/(অনলাইন|ফেসবুক|মেসেঞ্জার|সোশ্যাল|\bonline\b|\bfacebook\b|\bmessenger\b|\bsocial media\b)/iu.test(text)) return "online_social_media";
-  if(/(বাসা|বাড়ি|বাড়ি|ফ্ল্যাট|\bhome\b|\bhouse\b|\bflat\b|\bresidence\b)/iu.test(text)) return "home_private_space";
-  if(/(সরকারি অফিস|\bservice office\b|\bgovernment office\b)/iu.test(text)) return "government_service";
-  if(/(রাস্তা|পার্ক|উদ্যান|বাজার|\bpublic space\b|\broad\b|\bstreet\b|\bpark\b|\bmarket\b)/iu.test(text)) return "road_public_space";
-  return "unknown_not_stated";
+  const sentences=text
+    .split(/(?<=[.!?।])\s+/)
+    .map((sentence)=>sentence.trim())
+    .filter(Boolean);
+
+  // Resolve the context from the sentence that actually describes the alleged
+  // harassment/incident before looking at background, destination or responder
+  // sentences such as "returning home" or "taken to hospital".
+  for(const sentence of sentences){
+    if(!/(যৌন\s*হয়রানি|যৌন\s*হয়রানি|শ্লীলতাহানি|ইভ\s*টিজ|অনাকাঙ্ক্ষিত\s*স্পর্শ|sexual harassment|unwanted physical contact|eve[- ]?teas|grop|molest|incident (?:happened|occurred|took place))/iu.test(sentence)) continue;
+    const contextual=sexualContextFromScope(sentence);
+    if(contextual) return contextual;
+  }
+
+  return sexualContextFromScope(text) || "unknown_not_stated";
 };
 
 const inferMobDetails=(text:string)=>{
