@@ -877,10 +877,11 @@ await check('News Intake shows every category match on the right and completes g
   attachPageGuards(page, 'local-news-intake-automatic');
   const fixtures = await installSupabaseFixtures(page);
 
-  await page.goto(hashUrl(LOCAL_URL, '/news-intake'), {
+  await page.goto(hashUrl(LOCAL_URL, '/dashboard'), {
     waitUntil: 'domcontentloaded',
     timeout: 30000,
   });
+  await page.getByRole('link', { name: 'News Intake', exact: true }).click();
 
   await page.getByRole('button', { name: 'Find News', exact: true }).click();
   await page.getByRole('button', { name: 'Scan All Sources Now', exact: true }).click();
@@ -920,21 +921,21 @@ await check('News Intake shows every category match on the right and completes g
     'workspace closed after Keep Working'
   );
 
-  await page.getByRole('link', { name: 'Dashboard', exact: true }).click({ force: true });
+  await page.evaluate(() => window.history.back());
   await expectVisible(
     page.getByRole('heading', { name: 'Close News Intake?', exact: true }),
-    'switching Admin tabs during Step 2 did not ask for confirmation'
+    'leaving Step 2 through Admin navigation did not ask for confirmation'
   );
   if (!page.url().includes('/news-intake')) {
-    throw new Error('Admin tab navigation bypassed the active News Intake blocker');
+    throw new Error('Admin navigation bypassed the active News Intake blocker');
   }
   await page.getByRole('button', { name: 'Keep Working', exact: true }).click();
   await expectVisible(
     page.getByText('Category-matched reports', { exact: true }).first(),
-    'Step 2 did not remain open after cancelling Admin tab navigation'
+    'Step 2 did not remain open after cancelling Admin navigation'
   );
   if (!page.url().includes('/news-intake')) {
-    throw new Error('News Intake route changed after cancelling Admin tab navigation');
+    throw new Error('News Intake route changed after cancelling Admin navigation');
   }
 
   const matchedReviewCard = page.getByText('E2E source requiring review', { exact: true }).first();
