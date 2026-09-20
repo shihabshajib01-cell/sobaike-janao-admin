@@ -806,7 +806,7 @@ await check('News Intake automatic review selects only intended reports and keep
   await expectVisible(reviewFilter, 'automatic review filter missing');
   await reviewFilter.click();
   await expectVisible(
-    page.getByText('E2E source requiring review', { exact: true }),
+    page.getByText('E2E source requiring review', { exact: true }).first(),
     'needs-review filter did not retain the unmatched review item'
   );
   await expectVisible(
@@ -827,8 +827,14 @@ await check('News Intake automatic review selects only intended reports and keep
     page.getByText('Category-matched news', { exact: true }),
     'category-matched right panel heading missing'
   );
+  const reviewCopies = page.getByText('E2E source requiring review', { exact: true });
+  if ((await reviewCopies.count()) !== 2) {
+    throw new Error(
+      `category-matched review item should appear once in Raw News and once in Category-matched news; found ${await reviewCopies.count()}`
+    );
+  }
   await expectVisible(
-    page.getByText('E2E source requiring review', { exact: true }),
+    reviewCopies.last(),
     'category-matched review-only item was missing from the right panel'
   );
 
