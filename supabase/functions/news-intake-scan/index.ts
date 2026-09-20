@@ -854,7 +854,7 @@ const processNewsIntakeRun = async (
         }
 
         const ageDays=articleAgeDays(article.sourcePublishedDate);
-        if(ageDays>MAX_ARTICLE_AGE_DAYS){
+        if(ageDays !== null && ageDays>MAX_ARTICLE_AGE_DAYS){
           await record({
             itemKind:'article',
             sourceHostname:source.hostname,
@@ -938,6 +938,31 @@ const processNewsIntakeRun = async (
                 quality:'district_only',
               }
             : null;
+        }
+
+        const contextualDistrict=
+          findLocation(focusedLocationText)
+          || findLocation(article.title)
+          || findLocation(article.excerpt)
+          || findLocation(locationText);
+
+        if(location?.quality === 'multiple_locations' || location?.locationScope === 'multi_location'){
+          location=null;
+        }else if(
+          contextualDistrict?.district
+          && location?.district
+          && String(contextualDistrict.district) !== String(location.district)
+        ){
+          location={
+            ...contextualDistrict,
+            upazilaOrThana:'',
+            area:'',
+            road:'',
+            landmark:'',
+            formattedAddress:'',
+            locationScope:'district_only',
+            quality:'district_only',
+          };
         }
 
         const fallbackDistrict=
@@ -1034,20 +1059,17 @@ const processNewsIntakeRun = async (
         }
 
         const payload=buildReportPayload(article,classification,location,incidentDate,language);
-        const {data:preview,error:previewError}=await supabase.rpc(
-          'admin_preview_sourced_report_intake',
+        const {data:processed,error:processError}=await supabase.rpc(
+          'process_trusted_news_intake_candidate',
           {p_payload:payload}
         );
-        if(previewError) throw new Error(previewError.message);
+        if(processError) throw new Error(processError.message);
 
-        const duplicateStatus=String(preview?.duplicate?.status||'unavailable');
-        const exact=Array.isArray(preview?.duplicate?.exactSourceDuplicates)
-          ? preview.duplicate.exactSourceDuplicates
-          : [];
-        // In trusted-source automation, the approved article itself is the source
-        // of truth. Missing optional structured facts are retained as omissions
-        // instead of becoming a manual-review queue.
-        if(exact.length){
+        const resultAction=String(processed?.action||'');
+        const reportId=String(processed?.reportId||'');
+        if(!reportId) throw new Error('Trusted News Intake returned no report id.');
+
+        if(resultAction==='skip_duplicate'){
           await record({
             itemKind:'article',
             sourceHostname:source.hostname,
@@ -1061,62 +1083,34 @@ const processNewsIntakeRun = async (
             confidence:classification.confidence,
             action:'skip_duplicate',
             duplicateStatus:'exact',
-            reportId:exact[0]?.complaintId||'',
-            reason:'Exact source URL already exists in the report database.',
+            reportId,
+            reason:'Exact approved-source article already exists in the report database.',
           });
           return;
         }
 
-        if(duplicateStatus==='match'){
-          const matches=(Array.isArray(preview?.duplicate?.candidates)
-            ? preview.duplicate.candidates
-            : []).filter((item:any)=>item?.matchLevel==='match');
-          const strong=matches.length===1&&Number(matches[0]?.score||0)>=90
-            ? matches[0]
-            : null;
-          if(strong?.complaintId){
-            const {error:mergeError}=await supabase.rpc('admin_merge_intake_source',{
-              p_complaint_id:String(strong.complaintId),
-              p_source:payload.source,
-            });
-            if(mergeError)throw new Error(mergeError.message);
-            await record({
-              itemKind:'article',
-              sourceHostname:source.hostname,
-              publisherName:article.publisherName,
-              canonicalUrl:article.canonicalUrl,
-              sourceTitle:article.title,
-              sourcePublishedDate:article.sourcePublishedDate||'',
-              contentLanguage:language,
-              segmentId:classification.segmentId,
-              subcategoryId:classification.subcategoryId,
-              confidence:classification.confidence,
-              action:'merged_source',
-              duplicateStatus:'match',
-              reportId:String(strong.complaintId),
-              reason:'Strong same-incident match; source merged into the existing sourced report.',
-            });
-            return;
-          }
+        if(resultAction==='merged_source'){
+          await record({
+            itemKind:'article',
+            sourceHostname:source.hostname,
+            publisherName:article.publisherName,
+            canonicalUrl:article.canonicalUrl,
+            sourceTitle:article.title,
+            sourcePublishedDate:article.sourcePublishedDate||'',
+            contentLanguage:language,
+            segmentId:classification.segmentId,
+            subcategoryId:classification.subcategoryId,
+            confidence:classification.confidence,
+            action:'merged_source',
+            duplicateStatus:'match',
+            reportId,
+            reason:'Strong same-incident match; approved source merged into the existing published report.',
+          });
+          return;
         }
 
-        const {data:created,error:createError}=await supabase.rpc(
-          'admin_create_sourced_report_from_intake',
-          {p_payload:payload}
-        );
-        if(createError)throw new Error(createError.message);
-
-        const createdDuplicateStatus=String(created?.duplicate?.status||'clear');
-        const reportId=String(created?.reportId||'');
-        if(!reportId) throw new Error('Trusted News Intake created a report without an id.');
-
-        const {data:published,error:publishError}=await supabase.rpc(
-          'publish_trusted_news_intake_report',
-          {p_report_id:reportId}
-        );
-        if(publishError) throw new Error(publishError.message);
-        if(published?.published!==true){
-          throw new Error(String(published?.reason||'Trusted report could not be auto-published.'));
+        if(resultAction!=='published' || processed?.published!==true){
+          throw new Error('Trusted News Intake did not complete publication.');
         }
 
         await record({
@@ -1131,9 +1125,9 @@ const processNewsIntakeRun = async (
           subcategoryId:classification.subcategoryId,
           confidence:classification.confidence,
           action:'created_draft',
-          duplicateStatus:createdDuplicateStatus,
+          duplicateStatus:'clear',
           reportId,
-          reason:'Approved-source report created and automatically published to the public feed.',
+          reason:'Approved-source report automatically created and published to the public feed.',
           reviewPayload:null,
         });
       } catch(error) {
