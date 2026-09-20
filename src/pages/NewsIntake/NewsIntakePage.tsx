@@ -760,6 +760,7 @@ export const NewsIntakePage: React.FC = () => {
       'Exact source URL already exists in the report database.': 'এই একই উৎস URL ইতিমধ্যে রিপোর্ট ডাটাবেসে আছে।',
       'Possible same incident detected. No new report was created automatically.': 'সম্ভবত একই ঘটনা আগে থেকেই আছে। নতুন রিপোর্ট স্বয়ংক্রিয়ভাবে তৈরি করা হয়নি।',
       'Source-grounded draft created; publication remains a separate admin action.': 'উৎসভিত্তিক ড্রাফট তৈরি হয়েছে; প্রকাশ করা এখনও আলাদা অ্যাডমিন অ্যাকশন।',
+      'Approved-source report is ready for one-click publication.': 'অনুমোদিত সোর্সের রিপোর্ট এক ক্লিকে প্রকাশের জন্য প্রস্তুত।',
       'Draft created, but the final server duplicate evaluation requires review before publication.': 'ড্রাফট তৈরি হয়েছে, তবে প্রকাশের আগে সার্ভারের চূড়ান্ত ডুপ্লিকেট যাচাই রিভিউ করতে হবে।',
       'Privacy-sensitive category detected. Review the public title, summary, location, and identifying details before creating or publishing a report.': 'গোপনীয়তা-সংবেদনশীল ক্যাটাগরি পাওয়া গেছে। রিপোর্ট তৈরি বা প্রকাশের আগে পাবলিক শিরোনাম, সারাংশ, অবস্থান ও পরিচয়সংক্রান্ত তথ্য রিভিউ করুন।',
       'Potential retaliatory or mob violence following a theft allegation; confirm the incident category manually.': 'চুরির অভিযোগকে ঘিরে প্রতিশোধমূলক বা মব সহিংসতা হতে পারে; ক্যাটাগরি ম্যানুয়ালি নিশ্চিত করুন।',
@@ -853,16 +854,16 @@ export const NewsIntakePage: React.FC = () => {
       helper: latestRun ? formatDateTime(latestRun.startedAt) : isBn ? 'এখনও স্ক্যান হয়নি' : 'No scan yet',
     },
     {
-      label: isBn ? 'তৈরি হওয়া ড্রাফট' : 'Drafts created',
-      value: latestRun?.createdCount || 0,
-      helper: isBn
-        ? 'সর্বশেষ রানে তৈরি; বর্তমান প্রকাশযোগ্যতা রিভিউতে যাচাই হয়'
-        : 'Created in the latest run; current eligibility is checked in Review',
+      label: isBn ? 'ক্যাটাগরি ম্যাচ' : 'Category matches',
+      value: latestRun?.classifiedCount || 0,
+      helper: isBn ? 'সর্বশেষ রানে শনাক্ত' : 'Detected in the latest run',
     },
     {
-      label: isBn ? 'রিভিউ প্রয়োজন' : 'Needs review',
-      value: latestRun?.reviewCount || 0,
-      helper: isBn ? 'অনিশ্চিত তথ্য স্বয়ংক্রিয়ভাবে প্রকাশ হয় না' : 'Uncertain items never auto-publish',
+      label: isBn ? 'প্রস্তুত / প্রকাশিত' : 'Ready / published',
+      value: latestRun?.createdCount || 0,
+      helper: isBn
+        ? 'ম্যানুয়াল রানে নির্বাচনযোগ্য; অটোমেটিক রানে সরাসরি প্রকাশিত'
+        : 'Selectable in manual runs; published directly in automatic runs',
     },
   ];
 
@@ -909,8 +910,8 @@ export const NewsIntakePage: React.FC = () => {
         title={isBn ? 'নিউজ ইনটেক' : 'News Intake'}
         description={
           isBn
-            ? 'বিশ্বস্ত সংবাদ সোর্স স্ক্যান করুন, ক্যাটাগরি-ম্যাচড সংবাদ রিভিউ করুন এবং শুধু প্রস্তুত রিপোর্ট প্রকাশ করুন।'
-            : 'Scan trusted news sources, review category-matched stories, and publish only reports that are ready.'
+            ? 'বিশ্বস্ত সংবাদ সোর্স স্ক্যান করুন, ক্যাটাগরি-ম্যাচড রিপোর্ট নির্বাচন করুন এবং এক ক্লিকে ফিডে প্রকাশ করুন।'
+            : 'Scan trusted news sources, select category-matched reports, and publish them to the feed in one click.'
         }
         actions={
           <Button
@@ -953,8 +954,8 @@ export const NewsIntakePage: React.FC = () => {
                 <CardTitle>{isBn ? 'ইনটেক অটোমেশন' : 'Intake automation'}</CardTitle>
                 <CardDescription>
                   {isBn
-                    ? 'ব্যাকগ্রাউন্ড স্ক্যান চলবে, কিন্তু কোনো রিপোর্ট অ্যাডমিন নির্বাচন ছাড়া প্রকাশ হবে না।'
-                    : 'Background scanning continues, but no report is published without an admin selection.'}
+                    ? 'ম্যানুয়াল স্ক্যানে আপনি রিপোর্ট নির্বাচন করে প্রকাশ করবেন; ৩৬ ঘণ্টার অটোমেশন অনুমোদিত সোর্সের নতুন ম্যাচ স্বয়ংক্রিয়ভাবে প্রকাশ করবে।'
+                    : 'Manual scans wait for your selection; the 36-hour automation publishes new approved-source matches automatically.'}
                 </CardDescription>
               </div>
               <Tag tone={dashboard.automation.enabled ? 'success' : 'neutral'}>
@@ -1095,8 +1096,8 @@ export const NewsIntakePage: React.FC = () => {
               {[
                 [isBn ? 'সংবাদ' : 'News', run.discoveredCount],
                 [isBn ? 'শ্রেণিবদ্ধ' : 'Classified', run.classifiedCount],
-                [isBn ? 'ড্রাফট' : 'Drafts', run.createdCount],
-                [isBn ? 'রিভিউ' : 'Review', run.reviewCount],
+                [isBn ? 'প্রস্তুত / প্রকাশিত' : 'Ready / Published', run.createdCount],
+                [isBn ? 'ডুপ্লিকেট' : 'Duplicates', run.duplicateCount],
                 [isBn ? 'ত্রুটি' : 'Errors', run.errorCount],
               ].map(([label, value]) => (
                 <div key={String(label)}>
@@ -1111,7 +1112,7 @@ export const NewsIntakePage: React.FC = () => {
                 size="sm"
                 onClick={() => void openRunForReview(run)}
               >
-                {isBn ? 'রিভিউ করুন' : 'Review'}
+                {isBn ? 'খুলুন' : 'Open'}
               </Button>
             </div>
           ))}
@@ -1134,8 +1135,8 @@ export const NewsIntakePage: React.FC = () => {
         title={isBn ? 'নিউজ ইনটেক ওয়ার্কস্পেস' : 'News Intake Workspace'}
         description={
           isBn
-            ? 'সংবাদ খুঁজুন → সব ক্যাটাগরি-ম্যাচড রিপোর্ট ডান পাশে দেখুন → প্রয়োজন হলে ফর্মে রিভিউ করুন → প্রস্তুত রিপোর্ট নির্বাচন করে প্রকাশ করুন।'
-            : 'Find news → see every category-matched report on the right → review flagged fields when needed → select and publish ready reports.'
+            ? 'সংবাদ খুঁজুন → অনুমোদিত সব ক্যাটাগরি-ম্যাচড রিপোর্ট ডান পাশে দেখুন → প্রয়োজনীয় রিপোর্ট নির্বাচন করুন → ফিডে প্রকাশ করুন।'
+            : 'Find news → see every approved category match on the right → select the reports you want → publish them to the feed.'
         }
         footer={modalFooter}
       >
@@ -1144,7 +1145,7 @@ export const NewsIntakePage: React.FC = () => {
             <div className="flex min-w-max items-center gap-2">
             {[
               [1, isBn ? '১. সংবাদ খুঁজুন' : '1. Find news'],
-              [2, isBn ? '২. রিভিউ ও নির্বাচন' : '2. Review & select'],
+              [2, isBn ? '২. রিপোর্ট নির্বাচন' : '2. Select reports'],
               [3, isBn ? '৩. প্রকাশের ফলাফল' : '3. Publish results'],
             ].map(([number, label]) => (
               <div
@@ -1334,7 +1335,6 @@ export const NewsIntakePage: React.FC = () => {
                   {isBn ? 'ফলাফল:' : 'Outcome:'}
                 </p>
                 <Tag tone="success">{workspaceCounts.ready} {isBn ? 'প্রস্তুত' : 'ready'}</Tag>
-                <Tag tone="warning">{workspaceCounts.review} {isBn ? 'রিভিউ' : 'review'}</Tag>
                 {workspaceCounts.published > 0 && (
                   <Tag tone="success">{workspaceCounts.published} {isBn ? 'প্রকাশিত' : 'published'}</Tag>
                 )}
@@ -1843,8 +1843,8 @@ export const NewsIntakePage: React.FC = () => {
         title={isBn ? 'নিউজ ইনটেক বন্ধ করবেন?' : 'Close News Intake?'}
         description={
           isBn
-            ? 'আপনি ইনটেক শুরু করেছেন। মডাল বন্ধ করা বা অন্য অ্যাডমিন ট্যাবে গেলে বর্তমান নির্বাচন বা অসম্পূর্ণ রিভিউ হারাতে পারেন।'
-            : 'You started News Intake. Closing the workspace or switching to another Admin tab can discard the current selection or an unfinished review.'
+            ? 'আপনি ইনটেক শুরু করেছেন। মডাল বন্ধ করা বা অন্য অ্যাডমিন ট্যাবে গেলে বর্তমান নির্বাচন ও রান স্টেট হারাতে পারেন।'
+            : 'You started News Intake. Closing the workspace or switching to another Admin tab can discard the current selection and run state.'
         }
         footer={
           <>
