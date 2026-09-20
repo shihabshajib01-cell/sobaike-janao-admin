@@ -260,21 +260,44 @@ export const findLocation = (value: unknown) => {
   return best ? {division:best.division,district:best.district} : null;
 };
 
-const compactLocationPhrase = (value: string) =>
-  value
+const compactLocationPhrase = (value: string) => {
+  let candidate=value
     .replace(/[“”"'‘’()[\]{}]/g,' ')
     .replace(/\s+/g,' ')
     .trim()
     .replace(/^(?:ঘটনাটি|ঘটনা|এ ঘটনা|এ ঘটনাটি|এই ঘটনা|এই ঘটনাটি|দুর্ঘটনাটি|হামলাটি)\s*(?:ঘটেছে|ঘটে|ঘটেছিল|সংঘটিত হয়েছে|সংঘটিত হয়েছিল)?\s*/u,'')
     .replace(/^(?:the\s+)?(?:incident|accident|attack)\s+(?:happened|occurred|took\s+place)(?:\s+(?:near|at|in|on))?\s+/i,'')
-    .replace(/\b(?:happened|occurred|took\s+place)(?:\s+(?:near|at|in|on))?\s+/i,'')
+    .replace(/\b(?:happened|occurred|took\s+place)(?:\s+(?:near|at|in|on))?\s+/i,'');
+
+  // Source sentences often carry an outcome or search narrative immediately
+  // before the real place phrase. Keep what follows the last such cue.
+  const narrativeCues=[
+    /(?:সন্ধান\s+না\s+পেয়ে|সন্ধান\s+না\s+পেয়ে|খোঁজ\s+করেও)/gu,
+    /(?:নিহত|আহত|উদ্ধার|গ্রেপ্তার|আটক|জানান|বলেন)/gu,
+    /(?:was\s+killed|were\s+killed|was\s+injured|were\s+injured|was\s+rescued|were\s+rescued|arrested|detained)/giu,
+  ];
+  let cut=0;
+  for(const pattern of narrativeCues){
+    for(const match of candidate.matchAll(pattern)){
+      cut=Math.max(cut,(match.index||0)+match[0].length);
+    }
+  }
+  if(cut>0 && cut<candidate.length){
+    candidate=candidate.slice(cut).trim();
+  }
+
+  candidate=candidate
+    .replace(/^\d+\s+/u,'')
+    .replace(/^(?:আজ|গতকাল|ওইদিন|সেদিন|শনিবার|রবিবার|রোববার|সোমবার|মঙ্গলবার|বুধবার|বৃহস্পতিবার|শুক্রবার|today|yesterday|saturday|sunday|monday|tuesday|wednesday|thursday|friday)\s*/iu,'')
+    .replace(/^(?:সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|সন্ধ্যায়|সন্ধ্যায়|রাতে|morning|afternoon|evening|night)\s*/iu,'')
     .split(/\s+/)
-    // Keep the place phrase itself, not earlier narrative words from the
-    // incident sentence (e.g. "লাশ উদ্ধার ... গড়িয়ারপাড় এলাকায়").
     .slice(-7)
     .join(' ')
     .replace(/(এলাকা|মহল্লা|গ্রাম|বাজার|মার্কেট|থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|সড়ক|সড়ক|রোড|লেন|গলি|মোড়|মোড়|স্টেশন)(?:য়|য়|তে|ে)$/u,'$1')
     .trim();
+
+  return candidate;
+};
 
 const locationCandidateIsUsable = (candidate: string, district?: string | null) => {
   const normalized=normalizeText(candidate);
