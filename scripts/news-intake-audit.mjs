@@ -45,8 +45,11 @@ const subcategoryBuilders = read('supabase/functions/_shared/newsIntakeSubcatego
 const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
 const edge = read('supabase/functions/news-intake-fetch/index.ts');
 const scanner = read('supabase/functions/news-intake-scan/index.ts');
-const automationPanel = read('src/pages/NewsIntake/NewsAutomationPanel.tsx');
 const page = read('src/pages/NewsIntake/NewsIntakePage.tsx');
+// Automation controls were consolidated into NewsIntakePage. Keep the
+// regression assertions pointed at the current implementation instead of the
+// removed legacy panel file.
+const automationPanel = page;
 const manualForm = read('src/pages/NewsIntake/ManualNewsIntakeForm.tsx');
 const feedReadyPreview = read('src/pages/NewsIntake/FeedReadyReportPreview.tsx');
 const api = read('src/services/api/newsIntakeApi.ts');
@@ -537,12 +540,11 @@ for (const needle of [
   'merged_source',
   'needs_review',
   'manualSources',
-  'showAllResults',
   'selectedRunId',
   'newsIntakeApi.setAutoUpdate',
   'dashboard.automation.enabled',
   'dashboard.automation.nextAutoDueAt',
-  'selectedRun.triggerType',
+  'run.triggerType',
 ]) {
   requireText(automationPanel, needle, 'News Automation panel');
 }
