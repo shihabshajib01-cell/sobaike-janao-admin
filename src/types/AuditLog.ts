@@ -48,6 +48,11 @@ export interface AuditLogListResponse {
   has_more: boolean;
 }
 
+export interface AuditLogFilterOptions {
+  actions: string[];
+  target_types: string[];
+}
+
 export class AuditApiError extends Error {
   code?: string;
   details?: string;
