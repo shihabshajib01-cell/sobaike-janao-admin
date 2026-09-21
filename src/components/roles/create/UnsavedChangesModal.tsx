@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, X, ArrowLeft } from 'lucide-react';
+import { AlertTriangle, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { useLanguage } from '@/context/LanguageContext';
