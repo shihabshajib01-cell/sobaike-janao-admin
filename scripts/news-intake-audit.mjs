@@ -38,6 +38,7 @@ const oneClickContract = read('supabase/migrations/20260920175318_news_intake_on
 const subcategoryBuilderContract = read('supabase/migrations/20260920183600_news_intake_subcategory_builder_contract.sql');
 const locationSemanticGuard = read('supabase/migrations/20260920193000_news_intake_location_semantic_guard.sql');
 const followupHistoricalGuard = read('supabase/migrations/20260921032000_news_intake_followup_historical_location_guard.sql');
+const relativeDateNarrativeLocationGuard = read('supabase/migrations/20260921033500_news_intake_relative_date_narrative_location_guard.sql');
 const automationCore = read('supabase/functions/_shared/newsIntakeAutomationCore.ts');
 const subcategoryBuilders = read('supabase/functions/_shared/newsIntakeSubcategoryBuilders.ts');
 const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
@@ -184,6 +185,9 @@ requireText(behaviorAudit, 'Title-only extraction must never become Feed Ready',
 requireText(behaviorAudit, 'Court/bail follow-up headlines about older incidents must not create a fresh incident report', 'News Intake legal follow-up regression');
 requireText(behaviorAudit, 'Arrest/enforcement follow-ups about an already reported incident must not create a fresh report', 'News Intake enforcement follow-up regression');
 requireText(behaviorAudit, 'Historical background locations must never become the current incident location', 'News Intake historical location regression');
+requireText(behaviorAudit, 'Explicit past weekday incident date must beat earlier today/publication-day narrative wording', 'News Intake relative-date precedence regression');
+requireText(behaviorAudit, 'Narrative incident/police-jurisdiction phrases must never become a specific location', 'News Intake narrative thana semantic regression');
+requireText(behaviorAudit, 'Exact Mob Justice narrative thana phrase must not become the incident location', 'News Intake exact Mob Justice location regression');
 requireText(behaviorAudit, 'Fact-check/debunk stories must not be converted into fresh incident reports', 'News Intake fact-check regression');
 requireText(behaviorAudit, 'Narrative police-jurisdiction fragments must never become the public incident location', 'News Intake noisy-location regression');
 requireText(behaviorAudit, 'Generic English road fragments must never become a specific location', 'News Intake semantic location regression');
@@ -368,6 +372,18 @@ for (const needle of [
   'process_trusted_news_intake_candidate',
 ]) {
   requireText(followupHistoricalGuard, needle, 'News Intake final follow-up/historical-location guard');
+}
+
+for (const needle of [
+  'news_intake_has_explicit_past_relative_date',
+  'SOURCE_INCIDENT_DATE_GROUNDING_FAILED',
+  'news_intake_specific_location_text_is_safe',
+  'ঘটনায়',
+  'police[[:space:]]+station',
+  'guard_trusted_news_intake_one_click_contract',
+  'process_trusted_news_intake_candidate',
+]) {
+  requireText(relativeDateNarrativeLocationGuard, needle, 'News Intake final relative-date/narrative-location guard');
 }
 
 for (const needle of [
