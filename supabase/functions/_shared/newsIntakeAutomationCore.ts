@@ -431,6 +431,7 @@ export const isSafeSpecificLocationText = (
   // Narrative/action fragments must never be promoted to an incident place.
   if (/(?:collected\s+evidence|cordoned\s+off|investigat(?:e|ed|ing|ion)|police\s+said|officials?\s+said|victim(?:s)?|the\s+victim|was\s+arrested|were\s+arrested|detained|reported\s+the\s+incident|went\s+to\s+the\s+area|visited\s+the\s+area)/iu.test(normalized)) return false;
   if (/(?:ভুক্তভোগী|পুলিশ\s+জানায়|পুলিশ\s+জানায়|কর্তৃপক্ষ|তদন্ত|গ্রেপ্তার|আটক|নিহত|আহত|উদ্ধার|জানান|বলেন|সন্ধান\s+না\s+পেয়ে|সন্ধান\s+না\s+পেয়ে|খোঁজ\s+করেও)/iu.test(normalized)) return false;
+  if (/(?:ঘটনার|ঘটনায়|ঘটনায়|হত্যার\s+ঘটনায়|হত্যার\s+ঘটনায়|মামলার|মামলায়|মামলায়).{0,90}(?:থানা|পুলিশ\s+স্টেশন|police\s+station|thana)/iu.test(normalized)) return false;
   if (/(?:^|\s)(?:এদিকে|অন্যদিকে|এ\s+ঘটনায়|এ\s+ঘটনায়|এই\s+ঘটনায়|এই\s+ঘটনায়|এ\s+বিষয়ে|এ\s+বিষয়ে)(?=\s|$)/iu.test(normalized)) return false;
 
   // A road/street/lane phrase must carry an actual identifier or named place.
@@ -580,9 +581,12 @@ const numericDateFromText = (text: string) => {
   return null;
 };
 
-const relativeIncidentDateFromText = (text: string, publishedDate?: string | null) => {
+const relativeIncidentDateFromText = (
+  text: string,
+  publishedDate?: string | null,
+  allowToday=true
+) => {
   if (!publishedDate) return null;
-  if (/(আজ|today)/iu.test(text)) return publishedDate;
   if (/(গতকাল|yesterday)/iu.test(text)) {
     const d = new Date(publishedDate + 'T00:00:00Z');
     d.setUTCDate(d.getUTCDate()-1);
@@ -638,6 +642,9 @@ const relativeIncidentDateFromText = (text: string, publishedDate?: string | nul
   return d.toISOString().slice(0,10);
 };
 
+const todayIncidentDateFromText = (text: string, publishedDate?: string | null) =>
+  publishedDate && /(আজ|today)/iu.test(text) ? publishedDate : null;
+
 const INCIDENT_DATE_CUE_RE =
   /(ঘটনাটি|এ ঘটনা|এই ঘটনা|দুর্ঘটনা(?:টি|য়|য়)?|হামলাটি|ধর্ষণের ঘটনা|ছিনতাইয়ের ঘটনা|ছিনতাইয়ের ঘটনা|ডাকাতির ঘটনা|চুরির ঘটনা|ঘটেছে|ঘটে|ঘটেছিল|সংঘটিত|নিয়ন্ত্রণ হারিয়ে|নিয়ন্ত্রণ হারিয়ে|অবরোধ|অপহরণ|হত্যা|খুন|উদ্ধার|নিখোঁজ|নিহত|আহত|সংঘর্ষ|পিটিয়ে|পিটিয়ে|মারধর|incident|accident|attack|rape|robbery|snatching|theft|lost control|blockade|abduct|kidnap|murder|missing|disappeared|killed|injured|rescued|collision|crash|assault)/iu;
 
@@ -657,20 +664,18 @@ export const inferIncidentDate = (value: unknown, publishedDate?: string | null)
     .map((item,index)=>INCIDENT_DATE_CUE_RE.test(item)?index:-1)
     .filter((index)=>index>=0);
 
+  // First pass: prefer source-grounded explicit dates, yesterday, and named
+  // weekdays across ALL incident sentences. Generic "today" wording must not
+  // win merely because it appears in an earlier narrative sentence.
   for (const index of incidentIndexes) {
     const scope=sentences[index];
     const named=namedDateFromText(scope,publishedDate);
     if (named) return named;
     const numeric=numericDateFromText(scope);
     if (numeric) return numeric;
-    const relative=relativeIncidentDateFromText(scope,publishedDate);
-    if (relative) return relative;
+    const strongRelative=relativeIncidentDateFromText(scope,publishedDate,false);
+    if (strongRelative) return strongRelative;
 
-    // News reports commonly state a dated update first, then describe the
-    // incident in the next sentence with "এর আগে / earlier". In that narrow
-    // structure, carry the immediately preceding absolute date into the
-    // incident sentence. Never do this for publication/update metadata or for
-    // unrelated "today" wording.
     const backReferencesPriorSentence=
       /^(?:এর\s*আগে|এরআগে|এর\s*পূর্বে|এরপূর্বে|earlier|previously|before\s+that)(?:\s|,|:|।|$)/iu.test(scope);
     const previous=index>0?sentences[index-1]:'';
@@ -682,20 +687,33 @@ export const inferIncidentDate = (value: unknown, publishedDate?: string | null)
       if(previousNamed) return previousNamed;
       const previousNumeric=numericDateFromText(previous);
       if(previousNumeric) return previousNumeric;
+      const previousRelative=relativeIncidentDateFromText(previous,publishedDate,false);
+      if(previousRelative) return previousRelative;
     }
   }
 
-  // Accept an explicit date from a sentence that describes the reported event,
-  // even when it is the same day as publication. This is distinct from page
-  // metadata because the sentence must carry an incident/action cue.
+  // Second pass: an explicit "today" attached to an incident sentence is valid
+  // only when no stronger source date/weekday exists anywhere in the incident.
+  for (const index of incidentIndexes) {
+    const today=todayIncidentDateFromText(sentences[index],publishedDate);
+    if(today) return today;
+  }
+
+  // Accept explicit event dates from other non-metadata incident sentences.
   for(const sentence of sentences){
     if(PUBLICATION_METADATA_RE.test(sentence) || !INCIDENT_DATE_CUE_RE.test(sentence)) continue;
     const named=namedDateFromText(sentence,publishedDate);
     if(named) return named;
     const numeric=numericDateFromText(sentence);
     if(numeric) return numeric;
-    const relative=relativeIncidentDateFromText(sentence,publishedDate);
-    if(relative) return relative;
+    const strongRelative=relativeIncidentDateFromText(sentence,publishedDate,false);
+    if(strongRelative) return strongRelative;
+  }
+
+  for(const sentence of sentences){
+    if(PUBLICATION_METADATA_RE.test(sentence) || !INCIDENT_DATE_CUE_RE.test(sentence)) continue;
+    const today=todayIncidentDateFromText(sentence,publishedDate);
+    if(today) return today;
   }
 
   const nonMetadataText=sentences.filter((sentence)=>!PUBLICATION_METADATA_RE.test(sentence)).join(' ');
@@ -705,7 +723,10 @@ export const inferIncidentDate = (value: unknown, publishedDate?: string | null)
   const numericFallback=numericDateFromText(nonMetadataText);
   if (numericFallback) return numericFallback;
 
-  return null;
+  const relativeFallback=relativeIncidentDateFromText(nonMetadataText,publishedDate,false);
+  if(relativeFallback) return relativeFallback;
+
+  return todayIncidentDateFromText(nonMetadataText,publishedDate);
 };
 
 const incidentContextTokens = (value: string) =>
