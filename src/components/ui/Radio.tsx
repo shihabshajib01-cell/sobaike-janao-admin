@@ -5,6 +5,7 @@ interface RadioGroupContextType {
   name?: string;
   value?: string | number;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onSelect?: (value: string | number, e: React.ChangeEvent<HTMLInputElement>) => void;
   disabled?: boolean;
 }
 
@@ -37,15 +38,18 @@ export const RadioGroup: React.FC<RadioGroupProps> = ({
   const isControlled = value !== undefined;
   const resolvedValue = isControlled ? value : internalValue;
 
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSelect = (
+    nextValue: string | number,
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     if (!isControlled) {
-      setInternalValue(event.target.value);
+      setInternalValue(nextValue);
     }
     onChange?.(event);
   };
 
   return (
-    <RadioGroupContext.Provider value={{ name, value: resolvedValue, onChange: handleChange, disabled }}>
+    <RadioGroupContext.Provider value={{ name, value: resolvedValue, onSelect: handleSelect, disabled }}>
       <div
         role="radiogroup"
         aria-label={ariaLabel}
@@ -92,8 +96,11 @@ export const Radio = forwardRef<HTMLInputElement, RadioProps>(
     const radioId = id || `radio-${generatedId.replace(/:/g, '')}`;
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (onChange) onChange(e);
-      if (groupContext?.onChange) groupContext.onChange(e);
+      onChange?.(e);
+      groupContext?.onSelect?.(
+        value !== undefined ? value : e.target.value,
+        e
+      );
     };
 
     return (
