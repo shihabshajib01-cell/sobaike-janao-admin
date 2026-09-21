@@ -1,5 +1,5 @@
 import { ButtonBase } from '@/components/ui/Button';
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useId, useState } from 'react';
 import { cn } from '@/utils';
 
 export interface SwitchProps {
@@ -18,7 +18,8 @@ export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(
   (
     {
       id,
-      checked = false,
+      checked,
+      defaultChecked = false,
       onChange,
       disabled = false,
       label,
@@ -28,28 +29,41 @@ export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(
     },
     ref
   ) => {
+    const generatedId = useId();
+    const switchId = id || `switch-${generatedId.replace(/:/g, '')}`;
+    const labelId = label ? `${switchId}-label` : undefined;
+    const descriptionId = description ? `${switchId}-description` : undefined;
+    const [internalChecked, setInternalChecked] = useState(Boolean(defaultChecked));
+    const isControlled = checked !== undefined;
+    const isChecked = isControlled ? Boolean(checked) : internalChecked;
     const isSmall = size === 'sm';
 
     const handleClick = () => {
-      if (!disabled && onChange) {
-        onChange(!checked);
+      if (disabled) return;
+      const next = !isChecked;
+      if (!isControlled) {
+        setInternalChecked(next);
       }
+      onChange?.(next);
     };
 
     return (
       <div className={cn('inline-flex items-start gap-2.5 select-none', disabled && 'opacity-60 cursor-not-allowed')}>
         <ButtonBase
-          id={id}
+          id={switchId}
           ref={ref}
           type="button"
           role="switch"
-          aria-checked={checked}
+          aria-checked={isChecked}
+          aria-labelledby={labelId}
+          aria-describedby={descriptionId}
+          aria-label={!label ? 'Toggle setting' : undefined}
           disabled={disabled}
           onClick={handleClick}
           className={cn(
             'relative inline-flex shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950 disabled:cursor-not-allowed',
             isSmall ? 'h-4 w-7' : 'h-5 w-9',
-            checked ? 'bg-sky-600 dark:bg-sky-500' : 'bg-slate-300 dark:bg-slate-700',
+            isChecked ? 'bg-sky-600 dark:bg-sky-500' : 'bg-slate-300 dark:bg-slate-700',
             className
           )}
         >
@@ -58,7 +72,7 @@ export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(
             className={cn(
               'pointer-events-none inline-block rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out',
               isSmall ? 'h-3 w-3 mt-0.5 ml-0.5' : 'h-4 w-4 mt-0.5 ml-0.5',
-              checked ? (isSmall ? 'translate-x-3' : 'translate-x-4') : 'translate-x-0'
+              isChecked ? (isSmall ? 'translate-x-3' : 'translate-x-4') : 'translate-x-0'
             )}
           />
         </ButtonBase>
@@ -66,12 +80,12 @@ export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(
         {(label || description) && (
           <div className="flex flex-col text-left cursor-pointer" onClick={handleClick}>
             {label && (
-              <span className="type-label font-medium text-slate-800 dark:text-slate-200">
+              <span id={labelId} className="type-label font-medium text-slate-800 dark:text-slate-200">
                 {label}
               </span>
             )}
             {description && (
-              <span className="type-helper text-slate-500 dark:text-slate-400">
+              <span id={descriptionId} className="type-helper text-slate-500 dark:text-slate-400">
                 {description}
               </span>
             )}
