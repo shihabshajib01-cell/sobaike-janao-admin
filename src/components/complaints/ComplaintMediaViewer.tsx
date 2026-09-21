@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
+
 import { Tag } from '@/components/ui/Tag';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
@@ -19,7 +19,6 @@ import {
   ChevronLeft,
   ChevronRight,
   RotateCcw,
-  ZoomIn,
   Lock,
 } from 'lucide-react';
 import { cn } from '@/utils';
