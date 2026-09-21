@@ -699,7 +699,18 @@ export const supabaseComplaintService = {
             .eq('status', 'edited'),
         ]);
 
-      if (allRes.error) throw allRes.error;
+      const countErrors = [
+        allRes.error,
+        submittedRes.error,
+        publishedRes.error,
+        unpublishedRes.error,
+        rejectedRes.error,
+        editedRes.error,
+      ].filter(Boolean);
+
+      if (countErrors.length > 0) {
+        throw countErrors[0];
+      }
 
       return [
         {
