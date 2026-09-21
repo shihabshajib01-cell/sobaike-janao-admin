@@ -1,6 +1,3 @@
-export * from './apiClient';
-export { default as apiClient } from './apiClient';
-
 export * from './complaintApi';
 export { default as complaintApi } from './complaintApi';
 
