@@ -31,6 +31,10 @@ export const AdminMfaGate: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     setError('');
+    setFactorId('');
+    setQrCode('');
+    setSecret('');
+    setCode('');
     setMode('loading');
 
     const aal = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
@@ -176,28 +180,47 @@ export const AdminMfaGate: React.FC<{ children: React.ReactNode }> = ({ children
               </>
             )}
 
-            {mode === 'challenge' && (
+            {mode === 'challenge' && factorId && (
               <p className="text-sm text-foreground">
                 {bn ? 'আপনার অথেন্টিকেটর অ্যাপে দেখানো কোডটি দিন।' : 'Enter the current code shown in your authenticator app.'}
               </p>
             )}
 
-            <Input
-              id="admin-mfa-code"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              label={bn ? 'ভেরিফিকেশন কোড' : 'Verification code'}
-              value={code}
-              onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 10))}
-              error={error || undefined}
-              disabled={busy}
-            />
+            {mode === 'challenge' && !factorId && (
+              <div className="rounded-xl border border-border bg-muted/30 p-4" role="alert">
+                <p className="text-sm text-foreground">
+                  {bn
+                    ? 'নিরাপত্তা যাচাই সম্পন্ন করা যায়নি। আবার চেষ্টা করুন।'
+                    : 'Security verification could not be prepared. Try the security check again.'}
+                </p>
+                {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+              </div>
+            )}
+
+            {factorId && (
+              <Input
+                id="admin-mfa-code"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                label={bn ? 'ভেরিফিকেশন কোড' : 'Verification code'}
+                value={code}
+                onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 10))}
+                error={error || undefined}
+                disabled={busy}
+              />
+            )}
 
             <div className="flex flex-col sm:flex-row gap-3">
-              <Button onClick={verify} disabled={busy} className="flex-1">
-                {busy ? (bn ? 'যাচাই হচ্ছে…' : 'Verifying…') : (bn ? 'যাচাই করুন' : 'Verify')}
-              </Button>
+              {factorId ? (
+                <Button onClick={verify} disabled={busy} className="flex-1">
+                  {busy ? (bn ? 'যাচাই হচ্ছে…' : 'Verifying…') : (bn ? 'যাচাই করুন' : 'Verify')}
+                </Button>
+              ) : (
+                <Button onClick={() => void prepareMfa()} disabled={busy} className="flex-1">
+                  {bn ? 'নিরাপত্তা যাচাই আবার করুন' : 'Retry security check'}
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 onClick={() => void logout()}
