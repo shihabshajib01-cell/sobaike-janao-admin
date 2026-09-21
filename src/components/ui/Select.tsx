@@ -1,4 +1,4 @@
-import React, { SelectHTMLAttributes, forwardRef, useId } from 'react';
+import { SelectHTMLAttributes, forwardRef, useId } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/utils';
 
