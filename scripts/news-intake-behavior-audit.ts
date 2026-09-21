@@ -526,6 +526,24 @@ assert.equal(
   'Same-day Bangla weekday plus বেলা must resolve to the publication day'
 );
 
+assert.equal(
+  inferIncidentDate(
+    'রোববার উপজেলার কালিয়াইশ ইউনিয়নের পূর্ব কাটগড় রেলগেট এলাকায় এ দুর্ঘটনা ঘটে।',
+    '2026-09-20'
+  ),
+  '2026-09-20',
+  'A bare source weekday in an incident sentence must resolve to the publication weekday'
+);
+
+assert.equal(
+  inferIncidentDate(
+    'রোববার নগর পুলিশের দেওয়া সংবাদ বিজ্ঞপ্তিতে বলা হয়, ছিনতাইয়ের ঘটনাটি শনিবার ভোর ৬টা ৪০ মিনিটের।',
+    '2026-09-20'
+  ),
+  '2026-09-19',
+  'When a sentence names both the reporting day and incident day, the weekday nearest the incident cue must win'
+);
+
 assert.deepEqual(
   findLocation("Two killed in bus crash in Cox's Bazar"),
   { division: 'Chattogram', district: 'Coxs Bazar' },
