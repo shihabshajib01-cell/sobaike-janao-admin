@@ -426,7 +426,6 @@ const compactLocationPhrase = (value: string) => {
 
   return cleanSpecificLocationText(candidate);
 };
-};
 
 export const isSafeSpecificLocationText = (
   value: unknown,
