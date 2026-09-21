@@ -138,11 +138,6 @@ export interface RoleDetail {
   updated_at: string | null;
 }
 
-export interface RolePermission {
-  role_id: string;
-  permission_id: string;
-  created_at?: string;
-}
 
 export interface RoleUpdateInput {
   id: string;
@@ -173,7 +168,6 @@ export interface ReplaceRolePermissionsResult {
   updated_at: string;
 }
 
-export type RoleMutationResult = RoleDetail;
 
 export interface UserAssignedRole {
   id: string;
@@ -184,10 +178,5 @@ export interface UserAssignedRole {
   is_system?: boolean;
 }
 
-export interface UserPermissionProfile {
-  role: UserAssignedRole | null;
-  permissions: string[];
-  isBootstrapMode: boolean;
-}
 
 
