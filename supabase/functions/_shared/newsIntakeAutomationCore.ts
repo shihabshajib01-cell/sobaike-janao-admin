@@ -444,8 +444,12 @@ export const isSafeSpecificLocationText = (
   // avoided the narrative blacklist. A fine-grained location must either
   // contain an explicit geographic designator or be a compact Latin proper
   // place name captured from an incident-bound "at/near" phrase.
+  const hasBanglaGeographicDesignator =
+    /(?:^|[\s,;:()\-–—/])(?:থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|বাজার|মার্কেট|এলাকা|মহল্লা|গ্রাম|সড়ক|সড়ক|মহাসড়ক|মহাসড়ক|রোড|লেন|গলি|মোড়|মোড়|রেলগেট|স্টেশন|শহর|নগরী|মহানগরী)(?:য়|য়|তে|ে|র|ের|এর)?(?=$|[\s,.;:।()\-–—/])/u.test(raw);
+  const hasEnglishGeographicDesignator =
+    /(?:^|[\s,;:()\-–—/])(?:police\s+station|thana|upazila|union|market|bazaar|area|neighbou?rhood|village|road|street|lane|avenue|highway|rail\s*gate|station|city|metropolitan\s+area)(?=$|[\s,.;:()\-–—/])/iu.test(raw);
   const hasGeographicDesignator =
-    /(?:থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|বাজার|মার্কেট|এলাকা|মহল্লা|গ্রাম|সড়ক|সড়ক|মহাসড়ক|মহাসড়ক|রোড|লেন|গলি|মোড়|মোড়|রেলগেট|স্টেশন|শহর|নগরী|মহানগরী|police\s+station|thana|upazila|union|market|bazaar|area|neighbou?rhood|village|road|street|lane|avenue|highway|rail\s*gate|station|city|metropolitan\s+area)/iu.test(raw);
+    hasBanglaGeographicDesignator || hasEnglishGeographicDesignator;
   const compactLatinProperPlace =
     /^(?:[A-Z][A-Za-z0-9.'’\-]*)(?:[\s,]+[A-Z0-9][A-Za-z0-9.'’\-]*){0,6}$/u.test(raw);
 
