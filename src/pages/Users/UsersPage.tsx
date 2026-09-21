@@ -18,8 +18,6 @@ import {
   RefreshCw,
   Search,
   AlertCircle,
-  CheckCircle2,
-  X,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
