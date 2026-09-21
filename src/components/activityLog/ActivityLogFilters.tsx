@@ -2,14 +2,17 @@ import { ButtonBase } from '@/components/ui/Button';
 import React from 'react';
 import { Search, Filter, X, Calendar } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
+import { formatTargetType, getAuditActionMeta } from '@/utils/auditLogUtils';
 
 export interface ActivityLogFiltersProps {
   search: string;
   onSearchChange: (value: string) => void;
   action: string;
   onActionChange: (value: string) => void;
+  actionOptions: string[];
   targetType: string;
   onTargetTypeChange: (value: string) => void;
+  targetTypeOptions: string[];
   dateFrom: string;
   onDateFromChange: (value: string) => void;
   dateTo: string;
@@ -23,8 +26,10 @@ export const ActivityLogFilters: React.FC<ActivityLogFiltersProps> = ({
   onSearchChange,
   action,
   onActionChange,
+  actionOptions,
   targetType,
   onTargetTypeChange,
+  targetTypeOptions,
   dateFrom,
   onDateFromChange,
   dateTo,
@@ -66,36 +71,14 @@ export const ActivityLogFilters: React.FC<ActivityLogFiltersProps> = ({
             className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors"
           >
             <option value="all">{language === 'bn' ? 'সকল কার্যক্রম' : 'All Actions'}</option>
-            <optgroup label={language === 'bn' ? 'অভিযোগ কার্যক্রম' : 'Complaint Actions'}>
-              <option value="complaint.publish">
-                {language === 'bn' ? 'অভিযোগ প্রকাশিত' : 'Complaint Published'}
-              </option>
-              <option value="complaint.unpublish">
-                {language === 'bn' ? 'অভিযোগ অপ্রকাশিত' : 'Complaint Unpublished'}
-              </option>
-              <option value="complaint.reject">
-                {language === 'bn' ? 'অভিযোগ বাতিল' : 'Complaint Rejected'}
-              </option>
-            </optgroup>
-            <optgroup label={language === 'bn' ? 'প্রশাসক কার্যক্রম' : 'Administrator Actions'}>
-              <option value="USER_MEMBERSHIP_FINALIZED">
-                {language === 'bn' ? 'সদস্যপদ চূড়ান্তকরণ' : 'User Membership Finalized'}
-              </option>
-              <option value="ADMIN_USER_UPDATED">
-                {language === 'bn' ? 'প্রশাসক তথ্য আপডেট' : 'Admin User Updated'}
-              </option>
-            </optgroup>
-            <optgroup label={language === 'bn' ? 'ভূমিকা (RBAC) কার্যক্রম' : 'Role Actions'}>
-              <option value="ROLE_CREATED">
-                {language === 'bn' ? 'ভূমিকা তৈরি' : 'Role Created'}
-              </option>
-              <option value="ROLE_UPDATED">
-                {language === 'bn' ? 'ভূমিকা আপডেট' : 'Role Updated'}
-              </option>
-              <option value="ROLE_PERMISSIONS_REPLACED">
-                {language === 'bn' ? 'অনুমতি প্রতিস্থাপন' : 'Role Permissions Replaced'}
-              </option>
-            </optgroup>
+            {actionOptions.map((value) => {
+              const meta = getAuditActionMeta(value);
+              return (
+                <option key={value} value={value}>
+                  {language === 'bn' ? meta.labelBn : meta.labelEn}
+                </option>
+              );
+            })}
           </select>
         </div>
 
@@ -108,9 +91,11 @@ export const ActivityLogFilters: React.FC<ActivityLogFiltersProps> = ({
             className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors"
           >
             <option value="all">{language === 'bn' ? 'সকল টার্গেট ধরন' : 'All Target Types'}</option>
-            <option value="complaint">{language === 'bn' ? 'অভিযোগ (Complaint)' : 'Complaint'}</option>
-            <option value="admin_user">{language === 'bn' ? 'প্রশাসক (Administrator)' : 'Administrator'}</option>
-            <option value="role">{language === 'bn' ? 'ভূমিকা (Role)' : 'Role'}</option>
+            {targetTypeOptions.map((value) => (
+              <option key={value} value={value}>
+                {formatTargetType(value, language)}
+              </option>
+            ))}
           </select>
         </div>
 
