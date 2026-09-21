@@ -23,7 +23,8 @@
     "audit:news-intake": "node scripts/news-intake-audit.mjs",
     "audit:news-intake-behavior": "tsx scripts/news-intake-behavior-audit.ts",
     "audit:news-intake-publisher-fixtures": "tsx scripts/news-intake-publisher-fixture-audit.ts",
-    "audit:news-intake-preview-parity": "node scripts/news-intake-preview-parity-audit.mjs"
+    "audit:news-intake-preview-parity": "node scripts/news-intake-preview-parity-audit.mjs",
+    "audit:dead-code": "node scripts/dead-code-audit.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
