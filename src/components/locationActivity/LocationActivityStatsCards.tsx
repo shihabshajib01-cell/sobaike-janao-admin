@@ -62,7 +62,7 @@ export const LocationActivityStatsCards: React.FC<LocationActivityStatsCardsProp
       <Card variant="default" className="p-3.5">
         <div className="flex items-center justify-between">
           <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 truncate">
-            {isBn ? 'অনুমোদিত লোকেশন' : 'Granted Location'}
+            {isBn ? 'লোকেশন অনুমতি দেওয়া' : 'Location Permission Granted'}
           </span>
           <div className="w-7 h-7 rounded-md bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0 border border-emerald-100 dark:border-emerald-900/40">
             <MapPin className="w-3.5 h-3.5" />
