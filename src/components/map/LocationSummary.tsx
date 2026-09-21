@@ -4,7 +4,6 @@ import { useLanguage } from '@/context/LanguageContext';
 import { Card } from '@/components/ui/Card';
 import {
   MapPin,
-  Layers,
   AlertCircle,
   CheckCircle2,
   Navigation,
