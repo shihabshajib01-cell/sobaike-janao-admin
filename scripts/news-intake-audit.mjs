@@ -475,6 +475,8 @@ for (const needle of [
   'Current report form requirements could not be fully grounded from the source',
   'Court, bail, remand, confession, hearing, verdict, appeal, or trial follow-up was excluded',
   'Fact-check, misinformation, or debunking article was excluded',
+  "errorMessage.startsWith('SOURCE_DOMAIN_NOT_APPROVED:')",
+  'Approved-source link redirected to an unapproved domain and was excluded from News Intake.',
 ]) {
   requireText(scanner, needle, 'automated News Intake scanner');
 }
@@ -742,6 +744,7 @@ for (const needle of [
   'publicationPreferences',
   'news-intake-publish-',
   'publishable',
+  'ring-2 ring-emerald-200/70',
 ]) {
   requireText(feedReadyPreview, needle, 'Feed-ready public preview');
 }
