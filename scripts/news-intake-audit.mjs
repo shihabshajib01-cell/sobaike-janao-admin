@@ -655,7 +655,7 @@ for (const needle of [
   'FeedReadyReportPreview',
   'stagedReport={stagedReport || undefined}',
   'previewId={`staged-${item.id}`}',
-  'orderedMatchedItems.map((item)',
+  'feedReadyItems.map((item)',
   'workspaceCounts',
   'workspaceCounts.published',
   'rawNewsItems',
@@ -705,7 +705,7 @@ for (const needle of [
   'Close News Intake',
   'intakeStarted',
   'publishable={ready}',
-  'No category-matched reports',
+  'No Feed Ready reports',
   'rawNewsExpanded',
   'feedReadyExpanded',
   'scrollbar-gutter:stable',
@@ -720,8 +720,14 @@ for (const needle of [
   requireText(page, needle, 'News Intake dashboard workspace');
 }
 
-if (!page.includes('orderedMatchedItems.map((item)')) {
-  errors.push('Every category-matched item must render in the right panel, with Feed Ready previews ordered before diagnostics.');
+if (!page.includes('data-news-intake-ready-panel') || !page.includes('feedReadyItems.map((item)')) {
+  errors.push('The right News Intake panel must render Feed Ready reports only.');
+}
+if (!page.includes('data-news-intake-diagnostics-panel') || !page.includes('diagnosticMatchedItems.map((item)')) {
+  errors.push('Duplicate, excluded, and review diagnostics must remain in the left News Intake panel.');
+}
+if (page.includes('orderedMatchedItems')) {
+  errors.push('The legacy mixed matched-item right panel must not be reintroduced.');
 }
 
 if (/const canReview[\s\S]{0,260}isExcludedItem\(item\)/.test(page)) {
@@ -740,7 +746,10 @@ for (const needle of [
   'data-news-intake-feed-preview',
   'data-news-intake-diagnostic',
   'No Feed Ready reports in this run',
-  'orderedMatchedItems',
+  'data-news-intake-ready-panel',
+  'data-news-intake-diagnostics-panel',
+  'feedReadyItems.map((item)',
+  'diagnosticMatchedItems.map((item)',
 ]) {
   requireText(page, needle, 'News Intake Step 2 compact/feed-preview UI');
 }
