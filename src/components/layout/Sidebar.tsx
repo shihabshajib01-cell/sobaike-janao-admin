@@ -4,7 +4,7 @@ import { NavLink, Link, useLocation } from 'react-router-dom';
 import { ADMIN_NAVIGATION_ITEMS, getFirstAccessibleRoute } from '@/routes/routes.config';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
-import { Shield, ChevronRight, X, Sparkles, ShieldAlert } from 'lucide-react';
+import { Shield, ChevronRight, X, ShieldAlert } from 'lucide-react';
 import { cn } from '@/utils';
 
 export interface SidebarProps {
