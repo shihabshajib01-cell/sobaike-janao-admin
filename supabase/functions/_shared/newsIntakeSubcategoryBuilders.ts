@@ -368,10 +368,20 @@ const hasValidLocation=(location:NewsIntakeBuilderLocation|null)=>{
 
 export const buildNewsIntakeSubcategoryReport=(input:NewsIntakeBuilderInput)=>{
   const {article,classification,location,incidentDate,language,feedContext}=input;
-  const policy=NEWS_INTAKE_SUBCATEGORY_BUILDERS[classification.subcategoryId];
-  if(!policy || policy.segmentId!==classification.segmentId){
-    throw new Error("No proven News Intake builder is registered for "+classification.segmentId+"/"+classification.subcategoryId+".");
-  }
+  const registeredPolicy=NEWS_INTAKE_SUBCATEGORY_BUILDERS[classification.subcategoryId];
+  // Current proven subcategories keep their specialized extractors. A newly
+  // published Admin subcategory no longer breaks News Intake: it receives the
+  // conservative standard builder and is then validated against the live
+  // published form schema before it can become Feed Ready or be published.
+  const policy:BuilderPolicy=
+    registeredPolicy && registeredPolicy.segmentId===classification.segmentId
+      ? registeredPolicy
+      : {
+          segmentId:classification.segmentId,
+          kind:"standard",
+          frequency:"adaptive",
+          basePriority:"medium",
+        };
 
   const text=fullText(article);
   const fields=buildSourceLanguageFields(article.title,feedContext,language);
@@ -487,8 +497,14 @@ export const missingNewsIntakeSubcategoryFields=(report:any)=>{
   const missing:string[]=[];
   const text=(value:unknown)=>asText(value);
   const subcategory=text(report?.subcategoryId);
-  const policy=NEWS_INTAKE_SUBCATEGORY_BUILDERS[subcategory];
-  if(!policy)return ["subcategoryBuilder"];
+  const registeredPolicy=NEWS_INTAKE_SUBCATEGORY_BUILDERS[subcategory];
+  const policy:BuilderPolicy=
+    registeredPolicy || {
+      segmentId:text(report?.segmentId),
+      kind:"standard",
+      frequency:"adaptive",
+      basePriority:"medium",
+    };
 
   if(sourceTextLength(report?.descriptionBn)<400||sourceTextLength(report?.descriptionBn)>800){
     missing.push("description400To800");
