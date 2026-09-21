@@ -25,6 +25,7 @@ import {
 import { complaintApi } from '@/services/api';
 import { exportComplaintsToCsv, exportComplaintsToPdf } from '@/utils';
 import { RefreshCw, ChevronLeft, ChevronRight, SlidersHorizontal, AlertTriangle } from 'lucide-react';
+import { useDebounce } from '@/hooks/useDebounce';
 
 export const ComplaintsPage: React.FC = () => {
   const { language } = useLanguage();
@@ -57,6 +58,8 @@ export const ComplaintsPage: React.FC = () => {
     dateRange: 'all',
   });
 
+  const debouncedSearchQuery = useDebounce(filters.searchQuery, 350);
+
   const [showAdvancedFilters, setShowAdvancedFilters] = useState<boolean>(false);
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
@@ -80,7 +83,7 @@ export const ComplaintsPage: React.FC = () => {
       setLoadError(false);
       try {
         const response = await complaintApi.getComplaints(
-          filters,
+          { ...filters, searchQuery: debouncedSearchQuery },
           pageToLoad,
           pagination.pageSize
         );
@@ -94,12 +97,23 @@ export const ComplaintsPage: React.FC = () => {
         setLoading(false);
       }
     },
-    [filters, pagination.currentPage, pagination.pageSize]
+    [filters, debouncedSearchQuery, pagination.currentPage, pagination.pageSize]
   );
 
   useEffect(() => {
     fetchComplaints(1);
-  }, [filters, pagination.pageSize]);
+  }, [
+    filters.status,
+    filters.category,
+    filters.subcategory,
+    filters.location,
+    filters.affectedPersonAgeGroup,
+    filters.allegedAbuserRelationship,
+    filters.reportingFor,
+    filters.dateRange,
+    debouncedSearchQuery,
+    pagination.pageSize,
+  ]);
 
   // Handle Tab Selection
   const handleSelectStatus = (status: ComplaintLifecycleStatus | 'all') => {
@@ -247,6 +261,26 @@ export const ComplaintsPage: React.FC = () => {
     } finally {
       setIsExporting(false);
     }
+  };
+
+  const getVisiblePages = (): Array<number | 'ellipsis-start' | 'ellipsis-end'> => {
+    const total = pagination.totalPages;
+    const current = pagination.currentPage;
+
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+
+    const pages: Array<number | 'ellipsis-start' | 'ellipsis-end'> = [1];
+    const start = Math.max(2, current - 1);
+    const end = Math.min(total - 1, current + 1);
+
+    if (start > 2) pages.push('ellipsis-start');
+    for (let page = start; page <= end; page += 1) pages.push(page);
+    if (end < total - 1) pages.push('ellipsis-end');
+    pages.push(total);
+
+    return pages;
   };
 
   const formatNumber = (num: number): string => {
@@ -453,20 +487,38 @@ export const ComplaintsPage: React.FC = () => {
               </Button>
 
               <div className="flex items-center gap-1 overflow-x-auto max-w-full py-1">
-                {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((p) => {
-                  const isCurrent = p === pagination.currentPage;
+                {getVisiblePages().map((item) => {
+                  if (typeof item !== 'number') {
+                    return (
+                      <span
+                        key={item}
+                        className="w-8 h-8 inline-flex items-center justify-center text-xs text-slate-400"
+                        aria-hidden="true"
+                      >
+                        …
+                      </span>
+                    );
+                  }
+
+                  const isCurrent = item === pagination.currentPage;
                   return (
                     <ButtonBase
-                      key={p}
-                      onClick={() => handlePageChange(p)}
+                      key={item}
+                      onClick={() => handlePageChange(item)}
                       disabled={loading}
+                      aria-current={isCurrent ? 'page' : undefined}
+                      aria-label={
+                        isBn
+                          ? `পৃষ্ঠা ${formatNumber(item)}`
+                          : `Go to page ${item}`
+                      }
                       className={`w-8 h-8 rounded-md text-xs font-mono font-medium transition-colors ${
                         isCurrent
                           ? 'bg-sky-600 text-white font-bold'
                           : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                       }`}
                     >
-                      {formatNumber(p)}
+                      {formatNumber(item)}
                     </ButtonBase>
                   );
                 })}
