@@ -135,6 +135,90 @@ const unusedDiagnostics = ts
     };
   });
 
+const languageServiceHost = {
+  getScriptFileNames: () => parsed.fileNames,
+  getScriptVersion: () => '0',
+  getScriptSnapshot: (fileName) => {
+    if (!fs.existsSync(fileName)) return undefined;
+    return ts.ScriptSnapshot.fromString(fs.readFileSync(fileName, 'utf8'));
+  },
+  getCurrentDirectory: () => repoRoot,
+  getCompilationSettings: () => parsed.options,
+  getDefaultLibFileName: (options) => ts.getDefaultLibFilePath(options),
+  fileExists: ts.sys.fileExists,
+  readFile: ts.sys.readFile,
+  readDirectory: ts.sys.readDirectory,
+};
+const languageService = ts.createLanguageService(
+  languageServiceHost,
+  ts.createDocumentRegistry()
+);
+
+const hasExportModifier = (node) =>
+  Boolean(node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword));
+
+const exportedNamedDeclarations = [];
+for (const file of sourceFiles) {
+  for (const statement of file.statements) {
+    if (!hasExportModifier(statement)) continue;
+
+    const addNamedNode = (nameNode, kind) => {
+      if (!nameNode || !ts.isIdentifier(nameNode)) return;
+      exportedNamedDeclarations.push({ file, nameNode, name: nameNode.text, kind });
+    };
+
+    if (
+      ts.isFunctionDeclaration(statement) ||
+      ts.isClassDeclaration(statement) ||
+      ts.isInterfaceDeclaration(statement) ||
+      ts.isTypeAliasDeclaration(statement) ||
+      ts.isEnumDeclaration(statement)
+    ) {
+      addNamedNode(statement.name, ts.SyntaxKind[statement.kind]);
+      continue;
+    }
+
+    if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) {
+        addNamedNode(declaration.name, 'VariableDeclaration');
+      }
+    }
+  }
+}
+
+const unusedExportCandidates = [];
+for (const declaration of exportedNamedDeclarations) {
+  const fileName = declaration.file.fileName;
+  const references =
+    languageService.findReferences(
+      fileName,
+      declaration.nameNode.getStart(declaration.file)
+    ) || [];
+
+  const referenceEntries = references.flatMap((group) => group.references || []);
+  const externalReferences = referenceEntries.filter(
+    (reference) =>
+      !reference.isDefinition && normalize(reference.fileName) !== normalize(fileName)
+  );
+  const sameFileReferences = referenceEntries.filter(
+    (reference) =>
+      !reference.isDefinition && normalize(reference.fileName) === normalize(fileName)
+  );
+
+  if (externalReferences.length === 0) {
+    const pos = declaration.file.getLineAndCharacterOfPosition(
+      declaration.nameNode.getStart(declaration.file)
+    );
+    unusedExportCandidates.push({
+      file: toRepoPath(fileName),
+      line: pos.line + 1,
+      name: declaration.name,
+      kind: declaration.kind,
+      sameFileReferences: sameFileReferences.length,
+    });
+  }
+}
+
 const walkTextFiles = (dir) => {
   if (!fs.existsSync(dir)) return [];
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -211,6 +295,7 @@ const result = {
   reachableSourceFiles: reachable.size,
   unreachable,
   unusedDiagnostics,
+  unusedExportCandidates,
   unusedRuntimeDependencies,
   unreferencedAssets,
 };
