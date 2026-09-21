@@ -7,6 +7,7 @@ import { FeedbackNotice } from '@/components/ui/FeedbackNotice';
 import { TablePageSizeSelect } from '@/components/ui/TablePageSizeSelect';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
+import { useDebounce } from '@/hooks/useDebounce';
 import { adminUserApi } from '@/services/api/adminUserApi';
 import { AdminUserListItem, UserFilterRole } from '@/types/AdminUser';
 import { UsersTable } from '@/components/users/UsersTable';
@@ -97,6 +98,7 @@ export const UsersPage: React.FC = () => {
 
   // Filters
   const [search, setSearch] = useState<string>('');
+  const debouncedSearch = useDebounce(search, 350);
   const [selectedRole, setSelectedRole] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'inactive'>('all');
 
@@ -155,7 +157,7 @@ export const UsersPage: React.FC = () => {
     try {
       const offset = (page - 1) * pageSize;
       const response = await adminUserApi.getUsers({
-        search: search.trim() || undefined,
+        search: debouncedSearch.trim() || undefined,
         role_id: selectedRole !== 'all' ? selectedRole : undefined,
         status: selectedStatus !== 'all' ? selectedStatus : undefined,
         limit: pageSize,
@@ -177,7 +179,7 @@ export const UsersPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, search, selectedRole, selectedStatus, t]);
+  }, [page, pageSize, debouncedSearch, selectedRole, selectedStatus, t]);
 
   /**
    * Load role choices for filter dropdown using read-safe endpoint (admin_users.view required)
@@ -280,6 +282,7 @@ export const UsersPage: React.FC = () => {
               value={search}
               onChange={(e) => handleSearchChange(e.target.value)}
               placeholder={t.users.searchPlaceholder}
+              aria-label={t.users.searchPlaceholder}
               className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-400 text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
             />
           </div>
@@ -290,14 +293,25 @@ export const UsersPage: React.FC = () => {
               id="select-filter-role"
               value={selectedRole}
               onChange={(e) => handleRoleChange(e.target.value)}
+              aria-label={t.users.filterRole}
               className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-400 text-slate-900 dark:text-slate-100"
             >
               <option value="all">{t.users.allRoles}</option>
-              {roles.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {language === 'bn' ? r.name_bn || r.name_en : r.name_en}
-                </option>
-              ))}
+              {[...roles]
+                .sort((a, b) => {
+                  const aLabel = language === 'bn' ? a.name_bn || a.name_en : a.name_en;
+                  const bLabel = language === 'bn' ? b.name_bn || b.name_en : b.name_en;
+                  return aLabel.localeCompare(
+                    bLabel,
+                    language === 'bn' ? 'bn-BD' : 'en-US',
+                    { sensitivity: 'base', numeric: true }
+                  );
+                })
+                .map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {language === 'bn' ? r.name_bn || r.name_en : r.name_en}
+                  </option>
+                ))}
             </select>
           </div>
 
@@ -307,6 +321,7 @@ export const UsersPage: React.FC = () => {
               id="select-filter-status"
               value={selectedStatus}
               onChange={(e) => handleStatusChange(e.target.value as 'all' | 'active' | 'inactive')}
+              aria-label={t.users.filterStatus}
               className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-400 text-slate-900 dark:text-slate-100"
             >
               <option value="all">{t.users.allStatuses}</option>
