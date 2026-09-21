@@ -319,7 +319,12 @@ export const FeedReadyReportPreview: React.FC<FeedReadyReportPreviewProps> = ({
       </div>
 
       <article
-        className="select-none space-y-2.5 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm sm:space-y-3 sm:p-5 dark:border-slate-800 dark:bg-slate-950"
+        className={
+          'select-none space-y-2.5 rounded-2xl border bg-white p-4 text-left shadow-sm transition-[border-color,box-shadow] sm:space-y-3 sm:p-5 dark:bg-slate-950 ' +
+          (publishable && selected
+            ? 'border-emerald-400 ring-2 ring-emerald-200/70 dark:border-emerald-700 dark:ring-emerald-900/50'
+            : 'border-slate-200 dark:border-slate-800')
+        }
         aria-label={isBn ? 'পাবলিক ফিড প্রিভিউ' : 'Public feed preview'}
       >
         <div className="flex items-center justify-between gap-3 text-sm leading-5">
