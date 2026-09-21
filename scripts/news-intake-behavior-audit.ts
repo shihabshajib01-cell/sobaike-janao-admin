@@ -88,6 +88,17 @@ assert.equal(
 );
 
 assert.equal(
+  isLegalFollowUpOnly('চট্টগ্রামের পাথরঘাটায় ছিনতাইয়ের ঘটনায় গ্রেপ্তার ১'),
+  true,
+  'Arrest/enforcement follow-ups about an already reported incident must not create a fresh report'
+);
+assert.equal(
+  isLegalFollowUpOnly('ধর্ষণের অভিযোগে একজনকে গ্রেপ্তার করেছে পুলিশ'),
+  false,
+  'A direct incident headline that includes an immediate arrest must remain eligible'
+);
+
+assert.equal(
   isMultiIncidentArticle(
     'নীলফামারীতে পৃথক সড়ক দুর্ঘটনায় দম্পতিসহ নিহত ৩',
     'জেলার জলঢাকা ও কিশোরগঞ্জ উপজেলায় পৃথক দুর্ঘটনায় তিনজন নিহত হওয়ার ঘটনাটি ঘটে।'
@@ -156,6 +167,12 @@ assert.equal(
   isSafeSpecificLocationText('দিঘির পাড় কোল্ড স্টোরেজ সংলগ্ন এলাকা','Nilphamari'),
   true,
   'A single named source-grounded local place must remain eligible'
+);
+
+assert.equal(
+  isSafeSpecificLocationText('গত বছরের নভেম্বরে লালদিঘী এলাকা','Chattogram'),
+  false,
+  'Historical background locations must never become the current incident location'
 );
 
 const feedReadyContext=buildFeedReadyIncidentContext({
