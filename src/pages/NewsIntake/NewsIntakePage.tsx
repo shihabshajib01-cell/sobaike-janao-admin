@@ -1661,8 +1661,8 @@ export const NewsIntakePage: React.FC = () => {
                         <FeedbackNotice tone="neutral" compact>
                           <p>
                             {isBn
-                              ? 'এই রানে কোনো Feed Ready রিপোর্ট নেই। নিচের আইটেমগুলো ডুপ্লিকেট বা বাদ দেওয়া ডায়াগনস্টিক ফলাফল।'
-                              : 'No Feed Ready reports in this run. Items below are duplicate or excluded diagnostics.'}
+                              ? 'এই রানে কোনো Feed Ready রিপোর্ট নেই। ডুপ্লিকেট, বাদ দেওয়া ও রিভিউ ডায়াগনস্টিক বাম প্যানেলে রাখা হয়েছে।'
+                              : 'No Feed Ready reports in this run. Duplicate, excluded, and review diagnostics remain in the left panel.'}
                           </p>
                         </FeedbackNotice>
                       )}
