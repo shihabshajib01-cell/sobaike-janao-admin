@@ -388,6 +388,18 @@ export const formatTargetType = (targetType: string, language: 'en' | 'bn'): str
   switch (norm) {
     case 'complaint':
       return language === 'bn' ? 'অভিযোগ' : 'Complaint';
+    case 'complaints':
+      return language === 'bn' ? 'অভিযোগসমূহ' : 'Complaints';
+    case 'response':
+      return language === 'bn' ? 'প্রতিক্রিয়া' : 'Response';
+    case 'subcategory':
+      return language === 'bn' ? 'সাবক্যাটাগরি' : 'Subcategory';
+    case 'news_intake':
+      return language === 'bn' ? 'নিউজ ইনটেক' : 'News Intake';
+    case 'news_intake_run':
+      return language === 'bn' ? 'নিউজ ইনটেক রান' : 'News Intake Run';
+    case 'news_intake_automation':
+      return language === 'bn' ? 'নিউজ ইনটেক অটোমেশন' : 'News Intake Automation';
     case 'admin_user':
     case 'user':
       return language === 'bn' ? 'প্রশাসক' : 'Administrator';
