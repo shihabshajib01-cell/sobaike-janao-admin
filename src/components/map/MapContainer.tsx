@@ -25,7 +25,6 @@ import {
   ExternalLink,
   X,
   Calendar,
-  Layers,
   Folder,
 } from 'lucide-react';
 import { cn } from '@/utils';
