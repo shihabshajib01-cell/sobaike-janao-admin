@@ -8,20 +8,13 @@ import { ThemeToggle } from './ThemeToggle';
 import { LanguageToggle } from './LanguageToggle';
 import {
   Menu,
-  Bell,
-  Search,
-  User as UserIcon,
   ChevronDown,
   LogOut,
   Shield,
   ExternalLink,
-  CheckCircle2,
-  AlertTriangle,
-  Info,
 } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown';
 import { Badge } from '@/components/ui/Badge';
-import { cn } from '@/utils';
 
 export interface HeaderProps {
   onToggleSidebar?: () => void;
@@ -79,7 +72,17 @@ export const AdminHeader: React.FC<HeaderProps> = ({
   const currentNav = ADMIN_NAVIGATION_ITEMS.find((item) =>
     location.pathname.startsWith(item.path)
   );
-  const currentTitle = currentNav ? t.nav[currentNav.labelKey] : 'Overview';
+  const currentTitle = currentNav
+    ? currentNav.labelKey
+      ? t.nav[currentNav.labelKey] || currentNav.defaultLabel
+      : isBn
+        ? currentNav.defaultLabelBn || currentNav.defaultLabel
+        : currentNav.defaultLabel
+    : location.pathname.startsWith('/notifications')
+      ? t.notifications.title
+      : isBn
+        ? 'ওভারভিউ'
+        : 'Overview';
 
   // Click outside listener for dropdowns
   useEffect(() => {
@@ -88,9 +91,22 @@ export const AdminHeader: React.FC<HeaderProps> = ({
         setProfileOpen(false);
       }
     };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setProfileOpen(false);
+      }
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    if (profileOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [profileOpen]);
 
   return (
     <header className="sticky top-0 z-30 h-16 w-full shrink-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 flex items-center justify-between transition-colors">
@@ -116,19 +132,6 @@ export const AdminHeader: React.FC<HeaderProps> = ({
           </h2>
         </div>
 
-        {/* Quick Search Bar Placeholder */}
-        <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-100 dark:bg-slate-800/80 text-slate-400 dark:text-slate-500 type-meta w-64 border border-transparent dark:border-slate-800/60 ml-4 focus-within:border-sky-500 transition-all">
-          <Search className="w-3.5 h-3.5" />
-          <input
-            type="text"
-            placeholder={t.header.searchPlaceholder}
-            className="bg-transparent border-none outline-none type-meta text-slate-700 dark:text-slate-200 placeholder:text-slate-400 w-full"
-            disabled
-          />
-          <kbd className="hidden sm:inline-block type-technical font-mono px-1 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
-            ⌘K
-          </kbd>
-        </div>
       </div>
 
       {/* Right side: Controls (Lang, Theme, Notifs, Profile) */}
