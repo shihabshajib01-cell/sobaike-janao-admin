@@ -632,6 +632,15 @@ assert.notEqual(
   'এদিকে এ ঘটনায় খুলনার হরিণটানা থানা',
   'Narrative police-jurisdiction fragments must never become the public incident location'
 );
+
+assert.notEqual(
+  inferSpecificLocationPhrase(
+    'খুলনা বিশ্ববিদ্যালয়ের সীমানাপ্রাচীরের পূর্ব পাশে মসজিদের গলি ধরে একটু এগোলে ছাত্রদের মেস। আজমুল হোসেনকে হত্যার ঘটনায় নগরের হরিণটানা থানা পুলিশ তদন্ত করছে।',
+    'Khulna'
+  ),
+  'আজমুল হোসেনকে হত্যার ঘটনায় নগরের হরিণটানা থানা',
+  'Exact Mob Justice narrative thana phrase must not become the incident location'
+);
 assert.notEqual(
   inferSpecificLocationPhrase(
     'সুনামগঞ্জের তাহিরপুরে তিন শিশুর মৃত্যুর বিষয়ে যাচাই করে তাহিরপুর উপজেলা প্রশাসনের সঙ্গে কথা বলা হয়।',
