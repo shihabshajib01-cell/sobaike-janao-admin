@@ -1,5 +1,5 @@
 import { ActionGroup, IconButton } from './Button';
-import React, { useEffect } from 'react';
+import React, { useEffect, useId, useRef } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/utils';
 
@@ -28,24 +28,82 @@ export const Drawer: React.FC<DrawerProps> = ({
   mobileSheet = false,
   className,
 }) => {
-  // ESC key listener
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  const titleId = useId();
+  const descriptionId = useId();
+
   useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    const getFocusable = () =>
+      Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        ) || []
+      ).filter((element) => element.getAttribute('aria-hidden') !== 'true');
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
+      if (!isOpen) return;
+
+      const activeElement =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      const activeDialog = activeElement?.closest(
+        '[data-modal-dialog], [data-drawer-dialog]'
+      );
+      if (activeDialog && activeDialog !== dialogRef.current) return;
+
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+
+      if (e.key !== 'Tab') return;
+
+      const focusable = getFocusable();
+      if (focusable.length === 0) {
+        e.preventDefault();
+        dialogRef.current?.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+
+      if (e.shiftKey && (active === first || active === dialogRef.current)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
       }
     };
 
+    const previousOverflow = document.body.style.overflow;
+
     if (isOpen) {
+      previousFocusRef.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
       document.body.style.overflow = 'hidden';
       window.addEventListener('keydown', handleKeyDown);
+      window.requestAnimationFrame(() => {
+        const focusable = getFocusable();
+        (focusable[0] || dialogRef.current)?.focus();
+      });
     }
 
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', handleKeyDown);
+      previousFocusRef.current?.focus();
+      previousFocusRef.current = null;
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -62,7 +120,13 @@ export const Drawer: React.FC<DrawerProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden" role="dialog" aria-modal="true">
+    <div
+      className="fixed inset-0 z-50 overflow-hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={title ? titleId : undefined}
+      aria-describedby={description ? descriptionId : undefined}
+    >
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-900/50 dark:bg-black/70 backdrop-blur-xs transition-opacity animate-in fade-in"
@@ -72,6 +136,9 @@ export const Drawer: React.FC<DrawerProps> = ({
 
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div
+          ref={dialogRef}
+          data-drawer-dialog
+          tabIndex={-1}
           className={cn(
             'absolute flex flex-col w-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-2xl pointer-events-auto transition-transform duration-200',
             // If mobileSheet is enabled: Bottom sheet on mobile (max-sm)
@@ -93,12 +160,12 @@ export const Drawer: React.FC<DrawerProps> = ({
           <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-slate-800 shrink-0">
             <div>
               {title && (
-                <h3 className="type-card-title text-slate-900 dark:text-slate-100">
+                <h3 id={titleId} className="type-card-title text-slate-900 dark:text-slate-100">
                   {title}
                 </h3>
               )}
               {description && (
-                <p className="type-secondary text-slate-500 dark:text-slate-400 mt-0.5">{description}</p>
+                <p id={descriptionId} className="type-secondary text-slate-500 dark:text-slate-400 mt-0.5">{description}</p>
               )}
             </div>
             <IconButton
