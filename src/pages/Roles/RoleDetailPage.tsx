@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
+
 import { useLanguage } from '@/context/LanguageContext';
 import { roleApi } from '@/services/api';
 import { RoleDetail, PermissionCatalogueItem, RoleApiError } from '@/types/Role';
@@ -20,7 +20,6 @@ import {
   CheckCircle2,
   X,
   Lock,
-  Info,
 } from 'lucide-react';
 import { cn } from '@/utils';
 
