@@ -1,4 +1,4 @@
-import { ButtonBase } from '@/components/ui/Button';
+import { Button } from '@/components/ui/Button';
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
@@ -39,24 +39,33 @@ export class ErrorBoundary extends Component<Props, State> {
         return this.props.fallback;
       }
 
+      const isBn =
+        typeof document !== 'undefined' && document.documentElement.lang === 'bn';
+
       return (
-        <div className="min-h-[300px] flex flex-col items-center justify-center p-6 text-center border border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-950/20 rounded-lg m-4">
+        <div
+          role="alert"
+          className="min-h-[300px] flex flex-col items-center justify-center p-6 text-center border border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-950/20 rounded-lg m-4"
+        >
           <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center text-red-600 dark:text-red-400 mb-3">
             <AlertTriangle className="w-6 h-6" />
           </div>
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">
-            Something went wrong
+            {isBn ? 'কিছু সমস্যা হয়েছে' : 'Something went wrong'}
           </h2>
-          <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mb-4 font-mono text-xs bg-white dark:bg-slate-900 p-2 rounded border border-slate-200 dark:border-slate-800 break-all">
-            {this.state.error?.message || 'An unexpected runtime error occurred.'}
+          <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mb-4">
+            {isBn
+              ? 'এই অংশটি লোড করার সময় একটি অপ্রত্যাশিত সমস্যা হয়েছে। আবার চেষ্টা করুন।'
+              : 'An unexpected problem occurred while loading this section. Please try again.'}
           </p>
-          <ButtonBase
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={this.handleReset}
-            className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded-md bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 hover:opacity-90 transition-opacity"
+            leftIcon={<RefreshCw />}
           >
-            <RefreshCw className="w-4 h-4" />
-            Try again
-          </ButtonBase>
+            {isBn ? 'আবার চেষ্টা করুন' : 'Try again'}
+          </Button>
         </div>
       );
     }
