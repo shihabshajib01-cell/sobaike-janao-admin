@@ -533,7 +533,7 @@ export const NewsIntakePage: React.FC = () => {
   const diagnosticMatchedItems = useMemo(
     () =>
       matchedItems
-        .filter((item) => !isCurrentFeedReady(item))
+        .filter((item) => !isCurrentFeedReady(item) && !isCurrentPublishedItem(item))
         .sort((left, right) => {
           const leftDiagnostic =
             left.action === 'skip_duplicate' || left.action === 'merged_source'
@@ -560,9 +560,7 @@ export const NewsIntakePage: React.FC = () => {
       (item) => item.action === 'skip_duplicate' || item.action === 'merged_source'
     ).length;
     const excluded = matchedItems.filter(isExcludedItem).length;
-    const blocked = matchedItems.filter(
-      (item) => !isCurrentFeedReady(item) && !isCurrentPublishedItem(item)
-    ).length;
+    const blocked = diagnosticMatchedItems.length;
     const notReport = rawNewsItems.filter((item) => item.action === 'discovered').length;
     const error = rawNewsItems.filter((item) => item.action === 'error').length;
     return {
@@ -578,7 +576,7 @@ export const NewsIntakePage: React.FC = () => {
       not_report: notReport,
       error,
     };
-  }, [selectedItems, rawNewsItems, matchedItems, reportMap]);
+  }, [selectedItems, rawNewsItems, matchedItems, diagnosticMatchedItems, reportMap]);
 
   const filteredRawItems = useMemo(() => {
     if (rawFilter === 'blocked') return [];
