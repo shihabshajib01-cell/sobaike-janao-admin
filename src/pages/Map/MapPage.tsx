@@ -4,7 +4,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
+
 import {
   MapContainer,
   LocationSummary,
@@ -27,7 +27,6 @@ import {
   Info,
   Map as MapIcon,
   List as ListIcon,
-  CheckCircle2,
 } from 'lucide-react';
 import { cn } from '@/utils';
 
