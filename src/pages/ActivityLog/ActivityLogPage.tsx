@@ -161,8 +161,8 @@ export const ActivityLogPage: React.FC = () => {
         search: debouncedSearch.trim() || undefined,
         action: action !== 'all' ? action : undefined,
         target_type: targetType !== 'all' ? targetType : undefined,
-        date_from: dateFrom ? new Date(dateFrom).toISOString() : undefined,
-        date_to: dateTo ? new Date(`${dateTo}T23:59:59.999Z`).toISOString() : undefined,
+        date_from: dateFrom ? new Date(`${dateFrom}T00:00:00.000`).toISOString() : undefined,
+        date_to: dateTo ? new Date(`${dateTo}T23:59:59.999`).toISOString() : undefined,
         limit: pageSize,
         offset,
       });
