@@ -155,7 +155,6 @@ export const ComplaintTimeline: React.FC<ComplaintTimelineProps> = ({
         ) : (
           <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800">
             {timeline.map((event, idx) => {
-              const isLast = idx === timeline.length - 1;
               return (
                 <div key={event.id || idx} className="relative group">
                   {/* Timeline node icon */}
