@@ -20,6 +20,7 @@ import {
 } from '@/types/LocationActivity';
 import { locationActivityService } from '@/services/api';
 import { useLanguage } from '@/context/LanguageContext';
+import { useDebounce } from '@/hooks/useDebounce';
 
 export const LocationActivityPage: React.FC = () => {
   const { language } = useLanguage();
@@ -53,6 +54,12 @@ export const LocationActivityPage: React.FC = () => {
     browser: 'all',
     timeRange: 'all',
   });
+
+  const debouncedSearch = useDebounce(filters.search || '', 350);
+  const effectiveFilters: LocationActivityFilters = {
+    ...filters,
+    search: debouncedSearch,
+  };
 
   // Load distinct browsers on mount
   useEffect(() => {
@@ -98,8 +105,16 @@ export const LocationActivityPage: React.FC = () => {
 
   // Trigger data load when filters or page change
   useEffect(() => {
-    loadData(filters, page);
-  }, [filters, page, loadData]);
+    loadData(effectiveFilters, page);
+  }, [
+    debouncedSearch,
+    filters.permission,
+    filters.device,
+    filters.browser,
+    filters.timeRange,
+    page,
+    loadData,
+  ]);
 
   // Handle filter changes (resets page to 1)
   const handleFilterChange = (newFilters: LocationActivityFilters) => {
@@ -155,6 +170,23 @@ export const LocationActivityPage: React.FC = () => {
     return isBn ? n.toLocaleString('bn-BD') : n.toLocaleString('en-US');
   };
 
+  const getVisiblePages = (): Array<number | 'ellipsis-start' | 'ellipsis-end'> => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const items: Array<number | 'ellipsis-start' | 'ellipsis-end'> = [1];
+    const start = Math.max(2, page - 1);
+    const end = Math.min(totalPages - 1, page + 1);
+
+    if (start > 2) items.push('ellipsis-start');
+    for (let value = start; value <= end; value += 1) items.push(value);
+    if (end < totalPages - 1) items.push('ellipsis-end');
+    items.push(totalPages);
+
+    return items;
+  };
+
   return (
     <div className="space-y-6">
       {/* 1. Header Section */}
@@ -162,8 +194,8 @@ export const LocationActivityPage: React.FC = () => {
         title={isBn ? 'লোকেশন অ্যাক্টিভিটি' : 'Location Activity'}
         description={
           isBn
-            ? 'সম্মতিসহ সংগৃহীত ভিজিটর লোকেশন সেশন ও ব্রাউজার/ডিভাইস তথ্য পর্যালোচনা করুন।'
-            : 'Review consented visitor location sessions and browser/device context.'
+            ? 'ভিজিটরের লোকেশন অনুমতির অবস্থা ও ব্রাউজার/ডিভাইস তথ্য পর্যালোচনা করুন। গোপনীয়তার জন্য ব্রাউজিং GPS স্থানাঙ্ক সংরক্ষণ করা হয় না।'
+            : 'Review visitor location-permission status and browser/device context. Precise browse GPS coordinates are not retained for privacy.'
         }
         actions={
           <div className="flex items-center gap-2">
@@ -294,20 +326,34 @@ export const LocationActivityPage: React.FC = () => {
             </Button>
 
             <div className="flex items-center gap-1 overflow-x-auto max-w-full py-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
-                const isCurrent = p === page;
+              {getVisiblePages().map((item) => {
+                if (typeof item !== 'number') {
+                  return (
+                    <span
+                      key={item}
+                      className="w-8 h-8 inline-flex items-center justify-center text-xs text-slate-400"
+                      aria-hidden="true"
+                    >
+                      …
+                    </span>
+                  );
+                }
+
+                const isCurrent = item === page;
                 return (
                   <ButtonBase
-                    key={p}
-                    onClick={() => handlePageChange(p)}
+                    key={item}
+                    onClick={() => handlePageChange(item)}
                     disabled={loading}
+                    aria-current={isCurrent ? 'page' : undefined}
+                    aria-label={isBn ? `পৃষ্ঠা ${formatNumber(item)}` : `Go to page ${item}`}
                     className={`w-8 h-8 rounded-md text-xs font-mono font-medium transition-colors ${
                       isCurrent
                         ? 'bg-sky-600 text-white font-bold'
                         : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                     }`}
                   >
-                    {formatNumber(p)}
+                    {formatNumber(item)}
                   </ButtonBase>
                 );
               })}
