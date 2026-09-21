@@ -14,7 +14,6 @@ import {
 import {
   User,
   Shield,
-  FileText,
   Calendar,
   ArrowRight,
   Code2,
