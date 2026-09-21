@@ -6,7 +6,6 @@ import { PermissionCatalogueItem } from '@/types/Role';
 import {
   KeyRound,
   CheckCircle2,
-  XCircle,
   LayoutDashboard,
   AlertCircle,
   FolderTree,
@@ -19,7 +18,7 @@ import {
   Lock,
   ShieldAlert,
 } from 'lucide-react';
-import { cn } from '@/utils';
+
 
 export interface RolePermissionsViewProps {
   permissionIds: string[];
