@@ -1,4 +1,4 @@
-import React, { InputHTMLAttributes, forwardRef, useEffect, useRef } from 'react';
+import React, { InputHTMLAttributes, forwardRef, useEffect, useId, useRef, useState } from 'react';
 import { Check, Minus } from 'lucide-react';
 import { cn } from '@/utils';
 
@@ -15,7 +15,8 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
       label,
       description,
       indeterminate = false,
-      checked = false,
+      checked,
+      defaultChecked = false,
       disabled = false,
       id,
       onChange,
@@ -24,7 +25,11 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
     ref
   ) => {
     const internalRef = useRef<HTMLInputElement | null>(null);
-    const checkboxId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+    const generatedId = useId();
+    const checkboxId = id || `checkbox-${generatedId.replace(/:/g, '')}`;
+    const [internalChecked, setInternalChecked] = useState(Boolean(defaultChecked));
+    const isControlled = checked !== undefined;
+    const isChecked = isControlled ? Boolean(checked) : internalChecked;
 
     useEffect(() => {
       if (internalRef.current) {
@@ -32,7 +37,12 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
       }
     }, [indeterminate]);
 
-    const isChecked = Boolean(checked);
+    const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      if (!isControlled) {
+        setInternalChecked(event.target.checked);
+      }
+      onChange?.(event);
+    };
 
     return (
       <label
@@ -53,7 +63,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
             type="checkbox"
             checked={isChecked}
             disabled={disabled}
-            onChange={onChange}
+            onChange={handleChange}
             className="sr-only"
             {...props}
           />
