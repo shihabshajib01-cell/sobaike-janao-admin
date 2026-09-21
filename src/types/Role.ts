@@ -169,14 +169,6 @@ export interface ReplaceRolePermissionsResult {
 }
 
 
-export interface UserAssignedRole {
-  id: string;
-  name_en: string;
-  name_bn: string | null;
-  description?: string | null;
-  active: boolean;
-  is_system?: boolean;
-}
 
 
 
