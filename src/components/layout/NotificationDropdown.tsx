@@ -1,7 +1,7 @@
 import { ButtonBase, IconButton } from '@/components/ui/Button';
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Check, ArrowRight, RotateCcw, CheckCheck, AlertCircle } from 'lucide-react';
+import { Bell, ArrowRight, RotateCcw, CheckCheck, AlertCircle } from 'lucide-react';
 import { useNotifications } from '@/context/NotificationContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { cn } from '@/utils';
