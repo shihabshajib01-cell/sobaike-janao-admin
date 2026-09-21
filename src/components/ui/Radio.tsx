@@ -1,4 +1,4 @@
-import React, { InputHTMLAttributes, forwardRef, createContext, useContext } from 'react';
+import React, { InputHTMLAttributes, forwardRef, createContext, useContext, useId, useState } from 'react';
 import { cn } from '@/utils';
 
 interface RadioGroupContextType {
@@ -19,6 +19,7 @@ export interface RadioGroupProps {
   className?: string;
   children: React.ReactNode;
   orientation?: 'horizontal' | 'vertical';
+  ariaLabel?: string;
 }
 
 export const RadioGroup: React.FC<RadioGroupProps> = ({
@@ -29,11 +30,25 @@ export const RadioGroup: React.FC<RadioGroupProps> = ({
   className,
   children,
   orientation = 'vertical',
+  defaultValue,
+  ariaLabel,
 }) => {
+  const [internalValue, setInternalValue] = useState<string | number | undefined>(defaultValue);
+  const isControlled = value !== undefined;
+  const resolvedValue = isControlled ? value : internalValue;
+
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isControlled) {
+      setInternalValue(event.target.value);
+    }
+    onChange?.(event);
+  };
+
   return (
-    <RadioGroupContext.Provider value={{ name, value, onChange, disabled }}>
+    <RadioGroupContext.Provider value={{ name, value: resolvedValue, onChange: handleChange, disabled }}>
       <div
         role="radiogroup"
+        aria-label={ariaLabel}
         className={cn(
           'flex',
           orientation === 'horizontal' ? 'flex-row gap-4' : 'flex-col gap-2.5',
@@ -73,7 +88,8 @@ export const Radio = forwardRef<HTMLInputElement, RadioProps>(
     const isChecked =
       checked !== undefined ? checked : groupContext?.value !== undefined ? groupContext.value === value : false;
 
-    const radioId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+    const generatedId = useId();
+    const radioId = id || `radio-${generatedId.replace(/:/g, '')}`;
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (onChange) onChange(e);
