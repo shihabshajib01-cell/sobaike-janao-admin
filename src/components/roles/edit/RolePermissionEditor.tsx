@@ -242,7 +242,6 @@ export const RolePermissionEditor: React.FC<RolePermissionEditorProps> = ({
             const Icon = getModuleIcon(moduleKey);
             const moduleIds = items.map((item) => item.id);
             const allModuleSelected = moduleIds.length > 0 && moduleIds.every((id) => selectedPermissionIds.includes(id));
-            const someModuleSelected = moduleIds.some((id) => selectedPermissionIds.includes(id));
 
             return (
               <div
