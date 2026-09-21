@@ -3,6 +3,7 @@ import React, { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '@/utils';
+import { useLanguage } from '@/context/LanguageContext';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -31,6 +32,8 @@ export const Modal: React.FC<ModalProps> = ({
   mobileFullscreen = false,
   closeOnBackdrop = true,
 }) => {
+  const { language } = useLanguage();
+  const isBn = language === 'bn';
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
@@ -170,7 +173,7 @@ export const Modal: React.FC<ModalProps> = ({
             variant="ghost"
             size="sm"
             onClick={onClose}
-            aria-label="Close modal"
+            aria-label={isBn ? 'মোডাল বন্ধ করুন' : 'Close modal'}
             icon={<X />}
           />
         </div>
