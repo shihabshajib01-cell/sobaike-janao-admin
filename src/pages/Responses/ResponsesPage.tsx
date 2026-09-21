@@ -411,6 +411,26 @@ export const ResponsesPage: React.FC = () => {
     }
   };
 
+  const getVisiblePages = (): Array<number | 'ellipsis-start' | 'ellipsis-end'> => {
+    const total = pagination.totalPages;
+    const current = pagination.page;
+
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+
+    const pages: Array<number | 'ellipsis-start' | 'ellipsis-end'> = [1];
+    const start = Math.max(2, current - 1);
+    const end = Math.min(total - 1, current + 1);
+
+    if (start > 2) pages.push('ellipsis-start');
+    for (let page = start; page <= end; page += 1) pages.push(page);
+    if (end < total - 1) pages.push('ellipsis-end');
+    pages.push(total);
+
+    return pages;
+  };
+
   const formatNumber = (num: number): string => {
     if (!isBn) return num.toLocaleString();
     const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
@@ -612,21 +632,39 @@ export const ResponsesPage: React.FC = () => {
               </Button>
 
               <div className="flex items-center gap-1 overflow-x-auto max-w-full py-1">
-                {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((p) => {
-                  const isCurrent = p === pagination.page;
+                {getVisiblePages().map((item) => {
+                  if (typeof item !== 'number') {
+                    return (
+                      <span
+                        key={item}
+                        className="min-w-[36px] h-9 inline-flex items-center justify-center text-xs text-slate-400"
+                        aria-hidden="true"
+                      >
+                        …
+                      </span>
+                    );
+                  }
+
+                  const isCurrent = item === pagination.page;
                   return (
                     <ButtonBase
-                      key={p}
+                      key={item}
                       type="button"
-                      onClick={() => handlePageChange(p)}
+                      onClick={() => handlePageChange(item)}
                       disabled={loading}
+                      aria-current={isCurrent ? 'page' : undefined}
+                      aria-label={
+                        isBn
+                          ? `পৃষ্ঠা ${formatNumber(item)}`
+                          : `Go to page ${item}`
+                      }
                       className={`min-w-[36px] h-9 px-2 rounded-md text-xs font-mono font-medium transition-colors ${
                         isCurrent
                           ? 'bg-sky-600 text-white font-bold'
                           : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                       }`}
                     >
-                      {formatNumber(p)}
+                      {formatNumber(item)}
                     </ButtonBase>
                   );
                 })}
