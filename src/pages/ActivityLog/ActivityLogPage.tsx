@@ -7,6 +7,7 @@ import { AccessDenied } from '@/components/common';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { auditLogApi } from '@/services/api/auditLogApi';
+import { useDebounce } from '@/hooks/useDebounce';
 import { AuditLogItem } from '@/types/AuditLog';
 import {
   ActivityLogTable,
@@ -90,6 +91,11 @@ export const ActivityLogPage: React.FC = () => {
 
   // Filters State
   const [search, setSearch] = useState<string>('');
+  const debouncedSearch = useDebounce(search, 350);
+  const [filterOptions, setFilterOptions] = useState<{ actions: string[]; targetTypes: string[] }>({
+    actions: [],
+    targetTypes: [],
+  });
   const [action, setAction] = useState<string>('all');
   const [targetType, setTargetType] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState<string>('');
@@ -121,6 +127,27 @@ export const ActivityLogPage: React.FC = () => {
     setPage(1);
   };
 
+  useEffect(() => {
+    let active = true;
+
+    void auditLogApi
+      .getFilterOptions()
+      .then((options) => {
+        if (!active) return;
+        setFilterOptions({
+          actions: options.actions,
+          targetTypes: options.target_types,
+        });
+      })
+      .catch((filterError) => {
+        console.warn('Failed to load audit filter catalogue:', filterError);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   /**
    * Load audit logs via API service
    */
@@ -131,7 +158,7 @@ export const ActivityLogPage: React.FC = () => {
     try {
       const offset = (page - 1) * pageSize;
       const response = await auditLogApi.getAuditLogs({
-        search: search.trim() || undefined,
+        search: debouncedSearch.trim() || undefined,
         action: action !== 'all' ? action : undefined,
         target_type: targetType !== 'all' ? targetType : undefined,
         date_from: dateFrom ? new Date(dateFrom).toISOString() : undefined,
@@ -155,7 +182,7 @@ export const ActivityLogPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, search, action, targetType, dateFrom, dateTo]);
+  }, [page, pageSize, debouncedSearch, action, targetType, dateFrom, dateTo]);
 
   useEffect(() => {
     loadLogs();
@@ -237,11 +264,21 @@ export const ActivityLogPage: React.FC = () => {
           setPage(1);
         }}
         action={action}
+        actionOptions={
+          filterOptions.actions.length > 0
+            ? filterOptions.actions
+            : Array.from(new Set(logs.map((log) => log.action))).sort()
+        }
         onActionChange={(v) => {
           setAction(v);
           setPage(1);
         }}
         targetType={targetType}
+        targetTypeOptions={
+          filterOptions.targetTypes.length > 0
+            ? filterOptions.targetTypes
+            : Array.from(new Set(logs.map((log) => log.target_type))).sort()
+        }
         onTargetTypeChange={(v) => {
           setTargetType(v);
           setPage(1);
