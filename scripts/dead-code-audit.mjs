@@ -289,12 +289,17 @@ const unreferencedAssets = assetFiles
   .map(toRepoPath)
   .sort();
 
+const zeroReferenceExports = unusedExportCandidates.filter(
+  (candidate) => candidate.sameFileReferences === 0
+);
+
 const result = {
   htmlEntries: htmlEntries.map(toRepoPath),
   sourceFiles: sourceFiles.length,
   reachableSourceFiles: reachable.size,
   unreachable,
   unusedDiagnostics,
+  zeroReferenceExports,
   unusedExportCandidates,
   unusedRuntimeDependencies,
   unreferencedAssets,
@@ -305,6 +310,7 @@ console.log(JSON.stringify(result, null, 2));
 const failures =
   unreachable.length +
   unusedDiagnostics.length +
+  zeroReferenceExports.length +
   unusedRuntimeDependencies.length +
   unreferencedAssets.length;
 
@@ -315,6 +321,8 @@ if (failures > 0) {
       ' unreachable source file(s), ' +
       unusedDiagnostics.length +
       ' unused/unreachable declaration diagnostic(s), ' +
+      zeroReferenceExports.length +
+      ' zero-reference exported declaration(s), ' +
       unusedRuntimeDependencies.length +
       ' unused runtime dependency candidate(s), and ' +
       unreferencedAssets.length +
@@ -323,4 +331,4 @@ if (failures > 0) {
   process.exit(1);
 }
 
-console.log('\nDead-code audit passed: source reachability, unused declarations, runtime dependencies, and assets are clean.');
+console.log('\nDead-code audit passed: source reachability, unused declarations, zero-reference exports, runtime dependencies, and assets are clean.');
