@@ -488,7 +488,7 @@ for (const needle of [
   'buildNewsIntakeSubcategoryReport',
   'missingNewsIntakeSubcategoryFields',
   'Current report form requirements could not be fully grounded from the source',
-  'Court, bail, remand, confession, hearing, verdict, appeal, or trial follow-up was excluded',
+  'Court, bail, remand, confession, arrest/enforcement, hearing, verdict, appeal, or trial follow-up was excluded',
   'Fact-check, misinformation, or debunking article was excluded',
   "errorMessage.startsWith('SOURCE_DOMAIN_NOT_APPROVED:')",
   'Approved-source link redirected to an unapproved domain and was excluded from News Intake.',
