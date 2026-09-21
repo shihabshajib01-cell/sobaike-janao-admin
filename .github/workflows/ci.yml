@@ -65,6 +65,9 @@ jobs:
       - name: Admin hardening audit
         run: npm run audit:hardening
 
+      - name: Global UX audit
+        run: npm run audit:global-ux
+
       - name: Lint
         run: npm run lint
 
