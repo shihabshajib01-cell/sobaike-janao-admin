@@ -1,6 +1,6 @@
 import { ButtonBase } from '@/components/ui/Button';
 import React from 'react';
-import { Search, Filter, X, Calendar } from 'lucide-react';
+import { Search, X, Calendar } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatTargetType, getAuditActionMeta } from '@/utils/auditLogUtils';
 import { sortLocalizedTextOptions } from '@/utils/dropdownOptions';
