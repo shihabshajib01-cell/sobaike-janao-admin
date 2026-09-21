@@ -4,7 +4,7 @@
  * Real Supabase read-only operations for Sobaike Admin.
  */
 
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import {
   Complaint,
   ComplaintFilterState,
