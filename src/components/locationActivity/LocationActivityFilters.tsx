@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { useLanguage } from '@/context/LanguageContext';
+import { sortLocalizedTextOptions } from '@/utils/dropdownOptions';
 
 export interface LocationActivityFiltersProps {
   filters: FilterState;
@@ -24,6 +25,48 @@ export const LocationActivityFilters: React.FC<LocationActivityFiltersProps> = (
 }) => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
+
+  const permissionOptions = [
+    { value: 'all', label: isBn ? 'সকল অবস্থা' : 'All Statuses' },
+    ...sortLocalizedTextOptions(
+      [
+        { value: 'granted', label: isBn ? 'অনুমোদিত' : 'Granted' },
+        { value: 'denied', label: isBn ? 'অনুমতি দেওয়া হয়নি' : 'Denied' },
+        { value: 'prompt', label: isBn ? 'এখন নয় (Prompt)' : 'Not Now (Prompt)' },
+        { value: 'unavailable', label: isBn ? 'অনুপলব্ধ' : 'Unavailable' },
+      ],
+      language
+    ),
+  ];
+
+  const deviceOptions = [
+    { value: 'all', label: isBn ? 'সকল ডিভাইস' : 'All Devices' },
+    ...sortLocalizedTextOptions(
+      [
+        { value: 'desktop', label: isBn ? 'ডেস্কটপ' : 'Desktop' },
+        { value: 'mobile', label: isBn ? 'মোবাইল' : 'Mobile' },
+        { value: 'tablet', label: isBn ? 'ট্যাবলেট' : 'Tablet' },
+        { value: 'unknown', label: isBn ? 'অজানা' : 'Unknown' },
+      ],
+      language
+    ),
+  ];
+
+  const resolvedBrowsers =
+    browserOptions.length > 0
+      ? browserOptions
+      : ['Chrome', 'Firefox', 'Safari', 'Edge', 'Opera'];
+
+  const browserSelectOptions = [
+    { value: 'all', label: isBn ? 'সকল ব্রাউজার' : 'All Browsers' },
+    ...sortLocalizedTextOptions(
+      Array.from(new Set(resolvedBrowsers)).map((browser) => ({
+        value: browser,
+        label: browser,
+      })),
+      language
+    ),
+  ];
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange({
@@ -97,79 +140,57 @@ export const LocationActivityFilters: React.FC<LocationActivityFiltersProps> = (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 border-t border-slate-100 dark:border-slate-800">
           {/* 1. Permission Status */}
           <div className="space-y-1">
-            <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
+            <label htmlFor="location-permission-filter" className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
               <ShieldCheck className="w-3 h-3 text-slate-400" />
               <span>{isBn ? 'অনুমতি অবস্থা' : 'Permission'}</span>
             </label>
             <Select
+              id="location-permission-filter"
               value={filters.permission}
               onChange={handlePermissionChange}
               className="h-8.5 text-xs"
-            >
-              <option value="all">{isBn ? 'সকল অবস্থা' : 'All Statuses'}</option>
-              <option value="granted">{isBn ? 'অনুমোদিত' : 'Granted'}</option>
-              <option value="denied">{isBn ? 'অনুমতি দেওয়া হয়নি' : 'Denied'}</option>
-              <option value="prompt">{isBn ? 'এখন নয় (Prompt)' : 'Not Now (Prompt)'}</option>
-              <option value="unavailable">{isBn ? 'অনুপলব্ধ' : 'Unavailable'}</option>
-            </Select>
+              options={permissionOptions}
+            />
           </div>
 
           {/* 2. Device Category */}
           <div className="space-y-1">
-            <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
+            <label htmlFor="location-device-filter" className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
               <Smartphone className="w-3 h-3 text-slate-400" />
               <span>{isBn ? 'ডিভাইস' : 'Device'}</span>
             </label>
             <Select
+              id="location-device-filter"
               value={filters.device}
               onChange={handleDeviceChange}
               className="h-8.5 text-xs"
-            >
-              <option value="all">{isBn ? 'সকল ডিভাইস' : 'All Devices'}</option>
-              <option value="desktop">{isBn ? 'ডেস্কটপ' : 'Desktop'}</option>
-              <option value="mobile">{isBn ? 'মোবাইল' : 'Mobile'}</option>
-              <option value="tablet">{isBn ? 'ট্যাবলেট' : 'Tablet'}</option>
-              <option value="unknown">{isBn ? 'অজানা' : 'Unknown'}</option>
-            </Select>
+              options={deviceOptions}
+            />
           </div>
 
           {/* 3. Browser */}
           <div className="space-y-1">
-            <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
+            <label htmlFor="location-browser-filter" className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
               <Globe className="w-3 h-3 text-slate-400" />
               <span>{isBn ? 'ব্রাউজার' : 'Browser'}</span>
             </label>
             <Select
+              id="location-browser-filter"
               value={filters.browser}
               onChange={handleBrowserChange}
               className="h-8.5 text-xs"
-            >
-              <option value="all">{isBn ? 'সকল ব্রাউজার' : 'All Browsers'}</option>
-              {browserOptions.length > 0 ? (
-                browserOptions.map((b) => (
-                  <option key={b} value={b}>
-                    {b}
-                  </option>
-                ))
-              ) : (
-                <>
-                  <option value="Chrome">Chrome</option>
-                  <option value="Firefox">Firefox</option>
-                  <option value="Safari">Safari</option>
-                  <option value="Edge">Edge</option>
-                  <option value="Opera">Opera</option>
-                </>
-              )}
-            </Select>
+              options={browserSelectOptions}
+            />
           </div>
 
           {/* 4. Time Range */}
           <div className="space-y-1">
-            <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
+            <label htmlFor="location-time-range-filter" className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
               <Clock className="w-3 h-3 text-slate-400" />
               <span>{isBn ? 'সময়কাল' : 'Time Range'}</span>
             </label>
             <Select
+              id="location-time-range-filter"
               value={filters.timeRange}
               onChange={handleTimeRangeChange}
               className="h-8.5 text-xs"
