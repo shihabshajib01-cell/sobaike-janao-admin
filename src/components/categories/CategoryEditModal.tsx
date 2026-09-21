@@ -291,6 +291,13 @@ export const CategoryEditModal: React.FC<CategoryEditModalProps> = ({
                 onChange={(event) => setParentSegmentId(event.target.value)}
                 options={segments
                   .filter((segment) => segment.configStatus !== 'archived')
+                  .sort((a, b) =>
+                    (isBn ? a.nameBn : a.nameEn).localeCompare(
+                      isBn ? b.nameBn : b.nameEn,
+                      isBn ? 'bn-BD' : 'en',
+                      { sensitivity: 'base' }
+                    )
+                  )
                   .map((segment) => ({
                     value: segment.id,
                     label: isBn ? segment.nameBn : segment.nameEn,
