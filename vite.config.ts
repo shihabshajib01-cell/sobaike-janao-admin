@@ -22,6 +22,13 @@ export default defineConfig(() => {
       rollupOptions: {
         output: {
           manualChunks(id) {
+            if (id.includes('/src/context/LanguageContext.tsx')) {
+              return 'app-i18n';
+            }
+            if (id.includes('/src/components/ui/')) {
+              return 'app-ui';
+            }
+
             if (!id.includes('node_modules')) return undefined;
 
             if (id.includes('react-router') || id.includes('react-router-dom')) {
