@@ -1,5 +1,5 @@
 import { ButtonBase } from '@/components/ui/Button';
-import React, { InputHTMLAttributes, forwardRef, useState } from 'react';
+import React, { InputHTMLAttributes, forwardRef, useId, useState } from 'react';
 import { Eye, EyeOff, Search, X } from 'lucide-react';
 import { cn } from '@/utils';
 
@@ -28,12 +28,19 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       disabled,
       id,
       value,
+      'aria-describedby': ariaDescribedBy,
+      'aria-invalid': ariaInvalid,
       ...props
     },
     ref
   ) => {
     const [showPassword, setShowPassword] = useState(false);
-    const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+    const generatedId = useId();
+    const inputId = id || `input-${generatedId.replace(/:/g, '')}`;
+    const messageId = `${inputId}-message`;
+    const describedBy = [ariaDescribedBy, error || helperText ? messageId : undefined]
+      .filter(Boolean)
+      .join(' ') || undefined;
 
     const isPasswordType = type === 'password';
     const computedType = isPasswordType ? (showPassword ? 'text' : 'password') : type;
@@ -62,6 +69,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             type={computedType}
             value={value}
             disabled={disabled}
+            aria-invalid={ariaInvalid ?? (error ? true : undefined)}
+            aria-describedby={describedBy}
             className={cn(
               'w-full h-9 rounded-md border type-form-value transition-colors duration-150 font-normal',
               'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500',
@@ -105,9 +114,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 
         {/* Error or Helper message */}
         {error ? (
-          <p className="type-helper font-medium text-red-600 dark:text-red-400">{error}</p>
+          <p id={messageId} role="alert" className="type-helper font-medium text-red-600 dark:text-red-400">{error}</p>
         ) : helperText ? (
-          <p className="type-helper text-slate-500 dark:text-slate-400">{helperText}</p>
+          <p id={messageId} className="type-helper text-slate-500 dark:text-slate-400">{helperText}</p>
         ) : null}
       </div>
     );
