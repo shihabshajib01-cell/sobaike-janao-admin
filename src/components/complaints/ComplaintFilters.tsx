@@ -217,13 +217,10 @@ export const ComplaintFilters: React.FC<ComplaintFiltersProps> = ({
               onChange={(e) => onFilterChange('affectedPersonAgeGroup', e.target.value)}
               options={[
                 { value: 'all', label: isBn ? 'সকল বয়সের গ্রুপ' : 'All age groups' },
-                ...sortLocalizedTextOptions(
-                  HARASSMENT_AGE_GROUP_OPTIONS.map((item) => ({
-                    value: item.value,
-                    label: isBn ? item.labelBn : item.labelEn,
-                  })),
-                  language
-                ),
+                ...HARASSMENT_AGE_GROUP_OPTIONS.map((item) => ({
+                  value: item.value,
+                  label: isBn ? item.labelBn : item.labelEn,
+                })),
               ]}
             />
 
