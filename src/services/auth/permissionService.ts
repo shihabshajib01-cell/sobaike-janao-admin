@@ -9,6 +9,7 @@ export const CANONICAL_PERMISSIONS = [
   'complaints.unpublish',
   'complaints.reject',
   'categories.view',
+  'categories.manage',
   'banners.manage',
   'location_activity.view',
   'map.view',
