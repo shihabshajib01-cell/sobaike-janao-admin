@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, RotateCcw, Filter, Smartphone, ShieldCheck, Clock, Globe } from 'lucide-react';
+import { Search, RotateCcw, Smartphone, ShieldCheck, Clock, Globe } from 'lucide-react';
 import { LocationActivityFilters as FilterState } from '@/types/LocationActivity';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
