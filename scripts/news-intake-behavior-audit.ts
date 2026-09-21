@@ -88,6 +88,17 @@ assert.equal(
 );
 
 assert.equal(
+  isLegalFollowUpOnly('চট্টগ্রামের পাথরঘাটায় ছিনতাইয়ের ঘটনায় গ্রেপ্তার ১'),
+  true,
+  'Arrest-only follow-ups to a previously reported snatching must not create a fresh incident report'
+);
+assert.equal(
+  isLegalFollowUpOnly('ছিনতাই করে পালানোর সময় জনতার হাতে ধরা, পরে গ্রেপ্তার'),
+  false,
+  'A direct current incident that ends in an arrest must not be mistaken for an enforcement follow-up'
+);
+
+assert.equal(
   isMultiIncidentArticle(
     'নীলফামারীতে পৃথক সড়ক দুর্ঘটনায় দম্পতিসহ নিহত ৩',
     'জেলার জলঢাকা ও কিশোরগঞ্জ উপজেলায় পৃথক দুর্ঘটনায় তিনজন নিহত হওয়ার ঘটনাটি ঘটে।'
@@ -156,6 +167,20 @@ assert.equal(
   isSafeSpecificLocationText('দিঘির পাড় কোল্ড স্টোরেজ সংলগ্ন এলাকা','Nilphamari'),
   true,
   'A single named source-grounded local place must remain eligible'
+);
+
+assert.equal(
+  isSafeSpecificLocationText('গত বছরের নভেম্বরে লালদিঘী এলাকা','Chattogram'),
+  false,
+  'A historical background place must never replace the current incident location'
+);
+assert.equal(
+  inferSpecificLocationPhrase(
+    'রোববার উপজেলার কালিয়াইশ ইউনিয়নের পূর্ব কাটগড় রেলগেট এলাকায় এ দুর্ঘটনা ঘটে।',
+    'Chattogram'
+  ),
+  'কালিয়াইশ ইউনিয়নের পূর্ব কাটগড় রেলগেট এলাকা',
+  'Generic উপজেলা prefix should be removed so the public place label is self-contained'
 );
 
 const feedReadyContext=buildFeedReadyIncidentContext({

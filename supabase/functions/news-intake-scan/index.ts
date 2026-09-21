@@ -1231,7 +1231,7 @@ const processNewsIntakeRun = async (
           && location.quality !== 'multiple_locations'
           && location.locationScope !== 'multi_location'
         ){
-          const specificPhrase=inferSpecificLocationPhrase(locationText,location.district);
+          const specificPhrase=inferSpecificLocationPhrase(focusedLocationText,location.district);
           const districtWide=inferDistrictWideScope(locationText);
           const normalizePlace=(value:unknown)=>String(value||'')
             .toLowerCase()

@@ -1,0 +1,96 @@
+-- Final follow-up/location closeout for trusted News Intake.
+-- Keep current reports source-grounded: historical background places cannot
+-- become the incident location, and common Bangla Satkania inflections resolve
+-- to the existing canonical Chattogram upazila.
+
+update public.bangladesh_upazilas
+set aliases=(
+  select array_agg(distinct alias_value order by alias_value)
+  from unnest(
+    coalesce(aliases,'{}'::text[])
+    || array[
+      'সাতকানিয়ায়',
+      'সাতকানিয়ায়',
+      'সাতকানিয়ার',
+      'সাতকানিয়ার'
+    ]::text[]
+  ) alias_value
+)
+where id='chattogram-satkania';
+
+create or replace function public.news_intake_specific_location_text_is_safe(p_value text)
+returns boolean
+language sql
+immutable
+set search_path='pg_catalog'
+as $function$
+select case
+  when nullif(btrim(coalesce(p_value,'')),'') is null then false
+  when char_length(btrim(p_value))<5 or char_length(btrim(p_value))>120 then false
+  when lower(btrim(p_value)) ~ '^(area|market|bazaar|thana|upazila|union|village|city|road|street|lane|station)$' then false
+  when lower(btrim(p_value)) ~ '^(on|at|in|near)[[:space:]]+(the[[:space:]]+)?(road|street|lane|area|city|district|station)([[:space:]]+[0-9]+)?$' then false
+  when lower(p_value) ~ '(various|several)[[:space:]]+areas?' then false
+  when p_value ~ '(বিভিন্ন)[[:space:]]+এলাকা' then false
+  when btrim(p_value) ~ '^গত[[:space:]]+(বছর(ের)?|মাস(ের)?|সপ্তাহ(ের)?)([[:space:]]|$)' then false
+  when lower(btrim(p_value)) ~ '^last[[:space:]]+(year|month|week)([[:space:]]|$)' then false
+  when lower(btrim(p_value)) ~ '^[0-9]+[[:space:]]+(years?|months?|weeks?)[[:space:]]+ago([[:space:]]|$)' then false
+  when btrim(p_value) ~ '^(?:[০-৯0-9]{1,2}[[:space:]]+)?(?:জানুয়ারি|জানুয়ারি|ফেব্রুয়ারি|ফেব্রুয়ারি|মার্চ|এপ্রিল|মে|জুন|জুলাই|আগস্ট|সেপ্টেম্বর|অক্টোবর|নভেম্বর|ডিসেম্বর|সকাল|দুপুর|বিকেল|সন্ধ্যা|রাত)' then false
+  when lower(btrim(p_value)) ~ '^(?:[0-9]{1,2}[[:space:]]+)?(?:january|february|march|april|may|june|july|august|september|october|november|december|morning|afternoon|evening|night)([[:space:]]|$)' then false
+  when p_value ~ '(জেলার).{0,90}([[:space:]]ও[[:space:]]|[[:space:]]এবং[[:space:]]|,).{0,90}(উপজেলা|থানা)' then false
+  when lower(p_value) ~ 'district(''s)? .{0,90}([[:space:]]and[[:space:]]|,).{0,90}(upazila|thana)' then false
+  when p_value ~ '(উপজেলা|থানা).{0,70}([[:space:]]ও[[:space:]]|[[:space:]]এবং[[:space:]]|,).{0,70}(উপজেলা|থানা)' then false
+  when lower(p_value) ~ '(upazila|thana).{0,70}([[:space:]]and[[:space:]]|,).{0,70}(upazila|thana)' then false
+  when lower(p_value) ~ '(collected[[:space:]]+evidence|cordoned[[:space:]]+off|investigat(e|ed|ing|ion)|police[[:space:]]+said|officials?[[:space:]]+said|victims?|the[[:space:]]+victim|was[[:space:]]+arrested|were[[:space:]]+arrested|detained|went[[:space:]]+to[[:space:]]+the[[:space:]]+area|visited[[:space:]]+the[[:space:]]+area)' then false
+  when p_value ~ '(ভুক্তভোগী|পুলিশ[[:space:]]+জানায়|পুলিশ[[:space:]]+জানায়|কর্তৃপক্ষ|তদন্ত|গ্রেপ্তার|আটক|নিহত|আহত|উদ্ধার|জানান|বলেন)' then false
+  when p_value ~ '(^|[[:space:]])(এদিকে|অন্যদিকে|এ[[:space:]]+ঘটনায়|এ[[:space:]]+ঘটনায়|এই[[:space:]]+ঘটনায়|এই[[:space:]]+ঘটনায়)($|[[:space:]])' then false
+  when p_value ~ '^(র|এর)[[:space:]]+' then false
+  else true
+end
+$function$;
+
+revoke all on function public.news_intake_specific_location_text_is_safe(text)
+from public,anon,authenticated;
+grant execute on function public.news_intake_specific_location_text_is_safe(text)
+to service_role;
+
+-- Repair the one valid report created during the v46 production verification
+-- using facts already present in its approved source. This is deliberately
+-- source-URL scoped and becomes a no-op on databases where the audit row does
+-- not exist.
+update public.complaints c
+set upazila_or_thana='Satkania',
+    area='কালিয়াইশ ইউনিয়নের পূর্ব কাটগড় রেলগেট এলাকা',
+    formatted_address='কালিয়াইশ ইউনিয়নের পূর্ব কাটগড় রেলগেট এলাকা, সাতকানিয়া, চট্টগ্রাম',
+    updated_at=now()
+where c.id='SJ-2026-848907'
+  and c.origin_type='sourced_report'
+  and exists (
+    select 1
+    from public.complaint_sources s
+    where s.complaint_id=c.id
+      and public.normalize_source_url(s.canonical_url)=public.normalize_source_url(
+        'https://bangla.bdnews24.com/ctg/y9pm649rr5'
+      )
+  );
+
+-- Keep the audit-created enforcement follow-up quarantined even if this
+-- migration is replayed against a snapshot taken before the manual quarantine.
+update public.complaints c
+set status='unpublished',
+    custom_field_answers=coalesce(c.custom_field_answers,'{}'::jsonb)
+      || jsonb_build_object(
+        'newsIntakeReviewRequired',true,
+        'newsIntakeReviewReason','Enforcement follow-up was not a fresh incident; historical background location was selected.'
+      ),
+    updated_at=now()
+where c.id='SJ-2026-284319'
+  and c.origin_type='sourced_report'
+  and exists (
+    select 1
+    from public.complaint_sources s
+    where s.complaint_id=c.id
+      and public.normalize_source_url(s.canonical_url)=public.normalize_source_url(
+        'https://bangla.bdnews24.com/ctg/f0vcm5cbs4'
+      )
+  );
+

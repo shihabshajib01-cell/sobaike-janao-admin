@@ -37,6 +37,7 @@ const legacyQualityCleanup = read('supabase/migrations/20260920143848_news_intak
 const oneClickContract = read('supabase/migrations/20260920175318_news_intake_one_click_zero_issue_contract.sql');
 const subcategoryBuilderContract = read('supabase/migrations/20260920183600_news_intake_subcategory_builder_contract.sql');
 const locationSemanticGuard = read('supabase/migrations/20260920193000_news_intake_location_semantic_guard.sql');
+const followupLocationCloseout = read('supabase/migrations/20260921082500_news_intake_followup_location_closeout.sql');
 const automationCore = read('supabase/functions/_shared/newsIntakeAutomationCore.ts');
 const subcategoryBuilders = read('supabase/functions/_shared/newsIntakeSubcategoryBuilders.ts');
 const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
@@ -434,6 +435,7 @@ for (const needle of [
   'isMultiIncidentArticle',
   'Source contains multiple distinct incidents; candidate was blocked from Feed Ready',
   'Multiple distinct incident locations were detected; candidate was blocked from Feed Ready',
+  'inferSpecificLocationPhrase(focusedLocationText,location.district)',
   'isNonIncidentHeadline',
   'admin_check_source_duplicate',
   "triggerType==='manual'",
@@ -706,6 +708,15 @@ if (page.includes('padding="sm" className="h-full"')) {
 if (page.includes('Historical review item') || page.includes('Historical review')) {
   errors.push('News Intake must not label current excluded matches as historical review work.');
 }
+for (const needle of [
+  'chattogram-satkania',
+  'সাতকানিয়ায়',
+  'গত[[:space:]]+',
+  'news_intake_specific_location_text_is_safe',
+]) {
+  requireText(followupLocationCloseout, needle, 'News Intake follow-up/location closeout migration');
+}
+
 requireText(page, 'feedReadyItems.map(selectionKeyForItem)', 'ready matched selection eligibility');
 requireText(page, "item.reportId ? `report:${String(item.reportId)}` : `item:${item.id}`", 'staged trusted candidate selection key');
 
