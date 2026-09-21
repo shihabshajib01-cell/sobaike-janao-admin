@@ -10,6 +10,7 @@ import {
   clip,
   detectLanguage,
   findLocation,
+  hasPrimaryTheftHeadlineSignal,
   inferDistrictWideScope,
   inferIncidentDate,
   inferSpecificLocationPhrase,
@@ -1057,10 +1058,17 @@ const processNewsIntakeRun = async (
           return;
         }
 
-        const classification=
-          classifyArticle(article.title)
+        const titleClassification=classifyArticle(article.title);
+        const fallbackClassification=
+          titleClassification
           || classifyArticle(headlineText)
           || dynamicTaxonomyClassification(headlineText,liveTaxonomy);
+        const classification=
+          fallbackClassification?.subcategoryId==='theft'
+          && !titleClassification
+          && !hasPrimaryTheftHeadlineSignal(article.title)
+            ? null
+            : fallbackClassification;
         if(!classification){
           await record({
             itemKind:'article',
