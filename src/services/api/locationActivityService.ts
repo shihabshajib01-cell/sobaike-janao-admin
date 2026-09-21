@@ -29,7 +29,10 @@ export const locationActivityService = {
 
     let query = supabase
       .from('public_visit_sessions')
-      .select('*', { count: 'exact' });
+      .select(
+        'id, visitor_id, session_id, permission_status, browser_name, browser_version, os_name, device_category, platform, language, ui_language, timezone, screen_width, screen_height, user_agent, consented_at, first_seen_at, last_seen_at, created_at',
+        { count: 'exact' }
+      );
 
     // 1. Permission Filter
     if (filters.permission && filters.permission !== 'all') {
@@ -82,7 +85,14 @@ export const locationActivityService = {
       throw new Error(`Failed to load visitor sessions: ${error.message}`);
     }
 
-    const sessions = (data || []) as PublicVisitSession[];
+    const sessions = (data || []).map((row: any) => ({
+      ...row,
+      // Phase 8 privacy contract: browse coordinates are transient and never retained.
+      latitude: null,
+      longitude: null,
+      accuracy_meters: null,
+      location_updated_at: null,
+    })) as PublicVisitSession[];
     const total = count ?? 0;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
