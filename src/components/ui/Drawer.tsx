@@ -2,6 +2,7 @@ import { ActionGroup, IconButton } from './Button';
 import React, { useEffect, useId, useRef } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/utils';
+import { useLanguage } from '@/context/LanguageContext';
 
 export interface DrawerProps {
   isOpen: boolean;
@@ -28,6 +29,8 @@ export const Drawer: React.FC<DrawerProps> = ({
   mobileSheet = false,
   className,
 }) => {
+  const { language } = useLanguage();
+  const isBn = language === 'bn';
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
@@ -172,7 +175,7 @@ export const Drawer: React.FC<DrawerProps> = ({
               variant="ghost"
               size="sm"
               onClick={onClose}
-              aria-label="Close drawer"
+              aria-label={isBn ? 'ড্রয়ার বন্ধ করুন' : 'Close drawer'}
               icon={<X />}
             />
           </div>
