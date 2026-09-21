@@ -753,6 +753,60 @@ const safeScanFetch = async (
   return {html,finalUrl:current.toString(),domain};
 };
 
+const dynamicTaxonomyClassification = (
+  value: unknown,
+  taxonomy: any
+) => {
+  const text=String(value||'')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+  if(!text) return null;
+
+  const textTokens=new Set(text.split(' ').filter(Boolean));
+  const stopwords=new Set([
+    'and','or','other','others','issue','issues','report','reports','service','services',
+    'location','locations','public','private','general','related','the','of','for','in',
+    'ও','এবং','অন্যান্য','বিষয়','বিষয়','ঘটনা','সংক্রান্ত','সম্পর্কিত'
+  ]);
+
+  const candidates=(Array.isArray(taxonomy?.subcategories)?taxonomy.subcategories:[])
+    .map((subcategory:any)=>{
+      const phrases=[
+        String(subcategory?.nameEn||''),
+        String(subcategory?.nameBn||''),
+        String(subcategory?.id||'').replace(/[-_]+/g,' '),
+      ]
+        .map((item)=>item.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,' ').replace(/\s+/g,' ').trim())
+        .filter((item)=>item.length>=3);
+
+      let score=0;
+      for(const phrase of phrases){
+        if(phrase.includes(' ') && text.includes(phrase)) score=Math.max(score,0.92);
+        const tokens=phrase.split(' ').filter((token)=>token.length>=3 && !stopwords.has(token));
+        const matched=tokens.filter((token)=>textTokens.has(token));
+        if(tokens.length>=2 && matched.length===tokens.length) score=Math.max(score,0.89);
+        else if(tokens.length>=3 && matched.length>=2 && matched.length/tokens.length>=0.66) score=Math.max(score,0.86);
+        else if(tokens.length===1 && tokens[0].length>=5 && matched.length===1) score=Math.max(score,0.84);
+      }
+
+      return score>=0.84
+        ? {
+            segmentId:String(subcategory?.segmentId||''),
+            subcategoryId:String(subcategory?.id||''),
+            confidence:score,
+          }
+        : null;
+    })
+    .filter(Boolean)
+    .sort((left:any,right:any)=>right.confidence-left.confidence);
+
+  if(!candidates.length) return null;
+  if(candidates.length>1 && Math.abs(candidates[0].confidence-candidates[1].confidence)<0.03) return null;
+  return candidates[0];
+};
+
 const processNewsIntakeRun = async (
   supabase: any,
   runId: string,
@@ -774,8 +828,15 @@ const processNewsIntakeRun = async (
 
   let fatalMessage='';
   let processingErrors=0;
+  let liveTaxonomy:any={segments:[],subcategories:[]};
 
   try {
+    const {data:taxonomyData,error:taxonomyError}=await supabase.rpc('admin_get_news_intake_taxonomy');
+    if(taxonomyError) throw new Error(taxonomyError.message);
+    liveTaxonomy=taxonomyData && typeof taxonomyData==='object'
+      ? taxonomyData
+      : {segments:[],subcategories:[]};
+
     const {data:sourceData,error:sourceError}=await supabase.rpc('admin_get_news_intake_scan_sources');
     if(sourceError) throw new Error(sourceError.message);
     const sources=(Array.isArray(sourceData)?sourceData:[]).slice(0,MAX_SOURCES);
@@ -963,7 +1024,10 @@ const processNewsIntakeRun = async (
           return;
         }
 
-        const classification=classifyArticle(article.title) || classifyArticle(headlineText);
+        const classification=
+          classifyArticle(article.title)
+          || classifyArticle(headlineText)
+          || dynamicTaxonomyClassification(headlineText,liveTaxonomy);
         if(!classification){
           await record({
             itemKind:'article',
@@ -1338,6 +1402,49 @@ const processNewsIntakeRun = async (
             action:'discovered',
             duplicateStatus:'unavailable',
             reason:`Current report form requirements could not be fully grounded from the source: ${missingContractFields.join(', ')}. Candidate was blocked from Feed Ready.`,
+          });
+          return;
+        }
+
+        // The currently published reporting schema is the authoritative form
+        // contract. This keeps automatic intake aligned with Admin form changes
+        // without hard-coding every future required custom field into the
+        // scanner. Missing/changed schema fields fail closed into review.
+        const {data:liveSchemaPreview,error:liveSchemaPreviewError}=await supabase.rpc(
+          'admin_preview_sourced_report_intake',
+          {p_payload:payload}
+        );
+        if(liveSchemaPreviewError) throw new Error(liveSchemaPreviewError.message);
+
+        if(liveSchemaPreview?.schemaValidation?.ready!==true){
+          const missingSchemaFields=Array.isArray(liveSchemaPreview?.schemaValidation?.missingFields)
+            ? liveSchemaPreview.schemaValidation.missingFields
+            : [];
+          const reviewFields=missingSchemaFields
+            .flatMap((field:any)=>[String(field?.storageKey||''),String(field?.fieldKey||'')])
+            .filter(Boolean);
+          const missingLabels=missingSchemaFields
+            .map((field:any)=>String(field?.labelEn||field?.labelBn||field?.storageKey||field?.fieldKey||'required field'))
+            .filter(Boolean);
+
+          await record({
+            itemKind:'article',
+            sourceHostname:source.hostname,
+            publisherName:article.publisherName,
+            canonicalUrl:article.canonicalUrl,
+            sourceTitle:article.title,
+            sourcePublishedDate:article.sourcePublishedDate||'',
+            contentLanguage:language,
+            segmentId:classification.segmentId,
+            subcategoryId:classification.subcategoryId,
+            confidence:classification.confidence,
+            action:'needs_review',
+            duplicateStatus:'unavailable',
+            reason:`The live published form changed or requires source-grounded fields that automation could not safely fill: ${missingLabels.join(', ') || 'required fields'}. No report was published.`,
+            reviewPayload:{
+              ...payload,
+              reviewFields:Array.from(new Set(reviewFields)),
+            },
           });
           return;
         }
