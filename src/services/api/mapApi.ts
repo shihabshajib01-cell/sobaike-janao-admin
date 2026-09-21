@@ -14,7 +14,6 @@ import {
 } from '@/types/Map';
 import { ComplaintLifecycleStatus } from '@/types/Complaint';
 
-export const MAP_MONITORING_CONNECTED = true;
 
 export class MapApi {
   /**
