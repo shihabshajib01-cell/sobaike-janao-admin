@@ -380,6 +380,14 @@ export const findLocation = (value: unknown) => {
   return best ? {division:best.division,district:best.district} : null;
 };
 
+export const cleanSpecificLocationText = (value: unknown) =>
+  String(value ?? '')
+    .replace(/\s+/g,' ')
+    .trim()
+    .replace(/^(?:the\s+)?(?:vehicle|car|bus|truck|motorcycle|rickshaw|auto[- ]?rickshaw|three[- ]?wheeler|battery|incident|altercation|victim|suspect|body|house|home)\s+(?:in|at|near)\s+/i,'')
+    .replace(/\s+village\s+of\s+(.+?\s+union)$/i,' village, $1')
+    .trim();
+
 const compactLocationPhrase = (value: string) => {
   let candidate=value
     .replace(/[“”"'‘’()[\]{}]/g,' ')
@@ -413,16 +421,11 @@ const compactLocationPhrase = (value: string) => {
     .split(/\s+/)
     .slice(-7)
     .join(' ')
-    // Specific-location regexes can capture the last narrative noun immediately
-    // before a real English place phrase (for example "vehicle in Sakrail
-    // village of Garpara union"). Strip that narrative lead-in without
-    // weakening the positive geographic-evidence gate.
-    .replace(/^(?:the\s+)?(?:vehicle|car|bus|truck|motorcycle|rickshaw|auto[- ]?rickshaw|three[- ]?wheeler|battery|incident|altercation|victim|suspect|body|house|home)\s+(?:in|at|near)\s+/i,'')
-    .replace(/\s+village\s+of\s+(.+?\s+union)$/i,' village, $1')
     .replace(/(এলাকা|মহল্লা|গ্রাম|বাজার|মার্কেট|থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|সড়ক|সড়ক|রোড|লেন|গলি|মোড়|মোড়|স্টেশন)(?:য়|য়|তে|ে)$/u,'$1')
     .trim();
 
-  return candidate;
+  return cleanSpecificLocationText(candidate);
+};
 };
 
 export const isSafeSpecificLocationText = (
