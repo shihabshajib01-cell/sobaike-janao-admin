@@ -52,3 +52,45 @@ revoke all on function public.news_intake_specific_location_text_is_safe(text)
 from public,anon,authenticated;
 grant execute on function public.news_intake_specific_location_text_is_safe(text)
 to service_role;
+
+-- Repair the one valid report created during the v46 production verification
+-- using facts already present in its approved source. This is deliberately
+-- source-URL scoped and becomes a no-op on databases where the audit row does
+-- not exist.
+update public.complaints c
+set upazila_or_thana='Satkania',
+    area='কালিয়াইশ ইউনিয়নের পূর্ব কাটগড় রেলগেট এলাকা',
+    formatted_address='কালিয়াইশ ইউনিয়নের পূর্ব কাটগড় রেলগেট এলাকা, সাতকানিয়া, চট্টগ্রাম',
+    updated_at=now()
+where c.id='SJ-2026-848907'
+  and c.origin_type='sourced_report'
+  and exists (
+    select 1
+    from public.complaint_sources s
+    where s.complaint_id=c.id
+      and public.normalize_source_url(s.canonical_url)=public.normalize_source_url(
+        'https://bangla.bdnews24.com/ctg/y9pm649rr5'
+      )
+  );
+
+-- Keep the audit-created enforcement follow-up quarantined even if this
+-- migration is replayed against a snapshot taken before the manual quarantine.
+update public.complaints c
+set status='unpublished',
+    custom_field_answers=coalesce(c.custom_field_answers,'{}'::jsonb)
+      || jsonb_build_object(
+        'newsIntakeReviewRequired',true,
+        'newsIntakeReviewReason','Enforcement follow-up was not a fresh incident; historical background location was selected.'
+      ),
+    updated_at=now()
+where c.id='SJ-2026-284319'
+  and c.origin_type='sourced_report'
+  and exists (
+    select 1
+    from public.complaint_sources s
+    where s.complaint_id=c.id
+      and public.normalize_source_url(s.canonical_url)=public.normalize_source_url(
+        'https://bangla.bdnews24.com/ctg/f0vcm5cbs4'
+      )
+  );
+
