@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, ArrowRight, X, Hash, Lock, Globe, Sparkles } from 'lucide-react';
+import { Shield, ArrowRight, X, Hash, Lock, Sparkles } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
