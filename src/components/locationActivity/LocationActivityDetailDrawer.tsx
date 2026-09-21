@@ -91,7 +91,7 @@ export const LocationActivityDetailDrawer: React.FC<LocationActivityDetailDrawer
     <Drawer
       isOpen={isOpen}
       onClose={onClose}
-      title={isBn ? 'সেশন ও লোকেশন বিবরণ' : 'Session & Location Details'}
+      title={isBn ? 'সেশন ও লোকেশন অনুমতির বিবরণ' : 'Session & Location Permission Details'}
       description={
         isBn
           ? `সেশন আইডি: ${session.session_id.slice(0, 12)}...`
@@ -234,23 +234,27 @@ export const LocationActivityDetailDrawer: React.FC<LocationActivityDetailDrawer
               </div>
             ) : (
               <div className="bg-white/80 dark:bg-slate-800/60 p-3 rounded-lg border border-slate-200 dark:border-slate-700/60 text-xs text-slate-500 dark:text-slate-400 italic">
-                {session.permission_status === 'denied' || session.permission_status === 'prompt'
+                {session.permission_status === 'granted'
+                  ? isBn
+                    ? 'ভিজিটর লোকেশন অনুমতি দিয়েছেন। গোপনীয়তার জন্য ব্রাউজিং GPS স্থানাঙ্ক সংরক্ষণ করা হয় না।'
+                    : 'Visitor granted location permission. Precise browse GPS coordinates are not retained for privacy.'
+                  : session.permission_status === 'denied' || session.permission_status === 'prompt'
                   ? isBn
                     ? 'ভিজিটর লোকেশন অনুমতি প্রদান করেননি।'
                     : 'Visitor did not grant location permission.'
                   : isBn
-                  ? 'লোকেশন ডাটা অনুপলব্ধ।'
-                  : 'Location data unavailable.'}
+                  ? 'লোকেশন অনুমতির তথ্য অনুপলব্ধ।'
+                  : 'Location permission information is unavailable.'}
               </div>
             )}
 
             {/* Location Updated Timestamp */}
             <div className="pt-2 border-t border-slate-200/80 dark:border-slate-700/60 text-xs">
               <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-0.5">
-                {isBn ? 'লোকেশন সর্বশেষ আপডেট' : 'Location Updated At'}
+                {isBn ? 'ব্রাউজ GPS সংরক্ষণ' : 'Browse GPS Retention'}
               </span>
-              <span className="font-mono text-slate-700 dark:text-slate-300">
-                {formatDateTime(session.location_updated_at)}
+              <span className="text-slate-700 dark:text-slate-300">
+                {isBn ? 'সংরক্ষণ করা হয় না' : 'Not retained'}
               </span>
             </div>
           </div>
