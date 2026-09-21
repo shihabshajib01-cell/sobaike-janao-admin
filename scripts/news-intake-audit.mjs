@@ -39,6 +39,7 @@ const subcategoryBuilderContract = read('supabase/migrations/20260920183600_news
 const locationSemanticGuard = read('supabase/migrations/20260920193000_news_intake_location_semantic_guard.sql');
 const followupHistoricalGuard = read('supabase/migrations/20260921032000_news_intake_followup_historical_location_guard.sql');
 const relativeDateNarrativeLocationGuard = read('supabase/migrations/20260921033500_news_intake_relative_date_narrative_location_guard.sql');
+const finalNewsIntakeCloseout = read('supabase/migrations/20260921090000_news_intake_final_closeout.sql');
 const automationCore = read('supabase/functions/_shared/newsIntakeAutomationCore.ts');
 const subcategoryBuilders = read('supabase/functions/_shared/newsIntakeSubcategoryBuilders.ts');
 const behaviorAudit = read('scripts/news-intake-behavior-audit.ts');
@@ -138,6 +139,7 @@ for (const needle of [
   'sourceOmittedFields',
   'locationScope',
   'hasValidLocation',
+  'conservative standard builder',
   'utility_outage',
   '"load-shedding-outage"',
   '"gas-shortage"',
@@ -174,6 +176,15 @@ requireText(behaviorAudit, 'Taking a detainee/suspect from police must not be cl
 requireText(behaviorAudit, 'Future strike warnings must be excluded before category matching', 'News Intake non-incident strike regression');
 requireText(behaviorAudit, 'Evidence recovery during a murder investigation must not become a standalone theft report', 'News Intake evidence-recovery regression');
 requireText(behaviorAudit, 'Same-day Bangla weekday plus বেলা must resolve to the publication day', 'News Intake Bangla বেলা date regression');
+requireText(scanner, 'dynamicTaxonomyClassification', 'News Intake live taxonomy fallback classifier');
+requireText(scanner, 'admin_get_news_intake_taxonomy', 'News Intake live taxonomy fetch');
+requireText(scanner, 'admin_preview_sourced_report_intake', 'News Intake live published-schema validation');
+requireText(scanner, "action:'needs_review'", 'News Intake schema-change fail-closed review');
+requireText(page, 'data-news-intake-ready-panel', 'News Intake Feed Ready panel scope');
+requireText(page, 'feedReadyItems.map', 'News Intake Feed Ready-only rendering');
+requireText(page, 'data-news-intake-diagnostics-panel', 'News Intake diagnostics panel scope');
+requireText(finalNewsIntakeCloseout, 'news_intake_specific_location_has_positive_evidence', 'News Intake positive-location SQL guard');
+requireText(finalNewsIntakeCloseout, 'trg_guard_trusted_news_intake_positive_location', 'News Intake positive-location trigger');
 requireText(automationCore, 'isSubstantiveIncidentContext', 'News Intake substantive context helper');
 requireText(automationCore, 'isLegalFollowUpOnly', 'News Intake legal follow-up helper');
 requireText(automationCore, 'isFactCheckOrMisinformationStory', 'News Intake fact-check helper');
@@ -191,6 +202,8 @@ requireText(behaviorAudit, 'Exact Mob Justice narrative thana phrase must not be
 requireText(behaviorAudit, 'Fact-check/debunk stories must not be converted into fresh incident reports', 'News Intake fact-check regression');
 requireText(behaviorAudit, 'Narrative police-jurisdiction fragments must never become the public incident location', 'News Intake noisy-location regression');
 requireText(behaviorAudit, 'Generic English road fragments must never become a specific location', 'News Intake semantic location regression');
+requireText(behaviorAudit, 'Arbitrary Bangla narrative prose must fail positive geographic evidence validation', 'News Intake positive-location regression');
+requireText(behaviorAudit, 'A future Admin-created subcategory must use the conservative generic builder instead of failing on a missing code registry entry', 'News Intake generic-builder regression');
 requireText(behaviorAudit, 'Narrative Bangla victim/thana fragments must never become a specific location', 'News Intake Bangla semantic location regression');
 requireText(behaviorAudit, 'Feed Ready source context must contain at least 400 characters', 'News Intake 400-character minimum regression');
 requireText(behaviorAudit, 'Feed Ready source context must never exceed 800 characters', 'News Intake 800-character maximum regression');
