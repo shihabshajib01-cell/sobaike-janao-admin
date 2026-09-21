@@ -13,7 +13,6 @@ import {
   FileCheck,
   Building,
   User,
-  Shield,
   ArrowRight,
   AlertTriangle,
   RefreshCw,
