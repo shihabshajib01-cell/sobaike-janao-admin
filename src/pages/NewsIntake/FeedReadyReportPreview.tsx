@@ -318,6 +318,14 @@ export const FeedReadyReportPreview: React.FC<FeedReadyReportPreviewProps> = ({
         <Tag tone={statusTone}>{statusLabel}</Tag>
       </div>
 
+      <div
+        className={
+          publishable && selected
+            ? 'rounded-2xl ring-2 ring-emerald-200/70 dark:ring-emerald-900/50'
+            : ''
+        }
+        data-news-intake-preview-selected={publishable && selected ? 'true' : 'false'}
+      >
       <article
         className="select-none space-y-2.5 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm sm:space-y-3 sm:p-5 dark:border-slate-800 dark:bg-slate-950"
         aria-label={isBn ? 'পাবলিক ফিড প্রিভিউ' : 'Public feed preview'}
@@ -396,6 +404,7 @@ export const FeedReadyReportPreview: React.FC<FeedReadyReportPreviewProps> = ({
           </span>
         </div>
       </article>
+      </div>
     </div>
   );
 };

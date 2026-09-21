@@ -582,28 +582,52 @@ const relativeIncidentDateFromText = (text: string, publishedDate?: string | nul
   }
 
   const weekdayNames: Array<[number, RegExp]> = [
-    [0, /(গত\s*)?(?:রবিবার|রোববার)(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?sunday(?:\s+(?:night|morning|afternoon|evening))?/iu],
-    [1, /(গত\s*)?সোমবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?monday(?:\s+(?:night|morning|afternoon|evening))?/iu],
-    [2, /(গত\s*)?মঙ্গলবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?tuesday(?:\s+(?:night|morning|afternoon|evening))?/iu],
-    [3, /(গত\s*)?বুধবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?wednesday(?:\s+(?:night|morning|afternoon|evening))?/iu],
-    [4, /(গত\s*)?বৃহস্পতিবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?thursday(?:\s+(?:night|morning|afternoon|evening))?/iu],
-    [5, /(গত\s*)?শুক্রবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?friday(?:\s+(?:night|morning|afternoon|evening))?/iu],
-    [6, /(গত\s*)?শনিবার(?:\s*(?:রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?saturday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [0, /(গত\s*)?(?:রবিবার|রোববার)(?:\s*(?:রাত(?:ে)?|সকাল(?:ে)?|ভোর(?:ে)?|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?sunday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [1, /(গত\s*)?সোমবার(?:\s*(?:রাত(?:ে)?|সকাল(?:ে)?|ভোর(?:ে)?|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?monday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [2, /(গত\s*)?মঙ্গলবার(?:\s*(?:রাত(?:ে)?|সকাল(?:ে)?|ভোর(?:ে)?|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?tuesday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [3, /(গত\s*)?বুধবার(?:\s*(?:রাত(?:ে)?|সকাল(?:ে)?|ভোর(?:ে)?|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?wednesday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [4, /(গত\s*)?বৃহস্পতিবার(?:\s*(?:রাত(?:ে)?|সকাল(?:ে)?|ভোর(?:ে)?|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?thursday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [5, /(গত\s*)?শুক্রবার(?:\s*(?:রাত(?:ে)?|সকাল(?:ে)?|ভোর(?:ে)?|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?friday(?:\s+(?:night|morning|afternoon|evening))?/iu],
+    [6, /(গত\s*)?শনিবার(?:\s*(?:রাত(?:ে)?|সকাল(?:ে)?|ভোর(?:ে)?|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা))?|(?:last\s+)?saturday(?:\s+(?:night|morning|afternoon|evening))?/iu],
   ];
-  const base=new Date(publishedDate + 'T00:00:00Z');
-  for (const [weekday,pattern] of weekdayNames) {
+
+  const incidentAnchorPattern =
+    /(ঘটনাটি|দুর্ঘটনা(?:টি|য়|য়)?|ছিনতাইয়ের\s+ঘটনা|ছিনতাইয়ের\s+ঘটনা|হামলাটি|ধর্ষণের\s+ঘটনা|ডাকাতির\s+ঘটনা|চুরির\s+ঘটনা|ঘটে|ঘটেছে|ঘটেছিল|incident|accident|collision|crash|attack|rape|robbery|snatching|theft|occurred|happened)/iu;
+  const anchorMatch=text.match(incidentAnchorPattern);
+  const anchorIndex=anchorMatch?.index ?? Math.floor(text.length/2);
+
+  const weekdayCandidates:Array<{
+    weekday:number;
+    matchedText:string;
+    index:number;
+    distance:number;
+  }>=[];
+  for(const [weekday,pattern] of weekdayNames){
     const match=text.match(pattern);
-    if (!match) continue;
-    const matchedText=match[0];
-    const hasPastCue=/(গত|last|রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা|night|morning|afternoon|evening)/iu.test(matchedText);
-    if (!hasPastCue) continue;
-    const d=new Date(base);
-    let delta=(d.getUTCDay()-weekday+7)%7;
-    if (/গত|last/iu.test(matchedText) && delta===0) delta=7;
-    d.setUTCDate(d.getUTCDate()-delta);
-    return d.toISOString().slice(0,10);
+    if(!match) continue;
+    const index=match.index ?? 0;
+    weekdayCandidates.push({
+      weekday,
+      matchedText:match[0],
+      index,
+      distance:Math.abs(index-anchorIndex),
+    });
   }
-  return null;
+
+  if(!weekdayCandidates.length) return null;
+
+  // A news sentence can mention the press-release day and the actual incident
+  // day together. Choose the weekday closest to the incident/action wording,
+  // not simply the first weekday in calendar order.
+  weekdayCandidates.sort((a,b)=>a.distance-b.distance || a.index-b.index);
+  const chosen=weekdayCandidates[0];
+
+  const base=new Date(publishedDate + 'T00:00:00Z');
+  const d=new Date(base);
+  let delta=(d.getUTCDay()-chosen.weekday+7)%7;
+  if (/(গত|last)/iu.test(chosen.matchedText) && delta===0) delta=7;
+  d.setUTCDate(d.getUTCDate()-delta);
+  return d.toISOString().slice(0,10);
 };
 
 const INCIDENT_DATE_CUE_RE =
