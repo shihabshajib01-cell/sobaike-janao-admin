@@ -69,11 +69,9 @@ function setupPdfHeaderAndFooter(
   title: string,
   subtitle: string,
   filterItems: { label: string; value: string }[],
-  totalCount: number,
-  isLandscape: boolean
+  totalCount: number
 ) {
   const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
 
   // 1. Top Decorative Brand Bar
   doc.setFillColor(14, 116, 144); // Sky/Cyan 700
@@ -288,8 +286,7 @@ export function exportComplaintsToPdf(
       'Operational Complaint Triage & Grievance Report',
       'Filtered citizen reports including classification, ward, status, and urgency metrics.',
       filterItems,
-      complaints.length,
-      true
+      complaints.length
     );
 
     const headers = [
