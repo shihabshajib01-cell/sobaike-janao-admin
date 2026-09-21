@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { IconButton } from './Button';
 import { cn } from '@/utils';
+import { useLanguage } from '@/context/LanguageContext';
 
 export type FeedbackNoticeTone =
   | 'info'
@@ -52,11 +53,16 @@ export const FeedbackNotice: React.FC<FeedbackNoticeProps> = ({
   title,
   children,
   onDismiss,
-  dismissLabel = 'Dismiss',
+  dismissLabel,
   compact = false,
   className,
   ...props
-}) => (
+}) => {
+  const { language } = useLanguage();
+  const resolvedDismissLabel =
+    dismissLabel ?? (language === 'bn' ? 'বন্ধ করুন' : 'Dismiss');
+
+  return (
   <div
     role={tone === 'error' ? 'alert' : 'status'}
     data-ui="feedback-notice"
@@ -85,12 +91,13 @@ export const FeedbackNotice: React.FC<FeedbackNoticeProps> = ({
         variant="ghost"
         size="sm"
         onClick={onDismiss}
-        aria-label={dismissLabel}
+        aria-label={resolvedDismissLabel}
         icon={<X />}
         className="-mr-1 -mt-1 shrink-0"
       />
     )}
   </div>
-);
+  );
+};
 
 export default FeedbackNotice;
