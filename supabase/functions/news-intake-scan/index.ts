@@ -831,11 +831,44 @@ const processNewsIntakeRun = async (
   let liveTaxonomy:any={segments:[],subcategories:[]};
 
   try {
-    const {data:taxonomyData,error:taxonomyError}=await supabase.rpc('admin_get_news_intake_taxonomy');
-    if(taxonomyError) throw new Error(taxonomyError.message);
-    liveTaxonomy=taxonomyData && typeof taxonomyData==='object'
-      ? taxonomyData
-      : {segments:[],subcategories:[]};
+    if(triggerType==='automatic'){
+      const [{data:segmentRows,error:segmentError},{data:subcategoryRows,error:subcategoryError}]=await Promise.all([
+        supabase
+          .from('segments')
+          .select('id,name_en,name_bn,sort_order')
+          .eq('active',true)
+          .eq('config_status','published'),
+        supabase
+          .from('subcategories')
+          .select('id,segment_id,name_en,name_bn,sort_order,is_sensitive')
+          .eq('active',true)
+          .eq('config_status','published'),
+      ]);
+      if(segmentError) throw new Error(segmentError.message);
+      if(subcategoryError) throw new Error(subcategoryError.message);
+      liveTaxonomy={
+        segments:(Array.isArray(segmentRows)?segmentRows:[]).map((item:any)=>({
+          id:String(item.id||''),
+          nameEn:String(item.name_en||item.id||''),
+          nameBn:String(item.name_bn||item.name_en||item.id||''),
+          order:Number(item.sort_order||0),
+        })),
+        subcategories:(Array.isArray(subcategoryRows)?subcategoryRows:[]).map((item:any)=>({
+          id:String(item.id||''),
+          segmentId:String(item.segment_id||''),
+          nameEn:String(item.name_en||item.id||''),
+          nameBn:String(item.name_bn||item.name_en||item.id||''),
+          order:Number(item.sort_order||0),
+          isSensitive:Boolean(item.is_sensitive),
+        })),
+      };
+    }else{
+      const {data:taxonomyData,error:taxonomyError}=await supabase.rpc('admin_get_news_intake_taxonomy');
+      if(taxonomyError) throw new Error(taxonomyError.message);
+      liveTaxonomy=taxonomyData && typeof taxonomyData==='object'
+        ? taxonomyData
+        : {segments:[],subcategories:[]};
+    }
 
     const {data:sourceData,error:sourceError}=await supabase.rpc('admin_get_news_intake_scan_sources');
     if(sourceError) throw new Error(sourceError.message);
