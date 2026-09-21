@@ -3,6 +3,7 @@ import { useTheme } from '@/themes';
 import { Sun, Moon, Laptop } from 'lucide-react';
 import { IconButton } from '@/components/ui/Button';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
+import { useLanguage } from '@/context/LanguageContext';
 
 export interface ThemeToggleProps {
   className?: string;
@@ -14,6 +15,8 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
   variant = 'icon',
 }) => {
   const { mode, resolvedTheme, setTheme, toggleTheme } = useTheme();
+  const { language } = useLanguage();
+  const isBn = language === 'bn';
 
   if (variant === 'segmented') {
     return (
@@ -21,22 +24,22 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
         value={mode}
         onChange={setTheme}
         className={className}
-        ariaLabel="Color theme"
+        ariaLabel={isBn ? 'রঙের থিম' : 'Color theme'}
         options={[
           {
             value: 'light',
             icon: <Sun />,
-            ariaLabel: 'Light theme',
+            ariaLabel: isBn ? 'লাইট থিম' : 'Light theme',
           },
           {
             value: 'dark',
             icon: <Moon />,
-            ariaLabel: 'Dark theme',
+            ariaLabel: isBn ? 'ডার্ক থিম' : 'Dark theme',
           },
           {
             value: 'system',
             icon: <Laptop />,
-            ariaLabel: 'System theme',
+            ariaLabel: isBn ? 'সিস্টেম থিম' : 'System theme',
           },
         ]}
       />
@@ -44,6 +47,9 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
   }
 
   const switchingTo = resolvedTheme === 'dark' ? 'light' : 'dark';
+  const switchLabel = isBn
+    ? (switchingTo === 'light' ? 'লাইট মোডে যান' : 'ডার্ক মোডে যান')
+    : `Switch to ${switchingTo} mode`;
 
   return (
     <IconButton
@@ -51,8 +57,8 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
       size="md"
       onClick={toggleTheme}
       className={className}
-      title={`Switch to ${switchingTo} mode`}
-      aria-label="Toggle color theme"
+      title={switchLabel}
+      aria-label={isBn ? 'রঙের থিম পরিবর্তন করুন' : 'Toggle color theme'}
       icon={
         resolvedTheme === 'dark' ? (
           <Sun />
