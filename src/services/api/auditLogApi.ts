@@ -14,6 +14,7 @@ import {
   AuditLogItem,
   AuditLogQueryParams,
   AuditLogListResponse,
+  AuditLogFilterOptions,
   AuditApiError,
 } from '@/types/AuditLog';
 
@@ -27,6 +28,28 @@ function assertAuditApiConfigured(): void {
 }
 
 export const auditLogApi = {
+  /**
+   * Retrieves the authoritative action/target filter catalogue from the audit trail.
+   */
+  async getFilterOptions(): Promise<AuditLogFilterOptions> {
+    assertAuditApiConfigured();
+
+    const { data, error } = await supabase.rpc('admin_get_audit_log_filter_options');
+    if (error) {
+      throw new AuditApiError(
+        `Audit filter catalogue retrieval failed: ${error.message}`,
+        error.code,
+        error.details
+      );
+    }
+
+    const raw = (data || {}) as Partial<AuditLogFilterOptions>;
+    return {
+      actions: Array.isArray(raw.actions) ? raw.actions.map(String) : [],
+      target_types: Array.isArray(raw.target_types) ? raw.target_types.map(String) : [],
+    };
+  },
+
   /**
    * Retrieves paginated audit logs via authorized Supabase RPC
    */
