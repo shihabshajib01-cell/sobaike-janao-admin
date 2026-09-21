@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
+import { FeedbackNotice } from '@/components/ui/FeedbackNotice';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { Complaint, ComplaintTimelineEvent, ComplaintUrgency, ReportDuplicateCheckResult } from '@/types/Complaint';
@@ -493,26 +494,14 @@ export const ComplaintActionArea: React.FC<ComplaintActionAreaProps> = ({
           )}
 
           {feedbackToast && (
-            <div
-              className={cn(
-                'p-3 rounded-lg border text-xs flex items-center gap-2 animate-in fade-in transition-all',
-                feedbackToast.type === 'success' &&
-                  'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200',
-                feedbackToast.type === 'info' &&
-                  'bg-blue-50 dark:bg-blue-950/50 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200',
-                feedbackToast.type === 'error' &&
-                  'bg-rose-50 dark:bg-rose-950/50 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200'
-              )}
+            <FeedbackNotice
+              tone={feedbackToast.type}
+              compact
+              onDismiss={() => setFeedbackToast(null)}
+              dismissLabel={isBn ? 'বার্তা বন্ধ করুন' : 'Dismiss message'}
             >
-              {feedbackToast.type === 'success' ? (
-                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-              ) : feedbackToast.type === 'info' ? (
-                <Info className="w-4 h-4 text-blue-600 shrink-0" />
-              ) : (
-                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-              )}
               <span className="font-medium">{feedbackToast.message}</span>
-            </div>
+            </FeedbackNotice>
           )}
 
           <div className="space-y-2.5">
