@@ -424,7 +424,7 @@ export const isSafeSpecificLocationText = (
   if (/^(এলাকা|বাজার|মার্কেট|থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|গ্রাম|শহর|নগরী|মহানগরী|রোড|লেন|গলি|মোড়|মোড়|স্টেশন|area|market|bazaar|thana|upazila|union|village|city|road|street|lane|station)$/iu.test(normalized)) return false;
   if (/^(?:on|at|in|near)\s+(?:the\s+)?(?:road|street|lane|area|city|district|station)(?:\s+\d+)?$/iu.test(normalized)) return false;
   if (/(বিভিন্ন|various|several)\s+(এলাকা|areas?)/iu.test(normalized)) return false;
-  if (/^(?:গত\s+(?:বছর(?:ের)?|মাস(?:ের)?|সপ্তাহ(?:ের)?)|last\s+(?:year|month|week)|\d+\s+(?:years?|months?|weeks?)\s+ago)\b/iu.test(normalized)) return false;
+  if (/^(?:গত\s+(?:বছর(?:ের)?|মাস(?:ের)?|সপ্তাহ(?:ের)?)|last\s+(?:year|month|week)|\d+\s+(?:years?|months?|weeks?)\s+ago)(?:\s|$)/iu.test(normalized)) return false;
   if (/^(?:(?:\d{1,2}\s+)?(?:জানুয়ারি|জানুয়ারি|ফেব্রুয়ারি|ফেব্রুয়ারি|মার্চ|এপ্রিল|মে|জুন|জুলাই|আগস্ট|সেপ্টেম্বর|অক্টোবর|নভেম্বর|ডিসেম্বর|january|february|march|april|may|june|july|august|september|october|november|december)|(?:সকাল|দুপুর|বিকেল|সন্ধ্যা|রাত|morning|afternoon|evening|night)\b)/iu.test(normalized)) return false;
   if (/(?:জেলার|district(?:'s)?).{0,90}(?:\sও\s|\sএবং\s|\sand\s|,).{0,90}(?:উপজেলা|থানা|upazila|thana)/iu.test(normalized)) return false;
   if (/(?:উপজেলা|থানা|upazila|thana).{0,70}(?:\sও\s|\sএবং\s|\sand\s|,).{0,70}(?:উপজেলা|থানা|upazila|thana)/iu.test(normalized)) return false;
