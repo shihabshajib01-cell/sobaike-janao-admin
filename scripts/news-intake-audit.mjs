@@ -665,7 +665,6 @@ for (const needle of [
   'workspaceCounts.published',
   'rawNewsItems',
   "'blocked'",
-  "'ready'",
   "'published'",
   'reasonLabel',
   'segmentLabel',
