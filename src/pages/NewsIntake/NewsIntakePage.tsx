@@ -15,7 +15,7 @@ import { Button, ButtonBase } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { FeedbackNotice } from '@/components/ui/FeedbackNotice';
 import { Modal } from '@/components/ui/Modal';
-import { Checkbox } from '@/components/ui/Checkbox';
+
 import { Tag } from '@/components/ui/Tag';
 import { useLanguage } from '@/context/LanguageContext';
 import { complaintApi, newsIntakeApi } from '@/services/api';
