@@ -1465,6 +1465,27 @@ const processNewsIntakeRun = async (
           reviewPayload:null,
         });
       } catch(error) {
+        const errorMessage=error instanceof Error?error.message:'Article processing failed.';
+
+        // Approved publishers sometimes link to campaign/interactive or other
+        // separately hosted properties. Keep the domain trust boundary strict,
+        // but treat that known-safe rejection as a normal exclusion so one
+        // off-domain article cannot make the whole intake run partial.
+        if(errorMessage.startsWith('SOURCE_DOMAIN_NOT_APPROVED:')){
+          await record({
+            itemKind:'article',
+            sourceHostname:String(source.hostname||'unknown'),
+            publisherName:String(source.publisherName||'Unknown source'),
+            canonicalUrl:originalUrl,
+            sourceTitle:String(candidate.anchorText||'').trim() || null,
+            contentLanguage:String(source.languageHint||'unknown'),
+            action:'discovered',
+            duplicateStatus:'unavailable',
+            reason:'Approved-source link redirected to an unapproved domain and was excluded from News Intake.',
+          }).catch(()=>{});
+          return;
+        }
+
         processingErrors+=1;
         await record({
           itemKind:'article',
@@ -1474,7 +1495,7 @@ const processNewsIntakeRun = async (
           contentLanguage:String(source.languageHint||'unknown'),
           action:'error',
           duplicateStatus:'unavailable',
-          reason:clip(error instanceof Error?error.message:'Article processing failed.',1400),
+          reason:clip(errorMessage,1400),
         }).catch(()=>{});
       }
     });
