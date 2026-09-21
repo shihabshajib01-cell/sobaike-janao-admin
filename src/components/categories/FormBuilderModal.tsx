@@ -77,11 +77,10 @@ const parseOptionLines = (value: string): ReportingFieldOption[] =>
         .map((part) => part?.trim() || '');
       return {
         value: rawValue,
-        labelEn: rawEn || rawValue,
-        labelBn: rawBn || rawEn || rawValue,
+        labelEn: rawEn,
+        labelBn: rawBn,
       };
-    })
-    .filter((option) => Boolean(option.value));
+    });
 
 const normalizeKey = (value: string): string =>
   value
@@ -172,7 +171,11 @@ export const FormBuilderPanel: React.FC<FormBuilderPanelProps> = ({
       setFields(bundle.fields);
       setNotes(bundle.schema?.notes || '');
     } catch (err: any) {
-      setError(err?.message || 'Failed to load form configuration.');
+      setError(
+        isBn
+          ? 'ফর্ম কনফিগারেশন লোড করা যায়নি। আবার চেষ্টা করুন।'
+          : err?.message || 'Failed to load form configuration.'
+      );
     } finally {
       setLoading(false);
     }
@@ -313,34 +316,66 @@ export const FormBuilderPanel: React.FC<FormBuilderPanelProps> = ({
 
   const validateClient = (): string | null => {
     if (fields.length === 0) {
-      return 'At least the required Title and Description fields are required.';
+      return isBn
+        ? 'প্রয়োজনীয় শিরোনাম ও বিবরণ ফিল্ড অবশ্যই রাখতে হবে।'
+        : 'At least the required Title and Description fields are required.';
     }
 
     const keys = new Set<string>();
     for (const field of fields) {
       const key = field.fieldKey.trim();
+      const displayName = isBn ? field.labelBn || field.labelEn || key : field.labelEn || key;
 
       if (!/^[a-z][a-z0-9_]{0,63}$/.test(key)) {
-        return `Invalid field key: ${key || '(empty)'}`;
+        return isBn
+          ? `অবৈধ ফিল্ড কী: ${key || '(ফাঁকা)'}`
+          : `Invalid field key: ${key || '(empty)'}`;
       }
-      if (keys.has(key)) return `Duplicate field key: ${key}`;
+      if (keys.has(key)) {
+        return isBn ? `একই ফিল্ড কী একাধিকবার আছে: ${key}` : `Duplicate field key: ${key}`;
+      }
       keys.add(key);
 
       if (!field.labelEn.trim() || !field.labelBn.trim()) {
-        return `Both labels are required for ${key}.`;
+        return isBn
+          ? `${key} ফিল্ডের ইংরেজি ও বাংলা—দুইটি লেবেলই আবশ্যক।`
+          : `Both labels are required for ${key}.`;
       }
 
-      if (
-        ['select', 'radio', 'multiselect'].includes(field.fieldType) &&
-        field.options.length === 0
-      ) {
-        return `Add at least one option for ${field.labelEn}.`;
+      if (['select', 'radio', 'multiselect'].includes(field.fieldType)) {
+        if (field.options.length === 0) {
+          return isBn
+            ? `${displayName} ফিল্ডে অন্তত একটি অপশন যোগ করুন।`
+            : `Add at least one option for ${displayName}.`;
+        }
+
+        const optionValues = new Set<string>();
+        for (const option of field.options) {
+          const value = option.value.trim();
+          const labelEn = option.labelEn.trim();
+          const labelBn = option.labelBn.trim();
+
+          if (!value || !labelEn || !labelBn) {
+            return isBn
+              ? `${displayName} ফিল্ডের প্রতিটি অপশনে value, English label এবং বাংলা label দিতে হবে।`
+              : `Every option for ${displayName} must include a value, English label, and Bangla label.`;
+          }
+
+          if (optionValues.has(value)) {
+            return isBn
+              ? `${displayName} ফিল্ডে একই option value একাধিকবার আছে: ${value}`
+              : `Duplicate option value for ${displayName}: ${value}`;
+          }
+          optionValues.add(value);
+        }
       }
 
       const platformMax = platformMaxFor(field);
       const configuredMax = Number(field.validation?.maxLength || 0);
       if (platformMax && configuredMax > platformMax) {
-        return `${field.labelEn} cannot exceed the platform maximum of ${platformMax} characters.`;
+        return isBn
+          ? `${displayName} ফিল্ডে সর্বোচ্চ ${platformMax} অক্ষরের বেশি অনুমোদন করা যাবে না।`
+          : `${displayName} cannot exceed the platform maximum of ${platformMax} characters.`;
       }
 
       if (
@@ -348,7 +383,9 @@ export const FormBuilderPanel: React.FC<FormBuilderPanelProps> = ({
         field.storageMode === 'custom_json' &&
         field.config?.publicVisible === true
       ) {
-        return `${field.labelEn} contains sensitive contact information and cannot be public by default.`;
+        return isBn
+          ? `${displayName} ফিল্ডে সংবেদনশীল যোগাযোগের তথ্য থাকতে পারে, তাই এটি ডিফল্টভাবে পাবলিক করা যাবে না।`
+          : `${displayName} contains sensitive contact information and cannot be public by default.`;
       }
     }
 
@@ -362,14 +399,20 @@ export const FormBuilderPanel: React.FC<FormBuilderPanelProps> = ({
     );
 
     if (!title?.active || !title.required || !description?.active || !description.required) {
-      return 'The required Title and Description storage fields must remain enabled.';
+      return isBn
+        ? 'প্রয়োজনীয় শিরোনাম ও বিবরণ storage field সক্রিয় ও Required থাকতে হবে।'
+        : 'The required Title and Description storage fields must remain enabled.';
     }
 
     if (!['text', 'textarea'].includes(title.fieldType)) {
-      return 'Title must remain a text-compatible field.';
+      return isBn
+        ? 'শিরোনাম ফিল্ড অবশ্যই text-compatible হতে হবে।'
+        : 'Title must remain a text-compatible field.';
     }
     if (!['text', 'textarea'].includes(description.fieldType)) {
-      return 'Description must remain a text-compatible field.';
+      return isBn
+        ? 'বিবরণ ফিল্ড অবশ্যই text-compatible হতে হবে।'
+        : 'Description must remain a text-compatible field.';
     }
 
     return null;
@@ -398,7 +441,11 @@ export const FormBuilderPanel: React.FC<FormBuilderPanelProps> = ({
       );
       await load();
     } catch (err: any) {
-      setError(err?.message || 'Failed to save form draft.');
+      setError(
+        isBn
+          ? 'ফর্মের Draft সংরক্ষণ করা যায়নি। তথ্য যাচাই করে আবার চেষ্টা করুন।'
+          : err?.message || 'Failed to save form draft.'
+      );
     } finally {
       setSaving(false);
     }
@@ -429,7 +476,11 @@ export const FormBuilderPanel: React.FC<FormBuilderPanelProps> = ({
       await load();
       onPublished?.();
     } catch (err: any) {
-      setError(err?.message || 'Failed to publish form.');
+      setError(
+        isBn
+          ? 'ফর্ম প্রকাশ করা যায়নি। তথ্য যাচাই করে আবার চেষ্টা করুন।'
+          : err?.message || 'Failed to publish form.'
+      );
     } finally {
       setPublishing(false);
     }
