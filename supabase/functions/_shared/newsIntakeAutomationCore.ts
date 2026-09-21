@@ -227,6 +227,12 @@ const ARTICLE_RULES: Array<[string, string, number, RegExp[]]> = [
 const EXTORTION_RE = /(চাঁদাবাজি|চাঁদা\s*(দাবি|আদায়|আদায়)|চাঁদাবাজ|\bextortion\b)/iu;
 const NON_INCIDENT_THEFT_RE = /(শ্রম\s*চুরি|মজুরি\s*চুরি|মেধা\s*চুরি|আইডিয়া\s*চুরি|আইডিয়া\s*চুরি|কনটেন্ট\s*চুরি|wage\s+theft|labor\s+theft|content\s+theft|idea\s+theft|intellectual\s+property\s+theft)/iu;
 const NON_INCIDENT_GAS_RECOVERY_RE = /(গ্যাস\s*সংকটে\s*স্বস্তি|জাতীয়\s*গ্রিডে\s*যুক্ত\s*হলো|জাতীয়\s*গ্রিডে\s*যুক্ত\s*হলো|গ্যাস\s*সরবরাহ.{0,24}(বাড়ল|বাড়ল|বেড়েছে|বেড়েছে|উন্নতি)|gas\s+shortage.{0,24}(eases|improves)|gas\s+supply.{0,24}(improves|increases|restored))/iu;
+
+export const hasPrimaryTheftHeadlineSignal = (value: unknown) => {
+  const text=normalizeText(value);
+  if (!text || NON_INCIDENT_THEFT_RE.test(text)) return false;
+  return /(?:চুরি|চোরাই|চোর\b|\btheft\b|\bstolen\b|\bsteal(?:s|ing|er|ers)?\b)/iu.test(text);
+};
 // "ছিনতাই" is also used in Bangla for forcibly taking a detainee/person away.
 // That is not a property-snatching report and must not fall through to the broad
 // public-safety snatching keyword rule.
@@ -374,6 +380,14 @@ export const findLocation = (value: unknown) => {
   return best ? {division:best.division,district:best.district} : null;
 };
 
+export const cleanSpecificLocationText = (value: unknown) =>
+  String(value ?? '')
+    .replace(/\s+/g,' ')
+    .trim()
+    .replace(/^(?:the\s+)?(?:vehicle|car|bus|truck|motorcycle|rickshaw|auto[- ]?rickshaw|three[- ]?wheeler|battery|incident|altercation|victim|suspect|body|house|home)\s+(?:in|at|near)\s+/i,'')
+    .replace(/\s+village\s+of\s+(.+?\s+union)$/i,' village, $1')
+    .trim();
+
 const compactLocationPhrase = (value: string) => {
   let candidate=value
     .replace(/[“”"'‘’()[\]{}]/g,' ')
@@ -410,7 +424,7 @@ const compactLocationPhrase = (value: string) => {
     .replace(/(এলাকা|মহল্লা|গ্রাম|বাজার|মার্কেট|থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|সড়ক|সড়ক|রোড|লেন|গলি|মোড়|মোড়|স্টেশন)(?:য়|য়|তে|ে)$/u,'$1')
     .trim();
 
-  return candidate;
+  return cleanSpecificLocationText(candidate);
 };
 
 export const isSafeSpecificLocationText = (
@@ -480,6 +494,16 @@ const incidentLocationScopes = (text: string) =>
     );
 
 const locationFromScope = (scope: string, district?: string | null) => {
+  // Preserve common English administrative hierarchies before the broader
+  // designator regex can collapse them to a trailing fragment such as
+  // "of Garpara union".
+  const englishVillageUnionPattern =
+    /\b([A-Z][A-Za-z0-9.'’\-]*(?:\s+[A-Z][A-Za-z0-9.'’\-]*){0,3}\s+village\s+of\s+[A-Z][A-Za-z0-9.'’\-]*(?:\s+[A-Z][A-Za-z0-9.'’\-]*){0,3}\s+union)\b/gu;
+  for (const match of scope.matchAll(englishVillageUnionPattern)) {
+    const candidate=compactLocationPhrase(match[1] || '');
+    if (locationCandidateIsUsable(candidate,district)) return candidate;
+  }
+
   // Incident sentences often use a bare proper place after "at/near" without
   // adding words such as area, road, market, or village. Evaluate each match
   // in reading order, but ignore medical/destination phrases such as

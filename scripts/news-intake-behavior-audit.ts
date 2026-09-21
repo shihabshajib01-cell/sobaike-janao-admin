@@ -4,8 +4,10 @@ import {
   buildIncidentContext,
   buildIncidentFocusedLocationText,
   buildSourceLanguageFields,
+  cleanSpecificLocationText,
   classifyArticle,
   findLocation,
+  hasPrimaryTheftHeadlineSignal,
   inferDistrictWideScope,
   inferIncidentDate,
   inferSpecificLocationPhrase,
@@ -91,6 +93,22 @@ assert.equal(
   isLegalFollowUpOnly('চট্টগ্রামের পাথরঘাটায় ছিনতাইয়ের ঘটনায় গ্রেপ্তার ১'),
   true,
   'Arrest/enforcement follow-ups about an already reported incident must not create a fresh report'
+);
+
+assert.equal(
+  hasPrimaryTheftHeadlineSignal('চিরকুটে যা লিখে গেছেন নজরুলপত্নী মরিয়ম'),
+  false,
+  'Unrelated headlines must not become Theft merely because the summary mentions theft'
+);
+assert.equal(
+  hasPrimaryTheftHeadlineSignal('‘দুই-চার টাকা বাড়াইলেও হইতো, তাই বলে লিটারে ২০ টাকা!’'),
+  false,
+  'Price commentary headlines must not become Theft from context-only keywords'
+);
+assert.equal(
+  hasPrimaryTheftHeadlineSignal('Man dies after son-in-law allegedly kicks him in altercation over battery theft attempt'),
+  true,
+  'A direct theft-attempt headline must remain eligible for Theft'
 );
 assert.equal(
   isLegalFollowUpOnly('ধর্ষণের অভিযোগে একজনকে গ্রেপ্তার করেছে পুলিশ'),
@@ -657,6 +675,21 @@ assert.equal(
   ),
   'Gopalnagar',
   'Bare proper incident place after at must be retained'
+);
+
+assert.equal(
+  inferSpecificLocationPhrase(
+    'Quoting local residents, the OC said Siddik’s family members caught his son-in-law around 2:00am while he was allegedly trying to steal the battery from Siddik’s vehicle in Sakrail village of Garpara union. An altercation broke out between the two over the theft.',
+    'Manikganj'
+  ),
+  'Sakrail village, Garpara union',
+  'Location cleanup must strip narrative lead-ins such as vehicle in without losing the real place'
+);
+
+assert.equal(
+  cleanSpecificLocationText('vehicle in Sakrail village of Garpara union'),
+  'Sakrail village, Garpara union',
+  'Resolved location fields must remove narrative lead-ins before preview/publication'
 );
 assert.equal(
   inferDistrictWideScope('জেলাজুড়ে বিদ্যুৎ বিভ্রাটের অভিযোগ পাওয়া গেছে'),

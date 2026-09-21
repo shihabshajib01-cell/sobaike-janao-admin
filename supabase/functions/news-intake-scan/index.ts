@@ -7,9 +7,11 @@ import {
   buildIncidentContext,
   buildIncidentFocusedLocationText,
   classifyArticle,
+  cleanSpecificLocationText,
   clip,
   detectLanguage,
   findLocation,
+  hasPrimaryTheftHeadlineSignal,
   inferDistrictWideScope,
   inferIncidentDate,
   inferSpecificLocationPhrase,
@@ -1057,10 +1059,17 @@ const processNewsIntakeRun = async (
           return;
         }
 
-        const classification=
-          classifyArticle(article.title)
+        const titleClassification=classifyArticle(article.title);
+        const fallbackClassification=
+          titleClassification
           || classifyArticle(headlineText)
           || dynamicTaxonomyClassification(headlineText,liveTaxonomy);
+        const classification=
+          fallbackClassification?.subcategoryId==='theft'
+          && !titleClassification
+          && !hasPrimaryTheftHeadlineSignal(article.title)
+            ? null
+            : fallbackClassification;
         if(!classification){
           await record({
             itemKind:'article',
@@ -1259,6 +1268,20 @@ const processNewsIntakeRun = async (
                 quality:'district_only',
               }
             : null;
+        }
+
+        if(
+          location
+          && location.quality !== 'multiple_locations'
+          && location.locationScope !== 'multi_location'
+        ){
+          location={
+            ...location,
+            area:cleanSpecificLocationText(location.area),
+            road:cleanSpecificLocationText(location.road),
+            landmark:cleanSpecificLocationText(location.landmark),
+            formattedAddress:cleanSpecificLocationText(location.formattedAddress),
+          };
         }
 
         const contextualDistrict=

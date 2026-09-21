@@ -176,6 +176,8 @@ requireText(behaviorAudit, 'Taking a detainee/suspect from police must not be cl
 requireText(behaviorAudit, 'Future strike warnings must be excluded before category matching', 'News Intake non-incident strike regression');
 requireText(behaviorAudit, 'Evidence recovery during a murder investigation must not become a standalone theft report', 'News Intake evidence-recovery regression');
 requireText(behaviorAudit, 'Same-day Bangla weekday plus বেলা must resolve to the publication day', 'News Intake Bangla বেলা date regression');
+requireText(scanner, 'hasPrimaryTheftHeadlineSignal', 'News Intake context-only Theft false-positive guard');
+requireText(scanner, 'cleanSpecificLocationText(location.area)', 'News Intake resolved-location cleanup');
 requireText(scanner, 'dynamicTaxonomyClassification', 'News Intake live taxonomy fallback classifier');
 requireText(scanner, 'admin_get_news_intake_taxonomy', 'News Intake live taxonomy fetch');
 requireText(scanner, 'admin_preview_sourced_report_intake', 'News Intake live published-schema validation');
@@ -203,6 +205,9 @@ requireText(behaviorAudit, 'Fact-check/debunk stories must not be converted into
 requireText(behaviorAudit, 'Narrative police-jurisdiction fragments must never become the public incident location', 'News Intake noisy-location regression');
 requireText(behaviorAudit, 'Generic English road fragments must never become a specific location', 'News Intake semantic location regression');
 requireText(behaviorAudit, 'Arbitrary Bangla narrative prose must fail positive geographic evidence validation', 'News Intake positive-location regression');
+requireText(behaviorAudit, 'Unrelated headlines must not become Theft merely because the summary mentions theft', 'News Intake Theft headline precision regression');
+requireText(behaviorAudit, 'Location cleanup must strip narrative lead-ins such as vehicle in without losing the real place', 'News Intake location cleanup regression');
+requireText(behaviorAudit, 'Resolved location fields must remove narrative lead-ins before preview/publication', 'News Intake resolved-location cleanup regression');
 requireText(behaviorAudit, 'A future Admin-created subcategory must use the conservative generic builder instead of failing on a missing code registry entry', 'News Intake generic-builder regression');
 requireText(behaviorAudit, 'Narrative Bangla victim/thana fragments must never become a specific location', 'News Intake Bangla semantic location regression');
 requireText(behaviorAudit, 'Feed Ready source context must contain at least 400 characters', 'News Intake 400-character minimum regression');
@@ -648,7 +653,7 @@ for (const needle of [
   'Find News',
   'Scan All Sources Now',
   'Raw news found',
-  'Category-matched reports',
+  'Feed Ready reports',
   'Select All',
   'Clear Selection',
   'Publish Selected to Feed',
@@ -659,8 +664,7 @@ for (const needle of [
   'workspaceCounts',
   'workspaceCounts.published',
   'rawNewsItems',
-  "'excluded'",
-  "'ready'",
+  "'blocked'",
   "'published'",
   'reasonLabel',
   'segmentLabel',
@@ -749,7 +753,10 @@ for (const needle of [
   'data-news-intake-ready-panel',
   'data-news-intake-diagnostics-panel',
   'feedReadyItems.map((item)',
-  'diagnosticMatchedItems.map((item)',
+  "rawFilter === 'blocked' && diagnosticMatchedItems.map((item)",
+  'Blocked candidates',
+  'workspaceCounts.blocked',
+  'category candidates',
 ]) {
   requireText(page, needle, 'News Intake Step 2 compact/feed-preview UI');
 }
