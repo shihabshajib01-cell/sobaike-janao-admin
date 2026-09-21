@@ -494,6 +494,16 @@ const incidentLocationScopes = (text: string) =>
     );
 
 const locationFromScope = (scope: string, district?: string | null) => {
+  // Preserve common English administrative hierarchies before the broader
+  // designator regex can collapse them to a trailing fragment such as
+  // "of Garpara union".
+  const englishVillageUnionPattern =
+    /\b([A-Z][A-Za-z0-9.'’\-]*(?:\s+[A-Z][A-Za-z0-9.'’\-]*){0,3}\s+village\s+of\s+[A-Z][A-Za-z0-9.'’\-]*(?:\s+[A-Z][A-Za-z0-9.'’\-]*){0,3}\s+union)\b/gu;
+  for (const match of scope.matchAll(englishVillageUnionPattern)) {
+    const candidate=compactLocationPhrase(match[1] || '');
+    if (locationCandidateIsUsable(candidate,district)) return candidate;
+  }
+
   // Incident sentences often use a bare proper place after "at/near" without
   // adding words such as area, road, market, or village. Evaluate each match
   // in reading order, but ignore medical/destination phrases such as
