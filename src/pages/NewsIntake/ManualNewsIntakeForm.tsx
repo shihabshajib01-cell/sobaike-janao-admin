@@ -20,6 +20,7 @@ import { Textarea } from '@/components/ui/Textarea';
 import { FeedbackNotice } from '@/components/ui/FeedbackNotice';
 import { Tag } from '@/components/ui/Tag';
 import { useLanguage } from '@/context/LanguageContext';
+import { sortLocalizedTextOptions } from '@/utils/dropdownOptions';
 import { complaintApi, newsIntakeApi } from '@/services/api';
 import { reportingFormApi } from '@/services/api/reportingFormApi';
 import {
@@ -1337,10 +1338,13 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
               }
               options={[
                 { value: '', label: isBn ? 'ক্যাটাগরি নির্বাচন করুন' : 'Select category', disabled: true },
-                ...taxonomy.segments.map((item) => ({
-                  value: item.id,
-                  label: isBn ? item.nameBn : item.nameEn,
-                })),
+                ...sortLocalizedTextOptions(
+                  taxonomy.segments.map((item) => ({
+                    value: item.id,
+                    label: isBn ? item.nameBn : item.nameEn,
+                  })),
+                  isBn ? 'bn' : 'en'
+                ),
               ]}
             />
             <Select
@@ -1352,10 +1356,13 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
               }
               options={[
                 { value: '', label: isBn ? 'সাবক্যাটাগরি নির্বাচন করুন' : 'Select subcategory', disabled: true },
-                ...availableSubcategories.map((item) => ({
-                  value: item.id,
-                  label: isBn ? item.nameBn : item.nameEn,
-                })),
+                ...sortLocalizedTextOptions(
+                  availableSubcategories.map((item) => ({
+                    value: item.id,
+                    label: isBn ? item.nameBn : item.nameEn,
+                  })),
+                  isBn ? 'bn' : 'en'
+                ),
               ]}
             />
             </div>
@@ -1516,10 +1523,13 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
               }}
               options={[
                 { value: '', label: isBn ? 'বিভাগ নির্বাচন করুন' : 'Select division', disabled: true },
-                ...locationTaxonomy.divisions.map((item) => ({
-                  value: item.nameEn,
-                  label: isBn ? item.nameBn : item.nameEn,
-                })),
+                ...sortLocalizedTextOptions(
+                  locationTaxonomy.divisions.map((item) => ({
+                    value: item.nameEn,
+                    label: isBn ? item.nameBn : item.nameEn,
+                  })),
+                  isBn ? 'bn' : 'en'
+                ),
               ]}
             />
             <Select
@@ -1536,10 +1546,13 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
               }}
               options={[
                 { value: '', label: isBn ? 'জেলা নির্বাচন করুন' : 'Select district', disabled: true },
-                ...availableDistricts.map((item) => ({
-                  value: item.nameEn,
-                  label: isBn ? item.nameBn : item.nameEn,
-                })),
+                ...sortLocalizedTextOptions(
+                  availableDistricts.map((item) => ({
+                    value: item.nameEn,
+                    label: isBn ? item.nameBn : item.nameEn,
+                  })),
+                  isBn ? 'bn' : 'en'
+                ),
               ]}
             />
             <Select
@@ -1548,10 +1561,13 @@ export const ManualNewsIntakeForm: React.FC<ManualNewsIntakeFormProps> = ({
               onChange={(event) => updateReport({ upazilaOrThana: event.target.value })}
               options={[
                 { value: '', label: isBn ? 'প্রযোজ্য হলে নির্বাচন করুন' : 'Select when applicable' },
-                ...availableUpazilas.map((item) => ({
-                  value: item.nameEn,
-                  label: isBn ? item.nameBn : item.nameEn,
-                })),
+                ...sortLocalizedTextOptions(
+                  availableUpazilas.map((item) => ({
+                    value: item.nameEn,
+                    label: isBn ? item.nameBn : item.nameEn,
+                  })),
+                  isBn ? 'bn' : 'en'
+                ),
               ]}
             />
             <Select
