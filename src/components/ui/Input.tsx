@@ -2,6 +2,7 @@ import { ButtonBase } from '@/components/ui/Button';
 import React, { InputHTMLAttributes, forwardRef, useId, useState } from 'react';
 import { Eye, EyeOff, Search, X } from 'lucide-react';
 import { cn } from '@/utils';
+import { useLanguage } from '@/context/LanguageContext';
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -34,6 +35,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     },
     ref
   ) => {
+    const { language } = useLanguage();
+    const isBn = language === 'bn';
     const [showPassword, setShowPassword] = useState(false);
     const generatedId = useId();
     const inputId = id || `input-${generatedId.replace(/:/g, '')}`;
@@ -92,7 +95,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               type="button"
               onClick={onClear}
               className="absolute right-2.5 p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-              aria-label="Clear input"
+              aria-label={isBn ? 'ইনপুট মুছুন' : 'Clear input'}
             >
               <X className="w-3.5 h-3.5" />
             </ButtonBase>
@@ -101,7 +104,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
               className="absolute right-2.5 p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-label={showPassword
+                ? (isBn ? 'পাসওয়ার্ড লুকান' : 'Hide password')
+                : (isBn ? 'পাসওয়ার্ড দেখান' : 'Show password')}
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </ButtonBase>
