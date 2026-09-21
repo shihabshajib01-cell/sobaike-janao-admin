@@ -17,7 +17,3 @@ export function generateRoleSlug(name: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-export function isValidRoleSlug(slug: string): boolean {
-  if (!slug) return false;
-  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug);
-}
