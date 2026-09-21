@@ -9,7 +9,6 @@ import {
   ShieldAlert,
   Shield,
   Clock,
-  HelpCircle,
 } from 'lucide-react';
 import React from 'react';
 
