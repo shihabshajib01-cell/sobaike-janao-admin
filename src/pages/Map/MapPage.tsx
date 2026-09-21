@@ -461,7 +461,6 @@ export const MapPage: React.FC = () => {
                     complaints={filteredComplaints}
                     selectedComplaint={selectedComplaint}
                     onSelectComplaint={setSelectedComplaint}
-                    loading={refreshing}
                   />
 
                   <MapLegend
