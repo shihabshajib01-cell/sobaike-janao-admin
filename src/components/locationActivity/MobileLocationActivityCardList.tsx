@@ -136,7 +136,11 @@ export const MobileLocationActivityCardList: React.FC<MobileLocationActivityCard
                       </div>
                     ) : (
                       <div className="text-xs text-slate-500 dark:text-slate-400 italic">
-                        {session.permission_status === 'denied' || session.permission_status === 'prompt'
+                        {session.permission_status === 'granted'
+                          ? isBn
+                            ? 'অনুমতি দেওয়া হয়েছে · GPS স্থানাঙ্ক সংরক্ষণ করা হয় না'
+                            : 'Permission granted · precise GPS is not retained'
+                          : session.permission_status === 'denied' || session.permission_status === 'prompt'
                           ? isBn
                             ? 'লোকেশন শেয়ার করা হয়নি'
                             : 'Location not shared'
