@@ -15,7 +15,6 @@ import {
   Building,
   User,
   ShieldAlert,
-  HelpCircle,
   FileCheck,
 } from 'lucide-react';
 
