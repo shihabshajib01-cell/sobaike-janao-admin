@@ -89,4 +89,3 @@ export const lightTheme = {
   ...baseTokens,
 };
 
-export type Theme = typeof lightTheme;
