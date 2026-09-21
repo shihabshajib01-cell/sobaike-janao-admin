@@ -175,6 +175,17 @@ assert.equal(
   'Historical background locations must never become the current incident location'
 );
 
+assert.equal(
+  isSafeSpecificLocationText('মুল হোসেনকে হত্যার ঘটনায় নগরের হরিণটানা থানা','Khulna'),
+  false,
+  'Narrative incident/police-jurisdiction phrases must never become a specific location'
+);
+assert.equal(
+  isSafeSpecificLocationText('হরিণটানা থানা','Khulna'),
+  true,
+  'A clean named thana remains a valid source-grounded location'
+);
+
 const feedReadyContext=buildFeedReadyIncidentContext({
   excerpt:'',
   body:[
@@ -523,6 +534,15 @@ assert.equal(
   ),
   '2026-09-18',
   'Missing-person incident wording with a Bangla relative weekday must ground the incident date'
+);
+
+assert.equal(
+  inferIncidentDate(
+    'আজ এই হত্যাকাণ্ড নিয়ে প্রত্যক্ষদর্শীদের নতুন তথ্য সামনে এসেছে। নিহত আজমুল হোসেন খুলনার নর্থ ওয়েস্টার্ন বিশ্ববিদ্যালয়ের শিক্ষার্থী ছিলেন। গত শুক্রবার দিবাগত রাতে চুরির অভিযোগ তুলে ওই মেসে তাঁকে হত্যা করা হয়।',
+    '2026-09-21'
+  ),
+  '2026-09-18',
+  'Explicit past weekday incident date must beat earlier today/publication-day narrative wording'
 );
 
 assert.equal(
