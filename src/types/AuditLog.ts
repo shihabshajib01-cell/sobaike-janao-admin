@@ -10,13 +10,7 @@
  * - created_at: TIMESTAMPTZ
  */
 
-export type AuditTargetType = 'complaint' | 'role' | 'admin_user';
 
-export interface AuditActor {
-  id: string | null;
-  email: string | null;
-  display_name: string | null;
-}
 
 export interface AuditLogItem {
   id: string;
