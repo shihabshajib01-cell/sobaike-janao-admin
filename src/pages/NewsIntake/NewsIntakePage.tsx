@@ -45,7 +45,7 @@ const EMPTY_DASHBOARD: NewsIntakeAutomationDashboard = {
 
 type IntakeMode = 'automatic' | 'manual';
 type WorkspaceStep = 1 | 2 | 3;
-type RawNewsFilter = 'all' | 'matched' | 'ready' | 'review' | 'published' | 'duplicate' | 'excluded' | 'not_report' | 'error';
+type RawNewsFilter = 'all' | 'blocked' | 'not_report' | 'error';
 
 interface PublishOutcome {
   reportId: string;
@@ -560,6 +560,9 @@ export const NewsIntakePage: React.FC = () => {
       (item) => item.action === 'skip_duplicate' || item.action === 'merged_source'
     ).length;
     const excluded = matchedItems.filter(isExcludedItem).length;
+    const blocked = matchedItems.filter(
+      (item) => !isCurrentFeedReady(item) && !isCurrentPublishedItem(item)
+    ).length;
     const notReport = rawNewsItems.filter((item) => item.action === 'discovered').length;
     const error = rawNewsItems.filter((item) => item.action === 'error').length;
     return {
@@ -571,12 +574,14 @@ export const NewsIntakePage: React.FC = () => {
       published,
       duplicate,
       excluded,
+      blocked,
       not_report: notReport,
       error,
     };
   }, [selectedItems, rawNewsItems, matchedItems, reportMap]);
 
   const filteredRawItems = useMemo(() => {
+    if (rawFilter === 'blocked') return [];
     if (rawFilter === 'error') {
       return rawNewsItems.filter((item) => item.action === 'error');
     }
@@ -1176,8 +1181,8 @@ export const NewsIntakePage: React.FC = () => {
         title={isBn ? 'নিউজ ইনটেক ওয়ার্কস্পেস' : 'News Intake Workspace'}
         description={
           isBn
-            ? 'সংবাদ খুঁজুন → অনুমোদিত সব ক্যাটাগরি-ম্যাচড রিপোর্ট ডান পাশে দেখুন → প্রয়োজনীয় রিপোর্ট নির্বাচন করুন → ফিডে প্রকাশ করুন।'
-            : 'Find news → see every approved category match on the right → select the reports you want → publish them to the feed.'
+            ? 'সংবাদ খুঁজুন → ব্লকড ক্যাটাগরি ক্যান্ডিডেট বাম পাশে দেখুন → ডান পাশের Feed Ready রিপোর্ট নির্বাচন করুন → ফিডে প্রকাশ করুন।'
+            : 'Find news → inspect blocked category candidates on the left → select Feed Ready reports on the right → publish them to the feed.'
         }
         footer={modalFooter}
       >
@@ -1370,17 +1375,17 @@ export const NewsIntakePage: React.FC = () => {
                   {isBn ? 'স্ক্যান:' : 'Scan:'}
                 </p>
                 <Tag tone="neutral">{selectedItems.length} {isBn ? 'স্ক্যানড' : 'scanned'}</Tag>
-                <Tag tone="info">{workspaceCounts.matched} {isBn ? 'ক্যাটাগরি মিল' : 'category matched'}</Tag>
+                <Tag tone="info">{workspaceCounts.matched} {isBn ? 'ক্যাটাগরি ক্যান্ডিডেট' : 'category candidates'}</Tag>
                 <span className="mx-1 hidden h-5 w-px bg-slate-300 dark:bg-slate-700 sm:block" aria-hidden="true" />
                 <p className="type-helper font-medium text-slate-600 dark:text-slate-300">
                   {isBn ? 'ফলাফল:' : 'Outcome:'}
                 </p>
-                <Tag tone="success">{workspaceCounts.ready} {isBn ? 'প্রস্তুত' : 'ready'}</Tag>
+                <Tag tone="success">{workspaceCounts.ready} {isBn ? 'Feed Ready' : 'Feed Ready'}</Tag>
                 {workspaceCounts.published > 0 && (
                   <Tag tone="success">{workspaceCounts.published} {isBn ? 'প্রকাশিত' : 'published'}</Tag>
                 )}
                 <Tag tone="neutral">{workspaceCounts.duplicate} {isBn ? 'ডুপ্লিকেট' : 'duplicates'}</Tag>
-                <Tag tone="neutral">{workspaceCounts.excluded} {isBn ? 'বাদ দেওয়া' : 'excluded'}</Tag>
+                <Tag tone="neutral">{workspaceCounts.blocked} {isBn ? 'ব্লকড' : 'blocked'}</Tag>
                 <Tag tone="neutral">{workspaceCounts.not_report} {isBn ? 'রিপোর্ট নয়' : 'not reports'}</Tag>
                 {workspaceCounts.error > 0 && (
                   <Tag tone="danger">{workspaceCounts.error} {isBn ? 'ত্রুটি' : 'errors'}</Tag>
@@ -1397,12 +1402,12 @@ export const NewsIntakePage: React.FC = () => {
                 <div className="flex min-h-10 flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="type-label font-semibold text-slate-900 dark:text-slate-100">
-                      {isBn ? 'ক্যাটাগরি-ম্যাচড রিপোর্ট' : 'Category-matched reports'}
+                      {isBn ? 'Feed Ready রিপোর্ট' : 'Feed Ready reports'}
                     </p>
                     <p className="type-helper text-slate-500 dark:text-slate-400">
                       {isBn
-                        ? `${matchedItems.length}টি ম্যাচ · ${workspaceCounts.ready}টি প্রস্তুত · ${selectedReportIds.length}টি নির্বাচিত`
-                        : `${matchedItems.length} matched · ${workspaceCounts.ready} ready · ${selectedReportIds.length} selected`}
+                        ? `${workspaceCounts.ready}টি Feed Ready · ${selectedReportIds.length}টি নির্বাচিত`
+                        : `${workspaceCounts.ready} Feed Ready · ${selectedReportIds.length} selected`}
                     </p>
                   </div>
 
@@ -1460,6 +1465,7 @@ export const NewsIntakePage: React.FC = () => {
                     <div className="mb-3 flex flex-wrap items-center gap-2">
                       {([
                         ['all', isBn ? 'সব কাঁচা সংবাদ' : 'All raw', workspaceCounts.raw],
+                        ['blocked', isBn ? 'ব্লকড ক্যান্ডিডেট' : 'Blocked candidates', workspaceCounts.blocked],
                         ['not_report', isBn ? 'রিপোর্ট নয়' : 'Not a report', workspaceCounts.not_report],
                         ['error', isBn ? 'ত্রুটি' : 'Error', workspaceCounts.error],
                       ] as Array<[RawNewsFilter, string, number]>).map(([value, label, count]) => (
@@ -1520,7 +1526,7 @@ export const NewsIntakePage: React.FC = () => {
                       </Card>
                     ))}
 
-                    {diagnosticMatchedItems.map((item) => {
+                    {rawFilter === 'blocked' && diagnosticMatchedItems.map((item) => {
                       const canReview = canManuallyReviewItem(item);
                       return (
                         <Card key={`diagnostic-${item.id}`} padding="sm" data-news-intake-diagnostic>
@@ -1536,7 +1542,7 @@ export const NewsIntakePage: React.FC = () => {
                                   ? isBn ? 'রিভিউ প্রয়োজন' : 'Needs review'
                                   : item.action === 'skip_duplicate' || item.action === 'merged_source'
                                     ? isBn ? 'ডুপ্লিকেট' : 'Duplicate'
-                                    : isBn ? 'বাদ দেওয়া হয়েছে' : 'Excluded'}
+                                    : isBn ? 'ব্লকড' : 'Blocked'}
                               </Tag>
                             </div>
                             <div>
@@ -1597,7 +1603,12 @@ export const NewsIntakePage: React.FC = () => {
                         <p>{isBn ? 'এই রানে কোনো সংবাদ আইটেম পাওয়া যায়নি।' : 'No news items were found in this run.'}</p>
                       </FeedbackNotice>
                     )}
-                    {rawNewsItems.length > 0 && filteredRawItems.length === 0 && (
+                    {rawFilter === 'blocked' && diagnosticMatchedItems.length === 0 && (
+                      <FeedbackNotice tone="neutral">
+                        <p>{isBn ? 'এই রানে কোনো ব্লকড ক্যাটাগরি ক্যান্ডিডেট নেই।' : 'No blocked category candidates in this run.'}</p>
+                      </FeedbackNotice>
+                    )}
+                    {rawFilter !== 'blocked' && rawNewsItems.length > 0 && filteredRawItems.length === 0 && (
                       <FeedbackNotice tone="neutral">
                         <p>{isBn ? 'এই ফিল্টারে কোনো সংবাদ নেই।' : 'No news items match this filter.'}</p>
                       </FeedbackNotice>
@@ -1614,12 +1625,12 @@ export const NewsIntakePage: React.FC = () => {
                   >
                     <div>
                       <p className="type-label font-semibold text-slate-900 dark:text-slate-100">
-                        {isBn ? 'ক্যাটাগরি-ম্যাচড রিপোর্ট' : 'Category-matched reports'}
+                        {isBn ? 'Feed Ready রিপোর্ট' : 'Feed Ready reports'}
                       </p>
                       <p className="type-helper text-slate-500 dark:text-slate-400">
                         {isBn
-                          ? `${matchedItems.length}টি ম্যাচ · ${workspaceCounts.ready}টি প্রস্তুত · ${selectedReportIds.length}টি নির্বাচিত`
-                          : `${matchedItems.length} matched · ${workspaceCounts.ready} ready · ${selectedReportIds.length} selected`}
+                          ? `${workspaceCounts.ready}টি Feed Ready · ${selectedReportIds.length}টি নির্বাচিত`
+                          : `${workspaceCounts.ready} Feed Ready · ${selectedReportIds.length} selected`}
                       </p>
                     </div>
                     <ChevronDown
