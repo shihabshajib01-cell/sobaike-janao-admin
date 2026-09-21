@@ -1,6 +1,6 @@
 import { ButtonBase } from '@/components/ui/Button';
 import React from 'react';
-import { Check, Shield, Lock, FileCheck } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { cn } from '@/utils';
 
@@ -24,20 +24,14 @@ export const RoleStepper: React.FC<RoleStepperProps> = ({
     {
       step: 1,
       title: t.roles.step1Title,
-      description: t.roles.step1Description,
-      icon: Shield,
     },
     {
       step: 2,
       title: t.roles.step2Title,
-      description: t.roles.step2Description,
-      icon: Lock,
     },
     {
       step: 3,
       title: t.roles.step3Title,
-      description: t.roles.step3Description,
-      icon: FileCheck,
     },
   ];
 
@@ -60,7 +54,6 @@ export const RoleStepper: React.FC<RoleStepperProps> = ({
           const isCurrent = currentStep === item.step;
           const isCompleted = currentStep > item.step;
           const isClickable = Boolean(onStepClick && (isCompleted || (isStepValid && isStepValid(item.step))));
-          const StepIcon = item.icon;
 
           return (
             <li
