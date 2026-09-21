@@ -1,5 +1,6 @@
 import React, { ReactNode } from 'react';
 import { Inbox } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 export interface EmptyStateProps {
   title?: string;
@@ -9,11 +10,20 @@ export interface EmptyStateProps {
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
-  title = 'No data available',
-  description = 'There are no items to display right now.',
+  title,
+  description,
   icon,
   action,
 }) => {
+  const { language } = useLanguage();
+  const resolvedTitle =
+    title ?? (language === 'bn' ? 'কোনো তথ্য পাওয়া যায়নি' : 'No data available');
+  const resolvedDescription =
+    description ??
+    (language === 'bn'
+      ? 'এই মুহূর্তে দেখানোর মতো কোনো আইটেম নেই।'
+      : 'There are no items to display right now.');
+
   const renderIcon = () => {
     if (!icon) {
       return <Inbox className="w-6 h-6" />;
@@ -36,8 +46,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500 mb-3">
         {renderIcon()}
       </div>
-      <h3 className="type-card-title text-slate-800 dark:text-slate-200 mb-1">{title}</h3>
-      <p className="type-secondary text-slate-500 dark:text-slate-400 max-w-sm mb-4">{description}</p>
+      <h3 className="type-card-title text-slate-800 dark:text-slate-200 mb-1">{resolvedTitle}</h3>
+      <p className="type-secondary text-slate-500 dark:text-slate-400 max-w-sm mb-4">{resolvedDescription}</p>
       {action && <div>{action}</div>}
     </div>
   );
