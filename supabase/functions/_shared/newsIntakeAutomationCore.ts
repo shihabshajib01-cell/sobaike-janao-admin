@@ -595,8 +595,12 @@ const relativeIncidentDateFromText = (text: string, publishedDate?: string | nul
     const match=text.match(pattern);
     if (!match) continue;
     const matchedText=match[0];
-    const hasPastCue=/(গত|last|রাতে|সকাল(?:ে)?|ভোরে|দুপুর(?:ে)?|বিকেল(?:ে)?|বেলা|night|morning|afternoon|evening)/iu.test(matchedText);
-    if (!hasPastCue) continue;
+    // This helper is only called from incident/action sentences inside
+    // inferIncidentDate. A bare weekday there is source-grounded evidence:
+    // e.g. a Sunday-published article saying "রোববার ... দুর্ঘটনা ঘটে"
+    // means the incident happened on that publication Sunday; "শনিবার ..."
+    // resolves to the immediately preceding Saturday. "গত/last" on the same
+    // weekday still means the previous week's occurrence.
     const d=new Date(base);
     let delta=(d.getUTCDay()-weekday+7)%7;
     if (/গত|last/iu.test(matchedText) && delta===0) delta=7;
