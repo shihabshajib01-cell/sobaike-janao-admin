@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Badge, BadgeStatus } from '@/components/ui/Badge';
 import { useLanguage } from '@/context/LanguageContext';
 import { Complaint, ComplaintLifecycleStatus, ComplaintUrgency } from '@/types/Complaint';
