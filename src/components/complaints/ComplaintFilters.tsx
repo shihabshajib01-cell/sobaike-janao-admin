@@ -6,6 +6,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { ComplaintFilterState } from '@/types/Complaint';
 import { complaintApi } from '@/services/api';
 import { RotateCcw, Filter } from 'lucide-react';
+import { sortLocalizedTextOptions } from '@/utils/dropdownOptions';
 import {
   HARASSMENT_AGE_GROUP_OPTIONS,
   HARASSMENT_ABUSER_RELATIONSHIP_OPTIONS,
@@ -109,28 +110,37 @@ export const ComplaintFilters: React.FC<ComplaintFiltersProps> = ({
 
   const categoryOptions = [
     { value: 'all', label: isBn ? 'সকল বিভাগ' : 'All Categories' },
-    ...availableSegments.map((s) => ({
-      value: s.id,
-      label: isBn ? (s.name_bn || s.name_en) : (s.name_en || s.name_bn),
-    })),
+    ...sortLocalizedTextOptions(
+      availableSegments.map((s) => ({
+        value: s.id,
+        label: isBn ? (s.name_bn || s.name_en) : (s.name_en || s.name_bn),
+      })),
+      language
+    ),
   ];
 
   const subcategoryOptions = [
     { value: 'all', label: isBn ? 'সকল সাব-ক্যাটাগরি' : 'All Subcategories' },
-    ...availableSubcategories.map((subcategory) => ({
-      value: subcategory.id,
-      label: isBn
-        ? subcategory.name_bn || subcategory.name_en
-        : subcategory.name_en || subcategory.name_bn,
-    })),
+    ...sortLocalizedTextOptions(
+      availableSubcategories.map((subcategory) => ({
+        value: subcategory.id,
+        label: isBn
+          ? subcategory.name_bn || subcategory.name_en
+          : subcategory.name_en || subcategory.name_bn,
+      })),
+      language
+    ),
   ];
 
   const locationOptions = [
     { value: 'all', label: isBn ? 'সকল এলাকা' : 'All Locations' },
-    ...availableDistricts.map((loc) => ({
-      value: loc,
-      label: loc,
-    })),
+    ...sortLocalizedTextOptions(
+      availableDistricts.map((loc) => ({
+        value: loc,
+        label: loc,
+      })),
+      language
+    ),
   ];
 
   const dateOptions = [
@@ -207,10 +217,13 @@ export const ComplaintFilters: React.FC<ComplaintFiltersProps> = ({
               onChange={(e) => onFilterChange('affectedPersonAgeGroup', e.target.value)}
               options={[
                 { value: 'all', label: isBn ? 'সকল বয়সের গ্রুপ' : 'All age groups' },
-                ...HARASSMENT_AGE_GROUP_OPTIONS.map((item) => ({
-                  value: item.value,
-                  label: isBn ? item.labelBn : item.labelEn,
-                })),
+                ...sortLocalizedTextOptions(
+                  HARASSMENT_AGE_GROUP_OPTIONS.map((item) => ({
+                    value: item.value,
+                    label: isBn ? item.labelBn : item.labelEn,
+                  })),
+                  language
+                ),
               ]}
             />
 
@@ -220,10 +233,13 @@ export const ComplaintFilters: React.FC<ComplaintFiltersProps> = ({
               onChange={(e) => onFilterChange('allegedAbuserRelationship', e.target.value)}
               options={[
                 { value: 'all', label: isBn ? 'সকল সম্পর্ক' : 'All relationships' },
-                ...HARASSMENT_ABUSER_RELATIONSHIP_OPTIONS.map((item) => ({
-                  value: item.value,
-                  label: isBn ? item.labelBn : item.labelEn,
-                })),
+                ...sortLocalizedTextOptions(
+                  HARASSMENT_ABUSER_RELATIONSHIP_OPTIONS.map((item) => ({
+                    value: item.value,
+                    label: isBn ? item.labelBn : item.labelEn,
+                  })),
+                  language
+                ),
               ]}
             />
 
@@ -233,10 +249,13 @@ export const ComplaintFilters: React.FC<ComplaintFiltersProps> = ({
               onChange={(e) => onFilterChange('reportingFor', e.target.value)}
               options={[
                 { value: 'all', label: isBn ? 'সকল ধরন' : 'All reporting types' },
-                ...HARASSMENT_REPORTING_FOR_OPTIONS.map((item) => ({
-                  value: item.value,
-                  label: isBn ? item.labelBn : item.labelEn,
-                })),
+                ...sortLocalizedTextOptions(
+                  HARASSMENT_REPORTING_FOR_OPTIONS.map((item) => ({
+                    value: item.value,
+                    label: isBn ? item.labelBn : item.labelEn,
+                  })),
+                  language
+                ),
               ]}
             />
           </>
