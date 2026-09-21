@@ -7,7 +7,6 @@ import { Tag } from '@/components/ui/Tag';
 import { ResponsiveDataView, ResponsiveDataTableView, ResponsiveDataCardView } from '@/components/ui/ResponsiveDataView';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/Table';
 import {
-  Shield,
   ShieldCheck,
   Lock,
   Edit2,
