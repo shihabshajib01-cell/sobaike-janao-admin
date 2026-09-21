@@ -24,7 +24,6 @@ export const CANONICAL_PERMISSIONS = [
   'audit.view',
 ] as const;
 
-export type CanonicalPermissionId = (typeof CANONICAL_PERMISSIONS)[number];
 
 const AUTHORIZATION_TIMEOUT_MS = 8000;
 
