@@ -1,6 +1,6 @@
 import { ButtonBase } from '@/components/ui/Button';
 import React, { useState, useRef, useEffect } from 'react';
-import { Download, FileSpreadsheet, FileText, ChevronDown, Check, Loader2 } from 'lucide-react';
+import { Download, FileSpreadsheet, FileText, ChevronDown, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 
 export interface DownloadMenuProps {
