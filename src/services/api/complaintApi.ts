@@ -4,7 +4,6 @@
  * All environments fail closed when Supabase is not configured; no mock complaint data is returned.
  */
 
-import { apiClient, ApiClient } from './apiClient';
 import {
   Complaint,
   ComplaintFilterState,
@@ -127,12 +126,6 @@ async function enrichComplaintDetail(complaint: Complaint): Promise<Complaint> {
 }
 
 export class ComplaintApi {
-  private client: ApiClient;
-
-  constructor(client: ApiClient = apiClient) {
-    this.client = client;
-  }
-
   /**
    * Get active taxonomy segments
    */
