@@ -17,8 +17,6 @@ import {
   Eye,
   Clock,
   User,
-  Shield,
-  ArrowRight,
 } from 'lucide-react';
 import { cn } from '@/utils';
 
