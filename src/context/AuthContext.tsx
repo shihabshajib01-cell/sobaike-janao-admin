@@ -35,6 +35,34 @@ const ADMIN_E2E_MODE =
   import.meta.env?.VITE_ADMIN_E2E_MODE === 'true';
 
 const AUTH_BOOTSTRAP_TIMEOUT_MS = 8000;
+const EXPLICIT_SIGNOUT_STORAGE_KEY = 'sobaike_explicit_signout';
+
+const readExplicitSignout = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(EXPLICIT_SIGNOUT_STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+};
+
+const clearExplicitSignout = (): void => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(EXPLICIT_SIGNOUT_STORAGE_KEY);
+  } catch {
+    // Auth must remain functional when browser storage is unavailable.
+  }
+};
+
+const markExplicitSignout = (): void => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(EXPLICIT_SIGNOUT_STORAGE_KEY, 'true');
+  } catch {
+    // The server-backed Supabase session remains the source of truth.
+  }
+};
 
 const withTimeout = async <T,>(
   promise: Promise<T>,
@@ -245,9 +273,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         } else if (!isSupabaseConfigured && Boolean(typeof import.meta !== 'undefined' && import.meta.env?.DEV)) {
           // In unconfigured DEV mode, check if user explicitly signed out
-          const wasExplicitSignout =
-            typeof window !== 'undefined' &&
-            localStorage.getItem('sobaike_explicit_signout') === 'true';
+          const wasExplicitSignout = readExplicitSignout();
 
           if (!wasExplicitSignout) {
             const defaultUser: User = {
@@ -368,9 +394,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [loadUserPermissions, resetAuthState]);
 
   const login = async (credentials: LoginCredentials): Promise<LoginResponse> => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('sobaike_explicit_signout');
-    }
+    clearExplicitSignout();
     const result = await authService.login(credentials);
     if (result.success && result.session && result.user) {
       setSession(result.session);
@@ -394,9 +418,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async (): Promise<void> => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('sobaike_explicit_signout', 'true');
-    }
+    markExplicitSignout();
     await authService.logout();
     resetAuthState();
   };
