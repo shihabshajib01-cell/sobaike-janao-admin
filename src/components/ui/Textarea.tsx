@@ -1,4 +1,4 @@
-import React, { TextareaHTMLAttributes, forwardRef } from 'react';
+import React, { TextareaHTMLAttributes, forwardRef, useId } from 'react';
 import { cn } from '@/utils';
 
 export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -21,11 +21,21 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
       disabled,
       id,
       rows = 4,
+      'aria-describedby': ariaDescribedBy,
+      'aria-invalid': ariaInvalid,
       ...props
     },
     ref
   ) => {
-    const textareaId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+    const generatedId = useId();
+    const textareaId = id || `textarea-${generatedId.replace(/:/g, '')}`;
+    const messageId = `${textareaId}-message`;
+    const countId = maxCharCount !== undefined ? `${textareaId}-count` : undefined;
+    const describedBy = [
+      ariaDescribedBy,
+      error || helperText ? messageId : undefined,
+      countId,
+    ].filter(Boolean).join(' ') || undefined;
 
     return (
       <div className="w-full flex flex-col space-y-1.5 text-left">
@@ -39,7 +49,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             </label>
           )}
           {maxCharCount !== undefined && (
-            <span className="type-technical text-slate-400 dark:text-slate-500">
+            <span id={countId} aria-live="polite" className="type-technical text-slate-400 dark:text-slate-500">
               {charCount !== undefined ? charCount : 0}/{maxCharCount}
             </span>
           )}
@@ -49,6 +59,8 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           ref={ref}
           rows={rows}
           disabled={disabled}
+          aria-invalid={ariaInvalid ?? (error ? true : undefined)}
+          aria-describedby={describedBy}
           className={cn(
             'w-full rounded-md border type-form-value p-3 transition-colors duration-150 font-normal resize-y',
             'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500',
@@ -62,9 +74,9 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           {...props}
         />
         {error ? (
-          <p className="type-helper font-medium text-red-600 dark:text-red-400">{error}</p>
+          <p id={messageId} role="alert" className="type-helper font-medium text-red-600 dark:text-red-400">{error}</p>
         ) : helperText ? (
-          <p className="type-helper text-slate-500 dark:text-slate-400">{helperText}</p>
+          <p id={messageId} className="type-helper text-slate-500 dark:text-slate-400">{helperText}</p>
         ) : null}
       </div>
     );
