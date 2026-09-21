@@ -955,14 +955,19 @@ await check('News Intake keeps Step 2 open and Select All publishes approved mat
     throw new Error('read-only diagnostics still expose the old Not selectable selection bar');
   }
 
-  const feedBeforeDiagnostic = await page.evaluate(() => {
-    const feed = document.querySelector('[data-news-intake-feed-preview]');
-    const diagnostic = document.querySelector('[data-news-intake-diagnostic]');
-    if (!feed || !diagnostic) return false;
-    return Boolean(feed.compareDocumentPosition(diagnostic) & Node.DOCUMENT_POSITION_FOLLOWING);
-  });
-  if (!feedBeforeDiagnostic) {
-    throw new Error('Feed Ready previews must render before duplicate/excluded diagnostics');
+  const readyPanel = page.locator('[data-news-intake-ready-panel]');
+  const diagnosticsPanel = page.locator('[data-news-intake-diagnostics-panel]');
+  if ((await readyPanel.locator('[data-news-intake-diagnostic]').count()) !== 0) {
+    throw new Error('right-side Feed Ready panel still contains duplicate/excluded/review diagnostics');
+  }
+  if ((await readyPanel.locator('[data-news-intake-feed-preview]').count()) !== 2) {
+    throw new Error('right-side panel does not contain exactly the two Feed Ready previews');
+  }
+  if ((await diagnosticsPanel.locator('[data-news-intake-diagnostic]').count()) !== 1) {
+    throw new Error('left-side diagnostics panel did not retain the duplicate/excluded result');
+  }
+  if ((await diagnosticsPanel.locator('[data-news-intake-feed-preview]').count()) !== 0) {
+    throw new Error('Feed Ready previews leaked into the left-side diagnostics panel');
   }
 
   await page.waitForFunction(

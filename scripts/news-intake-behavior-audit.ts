@@ -732,6 +732,36 @@ assert.equal(
   'Banglanews section paths must never receive the final-detail article fallback'
 );
 
+assert.equal(
+  isSafeSpecificLocationText('তবে ছাদে ওই তিনজনের কেউ ছিলেন', 'Khulna'),
+  false,
+  'Arbitrary Bangla narrative prose must fail positive geographic evidence validation'
+);
+assert.equal(
+  isSafeSpecificLocationText('Shah Ali Market', 'Dhaka'),
+  true,
+  'Compact proper place names with geographic evidence must remain valid'
+);
+
+const genericSchemaBuilder = buildNewsIntakeSubcategoryReport({
+  article:{
+    title:'Future admin category incident at Shah Ali Market',
+    excerpt:'A source-backed incident was reported at Shah Ali Market in Dhaka.',
+    body:'A source-backed incident was reported at Shah Ali Market in Dhaka. Witnesses described the incident and the source provided a clear date and place. Officials later attended the location. This fixture intentionally represents a future Admin-created subcategory that does not have a hard-coded News Intake builder. The standard source-grounded fields remain available so the live published reporting schema can decide whether the candidate is complete or must go to review.'
+  },
+  classification:{segmentId:'public_safety',subcategoryId:'future-admin-subcategory'},
+  location:{division:'Dhaka',district:'Dhaka',area:'Shah Ali Market',formattedAddress:'Shah Ali Market',locationScope:'specific'},
+  incidentDate:'2026-09-20',
+  language:'en',
+  feedContext:'A source-backed incident was reported at Shah Ali Market in Dhaka. Witnesses described the incident and the source provided a clear date and place. Officials later attended the location. This fixture intentionally represents a future Admin-created subcategory that does not have a hard-coded News Intake builder. The standard source-grounded fields remain available so the live published reporting schema can decide whether the candidate is complete or must go to review.'
+});
+assert.equal(genericSchemaBuilder.report.subcategoryId,'future-admin-subcategory');
+assert.equal(
+  missingNewsIntakeSubcategoryFields(genericSchemaBuilder.report).includes('subcategoryBuilder'),
+  false,
+  'A future Admin-created subcategory must use the conservative generic builder instead of failing on a missing code registry entry'
+);
+
 console.log(
   `News Intake behavior audit passed: ${classificationCases.length} published subcategory fixtures plus production false-positive regressions, date parsing, location grounding, source-language handling, context generation, and content filtering.`
 );
