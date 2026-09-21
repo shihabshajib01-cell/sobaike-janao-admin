@@ -269,8 +269,6 @@ export const ResponsesPage: React.FC = () => {
     setIsModerating(true);
     setModerationError(null);
 
-    let mutationSucceeded = false;
-
     // STAGE A: Actual Mutation RPC
     try {
       if (action === 'publish') {
@@ -283,7 +281,6 @@ export const ResponsesPage: React.FC = () => {
         await responseApi.resubmitResponse(responseId);
       }
 
-      mutationSucceeded = true;
     } catch (mutationErr: unknown) {
       console.error('Moderation mutation error:', mutationErr);
       const message =
