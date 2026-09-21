@@ -11,7 +11,3 @@ export const formatDate = (dateString?: string): string => {
   }
 };
 
-export const truncate = (str?: string, maxLen = 50): string => {
-  if (!str) return '';
-  return str.length > maxLen ? `${str.slice(0, maxLen)}...` : str;
-};
