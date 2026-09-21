@@ -3,7 +3,7 @@ import React from 'react';
 import { ResponseFilterState, ResponseTypeFilter } from '@/types/Response';
 import { useLanguage } from '@/context/LanguageContext';
 import { Button } from '@/components/ui/Button';
-import { Search, X, Calendar, Filter } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 
 export interface ResponseFiltersProps {
   filters: ResponseFilterState;
