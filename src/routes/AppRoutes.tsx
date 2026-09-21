@@ -34,7 +34,11 @@ const CreateUserPage = lazy(() => import('@/pages/Users/CreateUserPage'));
 const UserDetailPage = lazy(() => import('@/pages/Users/UserDetailPage'));
 const EditUserPage = lazy(() => import('@/pages/Users/EditUserPage'));
 const NotificationsPage = lazy(() => import('@/pages/Notifications/NotificationsPage'));
-const ActivityLogPage = lazy(() => import('@/pages/ActivityLog/ActivityLogPage'));
+const ActivityLogPage = lazy(() =>
+  import('@/pages/ActivityLog/ActivityLogPage').then((module) => ({
+    default: module.ActivityLogPage,
+  }))
+);
 const NotFoundPage = lazy(() => import('@/pages/NotFound/NotFoundPage'));
 
 const LocalizedLoadingState: React.FC<{
