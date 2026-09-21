@@ -25,7 +25,11 @@ export default defineConfig(() => {
             if (id.includes('/src/context/LanguageContext.tsx')) {
               return 'app-i18n';
             }
-            if (id.includes('/src/components/ui/')) {
+            if (
+              id.includes('/src/components/ui/') &&
+              !id.endsWith('/src/components/ui/DownloadMenu.tsx') &&
+              !id.endsWith('/src/components/ui/index.ts')
+            ) {
               return 'app-ui';
             }
 
