@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { lazy, Suspense } from 'react';
 import {
   Route,
   Navigate,
@@ -13,29 +13,38 @@ import { LoadingState, AccessDenied } from '@/components/common';
 import { useAuth } from '@/context/AuthContext';
 import { AdminMfaGate } from '@/components/auth/AdminMfaGate';
 import { getFirstAccessibleRoute } from '@/routes/routes.config';
-import {
-  LoginPage,
-  DashboardPage,
-  ComplaintsPage,
-  ComplaintDetailPage,
-  NewsIntakePage,
-  ResponsesPage,
-  CategoriesPage,
-  BannersPage,
-  MapPage,
-  LocationActivityPage,
-  RolesPage,
-  CreateRolePage,
-  RoleDetailPage,
-  EditRolePage,
-  UsersPage,
-  CreateUserPage,
-  UserDetailPage,
-  EditUserPage,
-  NotificationsPage,
-  ActivityLogPage,
-  NotFoundPage,
-} from '@/pages';
+import { useLanguage } from '@/context/LanguageContext';
+
+const LoginPage = lazy(() => import('@/pages/Login/LoginPage'));
+const DashboardPage = lazy(() => import('@/pages/Dashboard/DashboardPage'));
+const ComplaintsPage = lazy(() => import('@/pages/Complaints/ComplaintsPage'));
+const ComplaintDetailPage = lazy(() => import('@/pages/Complaints/ComplaintDetailPage'));
+const NewsIntakePage = lazy(() => import('@/pages/NewsIntake/NewsIntakePage'));
+const ResponsesPage = lazy(() => import('@/pages/Responses/ResponsesPage'));
+const CategoriesPage = lazy(() => import('@/pages/Categories/CategoriesPage'));
+const BannersPage = lazy(() => import('@/pages/Banners/BannersPage'));
+const MapPage = lazy(() => import('@/pages/Map/MapPage'));
+const LocationActivityPage = lazy(() => import('@/pages/LocationActivity/LocationActivityPage'));
+const RolesPage = lazy(() => import('@/pages/Roles/RolesPage'));
+const CreateRolePage = lazy(() => import('@/pages/Roles/CreateRolePage'));
+const RoleDetailPage = lazy(() => import('@/pages/Roles/RoleDetailPage'));
+const EditRolePage = lazy(() => import('@/pages/Roles/EditRolePage'));
+const UsersPage = lazy(() => import('@/pages/Users/UsersPage'));
+const CreateUserPage = lazy(() => import('@/pages/Users/CreateUserPage'));
+const UserDetailPage = lazy(() => import('@/pages/Users/UserDetailPage'));
+const EditUserPage = lazy(() => import('@/pages/Users/EditUserPage'));
+const NotificationsPage = lazy(() => import('@/pages/Notifications/NotificationsPage'));
+const ActivityLogPage = lazy(() => import('@/pages/ActivityLog/ActivityLogPage'));
+const NotFoundPage = lazy(() => import('@/pages/NotFound/NotFoundPage'));
+
+const LocalizedLoadingState: React.FC<{
+  bn: string;
+  en: string;
+  fullHeight?: boolean;
+}> = ({ bn, en, fullHeight = true }) => {
+  const { language } = useLanguage();
+  return <LoadingState fullHeight={fullHeight} message={language === 'bn' ? bn : en} />;
+};
 
 /**
  * Protected Admin Route Wrapper
@@ -46,7 +55,12 @@ const ProtectedAdminRoute: React.FC = () => {
   const location = useLocation();
 
   if (isLoading) {
-    return <LoadingState fullHeight message="Verifying administrative session..." />;
+    return (
+      <LocalizedLoadingState
+        bn="প্রশাসনিক সেশন যাচাই করা হচ্ছে..."
+        en="Verifying administrative session..."
+      />
+    );
   }
 
   if (!session || !user || !isAdmin) {
@@ -81,7 +95,12 @@ const PermissionGuard: React.FC<PermissionGuardProps> = ({
   const { hasPermission, permissionsLoading, permissionsError, isLoading, isBootstrapMode } = useAuth();
 
   if (isLoading || permissionsLoading) {
-    return <LoadingState fullHeight message="Verifying permissions..." />;
+    return (
+      <LocalizedLoadingState
+        bn="অনুমতি যাচাই করা হচ্ছে..."
+        en="Verifying permissions..."
+      />
+    );
   }
 
   const calculatedFallback = fallbackPath || getFirstAccessibleRoute(hasPermission, isBootstrapMode);
@@ -116,7 +135,12 @@ const RootRedirect: React.FC = () => {
   const { session, user, isAdmin, isLoading, permissionsLoading, hasPermission, isBootstrapMode } = useAuth();
 
   if (isLoading || permissionsLoading) {
-    return <LoadingState fullHeight message="Verifying session..." />;
+    return (
+      <LocalizedLoadingState
+        bn="সেশন যাচাই করা হচ্ছে..."
+        en="Verifying session..."
+      />
+    );
   }
 
   if (!session || !user || !isAdmin) {
@@ -136,7 +160,12 @@ const PublicAuthRoute: React.FC = () => {
   const location = useLocation();
 
   if (isLoading || permissionsLoading) {
-    return <LoadingState fullHeight message="Verifying session..." />;
+    return (
+      <LocalizedLoadingState
+        bn="সেশন যাচাই করা হচ্ছে..."
+        en="Verifying session..."
+      />
+    );
   }
 
   if (session && user && isAdmin) {
@@ -313,7 +342,14 @@ export const router = createHashRouter(routes);
 
 export const AppRoutes: React.FC = () => {
   return (
-    <Suspense fallback={<LoadingState fullHeight message="Loading view..." />}>
+    <Suspense
+      fallback={
+        <LocalizedLoadingState
+          bn="ভিউ লোড হচ্ছে..."
+          en="Loading view..."
+        />
+      }
+    >
       <RouterProvider router={router} />
     </Suspense>
   );
