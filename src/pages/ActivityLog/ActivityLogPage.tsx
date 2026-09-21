@@ -20,7 +20,6 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
-  History,
 } from 'lucide-react';
 
 /**
