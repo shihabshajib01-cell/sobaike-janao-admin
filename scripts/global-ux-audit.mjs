@@ -106,6 +106,43 @@ requireMarkers('src/pages/Login/LoginPage.tsx', [
   'সর্বস্বত্ব সংরক্ষিত',
 ]);
 
+requireMarkers('src/components/common/LoadingState.tsx', [
+  'useLanguage',
+  'role="status"',
+  'aria-live="polite"',
+  'aria-busy="true"',
+]);
+
+requireMarkers('src/components/common/EmptyState.tsx', [
+  'useLanguage',
+  'কোনো তথ্য পাওয়া যায়নি',
+]);
+
+requireMarkers('src/components/ui/FeedbackNotice.tsx', [
+  'useLanguage',
+  'resolvedDismissLabel',
+]);
+
+requireMarkers('src/context/AuthContext.tsx', [
+  'readExplicitSignout',
+  'clearExplicitSignout',
+  'markExplicitSignout',
+  'window.localStorage',
+]);
+
+requireMarkers('src/utils/dropdownOptions.ts', [
+  'sortLocalizedTextOptions',
+  'localeCompare',
+  'numeric: true',
+]);
+
+requireMarkers('src/pages/Complaints/ComplaintDetailPage.tsx', [
+  'https://shobaikejanao.com',
+  'report-detail',
+  'View Live Public Post',
+  'noopener noreferrer',
+]);
+
 const pagesRoot = path.join(repoRoot, 'src/pages');
 const walk = (dir) =>
   fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -127,4 +164,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log('Global UX audit passed: forms expose validation semantics, default state contracts work, modal/drawer focus is managed, all pages participate in EN/BN, and page routes remain lazy-loaded.');
+console.log('Global UX audit passed: forms expose validation semantics, shared fallback states are localized, auth/browser-storage recovery is hardened, modal/drawer focus is managed, text-option sorting and live Public verification remain protected, all pages participate in EN/BN, and page routes remain lazy-loaded.');
