@@ -7,6 +7,7 @@ import {
   buildIncidentContext,
   buildIncidentFocusedLocationText,
   classifyArticle,
+  cleanSpecificLocationText,
   clip,
   detectLanguage,
   findLocation,
@@ -1267,6 +1268,20 @@ const processNewsIntakeRun = async (
                 quality:'district_only',
               }
             : null;
+        }
+
+        if(
+          location
+          && location.quality !== 'multiple_locations'
+          && location.locationScope !== 'multi_location'
+        ){
+          location={
+            ...location,
+            area:cleanSpecificLocationText(location.area),
+            road:cleanSpecificLocationText(location.road),
+            landmark:cleanSpecificLocationText(location.landmark),
+            formattedAddress:cleanSpecificLocationText(location.formattedAddress),
+          };
         }
 
         const contextualDistrict=
