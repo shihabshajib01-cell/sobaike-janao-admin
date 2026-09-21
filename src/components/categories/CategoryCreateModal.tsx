@@ -46,8 +46,17 @@ export const CategoryCreateModal: React.FC<CategoryCreateModalProps> = ({
   const isSubcategory = itemType === 'subcategory';
 
   const availableParents = useMemo(
-    () => segments.filter((segment) => segment.configStatus !== 'archived'),
-    [segments]
+    () =>
+      segments
+        .filter((segment) => segment.configStatus !== 'archived')
+        .sort((a, b) =>
+          (isBn ? a.nameBn : a.nameEn).localeCompare(
+            isBn ? b.nameBn : b.nameEn,
+            isBn ? 'bn-BD' : 'en',
+            { sensitivity: 'base' }
+          )
+        ),
+    [segments, isBn]
   );
 
   const allIds = useMemo(
