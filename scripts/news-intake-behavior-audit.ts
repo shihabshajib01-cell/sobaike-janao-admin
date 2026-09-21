@@ -175,6 +175,17 @@ assert.equal(
   'Historical background locations must never become the current incident location'
 );
 
+assert.equal(
+  isSafeSpecificLocationText('মুল হোসেনকে হত্যার ঘটনায় নগরের হরিণটানা থানা','Khulna'),
+  false,
+  'Narrative incident/police-jurisdiction phrases must never become a specific location'
+);
+assert.equal(
+  isSafeSpecificLocationText('হরিণটানা থানা','Khulna'),
+  true,
+  'A clean named thana remains a valid source-grounded location'
+);
+
 const feedReadyContext=buildFeedReadyIncidentContext({
   excerpt:'',
   body:[
@@ -527,6 +538,15 @@ assert.equal(
 
 assert.equal(
   inferIncidentDate(
+    'আজ এই হত্যাকাণ্ড নিয়ে প্রত্যক্ষদর্শীদের নতুন তথ্য সামনে এসেছে। নিহত আজমুল হোসেন খুলনার নর্থ ওয়েস্টার্ন বিশ্ববিদ্যালয়ের শিক্ষার্থী ছিলেন। গত শুক্রবার দিবাগত রাতে চুরির অভিযোগ তুলে ওই মেসে তাঁকে হত্যা করা হয়।',
+    '2026-09-21'
+  ),
+  '2026-09-18',
+  'Explicit past weekday incident date must beat earlier today/publication-day narrative wording'
+);
+
+assert.equal(
+  inferIncidentDate(
     'রোববার (২০ সেপ্টেম্বর) বেলা সাড়ে ১১টার দিকে ঢাকা-চট্টগ্রাম মহাসড়কের কুমিল্লার কোটবাড়ি এলাকায় শিক্ষার্থীরা সড়ক অবরোধ করেন।',
     '2026-09-20'
   ),
@@ -611,6 +631,15 @@ assert.notEqual(
   ),
   'এদিকে এ ঘটনায় খুলনার হরিণটানা থানা',
   'Narrative police-jurisdiction fragments must never become the public incident location'
+);
+
+assert.notEqual(
+  inferSpecificLocationPhrase(
+    'খুলনা বিশ্ববিদ্যালয়ের সীমানাপ্রাচীরের পূর্ব পাশে মসজিদের গলি ধরে একটু এগোলে ছাত্রদের মেস। আজমুল হোসেনকে হত্যার ঘটনায় নগরের হরিণটানা থানা পুলিশ তদন্ত করছে।',
+    'Khulna'
+  ),
+  'আজমুল হোসেনকে হত্যার ঘটনায় নগরের হরিণটানা থানা',
+  'Exact Mob Justice narrative thana phrase must not become the incident location'
 );
 assert.notEqual(
   inferSpecificLocationPhrase(
