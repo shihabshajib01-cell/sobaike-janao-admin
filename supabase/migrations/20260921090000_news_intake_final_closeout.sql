@@ -13,7 +13,8 @@ AS $function$
   select case
     when nullif(btrim(coalesce(p_value,'')),'') is null then false
     when char_length(btrim(p_value)) < 5 or char_length(btrim(p_value)) > 120 then false
-    when p_value ~* '(থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|বাজার|মার্কেট|এলাকা|মহল্লা|গ্রাম|সড়ক|সড়ক|মহাসড়ক|মহাসড়ক|রোড|লেন|গলি|মোড়|মোড়|রেলগেট|স্টেশন|শহর|নগরী|মহানগরী|police[[:space:]]+station|thana|upazila|union|market|bazaar|area|neighbou?rhood|village|road|street|lane|avenue|highway|rail[[:space:]]*gate|station|city|metropolitan[[:space:]]+area)' then true
+    when p_value ~ '(^|[[:space:],;:()/–—-])(থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|বাজার|মার্কেট|এলাকা|মহল্লা|গ্রাম|সড়ক|সড়ক|মহাসড়ক|মহাসড়ক|রোড|লেন|গলি|মোড়|মোড়|রেলগেট|স্টেশন|শহর|নগরী|মহানগরী)(য়|য়|তে|ে|র|ের|এর)?($|[[:space:],.;:।()/–—-])' then true
+    when lower(p_value) ~ '(^|[[:space:],;:()/–—-])(police[[:space:]]+station|thana|upazila|union|market|bazaar|area|neighbou?rhood|village|road|street|lane|avenue|highway|rail[[:space:]]*gate|station|city|metropolitan[[:space:]]+area)($|[[:space:],.;:()/–—-])' then true
     when btrim(p_value) ~ '^[A-Z][A-Za-z0-9.''’\-]*(?:[[:space:],]+[A-Z0-9][A-Za-z0-9.''’\-]*){0,6}$' then true
     else false
   end
