@@ -65,7 +65,8 @@ export const RadioGroup: React.FC<RadioGroupProps> = ({
   );
 };
 
-export interface RadioProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
+export interface RadioProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'value'> {
+  value?: string | number;
   label?: string;
   description?: string;
 }
