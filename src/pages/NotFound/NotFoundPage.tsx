@@ -26,9 +26,9 @@ export const NotFoundPage: React.FC = () => {
         variant="primary"
         size="md"
         leftIcon={<Home />}
-        onClick={() => navigate('/dashboard')}
+        onClick={() => navigate('/')}
       >
-        {isBn ? 'ড্যাশবোর্ডে ফিরে যান' : 'Return to Dashboard'}
+        {isBn ? 'অ্যাডমিন প্যানেলে ফিরে যান' : 'Return to Admin'}
       </Button>
     </div>
   );
