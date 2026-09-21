@@ -364,6 +364,11 @@ export const ComplaintDetailPage: React.FC = () => {
   const isMobJusticeComplaint =
     complaint.categoryId === 'public_safety' && complaint.subcategoryId === 'mob-justice';
 
+  const publicReportUrl =
+    complaint.status === 'published'
+      ? `https://shobaikejanao.com${isBn ? '' : '/en'}/report-detail/${encodeURIComponent(complaint.id)}`
+      : null;
+
   return (
     <div className="space-y-6 pb-24 sm:pb-8">
       {/* 1. Page Header with Back Button and Quick Actions */}
@@ -388,6 +393,25 @@ export const ComplaintDetailPage: React.FC = () => {
               {isBn ? statusCfg.labelBn : statusCfg.labelEn}
             </Badge>
 
+            {publicReportUrl && (
+              <a
+                href={publicReportUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-8 min-h-8 items-center justify-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 type-action-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                aria-label={
+                  isBn
+                    ? `পাবলিক সাইটে ${complaint.id} প্রতিবেদন খুলুন`
+                    : `Open report ${complaint.id} on the public site`
+                }
+              >
+                <ExternalLink className="size-3.5 shrink-0" aria-hidden="true" />
+                <span className="hidden sm:inline">
+                  {isBn ? 'লাইভ পাবলিক পোস্ট' : 'View Live Public Post'}
+                </span>
+              </a>
+            )}
+
             <Button
               variant="secondary"
               size="sm"
@@ -397,7 +421,7 @@ export const ComplaintDetailPage: React.FC = () => {
               }}
               disabled={loading || partiesLoading}
               leftIcon={<RefreshCw className={`${loading || partiesLoading ? 'animate-spin' : ''}`} />}
-              aria-label="Refresh complaint"
+              aria-label={isBn ? 'অভিযোগ রিফ্রেশ করুন' : 'Refresh complaint'}
             >
               <span className="hidden sm:inline">{isBn ? 'রিফ্রেশ' : 'Refresh'}</span>
             </Button>
