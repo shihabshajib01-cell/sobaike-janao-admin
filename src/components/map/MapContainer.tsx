@@ -13,7 +13,6 @@ import 'leaflet/dist/leaflet.css';
 
 import { MapComplaint } from '@/types/Map';
 import { useLanguage } from '@/context/LanguageContext';
-import { useTheme } from '@/themes/ThemeProvider';
 import { useAuth } from '@/context/AuthContext';
 import { Badge, BadgeStatus } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -33,7 +32,6 @@ export interface MapContainerProps {
   complaints: MapComplaint[];
   selectedComplaint: MapComplaint | null;
   onSelectComplaint: (complaint: MapComplaint | null) => void;
-  loading?: boolean;
   className?: string;
 }
 
@@ -176,14 +174,11 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   complaints,
   selectedComplaint,
   onSelectComplaint,
-  loading = false,
   className,
 }) => {
   const { language } = useLanguage();
-  const { resolvedTheme } = useTheme();
   const { hasPermission } = useAuth();
   const canViewComplaints = hasPermission('complaints.view');
-  const isDark = resolvedTheme === 'dark';
   const isBn = language === 'bn';
   const navigate = useNavigate();
 
