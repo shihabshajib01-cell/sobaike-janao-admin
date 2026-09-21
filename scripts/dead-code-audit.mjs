@@ -77,9 +77,27 @@ for (const file of sourceFiles) {
   visit(file);
 }
 
-const entry = normalize(path.join(srcRoot, 'main.tsx'));
+const indexHtmlPath = path.join(repoRoot, 'index.html');
+const indexHtml = fs.readFileSync(indexHtmlPath, 'utf8');
+const htmlEntrySpecifiers = [
+  ...indexHtml.matchAll(/<script[^>]+src=["']([^"']+)["'][^>]*><\/script>/gi),
+]
+  .map((match) => match[1])
+  .filter((specifier) => specifier.startsWith('./src/') || specifier.startsWith('/src/'));
+
+const htmlEntries = htmlEntrySpecifiers
+  .map((specifier) =>
+    normalize(path.join(repoRoot, specifier.replace(/^\.\//, '').replace(/^\//, '')))
+  )
+  .filter((entryPath) => sourceSet.has(entryPath));
+
+if (htmlEntries.length === 0) {
+  console.error('Dead-code audit could not resolve a local source entry from index.html.');
+  process.exit(1);
+}
+
 const reachable = new Set();
-const stack = [entry];
+const stack = [...htmlEntries];
 while (stack.length > 0) {
   const current = stack.pop();
   if (!current || reachable.has(current)) continue;
@@ -188,6 +206,7 @@ const unreferencedAssets = assetFiles
   .sort();
 
 const result = {
+  htmlEntries: htmlEntries.map(toRepoPath),
   sourceFiles: sourceFiles.length,
   reachableSourceFiles: reachable.size,
   unreachable,
