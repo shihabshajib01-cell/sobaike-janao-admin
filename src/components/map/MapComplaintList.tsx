@@ -8,7 +8,6 @@ import { Badge, BadgeStatus } from '@/components/ui/Badge';
 import {
   MapPin,
   Folder,
-  Calendar,
   ExternalLink,
 } from 'lucide-react';
 import { cn } from '@/utils';
