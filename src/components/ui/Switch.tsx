@@ -1,6 +1,7 @@
 import { ButtonBase } from '@/components/ui/Button';
 import React, { forwardRef, useId, useState } from 'react';
 import { cn } from '@/utils';
+import { useLanguage } from '@/context/LanguageContext';
 
 export interface SwitchProps {
   id?: string;
@@ -29,6 +30,8 @@ export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(
     },
     ref
   ) => {
+    const { language } = useLanguage();
+    const isBn = language === 'bn';
     const generatedId = useId();
     const switchId = id || `switch-${generatedId.replace(/:/g, '')}`;
     const labelId = label ? `${switchId}-label` : undefined;
@@ -57,7 +60,7 @@ export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(
           aria-checked={isChecked}
           aria-labelledby={labelId}
           aria-describedby={descriptionId}
-          aria-label={!label ? 'Toggle setting' : undefined}
+          aria-label={!label ? (isBn ? 'সেটিং পরিবর্তন করুন' : 'Toggle setting') : undefined}
           disabled={disabled}
           onClick={handleClick}
           className={cn(
