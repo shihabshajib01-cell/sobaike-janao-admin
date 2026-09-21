@@ -4,6 +4,7 @@ import {
   buildIncidentContext,
   buildIncidentFocusedLocationText,
   buildSourceLanguageFields,
+  cleanSpecificLocationText,
   classifyArticle,
   findLocation,
   hasPrimaryTheftHeadlineSignal,
@@ -683,6 +684,12 @@ assert.equal(
   ),
   'Sakrail village, Garpara union',
   'Location cleanup must strip narrative lead-ins such as vehicle in without losing the real place'
+);
+
+assert.equal(
+  cleanSpecificLocationText('vehicle in Sakrail village of Garpara union'),
+  'Sakrail village, Garpara union',
+  'Resolved location fields must remove narrative lead-ins before preview/publication'
 );
 assert.equal(
   inferDistrictWideScope('জেলাজুড়ে বিদ্যুৎ বিভ্রাটের অভিযোগ পাওয়া গেছে'),
