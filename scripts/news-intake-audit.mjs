@@ -177,6 +177,7 @@ requireText(behaviorAudit, 'Future strike warnings must be excluded before categ
 requireText(behaviorAudit, 'Evidence recovery during a murder investigation must not become a standalone theft report', 'News Intake evidence-recovery regression');
 requireText(behaviorAudit, 'Same-day Bangla weekday plus বেলা must resolve to the publication day', 'News Intake Bangla বেলা date regression');
 requireText(scanner, 'hasPrimaryTheftHeadlineSignal', 'News Intake context-only Theft false-positive guard');
+requireText(scanner, 'cleanSpecificLocationText(location.area)', 'News Intake resolved-location cleanup');
 requireText(scanner, 'dynamicTaxonomyClassification', 'News Intake live taxonomy fallback classifier');
 requireText(scanner, 'admin_get_news_intake_taxonomy', 'News Intake live taxonomy fetch');
 requireText(scanner, 'admin_preview_sourced_report_intake', 'News Intake live published-schema validation');
@@ -206,6 +207,7 @@ requireText(behaviorAudit, 'Generic English road fragments must never become a s
 requireText(behaviorAudit, 'Arbitrary Bangla narrative prose must fail positive geographic evidence validation', 'News Intake positive-location regression');
 requireText(behaviorAudit, 'Unrelated headlines must not become Theft merely because the summary mentions theft', 'News Intake Theft headline precision regression');
 requireText(behaviorAudit, 'Location cleanup must strip narrative lead-ins such as vehicle in without losing the real place', 'News Intake location cleanup regression');
+requireText(behaviorAudit, 'Resolved location fields must remove narrative lead-ins before preview/publication', 'News Intake resolved-location cleanup regression');
 requireText(behaviorAudit, 'A future Admin-created subcategory must use the conservative generic builder instead of failing on a missing code registry entry', 'News Intake generic-builder regression');
 requireText(behaviorAudit, 'Narrative Bangla victim/thana fragments must never become a specific location', 'News Intake Bangla semantic location regression');
 requireText(behaviorAudit, 'Feed Ready source context must contain at least 400 characters', 'News Intake 400-character minimum regression');
