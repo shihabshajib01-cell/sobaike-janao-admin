@@ -958,7 +958,7 @@ const processNewsIntakeRun = async (
             contentLanguage:language,
             action:'discovered',
             duplicateStatus:'unavailable',
-            reason:'Court, bail, remand, confession, hearing, verdict, appeal, or trial follow-up was excluded because it does not report a new incident.',
+            reason:'Court, bail, remand, confession, arrest/enforcement, hearing, verdict, appeal, or trial follow-up was excluded because it does not report a new incident.',
           });
           return;
         }
