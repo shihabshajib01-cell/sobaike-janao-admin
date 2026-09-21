@@ -913,8 +913,8 @@ await check('News Intake keeps Step 2 open and Select All publishes approved mat
   await page.getByRole('button', { name: 'Scan All Sources Now', exact: true }).click();
 
   await expectVisible(
-    page.getByText('Category-matched reports', { exact: true }).first(),
-    'category-matched panel heading missing'
+    page.getByText('Feed Ready reports', { exact: true }).first(),
+    'Feed Ready panel heading missing'
   );
 
   const existingSelector = page.getByLabel(
@@ -945,8 +945,22 @@ await check('News Intake keeps Step 2 open and Select All publishes approved mat
   }
 
   const diagnostics = page.locator('[data-news-intake-diagnostic]');
+  const readyPanel = page.locator('[data-news-intake-ready-panel]');
+  const diagnosticsPanel = page.locator('[data-news-intake-diagnostics-panel]');
+
+  if ((await diagnostics.count()) !== 0) {
+    throw new Error('blocked candidates should not be mixed into the default All raw view');
+  }
+  if ((await readyPanel.locator('[data-news-intake-diagnostic]').count()) !== 0) {
+    throw new Error('right-side Feed Ready panel still contains blocked/review diagnostics');
+  }
+  if ((await readyPanel.locator('[data-news-intake-feed-preview]').count()) !== 2) {
+    throw new Error('right-side panel does not contain exactly the two Feed Ready previews');
+  }
+
+  await page.getByRole('button', { name: 'Blocked candidates · 1', exact: true }).click();
   if ((await diagnostics.count()) !== 1) {
-    throw new Error('duplicate/excluded result did not render as one compact diagnostic');
+    throw new Error('Blocked candidates filter did not expose the one blocked category candidate');
   }
   if (await diagnostics.locator('input[type="checkbox"]').count()) {
     throw new Error('read-only diagnostics still render a fake disabled selection checkbox');
@@ -954,30 +968,30 @@ await check('News Intake keeps Step 2 open and Select All publishes approved mat
   if (await page.getByText('Not selectable', { exact: true }).count()) {
     throw new Error('read-only diagnostics still expose the old Not selectable selection bar');
   }
-
-  const readyPanel = page.locator('[data-news-intake-ready-panel]');
-  const diagnosticsPanel = page.locator('[data-news-intake-diagnostics-panel]');
-  if ((await readyPanel.locator('[data-news-intake-diagnostic]').count()) !== 0) {
-    throw new Error('right-side Feed Ready panel still contains duplicate/excluded/review diagnostics');
-  }
-  if ((await readyPanel.locator('[data-news-intake-feed-preview]').count()) !== 2) {
-    throw new Error('right-side panel does not contain exactly the two Feed Ready previews');
-  }
   if ((await diagnosticsPanel.locator('[data-news-intake-diagnostic]').count()) !== 1) {
-    throw new Error('left-side diagnostics panel did not retain the duplicate/excluded result');
+    throw new Error('left-side diagnostics panel did not retain the blocked candidate');
   }
   if ((await diagnosticsPanel.locator('[data-news-intake-feed-preview]').count()) !== 0) {
     throw new Error('Feed Ready previews leaked into the left-side diagnostics panel');
   }
+  await page.getByRole('button', { name: 'All raw · 1', exact: true }).click();
 
   await page.waitForFunction(
-    () => document.body.textContent?.includes('3 matched · 2 ready · 0 selected'),
+    () => document.body.textContent?.includes('2 Feed Ready · 0 selected'),
     undefined,
     { timeout: 15000 }
   );
-  if (!String(await page.locator('body').textContent()).includes('3 matched · 2 ready · 0 selected')) {
-    throw new Error('category-matched panel did not expose the zero-review ready counts after both cards loaded');
+  if (!String(await page.locator('body').textContent()).includes('2 Feed Ready · 0 selected')) {
+    throw new Error('Feed Ready panel did not expose the ready count after both cards loaded');
   }
+  await expectVisible(
+    page.getByText('3 category candidates', { exact: true }),
+    'category candidate summary count missing'
+  );
+  await expectVisible(
+    page.getByText('1 blocked', { exact: true }),
+    'blocked candidate summary count missing'
+  );
 
   if (await page.getByText('Review required', { exact: true }).count()) {
     throw new Error('current approved-source matches still expose Review required');
@@ -996,7 +1010,7 @@ await check('News Intake keeps Step 2 open and Select All publishes approved mat
   );
   await page.getByRole('button', { name: 'Keep Working', exact: true }).click();
   await expectVisible(
-    page.getByText('Category-matched reports', { exact: true }).first(),
+    page.getByText('Feed Ready reports', { exact: true }).first(),
     'workspace closed after Keep Working'
   );
 
@@ -1026,7 +1040,7 @@ await check('News Intake keeps Step 2 open and Select All publishes approved mat
   await secondTab.bringToFront();
   await page.bringToFront();
   await expectVisible(
-    page.getByText('Category-matched reports', { exact: true }).first(),
+    page.getByText('Feed Ready reports', { exact: true }).first(),
     'browser tab switching closed Step 2'
   );
   await secondTab.close();
@@ -1042,15 +1056,15 @@ await check('News Intake keeps Step 2 open and Select All publishes approved mat
   await page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
 
   await expectVisible(
-    page.getByText('Category-matched reports', { exact: true }).first(),
+    page.getByText('Feed Ready reports', { exact: true }).first(),
     'Step 2 did not restore after browser reload/tab discard'
   );
   await page.waitForFunction(
-    () => document.body.textContent?.includes('3 matched · 2 ready · 1 selected'),
+    () => document.body.textContent?.includes('2 Feed Ready · 1 selected'),
     undefined,
     { timeout: 15000 }
   );
-  if (!String(await page.locator('body').textContent()).includes('3 matched · 2 ready · 1 selected')) {
+  if (!String(await page.locator('body').textContent()).includes('2 Feed Ready · 1 selected')) {
     throw new Error('run/selection state did not restore after browser reload');
   }
 
@@ -1101,7 +1115,7 @@ await check('News Intake mobile workspace is full-screen and review panels colla
   }
 
   const rawToggle = page.getByRole('button', { name: /Raw news found/ });
-  const readyToggle = page.getByRole('button', { name: /Category-matched reports/ });
+  const readyToggle = page.getByRole('button', { name: /Feed Ready reports/ });
   await expectVisible(rawToggle, 'mobile raw-news collapse control missing');
   await expectVisible(readyToggle, 'mobile category-matched collapse control missing');
 
@@ -1110,12 +1124,12 @@ await check('News Intake mobile workspace is full-screen and review panels colla
     throw new Error('raw-news panel did not collapse');
   }
   if ((await readyToggle.getAttribute('aria-expanded')) !== 'true') {
-    throw new Error('category-matched panel collapsed when only raw news was toggled');
+    throw new Error('Feed Ready panel collapsed when only raw news was toggled');
   }
 
   await readyToggle.click();
   if ((await readyToggle.getAttribute('aria-expanded')) !== 'false') {
-    throw new Error('category-matched panel did not collapse independently');
+    throw new Error('Feed Ready panel did not collapse independently');
   }
 
   await context.close();
