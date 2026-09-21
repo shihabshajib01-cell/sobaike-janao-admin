@@ -45,6 +45,7 @@ export const ResponseFilters: React.FC<ResponseFiltersProps> = ({
                 ? 'রেসপন্স আইডি, রিপোর্ট আইডি বা প্রতিক্রিয়ার লেখা খুঁজুন'
                 : 'Search Response ID, Report ID, or response text'
             }
+            aria-label={isBn ? 'প্রতিক্রিয়া অনুসন্ধান' : 'Search responses'}
             className="w-full pl-9 pr-9 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100 placeholder-slate-400"
             disabled={isLoading}
           />
