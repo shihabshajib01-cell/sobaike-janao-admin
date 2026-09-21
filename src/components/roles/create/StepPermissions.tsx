@@ -376,14 +376,11 @@ export const StepPermissions: React.FC<StepPermissionsProps> = ({
           <div className="space-y-4">
             {moduleKeys.map((moduleKey) => {
               const items = groupedPermissions[moduleKey] || [];
-              const moduleIds = items.map((i) => i.id);
               const selectedInModule = items.filter((i) =>
                 selectedPermissionIds.includes(i.id)
               );
               const isAllModuleSelected =
                 items.length > 0 && selectedInModule.length === items.length;
-              const isSomeModuleSelected =
-                selectedInModule.length > 0 && !isAllModuleSelected;
               const ModuleIcon = getModuleIcon(moduleKey);
 
               return (
