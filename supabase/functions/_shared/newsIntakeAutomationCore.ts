@@ -725,10 +725,10 @@ export const inferIncidentDate = (value: unknown, publishedDate?: string | null)
   const numericFallback=numericDateFromText(nonMetadataText);
   if (numericFallback) return numericFallback;
 
-  const relativeFallback=relativeIncidentDateFromText(nonMetadataText,publishedDate,false);
-  if(relativeFallback) return relativeFallback;
-
-  return todayIncidentDateFromText(nonMetadataText,publishedDate);
+  // Relative weekdays/today are only trustworthy when attached to an
+  // incident-bearing sentence. Never infer them from unrelated circulation,
+  // publication, responder, or background text.
+  return null;
 };
 
 const incidentContextTokens = (value: string) =>
