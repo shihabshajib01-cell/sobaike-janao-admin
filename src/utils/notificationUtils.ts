@@ -14,7 +14,6 @@ import {
   ShieldCheck,
   ShieldAlert,
   Key,
-  Info,
   FolderPlus,
   FolderCheck,
   MoveRight,
