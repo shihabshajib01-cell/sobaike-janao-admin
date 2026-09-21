@@ -993,14 +993,22 @@ const LANGUAGE_STORAGE_KEY = 'sobaike_admin_lang';
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguageState] = useState<Language>(() => {
-    const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-    if (saved === 'en' || saved === 'bn') return saved;
+    try {
+      const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+      if (saved === 'en' || saved === 'bn') return saved;
+    } catch {
+      // Storage may be unavailable in hardened/private browser contexts.
+    }
     return 'en';
   });
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-    localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
+    try {
+      localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
+    } catch {
+      // Keep the in-memory language switch functional even without storage.
+    }
     document.documentElement.lang = lang;
   };
 
