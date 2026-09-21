@@ -626,7 +626,9 @@ const relativeIncidentDateFromText = (
     });
   }
 
-  if(!weekdayCandidates.length) return null;
+  if(!weekdayCandidates.length) {
+    return allowToday && /(আজ|today)/iu.test(text) ? publishedDate : null;
+  }
 
   // A news sentence can mention the press-release day and the actual incident
   // day together. Choose the weekday closest to the incident/action wording,
