@@ -10,7 +10,6 @@ import { ComplaintEmptyState } from './ComplaintEmptyState';
 import {
   MapPin,
   Calendar,
-  Eye,
   Tag,
   ExternalLink,
   ChevronRight,
