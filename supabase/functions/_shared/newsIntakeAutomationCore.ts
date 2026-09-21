@@ -417,7 +417,8 @@ export const isSafeSpecificLocationText = (
   value: unknown,
   district?: string | null
 ) => {
-  const normalized=normalizeText(value);
+  const raw=String(value ?? '').replace(/\s+/g,' ').trim();
+  const normalized=normalizeText(raw);
   if (!normalized || normalized.length<5 || normalized.length>120) return false;
 
   if (/^(এলাকা|বাজার|মার্কেট|থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|গ্রাম|শহর|নগরী|মহানগরী|রোড|লেন|গলি|মোড়|মোড়|স্টেশন|area|market|bazaar|thana|upazila|union|village|city|road|street|lane|station)$/iu.test(normalized)) return false;
@@ -438,6 +439,17 @@ export const isSafeSpecificLocationText = (
   if (/^(?:road|street|lane|avenue)\s*$/iu.test(normalized)) return false;
   if (/^(?:on|at|in|near)\s+(?:road|street|lane|avenue)\b/iu.test(normalized)) return false;
   if (/^(?:র|এর)\s+/u.test(normalized)) return false;
+
+  // Positive place proof: do not accept arbitrary prose merely because it
+  // avoided the narrative blacklist. A fine-grained location must either
+  // contain an explicit geographic designator or be a compact Latin proper
+  // place name captured from an incident-bound "at/near" phrase.
+  const hasGeographicDesignator =
+    /(?:থানা|উপজেলা|ইউনিয়ন|ইউনিয়ন|বাজার|মার্কেট|এলাকা|মহল্লা|গ্রাম|সড়ক|সড়ক|মহাসড়ক|মহাসড়ক|রোড|লেন|গলি|মোড়|মোড়|রেলগেট|স্টেশন|শহর|নগরী|মহানগরী|police\s+station|thana|upazila|union|market|bazaar|area|neighbou?rhood|village|road|street|lane|avenue|highway|rail\s*gate|station|city|metropolitan\s+area)/iu.test(raw);
+  const compactLatinProperPlace =
+    /^(?:[A-Z][A-Za-z0-9.'’\-]*)(?:[\s,]+[A-Z0-9][A-Za-z0-9.'’\-]*){0,6}$/u.test(raw);
+
+  if (!hasGeographicDesignator && !compactLatinProperPlace) return false;
 
   if (district) {
     const districtNormalized=normalizeText(district);
