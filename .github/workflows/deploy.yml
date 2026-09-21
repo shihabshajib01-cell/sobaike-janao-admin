@@ -9,12 +9,12 @@ on:
 
 permissions:
   contents: read
-  actions: read
+  actions: write
   pages: write
   id-token: write
 
 concurrency:
-  group: "pages"
+  group: "admin-vite-pages"
   cancel-in-progress: true
 
 jobs:
@@ -24,6 +24,59 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
+      - name: Cancel legacy Jekyll Pages publisher
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          for attempt in {1..10}; do
+            curl -fsSL \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "X-GitHub-Api-Version: 2026-03-10" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${GITHUB_SHA}&per_page=100" \
+              -o /tmp/pages-runs.json
+
+            read -r status run_id < <(python - <<'PY'
+          import json
+          from pathlib import Path
+
+          payload = json.loads(Path('/tmp/pages-runs.json').read_text())
+          matches = [
+              run for run in payload.get('workflow_runs', [])
+              if run.get('name') == 'pages build and deployment'
+          ]
+          if not matches:
+              print('none none')
+          else:
+              run = max(matches, key=lambda item: item.get('id', 0))
+              print(run.get('status') or 'unknown', run.get('id') or 'none')
+          PY
+            )
+
+            if [ "$run_id" != "none" ]; then
+              if [ "$status" = "completed" ]; then
+                echo "Legacy Pages run $run_id already completed; custom Vite deployment will replace it."
+              else
+                echo "Cancelling legacy Jekyll Pages run $run_id (status: $status)."
+                curl -fsSL -X POST \
+                  -H "Accept: application/vnd.github+json" \
+                  -H "Authorization: Bearer $GH_TOKEN" \
+                  -H "X-GitHub-Api-Version: 2026-03-10" \
+                  "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/$run_id/cancel"
+              fi
+              break
+            fi
+
+            if [ "$attempt" -eq 10 ]; then
+              echo "No legacy Pages run detected; continuing with the custom Vite publisher."
+              break
+            fi
+            sleep 2
+          done
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -75,6 +128,9 @@ jobs:
       - name: Admin hardening audit
         run: npm run audit:hardening
 
+      - name: Global UX audit
+        run: npm run audit:global-ux
+
       - name: Type check
         run: npm run lint
 
@@ -104,60 +160,6 @@ jobs:
         with:
           path: './dist'
           name: github-pages-${{ github.run_attempt }}
-
-      - name: Wait for legacy Pages publisher
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          legacy_found=0
-          legacy_status=""
-
-          for attempt in {1..36}; do
-            curl -fsSL \
-              -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer $GH_TOKEN" \
-              -H "X-GitHub-Api-Version: 2026-03-10" \
-              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${GITHUB_SHA}&per_page=100" \
-              -o /tmp/pages-runs.json
-
-            read -r found status run_id < <(python - <<'PY'
-          import json
-          from pathlib import Path
-
-          payload = json.loads(Path('/tmp/pages-runs.json').read_text())
-          matches = [
-              run for run in payload.get('workflow_runs', [])
-              if run.get('name') == 'pages build and deployment'
-          ]
-          if not matches:
-              print('0 none none')
-          else:
-              run = max(matches, key=lambda item: item.get('id', 0))
-              print('1', run.get('status') or 'unknown', run.get('id') or 'none')
-          PY
-            )
-
-            if [ "$found" = "1" ]; then
-              legacy_found=1
-              legacy_status="$status"
-              echo "Legacy Pages run $run_id status: $status"
-              if [ "$status" = "completed" ]; then
-                break
-              fi
-            elif [ "$attempt" -ge 6 ]; then
-              echo "No legacy Pages run detected for this commit; continuing with the custom publisher."
-              break
-            fi
-
-            sleep 5
-          done
-
-          if [ "$legacy_found" = "1" ] && [ "$legacy_status" != "completed" ]; then
-            echo "ERROR: legacy Pages publisher did not finish before timeout."
-            exit 1
-          fi
 
       - name: Deploy to GitHub Pages
         id: deployment
