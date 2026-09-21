@@ -3,6 +3,7 @@ import React from 'react';
 import { Search, Filter, X, Calendar } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatTargetType, getAuditActionMeta } from '@/utils/auditLogUtils';
+import { sortLocalizedTextOptions } from '@/utils/dropdownOptions';
 
 export interface ActivityLogFiltersProps {
   search: string;
@@ -37,7 +38,26 @@ export const ActivityLogFilters: React.FC<ActivityLogFiltersProps> = ({
   onClearFilters,
   hasActiveFilters,
 }) => {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
+
+  const sortedActions = sortLocalizedTextOptions(
+    actionOptions.map((value) => {
+      const meta = getAuditActionMeta(value);
+      return {
+        value,
+        label: language === 'bn' ? meta.labelBn : meta.labelEn,
+      };
+    }),
+    language
+  );
+
+  const sortedTargets = sortLocalizedTextOptions(
+    targetTypeOptions.map((value) => ({
+      value,
+      label: formatTargetType(value, language),
+    })),
+    language
+  );
 
   return (
     <div
@@ -58,6 +78,7 @@ export const ActivityLogFilters: React.FC<ActivityLogFiltersProps> = ({
                 ? 'টার্গেট আইডি, পদবী বা নাম অনুসন্ধান...'
                 : 'Search target ID, action, actor...'
             }
+            aria-label={language === 'bn' ? 'অ্যাক্টিভিটি লগ অনুসন্ধান' : 'Search activity log'}
             className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors"
           />
         </div>
@@ -68,17 +89,15 @@ export const ActivityLogFilters: React.FC<ActivityLogFiltersProps> = ({
             id="activity-action-select"
             value={action}
             onChange={(e) => onActionChange(e.target.value)}
+            aria-label={language === 'bn' ? 'কার্যক্রম ফিল্টার' : 'Action filter'}
             className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors"
           >
             <option value="all">{language === 'bn' ? 'সকল কার্যক্রম' : 'All Actions'}</option>
-            {actionOptions.map((value) => {
-              const meta = getAuditActionMeta(value);
-              return (
-                <option key={value} value={value}>
-                  {language === 'bn' ? meta.labelBn : meta.labelEn}
-                </option>
-              );
-            })}
+            {sortedActions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -88,12 +107,13 @@ export const ActivityLogFilters: React.FC<ActivityLogFiltersProps> = ({
             id="activity-target-type-select"
             value={targetType}
             onChange={(e) => onTargetTypeChange(e.target.value)}
+            aria-label={language === 'bn' ? 'টার্গেট ধরন ফিল্টার' : 'Target type filter'}
             className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors"
           >
             <option value="all">{language === 'bn' ? 'সকল টার্গেট ধরন' : 'All Target Types'}</option>
-            {targetTypeOptions.map((value) => (
-              <option key={value} value={value}>
-                {formatTargetType(value, language)}
+            {sortedTargets.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>
@@ -110,6 +130,7 @@ export const ActivityLogFilters: React.FC<ActivityLogFiltersProps> = ({
               onChange={(e) => onDateFromChange(e.target.value)}
               className="w-full pl-8 pr-2 py-2 text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors"
               title={language === 'bn' ? 'তারিখ হতে' : 'From Date'}
+              aria-label={language === 'bn' ? 'তারিখ হতে' : 'From Date'}
             />
           </div>
 
@@ -122,6 +143,7 @@ export const ActivityLogFilters: React.FC<ActivityLogFiltersProps> = ({
               onChange={(e) => onDateToChange(e.target.value)}
               className="w-full pl-8 pr-2 py-2 text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors"
               title={language === 'bn' ? 'তারিখ পর্যন্ত' : 'To Date'}
+              aria-label={language === 'bn' ? 'তারিখ পর্যন্ত' : 'To Date'}
             />
           </div>
 
