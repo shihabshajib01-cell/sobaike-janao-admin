@@ -61,7 +61,7 @@ for (const file of sourceFiles) {
 const graph = new Map(sourceFiles.map((file) => [normalize(file.fileName), new Set()]));
 const incomingEdges = new Map(sourceFiles.map((file) => [normalize(file.fileName), []]));
 
-const addResolvedModule = (fromFile, specifier, edgeType, usesDefault = false) => {
+const addResolvedModule = (fromFile, specifier, edgeType, usesDefault = false, importedNames = []) => {
   if (!specifier || (!specifier.startsWith('.') && !specifier.startsWith('@/'))) return;
 
   const resolved = ts.resolveModuleName(
@@ -81,6 +81,7 @@ const addResolvedModule = (fromFile, specifier, edgeType, usesDefault = false) =
       type: edgeType,
       specifier,
       usesDefault,
+      importedNames,
     });
   }
 };
@@ -92,6 +93,17 @@ for (const file of sourceFiles) {
       node.moduleSpecifier &&
       ts.isStringLiteralLike(node.moduleSpecifier)
     ) {
+      const importedNames = [];
+      if (node.importClause?.name) importedNames.push('default');
+      if (node.importClause?.namedBindings) {
+        if (ts.isNamespaceImport(node.importClause.namedBindings)) {
+          importedNames.push('*');
+        } else {
+          for (const element of node.importClause.namedBindings.elements) {
+            importedNames.push(element.propertyName?.text || element.name.text);
+          }
+        }
+      }
       addResolvedModule(
         file.fileName,
         node.moduleSpecifier.text,
@@ -99,7 +111,8 @@ for (const file of sourceFiles) {
         Boolean(
           node.importClause?.name ||
           (node.importClause?.namedBindings && ts.isNamespaceImport(node.importClause.namedBindings))
-        )
+        ),
+        importedNames
       );
     }
 
@@ -422,6 +435,7 @@ const barrelUsage = sourceFiles
       from: toRepoPath(edge.from),
       type: edge.type,
       specifier: edge.specifier,
+      importedNames: edge.importedNames || [],
     })),
   }))
   .filter((entry) => entry.incoming.length > 0)
