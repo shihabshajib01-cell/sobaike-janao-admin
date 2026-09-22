@@ -317,14 +317,9 @@ const sourceOutsideBaseCss = [...textByFile.entries()]
   .filter(([file]) => normalize(file) !== normalize(baseCssPath))
   .map(([, source]) => source)
   .join('\n');
-const escapeRegExp = (value) => value.replace(/[.*+?^$()|[\]\\]/g, '\\const zeroReferenceExports = unusedExportCandidates.filter(
-  (candidate) => candidate.sameFileReferences === 0
-);
-
-const isBarrelFile');
 const unusedBaseCssCustomProperties = baseCssCustomProperties
   .filter((property) => {
-    const escaped = escapeRegExp(property);
+    const escaped = property;
     const varUsage = new RegExp('var\\(\\s*' + escaped + '(?:\\s*[,)]|\\s+)');
     const externalLiteral = new RegExp(escaped);
     return !varUsage.test(baseCssSource) && !externalLiteral.test(sourceOutsideBaseCss);
