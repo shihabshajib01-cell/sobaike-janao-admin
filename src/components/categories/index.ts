@@ -1,6 +1,7 @@
-export * from './CategoryFilters';
-export * from './SegmentTabs';
-export * from './TaxonomyTree';
-export * from './CategoryDetailDrawer';
-export * from './CategoryEmptyState';
-export * from './CategoryCreateModal';
+export { CategoryFilters } from './CategoryFilters';
+export { SegmentTabs } from './SegmentTabs';
+export { TaxonomyTree } from './TaxonomyTree';
+export { CategoryDetailDrawer } from './CategoryDetailDrawer';
+export type { DetailDrawerTarget } from './CategoryDetailDrawer';
+export { CategoryEmptyState } from './CategoryEmptyState';
+export { CategoryCreateModal } from './CategoryCreateModal';
