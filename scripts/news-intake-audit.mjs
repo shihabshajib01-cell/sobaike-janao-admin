@@ -24,6 +24,7 @@ const publishGroundingGuard = read('supabase/migrations/20260919082837_news_inta
 const groundingGuardAlignment = read('supabase/migrations/20260919083754_news_intake_grounding_guard_align_duplicate_gate.sql');
 const misclassifiedReportQuarantine = read('supabase/migrations/20260919184248_quarantine_misclassified_automated_news_report.sql');
 const sensitiveContentReviewGate = read('supabase/migrations/20260920021207_news_intake_sensitive_content_review_gate.sql');
+const rideSharingSafety = read('supabase/migrations/20260922061000_add_ride_sharing_safety.sql');
 const matchedReviewWorkspace = read('supabase/migrations/20260920065202_news_intake_matched_review_workspace.sql');
 const trustedAutoPublish = read('supabase/migrations/20260920093010_trusted_news_intake_auto_publish.sql');
 const trustedSourceOmissions = read('supabase/migrations/20260920093258_trusted_news_source_omission_columns.sql');
@@ -770,6 +771,16 @@ if (page.includes('Historical review item') || page.includes('Historical review'
 }
 requireText(page, 'feedReadyItems.map(selectionKeyForItem)', 'ready matched selection eligibility');
 requireText(page, "item.reportId ? `report:${String(item.reportId)}` : `item:${item.id}`", 'staged trusted candidate selection key');
+
+for (const needle of [
+  "'ride_sharing_safety'",
+  'news_intake_privacy_review_required',
+  'rideSharePlatform',
+  'rideShareIncidentType',
+  'rideShareRole',
+]) {
+  requireText(rideSharingSafety, needle, 'Ride-sharing Safety reporting contract');
+}
 
 for (const needle of [
   'sensitiveContentReviewed',
