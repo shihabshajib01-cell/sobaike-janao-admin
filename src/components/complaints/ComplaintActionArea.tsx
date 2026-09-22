@@ -9,7 +9,7 @@ import { FeedbackNotice } from '@/components/ui/FeedbackNotice';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { Complaint, ComplaintTimelineEvent, ComplaintUrgency, ReportDuplicateCheckResult } from '@/types/Complaint';
-import { complaintApi } from '@/services';
+import { complaintApi } from '@/services/api';
 import { useComplaintEditTaxonomy } from '@/hooks/useComplaintEditTaxonomy';
 import { SourcedReportDuplicateReview } from './SourcedReportDuplicateReview';
 import {
