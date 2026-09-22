@@ -378,7 +378,8 @@ const failures =
   unusedDiagnostics.length +
   zeroReferenceExports.length +
   unusedRuntimeDependencies.length +
-  unreferencedAssets.length;
+  unreferencedAssets.length +
+  unusedBaseCssCustomProperties.length;
 
 if (failures > 0) {
   console.error(
@@ -390,11 +391,13 @@ if (failures > 0) {
       zeroReferenceExports.length +
       ' zero-reference exported declaration(s), ' +
       unusedRuntimeDependencies.length +
-      ' unused runtime dependency candidate(s), and ' +
+      ' unused runtime dependency candidate(s), ' +
       unreferencedAssets.length +
-      ' unreferenced asset candidate(s).'
+      ' unreferenced asset candidate(s), and ' +
+      unusedBaseCssCustomProperties.length +
+      ' unused base CSS custom property candidate(s).'
   );
   process.exit(1);
 }
 
-console.log('\nDead-code audit passed: source reachability, unused declarations, zero-reference exports, runtime dependencies, and assets are clean. Barrel diagnostics are included for deeper re-export review.');
+console.log('\nDead-code audit passed: source reachability, unused declarations, zero-reference exports, runtime dependencies, assets, and base CSS custom properties are clean. Barrel diagnostics are included for deeper re-export review.');
