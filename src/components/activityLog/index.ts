@@ -1,4 +1,4 @@
-export * from './ActivityLogTable';
-export * from './ActivityLogFilters';
-export * from './ActivityLogDetailDrawer';
-export * from './ActivityLogLoadingSkeleton';
+export { ActivityLogTable } from './ActivityLogTable';
+export { ActivityLogFilters } from './ActivityLogFilters';
+export { ActivityLogDetailDrawer } from './ActivityLogDetailDrawer';
+export { ActivityLogLoadingSkeleton } from './ActivityLogLoadingSkeleton';
