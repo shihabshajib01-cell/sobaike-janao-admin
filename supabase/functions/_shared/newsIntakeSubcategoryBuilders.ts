@@ -473,7 +473,7 @@ export const buildNewsIntakeSubcategoryReport=(input:NewsIntakeBuilderInput)=>{
     case "ride_sharing":
       report.customFieldAnswers.rideSharePlatform=inferRideSharingPlatform(text);
       report.customFieldAnswers.rideShareIncidentType=inferRideSharingIncidentType(text);
-      report.customFieldAnswers.rideShareRole="witness_other";
+      report.customFieldAnswers.rideShareRole="unknown_not_stated";
       report.customFieldAnswers.rideShareVehicleType=inferRideSharingVehicleType(text);
       break;
     case "utility_outage":
