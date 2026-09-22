@@ -200,6 +200,46 @@ export const inferChildIncidentType = (value: unknown) => {
   return 'unknown_not_stated';
 };
 
+const RIDE_SHARING_CONTEXT_RE =
+  /(?:\buber\b|\bpathao\b|\bobhai\b|ride[-\s]?sharing|rideshare|ride[-\s]?hailing|রাইড[\s-]*শেয়ারিং|রাইড[\s-]*শেয়ারিং|রাইডশেয়ারিং|রাইডশেয়ারিং|উবার|পাঠাও|ওভাই)/iu;
+const RIDE_SHARING_SAFETY_INCIDENT_RE =
+  /(?:যৌন\s*(?:হয়রানি|হয়রানি)|হয়রানি|হয়রানি|শ্লীলতাহানি|অশালীন\s*আচরণ|হুমকি|মারধর|আক্রমণ|হামলা|লাঞ্ছিত|চুরি|ডাকাতি|ছিনতাই|অপহরণ|ভুল\s*পথে|অন্য\s*পথে|রুট\s*(?:পরিবর্তন|বদল)|পথ\s*(?:পরিবর্তন|বদল)|বেপরোয়া|বেপরোয়া|ঝুঁকিপূর্ণ\s*চালনা|জোর(?:পূর্বক|\s*করে).{0,30}(?:টাকা|ভাড়া|ভাড়া)|(?:চালক|ড্রাইভার|গাড়ি|গাড়ি|যানবাহন).{0,40}(?:অমিল|মিল(?:েনি|েনি)|ভিন্ন)|sexual\s+harassment|harass(?:ed|ment)?|molest(?:ed|ation)?|inappropriate\s+behavio(?:u)?r|threat(?:en(?:ed|ing)?)?|assault(?:ed)?|attack(?:ed)?|robbery|robbed|theft|stolen|snatch(?:ed|ing)?|mugg(?:ed|ing)|kidnap(?:ped|ping)?|abduct(?:ed|ion)?|off[-\s]?route|wrong\s+route|route\s+deviation|deviat(?:ed|ion).{0,20}route|reckless\s+driv(?:ing|er)|dangerous\s+driv(?:ing|er)|unsafe\s+driv(?:ing|er)|forced\s+(?:payment|fare)|coercive\s+fare|driver.{0,30}mismatch|vehicle.{0,30}mismatch)/iu;
+
+export const inferRideSharingPlatform = (value: unknown) => {
+  const text=normalizeText(value);
+  if(/(?:\buber\b|উবার)/iu.test(text)) return 'uber';
+  if(/(?:\bpathao\b|পাঠাও)/iu.test(text)) return 'pathao';
+  if(/(?:\bobhai\b|ওভাই)/iu.test(text)) return 'obhai';
+  if(RIDE_SHARING_CONTEXT_RE.test(text)) return 'other';
+  return 'unknown_not_stated';
+};
+
+export const inferRideSharingIncidentType = (value: unknown) => {
+  const text=normalizeText(value);
+  if(/(?:যৌন\s*(?:হয়রানি|হয়রানি)|শ্লীলতাহানি|sexual\s+harassment|molest(?:ed|ation)?)/iu.test(text)) return 'sexual_harassment';
+  if(/(?:হয়রানি|হয়রানি|অশালীন\s*আচরণ|harass(?:ed|ment)?|inappropriate\s+behavio(?:u)?r)/iu.test(text)) return 'harassment';
+  if(/(?:চুরি|ডাকাতি|ছিনতাই|robbery|robbed|theft|stolen|snatch(?:ed|ing)?|mugg(?:ed|ing))/iu.test(text)) return 'theft_robbery';
+  if(/(?:ভুল\s*পথে|অন্য\s*পথে|রুট\s*(?:পরিবর্তন|বদল)|পথ\s*(?:পরিবর্তন|বদল)|off[-\s]?route|wrong\s+route|route\s+deviation|deviat(?:ed|ion).{0,20}route)/iu.test(text)) return 'route_deviation';
+  if(/(?:(?:চালক|ড্রাইভার|গাড়ি|গাড়ি|যানবাহন).{0,40}(?:অমিল|মিল(?:েনি|েনি)|ভিন্ন)|driver.{0,30}mismatch|vehicle.{0,30}mismatch)/iu.test(text)) return 'driver_vehicle_mismatch';
+  if(/(?:বেপরোয়া|বেপরোয়া|ঝুঁকিপূর্ণ\s*চালনা|reckless\s+driv(?:ing|er)|dangerous\s+driv(?:ing|er)|unsafe\s+driv(?:ing|er))/iu.test(text)) return 'unsafe_driving';
+  if(/(?:জোর(?:পূর্বক|\s*করে).{0,30}(?:টাকা|ভাড়া|ভাড়া)|forced\s+(?:payment|fare)|coercive\s+fare)/iu.test(text)) return 'forced_payment';
+  if(/(?:হুমকি|মারধর|আক্রমণ|হামলা|লাঞ্ছিত|অপহরণ|threat(?:en(?:ed|ing)?)?|assault(?:ed)?|attack(?:ed)?|kidnap(?:ped|ping)?|abduct(?:ed|ion)?)/iu.test(text)) return 'threat_assault';
+  return 'other_safety_incident';
+};
+
+export const inferRideSharingVehicleType = (value: unknown) => {
+  const text=normalizeText(value);
+  if(/(?:মোটরসাইকেল|মোটর বাইক|বাইক|motorcycle|motorbike|\bbike\b)/iu.test(text)) return 'motorcycle';
+  if(/(?:সিএনজি|অটোরিকশা|cng|auto[-\s]?rickshaw)/iu.test(text)) return 'cng_auto_rickshaw';
+  if(/(?:গাড়ি|গাড়ি|প্রাইভেটকার|car|sedan|vehicle)/iu.test(text)) return 'car';
+  return 'unknown_not_stated';
+};
+
+const isRideSharingSafetyIncident = (value: unknown) => {
+  const text=normalizeText(value);
+  return RIDE_SHARING_CONTEXT_RE.test(text) && RIDE_SHARING_SAFETY_INCIDENT_RE.test(text);
+};
+
 const ARTICLE_RULES: Array<[string, string, number, RegExp[]]> = [
   ['harassment','rape-sexual-violence',0.93,[/ধর্ষণ/u,/ধর্ষণের চেষ্টা/u,/\brap(?:e|ed|es|ing)\b/i,/attempted rape/i]],
   ['harassment','sexual-harassment',0.90,[/যৌন হয়রানি/u,/যৌন হয়রানি/u,/ইভ টিজিং/u,/শ্লীলতাহানি/u,/sexual harassment/i,/eve[- ]?teasing/i]],
@@ -264,6 +304,13 @@ export const classifyArticle = (value: unknown): Classification | null => {
     NON_PROPERTY_SNATCHING_RE.test(text) ||
     NON_INCIDENT_EVIDENCE_RECOVERY_RE.test(text)
   ) return null;
+  if (isRideSharingSafetyIncident(text)) {
+    return {
+      segmentId:'public_safety',
+      subcategoryId:'ride_sharing_safety',
+      confidence:0.95,
+    };
+  }
   if (THEFT_ALLEGATION_VIOLENCE_RE.test(text)) {
     return {
       segmentId:'public_safety',
