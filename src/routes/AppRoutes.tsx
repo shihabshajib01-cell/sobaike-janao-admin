@@ -8,7 +8,7 @@ import {
   createRoutesFromElements,
   RouterProvider,
 } from 'react-router-dom';
-import { AdminLayout } from '@/layouts';
+import { AdminLayout } from '@/components/layout/AdminLayout';
 import { LoadingState, AccessDenied } from '@/components/common';
 import { useAuth } from '@/context/AuthContext';
 import { AdminMfaGate } from '@/components/auth/AdminMfaGate';
