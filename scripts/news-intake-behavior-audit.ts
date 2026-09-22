@@ -391,7 +391,11 @@ const rideShareBuilder = buildNewsIntakeSubcategoryReport({
 });
 assert.equal(rideShareBuilder.report.customFieldAnswers.rideSharePlatform,'pathao');
 assert.equal(rideShareBuilder.report.customFieldAnswers.rideShareIncidentType,'route_deviation');
-assert.equal(rideShareBuilder.report.customFieldAnswers.rideShareRole,'witness_other');
+assert.equal(
+  rideShareBuilder.report.customFieldAnswers.rideShareRole,
+  'unknown_not_stated',
+  'News Intake must not invent a passenger, driver, or witness role when the source does not state it'
+);
 assert.deepEqual(
   missingNewsIntakeSubcategoryFields(rideShareBuilder.report),
   [],
