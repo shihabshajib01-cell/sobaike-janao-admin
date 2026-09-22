@@ -231,7 +231,7 @@ export const inferRideSharingVehicleType = (value: unknown) => {
   const text=normalizeText(value);
   if(/(?:মোটরসাইকেল|মোটর বাইক|বাইক|motorcycle|motorbike|\bbike\b)/iu.test(text)) return 'motorcycle';
   if(/(?:সিএনজি|অটোরিকশা|cng|auto[-\s]?rickshaw)/iu.test(text)) return 'cng_auto_rickshaw';
-  if(/(?:গাড়ি|গাড়ি|প্রাইভেটকার|car|sedan|vehicle)/iu.test(text)) return 'car';
+  if(/(?:গাড়ি|গাড়ি|প্রাইভেটকার|\bcar\b|sedan)/iu.test(text)) return 'car';
   return 'unknown_not_stated';
 };
 
