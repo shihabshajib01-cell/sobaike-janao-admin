@@ -61,7 +61,7 @@ for (const file of sourceFiles) {
 const graph = new Map(sourceFiles.map((file) => [normalize(file.fileName), new Set()]));
 const incomingEdges = new Map(sourceFiles.map((file) => [normalize(file.fileName), []]));
 
-const addResolvedModule = (fromFile, specifier, edgeType) => {
+const addResolvedModule = (fromFile, specifier, edgeType, usesDefault = false) => {
   if (!specifier || (!specifier.startsWith('.') && !specifier.startsWith('@/'))) return;
 
   const resolved = ts.resolveModuleName(
@@ -80,6 +80,7 @@ const addResolvedModule = (fromFile, specifier, edgeType) => {
       from: normalizedFrom,
       type: edgeType,
       specifier,
+      usesDefault,
     });
   }
 };
@@ -91,7 +92,15 @@ for (const file of sourceFiles) {
       node.moduleSpecifier &&
       ts.isStringLiteralLike(node.moduleSpecifier)
     ) {
-      addResolvedModule(file.fileName, node.moduleSpecifier.text, 'import');
+      addResolvedModule(
+        file.fileName,
+        node.moduleSpecifier.text,
+        'import',
+        Boolean(
+          node.importClause?.name ||
+          (node.importClause?.namedBindings && ts.isNamespaceImport(node.importClause.namedBindings))
+        )
+      );
     }
 
     if (
@@ -99,7 +108,20 @@ for (const file of sourceFiles) {
       node.moduleSpecifier &&
       ts.isStringLiteralLike(node.moduleSpecifier)
     ) {
-      addResolvedModule(file.fileName, node.moduleSpecifier.text, 'reexport');
+      const exportsDefault = Boolean(
+        node.exportClause &&
+        ts.isNamedExports(node.exportClause) &&
+        node.exportClause.elements.some((element) => {
+          const importedName = element.propertyName?.text || element.name.text;
+          return importedName === 'default';
+        })
+      );
+      addResolvedModule(
+        file.fileName,
+        node.moduleSpecifier.text,
+        'reexport',
+        exportsDefault
+      );
     }
 
     if (
@@ -108,7 +130,12 @@ for (const file of sourceFiles) {
       node.arguments.length === 1 &&
       ts.isStringLiteralLike(node.arguments[0])
     ) {
-      addResolvedModule(file.fileName, node.arguments[0].text, 'dynamic-import');
+      addResolvedModule(
+        file.fileName,
+        node.arguments[0].text,
+        'dynamic-import',
+        true
+      );
     }
 
     ts.forEachChild(node, visit);
@@ -332,6 +359,26 @@ const zeroReferenceExports = unusedExportCandidates.filter(
   (candidate) => candidate.sameFileReferences === 0
 );
 
+const defaultExportFiles = sourceFiles
+  .filter((file) =>
+    file.statements.some((statement) =>
+      Boolean(
+        statement.modifiers?.some(
+          (modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword
+        )
+      )
+    )
+  )
+  .map((file) => normalize(file.fileName));
+
+const unusedDefaultExportCandidates = defaultExportFiles
+  .filter((fileName) => {
+    const incoming = incomingEdges.get(fileName) || [];
+    return !incoming.some((edge) => edge.usesDefault || edge.type === 'dynamic-import');
+  })
+  .map(toRepoPath)
+  .sort();
+
 const baseCssPath = path.join(repoRoot, 'src', 'styles', 'base.css');
 const baseCssSource = fs.existsSync(baseCssPath) ? fs.readFileSync(baseCssPath, 'utf8') : '';
 const baseCssCustomProperties = [
@@ -392,6 +439,7 @@ const result = {
   unusedDiagnostics,
   zeroReferenceExports,
   unusedExportCandidates,
+  unusedDefaultExportCandidates,
   reexportOnlySourceFiles,
   barrelUsage,
   unusedRuntimeDependencies,
