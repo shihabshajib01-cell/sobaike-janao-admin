@@ -426,6 +426,24 @@ const reexportOnlySourceFiles = sourceFiles
   }))
   .sort((a, b) => a.file.localeCompare(b.file));
 
+const wildcardBarrelReexports = sourceFiles
+  .filter((file) => isBarrelFile(normalize(file.fileName)))
+  .flatMap((file) =>
+    file.statements
+      .filter(
+        (statement) =>
+          ts.isExportDeclaration(statement) &&
+          !statement.exportClause &&
+          statement.moduleSpecifier &&
+          ts.isStringLiteralLike(statement.moduleSpecifier)
+      )
+      .map((statement) => ({
+        file: toRepoPath(file.fileName),
+        module: statement.moduleSpecifier.text,
+      }))
+  )
+  .sort((a, b) => a.file.localeCompare(b.file) || a.module.localeCompare(b.module));
+
 const barrelUsage = sourceFiles
   .map((file) => normalize(file.fileName))
   .filter(isBarrelFile)
@@ -456,6 +474,7 @@ const result = {
   unusedDefaultExportCandidates,
   reexportOnlySourceFiles,
   barrelUsage,
+  wildcardBarrelReexports,
   unusedRuntimeDependencies,
   unreferencedAssets,
   unusedBaseCssCustomProperties,
@@ -468,6 +487,7 @@ const failures =
   unusedDiagnostics.length +
   zeroReferenceExports.length +
   unusedDefaultExportCandidates.length +
+  wildcardBarrelReexports.length +
   unusedRuntimeDependencies.length +
   unreferencedAssets.length +
   unusedBaseCssCustomProperties.length;
@@ -483,6 +503,8 @@ if (failures > 0) {
       ' zero-reference exported declaration(s), ' +
       unusedDefaultExportCandidates.length +
       ' unused default export candidate(s), ' +
+      wildcardBarrelReexports.length +
+      ' wildcard barrel re-export(s), ' +
       unusedRuntimeDependencies.length +
       ' unused runtime dependency candidate(s), ' +
       unreferencedAssets.length +
@@ -493,4 +515,4 @@ if (failures > 0) {
   process.exit(1);
 }
 
-console.log('\nDead-code audit passed: source reachability, unused declarations, named/default exports, runtime dependencies, assets, and base CSS custom properties are clean. Barrel diagnostics are included for deeper re-export review.');
+console.log('\nDead-code audit passed: source reachability, unused declarations, named/default exports, wildcard barrel exports, runtime dependencies, assets, and base CSS custom properties are clean. Barrel diagnostics are included for deeper re-export review.');
