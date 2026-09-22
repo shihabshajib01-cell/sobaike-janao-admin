@@ -1,15 +1,14 @@
-export * from './ComplaintStatusTabs';
-export * from './ComplaintSearch';
-export * from './ComplaintFilters';
-export * from './ComplaintTable';
-export * from './MobileComplaintCardList';
-export * from './ComplaintSummaryCard';
+export { ComplaintStatusTabs } from './ComplaintStatusTabs';
+export { ComplaintSearch } from './ComplaintSearch';
+export { ComplaintFilters } from './ComplaintFilters';
+export { ComplaintTable } from './ComplaintTable';
+export { MobileComplaintCardList } from './MobileComplaintCardList';
+export { ComplaintSummaryCard } from './ComplaintSummaryCard';
 export { ComplaintInfoSectionWithHarassmentContext as ComplaintInfoSection } from './ComplaintInfoSectionWithHarassmentContext';
-export * from './ComplaintPartiesCard';
-export * from './ComplaintMediaViewer';
-export * from './ComplaintLocationCard';
-export * from './ComplaintTimeline';
+export { ComplaintPartiesCard } from './ComplaintPartiesCard';
+export { ComplaintMediaViewer } from './ComplaintMediaViewer';
+export { ComplaintLocationCard } from './ComplaintLocationCard';
+export { ComplaintTimeline } from './ComplaintTimeline';
 export { ComplaintActionAreaWithPublication as ComplaintActionArea } from './ComplaintActionAreaWithPublication';
-export * from './ComplaintVersionHistory';
-
-export * from './ConfiguredComplaintFieldsCard';
+export { ComplaintVersionHistory } from './ComplaintVersionHistory';
+export { ConfiguredComplaintFieldsCard } from './ConfiguredComplaintFieldsCard';
