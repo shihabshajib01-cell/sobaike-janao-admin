@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { useLanguage } from '@/context/LanguageContext';
 import { Complaint, ComplaintPublicationDraft, ComplaintTimelineEvent } from '@/types/Complaint';
-import { complaintApi } from '@/services';
+import { complaintApi } from '@/services/api';
 import { saveComplaintPublicationDraft } from '@/services/api/publicationApi';
 
 interface PublicationComposerModalProps {
