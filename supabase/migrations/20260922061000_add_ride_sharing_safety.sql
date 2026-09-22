@@ -224,3 +224,23 @@ begin
   );
 end
 $migration$;
+
+-- Ride-sharing reports can include victim-identifying harassment or assault details.
+-- Keep automated News Intake conservative: a human privacy review is required
+-- before a sourced Ride-sharing Safety report can be published.
+create or replace function public.news_intake_privacy_review_required(p_subcategory_id text)
+returns boolean
+language sql
+immutable
+set search_path = pg_catalog, public
+as $function$
+  select coalesce(p_subcategory_id,'') = any (array[
+    'child_abduction_murder',
+    'ride_sharing_safety',
+    'rape-sexual-violence',
+    'sexual-harassment',
+    'domestic-violence',
+    'blackmail-coercion',
+    'honeytrap'
+  ]::text[]);
+$function$;
