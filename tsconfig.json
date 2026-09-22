@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "experimentalDecorators": true,
     "useDefineForClassFields": false,
     "module": "ESNext",
     "lib": [
@@ -23,7 +22,6 @@
       "vite/client",
       "node"
     ],
-    "allowImportingTsExtensions": true,
     "noEmit": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true
