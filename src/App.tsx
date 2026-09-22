@@ -3,7 +3,7 @@ import { ThemeProvider } from '@/themes';
 import { LanguageProvider } from '@/context/LanguageContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { NotificationProvider } from '@/context/NotificationContext';
-import { AppRoutes } from '@/routes';
+import { AppRoutes } from '@/routes/AppRoutes';
 import { ErrorBoundary } from '@/components/common';
 
 export const App: React.FC = () => {
