@@ -1,3 +1,3 @@
-export * from './ErrorBoundary';
-export * from './LoadingState';
-export * from './AccessDenied';
+export { ErrorBoundary } from './ErrorBoundary';
+export { LoadingState } from './LoadingState';
+export { AccessDenied } from './AccessDenied';
