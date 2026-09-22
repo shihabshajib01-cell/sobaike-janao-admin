@@ -1,1 +1,1 @@
-export * from './AdminLayout';
+export { AdminLayout } from '@/components/layout/AdminLayout';
