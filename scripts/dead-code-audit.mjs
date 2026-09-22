@@ -35,8 +35,9 @@ const sourceFiles = program
 
 const sourceSet = new Set(sourceFiles.map((file) => normalize(file.fileName)));
 const graph = new Map(sourceFiles.map((file) => [normalize(file.fileName), new Set()]));
+const incomingEdges = new Map(sourceFiles.map((file) => [normalize(file.fileName), []]));
 
-const addResolvedModule = (fromFile, specifier) => {
+const addResolvedModule = (fromFile, specifier, edgeType) => {
   if (!specifier || (!specifier.startsWith('.') && !specifier.startsWith('@/'))) return;
 
   const resolved = ts.resolveModuleName(
@@ -49,18 +50,32 @@ const addResolvedModule = (fromFile, specifier) => {
   if (!resolved) return;
   const resolvedPath = normalize(resolved.resolvedFileName);
   if (sourceSet.has(resolvedPath)) {
-    graph.get(normalize(fromFile))?.add(resolvedPath);
+    const normalizedFrom = normalize(fromFile);
+    graph.get(normalizedFrom)?.add(resolvedPath);
+    incomingEdges.get(resolvedPath)?.push({
+      from: normalizedFrom,
+      type: edgeType,
+      specifier,
+    });
   }
 };
 
 for (const file of sourceFiles) {
   const visit = (node) => {
     if (
-      (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+      ts.isImportDeclaration(node) &&
       node.moduleSpecifier &&
       ts.isStringLiteralLike(node.moduleSpecifier)
     ) {
-      addResolvedModule(file.fileName, node.moduleSpecifier.text);
+      addResolvedModule(file.fileName, node.moduleSpecifier.text, 'import');
+    }
+
+    if (
+      ts.isExportDeclaration(node) &&
+      node.moduleSpecifier &&
+      ts.isStringLiteralLike(node.moduleSpecifier)
+    ) {
+      addResolvedModule(file.fileName, node.moduleSpecifier.text, 'reexport');
     }
 
     if (
@@ -69,7 +84,7 @@ for (const file of sourceFiles) {
       node.arguments.length === 1 &&
       ts.isStringLiteralLike(node.arguments[0])
     ) {
-      addResolvedModule(file.fileName, node.arguments[0].text);
+      addResolvedModule(file.fileName, node.arguments[0].text, 'dynamic-import');
     }
 
     ts.forEachChild(node, visit);
@@ -293,6 +308,36 @@ const zeroReferenceExports = unusedExportCandidates.filter(
   (candidate) => candidate.sameFileReferences === 0
 );
 
+const isBarrelFile = (fileName) => /^index\.(?:ts|tsx|js|jsx)$/.test(path.basename(fileName));
+const reexportOnlySourceFiles = sourceFiles
+  .map((file) => normalize(file.fileName))
+  .filter((fileName) => {
+    const edges = incomingEdges.get(fileName) || [];
+    return (
+      edges.length > 0 &&
+      edges.every((edge) => edge.type === 'reexport' && isBarrelFile(edge.from))
+    );
+  })
+  .map((fileName) => ({
+    file: toRepoPath(fileName),
+    reexportedBy: [...new Set((incomingEdges.get(fileName) || []).map((edge) => toRepoPath(edge.from)))],
+  }))
+  .sort((a, b) => a.file.localeCompare(b.file));
+
+const barrelUsage = sourceFiles
+  .map((file) => normalize(file.fileName))
+  .filter(isBarrelFile)
+  .map((fileName) => ({
+    file: toRepoPath(fileName),
+    incoming: (incomingEdges.get(fileName) || []).map((edge) => ({
+      from: toRepoPath(edge.from),
+      type: edge.type,
+      specifier: edge.specifier,
+    })),
+  }))
+  .filter((entry) => entry.incoming.length > 0)
+  .sort((a, b) => a.file.localeCompare(b.file));
+
 const result = {
   htmlEntries: htmlEntries.map(toRepoPath),
   sourceFiles: sourceFiles.length,
@@ -301,6 +346,8 @@ const result = {
   unusedDiagnostics,
   zeroReferenceExports,
   unusedExportCandidates,
+  reexportOnlySourceFiles,
+  barrelUsage,
   unusedRuntimeDependencies,
   unreferencedAssets,
 };
@@ -331,4 +378,4 @@ if (failures > 0) {
   process.exit(1);
 }
 
-console.log('\nDead-code audit passed: source reachability, unused declarations, zero-reference exports, runtime dependencies, and assets are clean.');
+console.log('\nDead-code audit passed: source reachability, unused declarations, zero-reference exports, runtime dependencies, and assets are clean. Barrel diagnostics are included for deeper re-export review.');
