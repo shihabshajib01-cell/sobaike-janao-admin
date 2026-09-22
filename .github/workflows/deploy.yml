@@ -131,6 +131,9 @@ jobs:
       - name: Global UX audit
         run: npm run audit:global-ux
 
+      - name: Dead-code audit
+        run: npm run audit:dead-code
+
       - name: Type check
         run: npm run lint
 
