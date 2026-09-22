@@ -1,6 +1,9 @@
 import {
   buildSourceLanguageFields,
   inferChildIncidentType,
+  inferRideSharingIncidentType,
+  inferRideSharingPlatform,
+  inferRideSharingVehicleType,
   isSafeSpecificLocationText,
   sourceTextLength,
 } from "./newsIntakeAutomationCore.ts";
@@ -48,6 +51,7 @@ type BuilderKind =
   | "sexual_harassment"
   | "mob_justice"
   | "child_safety"
+  | "ride_sharing"
   | "utility_outage"
   | "excess_bill";
 
@@ -87,6 +91,7 @@ export const NEWS_INTAKE_SUBCATEGORY_BUILDERS: Record<string, BuilderPolicy> = {
   "snatching": {segmentId:"public_safety",kind:"standard",frequency:"one_time",basePriority:"high"},
   "mob-justice": {segmentId:"public_safety",kind:"mob_justice",frequency:"one_time",basePriority:"high"},
   "child_abduction_murder": {segmentId:"public_safety",kind:"child_safety",frequency:"one_time",basePriority:"high"},
+  "ride_sharing_safety": {segmentId:"public_safety",kind:"ride_sharing",frequency:"one_time",basePriority:"high"},
 
   "charging-station-location": {segmentId:"rickshaw",kind:"standard",frequency:"repeated",basePriority:"medium"},
 
@@ -465,6 +470,12 @@ export const buildNewsIntakeSubcategoryReport=(input:NewsIntakeBuilderInput)=>{
     case "child_safety":
       report.customFieldAnswers.childIncidentType=inferChildIncidentType(text);
       break;
+    case "ride_sharing":
+      report.customFieldAnswers.rideSharePlatform=inferRideSharingPlatform(text);
+      report.customFieldAnswers.rideShareIncidentType=inferRideSharingIncidentType(text);
+      report.customFieldAnswers.rideShareRole="witness_other";
+      report.customFieldAnswers.rideShareVehicleType=inferRideSharingVehicleType(text);
+      break;
     case "utility_outage":
       report.incidentTime=times[0]||"";
       report.utilityEndTime=times[1]||"";
@@ -547,6 +558,12 @@ export const missingNewsIntakeSubcategoryFields=(report:any)=>{
 
   if(policy.kind==="child_safety"&&!text(report?.customFieldAnswers?.childIncidentType)){
     missing.push("childIncidentType");
+  }
+
+  if(policy.kind==="ride_sharing"){
+    if(!text(report?.customFieldAnswers?.rideSharePlatform)) missing.push("rideSharePlatform");
+    if(!text(report?.customFieldAnswers?.rideShareIncidentType)) missing.push("rideShareIncidentType");
+    if(!text(report?.customFieldAnswers?.rideShareRole)) missing.push("rideShareRole");
   }
 
   if(policy.kind==="mob_justice"){
