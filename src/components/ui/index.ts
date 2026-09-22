@@ -16,7 +16,6 @@ export * from './Tag';
 export * from './FeedbackNotice';
 export * from './Card';
 export * from './Divider';
-export * from './Tooltip';
 export * from './Table';
 export * from './ResponsiveDataView';
 export * from './TablePageSizeSelect';
