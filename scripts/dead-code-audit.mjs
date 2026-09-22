@@ -34,6 +34,30 @@ const sourceFiles = program
   .filter((file) => !file.isDeclarationFile);
 
 const sourceSet = new Set(sourceFiles.map((file) => normalize(file.fileName)));
+
+let decoratorNodeCount = 0;
+const explicitTsExtensionImports = [];
+for (const file of sourceFiles) {
+  const inspectConfigUsage = (node) => {
+    if (ts.canHaveDecorators(node) && (ts.getDecorators(node)?.length || 0) > 0) {
+      decoratorNodeCount += ts.getDecorators(node)?.length || 0;
+    }
+    if (
+      (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+      node.moduleSpecifier &&
+      ts.isStringLiteralLike(node.moduleSpecifier) &&
+      /\.(?:ts|tsx)$/.test(node.moduleSpecifier.text)
+    ) {
+      explicitTsExtensionImports.push({
+        file: toRepoPath(file.fileName),
+        specifier: node.moduleSpecifier.text,
+      });
+    }
+    ts.forEachChild(node, inspectConfigUsage);
+  };
+  inspectConfigUsage(file);
+}
+
 const graph = new Map(sourceFiles.map((file) => [normalize(file.fileName), new Set()]));
 const incomingEdges = new Map(sourceFiles.map((file) => [normalize(file.fileName), []]));
 
@@ -360,6 +384,10 @@ const result = {
   htmlEntries: htmlEntries.map(toRepoPath),
   sourceFiles: sourceFiles.length,
   reachableSourceFiles: reachable.size,
+  compilerConfigUsage: {
+    decoratorNodeCount,
+    explicitTsExtensionImports,
+  },
   unreachable,
   unusedDiagnostics,
   zeroReferenceExports,
