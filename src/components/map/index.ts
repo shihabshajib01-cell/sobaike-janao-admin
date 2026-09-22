@@ -1,6 +1,6 @@
-export * from './MapContainer';
-export * from './MapFilters';
-export * from './MapLegend';
-export * from './LocationSummary';
-export * from './MapComplaintList';
-export * from './MapEmptyState';
+export { MapContainer } from './MapContainer';
+export { MapFilters } from './MapFilters';
+export { MapLegend } from './MapLegend';
+export { LocationSummary } from './LocationSummary';
+export { MapComplaintList } from './MapComplaintList';
+export { MapEmptyState } from './MapEmptyState';
