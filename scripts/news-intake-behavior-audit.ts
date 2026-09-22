@@ -255,6 +255,8 @@ const classificationCases: Array<[string, string, string]> = [
   ['child_abduction_murder', 'ঢাকায় ৮ বছরের শিশু অপহরণের অভিযোগ, তদন্তে পুলিশ', 'public_safety'],
   ['child_abduction_murder', 'কিশোরীকে অপহরণের পর হত্যা, মরদেহ উদ্ধার', 'public_safety'],
   ['child_abduction_murder', 'Child abducted from home; police begin investigation', 'public_safety'],
+  ['ride_sharing_safety', 'Uber passenger reports sexual harassment by driver during a ride in Dhaka', 'public_safety'],
+  ['ride_sharing_safety', 'পাঠাও রাইডে যাত্রীকে ভুল পথে নিয়ে হুমকির অভিযোগ', 'public_safety'],
   ['road-repair-delay', 'রাস্তা মেরামত কাজ দীর্ঘদিন ধরে বিলম্বিত', 'road_transport'],
   ['road-accident', 'বাস ও ট্রাকের সংঘর্ষে দুইজন নিহত', 'road_transport'],
   ['road-accident', 'বরিশালে নিয়ন্ত্রণ হারিয়ে বাস পুকুরে, একজনের লাশ উদ্ধার', 'road_transport'],
@@ -283,8 +285,8 @@ assert.deepEqual(
 );
 assert.equal(
   NEWS_INTAKE_SUBCATEGORY_IDS.length,
-  26,
-  'The proven News Intake builder registry must cover all 26 active published subcategories'
+  27,
+  'The proven News Intake builder registry must cover all 27 active published subcategories'
 );
 
 const fixtureArticle = {
@@ -373,6 +375,39 @@ const childBuilder = buildNewsIntakeSubcategoryReport({
   feedContext:'Police said a child was abducted from a home in Mirpur on 20 September 2026. The family reported the incident and officers began searching the area. Investigators later rescued the child and detained a suspect. The source identifies Mirpur in Dhaka as the incident location and describes the case as an abduction. No child murder was reported in the article.',
 });
 assert.equal(childBuilder.report.customFieldAnswers.childIncidentType,'abduction');
+
+const rideShareArticle = {
+  ...fixtureArticle,
+  title:'Pathao passenger threatened after driver took a wrong route in Mirpur',
+  body:'A passenger using Pathao said the driver left the expected route and took a wrong route near Mirpur Section 6 in Dhaka on 20 September 2026. The passenger reported being threatened when asking the driver to return to the expected route. The source describes an app-based ride and identifies Pathao as the ride-sharing service. Police were later informed about the incident, which happened during the ride near Mirpur Section 6. No unrelated road crash was reported.'
+};
+const rideShareBuilder = buildNewsIntakeSubcategoryReport({
+  article:rideShareArticle,
+  classification:{segmentId:'public_safety',subcategoryId:'ride_sharing_safety'},
+  location:{division:'Dhaka',district:'Dhaka',upazilaOrThana:'Mirpur',area:'Mirpur Section 6',locationScope:'specific'},
+  incidentDate:'2026-09-20',
+  language:'en',
+  feedContext:rideShareArticle.body,
+});
+assert.equal(rideShareBuilder.report.customFieldAnswers.rideSharePlatform,'pathao');
+assert.equal(rideShareBuilder.report.customFieldAnswers.rideShareIncidentType,'route_deviation');
+assert.equal(rideShareBuilder.report.customFieldAnswers.rideShareRole,'witness_other');
+assert.deepEqual(
+  missingNewsIntakeSubcategoryFields(rideShareBuilder.report),
+  [],
+  'A source-grounded Ride-sharing Safety builder fixture must satisfy its required custom fields'
+);
+
+assert.equal(
+  classifyArticle('Pathao launches a new discount campaign for riders in Dhaka'),
+  null,
+  'Ride-sharing brand news without a safety incident must not create a report'
+);
+assert.equal(
+  classifyArticle('Uber car road crash kills one in Dhaka')?.subcategoryId,
+  'road-accident',
+  'A generic road crash involving an Uber car must remain Road Accident unless a ride-safety incident signal is present'
+);
 
 assert.equal(
   classifyArticle('টিউবওয়েলের পানি নিয়ে বিরোধ, কিল-ঘুষিতে বৃদ্ধের মৃত্যু'),

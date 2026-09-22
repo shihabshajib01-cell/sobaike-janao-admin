@@ -236,6 +236,7 @@ const dynamicStorageKey = (field: ReportingFormField) =>
 
 const NEWS_INTAKE_PRIVACY_REVIEW_SUBCATEGORIES = new Set([
   'child_abduction_murder',
+  'ride_sharing_safety',
   'rape-sexual-violence',
   'sexual-harassment',
   'domestic-violence',

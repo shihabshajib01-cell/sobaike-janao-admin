@@ -123,6 +123,26 @@ const fixtures: Fixture[] = [
     expectedLocationIncludes: 'মিরপুর',
   },
   {
+    name: 'Pathao ride route deviation with threat is a ride-sharing safety incident',
+    title: 'Pathao passenger threatened after driver takes wrong route in Mirpur',
+    context:
+      'A passenger using Pathao said the driver left the expected route near Mirpur in Dhaka on 19 September 2026 and threatened the passenger when asked to return to the route.',
+    publishedDate: '2026-09-20',
+    expectedCategory: { segmentId: 'public_safety', subcategoryId: 'ride_sharing_safety' },
+    expectedIncidentDate: '2026-09-19',
+    expectedDistrict: 'Dhaka',
+    expectedLocationIncludes: 'Mirpur',
+  },
+  {
+    name: 'Ride-sharing commercial announcement is not a safety incident',
+    title: 'Pathao launches discount campaign for riders',
+    context:
+      'The company announced a promotional discount for app users in Dhaka and did not report any safety incident.',
+    publishedDate: '2026-09-20',
+    expectedCategory: null,
+    expectedIncidentDate: null,
+  },
+  {
     name: 'Child road-crash fatality remains a road accident',
     title: 'School bus crash kills a 10-year-old child in Dhaka',
     context:
