@@ -28,21 +28,9 @@
   --type-badge-md-size: 14px;
   --type-badge-md-line: 20px;
   --bg-default: #f8fafc;
-  --bg-subtle: #f1f5f9;
   --surface-default: #ffffff;
-  --surface-raised: #ffffff;
-  --surface-sunken: #f8fafc;
   --border-default: #e2e8f0;
-  --border-subtle: #f1f5f9;
   --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
-  --primary-default: #0284c7;
-  --primary-hover: #0369a1;
-  --status-success: #16a34a;
-  --status-warning: #d97706;
-  --status-error: #dc2626;
-  --status-info: #0284c7;
 }
 
 html[lang="bn"] {
@@ -76,21 +64,9 @@ html[lang="en"] {
 .dark {
   color-scheme: dark;
   --bg-default: #090d16;
-  --bg-subtle: #0f172a;
   --surface-default: #0f172a;
-  --surface-raised: #1e293b;
-  --surface-sunken: #090d16;
   --border-default: #1e293b;
-  --border-subtle: #0f172a;
   --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --primary-default: #38bdf8;
-  --primary-hover: #0284c7;
-  --status-success: #22c55e;
-  --status-warning: #f59e0b;
-  --status-error: #ef4444;
-  --status-info: #38bdf8;
 }
 
 html,
