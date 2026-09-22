@@ -308,6 +308,29 @@ const zeroReferenceExports = unusedExportCandidates.filter(
   (candidate) => candidate.sameFileReferences === 0
 );
 
+const baseCssPath = path.join(repoRoot, 'src', 'styles', 'base.css');
+const baseCssSource = fs.existsSync(baseCssPath) ? fs.readFileSync(baseCssPath, 'utf8') : '';
+const baseCssCustomProperties = [
+  ...new Set([...baseCssSource.matchAll(/--([a-z0-9-]+)\s*:/gi)].map((match) => '--' + match[1])),
+];
+const sourceOutsideBaseCss = [...textByFile.entries()]
+  .filter(([file]) => normalize(file) !== normalize(baseCssPath))
+  .map(([, source]) => source)
+  .join('\n');
+const escapeRegExp = (value) => value.replace(/[.*+?^$()|[\]\\]/g, '\\const zeroReferenceExports = unusedExportCandidates.filter(
+  (candidate) => candidate.sameFileReferences === 0
+);
+
+const isBarrelFile');
+const unusedBaseCssCustomProperties = baseCssCustomProperties
+  .filter((property) => {
+    const escaped = escapeRegExp(property);
+    const varUsage = new RegExp('var\\(\\s*' + escaped + '(?:\\s*[,)]|\\s+)');
+    const externalLiteral = new RegExp(escaped);
+    return !varUsage.test(baseCssSource) && !externalLiteral.test(sourceOutsideBaseCss);
+  })
+  .sort();
+
 const isBarrelFile = (fileName) => /^index\.(?:ts|tsx|js|jsx)$/.test(path.basename(fileName));
 const reexportOnlySourceFiles = sourceFiles
   .map((file) => normalize(file.fileName))
@@ -350,6 +373,7 @@ const result = {
   barrelUsage,
   unusedRuntimeDependencies,
   unreferencedAssets,
+  unusedBaseCssCustomProperties,
 };
 
 console.log(JSON.stringify(result, null, 2));
