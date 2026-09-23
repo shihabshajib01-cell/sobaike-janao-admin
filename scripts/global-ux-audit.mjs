@@ -136,6 +136,12 @@ requireMarkers('src/utils/dropdownOptions.ts', [
   'numeric: true',
 ]);
 
+requireMarkers('src/components/categories/FormBuilderModal.tsx', [
+  'privacySystemBlock',
+  "'Show privacy options'",
+  "'Reports created from news sources remain anonymous.'",
+]);
+
 requireMarkers('src/pages/Complaints/ComplaintDetailPage.tsx', [
   'https://shobaikejanao.com',
   'report-detail',
