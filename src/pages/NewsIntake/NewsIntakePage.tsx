@@ -374,6 +374,9 @@ export const NewsIntakePage: React.FC = () => {
     setIntakeStarted(true);
     setCloseConfirmOpen(false);
     setWorkspaceOpen(true);
+    // Re-check production scan state when opening the workspace; the dashboard
+    // may have been loaded before an abandoned run was recovered.
+    void loadDashboard();
   };
 
   const openRunForReview = async (run: NewsIntakeAutomationRun) => {
@@ -1280,7 +1283,7 @@ export const NewsIntakePage: React.FC = () => {
                     size="lg"
                     onClick={handleScan}
                     isLoading={scanning}
-                    disabled={dashboard.automation.running || automatedSources.length === 0}
+                    disabled={loading || dashboard.automation.running || automatedSources.length === 0}
                     leftIcon={<SearchCheck />}
                   >
                     {isBn ? 'সব সোর্স এখনই স্ক্যান করুন' : 'Scan All Sources Now'}
@@ -1298,6 +1301,18 @@ export const NewsIntakePage: React.FC = () => {
                   </Button>
                 )}
               </div>
+              {mode === 'automatic' && (dashboard.automation.running || (!loading && automatedSources.length === 0)) && (
+                <div className="text-center">
+                  <p className="type-helper text-slate-500 dark:text-slate-400">
+                    {dashboard.automation.running
+                      ? (isBn ? 'আরেকটি স্ক্যান চলছে। শেষ হলে আবার চেষ্টা করুন।' : 'Another scan is running. Try again when it finishes.')
+                      : (isBn ? 'কোনো সক্রিয় অটোমেটিক সোর্স নেই।' : 'No active automatic sources are configured.')}
+                  </p>
+                  <Button variant="ghost" size="sm" onClick={() => void loadDashboard()} disabled={loading} leftIcon={<RefreshCw />}>
+                    {isBn ? 'স্ট্যাটাস রিফ্রেশ' : 'Refresh scan status'}
+                  </Button>
+                </div>
+              )}
 
               <FeedbackNotice tone="info">
                 <p>
