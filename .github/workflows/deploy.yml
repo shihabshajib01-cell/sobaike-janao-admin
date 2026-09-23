@@ -149,6 +149,7 @@ jobs:
       - name: Verify dist output
         run: |
           ls -la dist
+          test -f dist/geo/bangladesh-districts-2020.geojson
           cat dist/index.html
           if grep -Eq 'src/(main\.tsx|entry\.js)' dist/index.html; then
             echo "ERROR: dist/index.html still references source entry files. Aborting deployment."
