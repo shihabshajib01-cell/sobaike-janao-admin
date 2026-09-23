@@ -1,10 +1,11 @@
 import { ButtonBase, IconButton } from '@/components/ui/Button';
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   MapContainer as LeafletMapContainer,
   TileLayer,
   CircleMarker,
+  GeoJSON,
   Popup,
   useMap,
 } from 'react-leaflet';
@@ -181,6 +182,29 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   const canViewComplaints = hasPermission('complaints.view');
   const isBn = language === 'bn';
   const navigate = useNavigate();
+  // The same local geography is used by public and admin; no public/admin complaint data is shared.
+  const [districtGeometry, setDistrictGeometry] = useState<any | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    const load = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.BASE_URL}geo/bangladesh-districts-2020.geojson`, { signal: controller.signal });
+        if (!response.ok) throw new Error(`District asset HTTP ${response.status}`);
+        const result = await response.json();
+        const features: any[] = result?.features;
+        if (result?.type !== 'FeatureCollection' || !Array.isArray(features) || features.length !== 64 ||
+            new Set(features.map(f => f?.properties?.district_id)).size !== 64 ||
+            features.some(f => !f?.properties?.district_id || !f?.properties?.ADM2_PCODE || !f?.geometry)) {
+          throw new Error('District boundaries failed 64-district validation');
+        }
+        if (!controller.signal.aborted) setDistrictGeometry(result);
+      } catch (error) {
+        if (!controller.signal.aborted) console.warn('[Admin Map] Retaining original map without district boundaries:', error);
+      }
+    };
+    void load();
+    return () => controller.abort();
+  }, []);
 
   // Status Color Helper
   const getStatusColor = (status: MapComplaint['status']) => {
@@ -261,6 +285,20 @@ export const MapContainer: React.FC<MapContainerProps> = ({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           maxZoom={19}
         />
+
+        {districtGeometry && (
+          <GeoJSON
+            data={districtGeometry as any}
+            interactive={false}
+            style={() => ({
+              color: '#64748b',
+              weight: 0.85,
+              opacity: 0.6,
+              fillColor: '#94a3b8',
+              fillOpacity: 0.045,
+            })}
+          />
+        )}
 
         {/* View Controller */}
         <MapViewController
