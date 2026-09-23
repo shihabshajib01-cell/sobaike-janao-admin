@@ -3,6 +3,7 @@ import {
   MapFilterState,
   MapSegmentOption,
   MapSubcategoryOption,
+  MapLocationTaxonomy,
 } from '@/types/Map';
 import { ComplaintLifecycleStatus } from '@/types/Complaint';
 import { useLanguage } from '@/context/LanguageContext';
@@ -36,6 +37,7 @@ export interface MapFiltersProps {
   segments: MapSegmentOption[];
   subcategories: MapSubcategoryOption[];
   districts: string[];
+  locationTaxonomy: MapLocationTaxonomy | null;
   totalResultsCount: number;
   className?: string;
 }
@@ -47,12 +49,21 @@ export const MapFilters: React.FC<MapFiltersProps> = ({
   segments,
   subcategories,
   districts,
+  locationTaxonomy,
   totalResultsCount,
   className,
 }) => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
   const isHarassmentFilter = filters.segment === 'harassment';
+  const filteredDistricts = (locationTaxonomy?.districts || [])
+    .filter(item => filters.division === 'all' || item.divisionId === filters.division);
+  const selectedDistrict = locationTaxonomy?.districts.find(item =>
+    item.nameEn.toLowerCase() === filters.district.toLowerCase() ||
+    item.nameBn === filters.district
+  );
+  const canonicalUpazilas = (locationTaxonomy?.upazilas || [])
+    .filter(item => selectedDistrict && item.districtId === selectedDistrict.id);
 
   // Subcategories filtered by selected segment
   const filteredSubcategories =
@@ -67,6 +78,8 @@ export const MapFilters: React.FC<MapFiltersProps> = ({
       (filters.subcategory && filters.subcategory !== 'all') ||
       (filters.status && filters.status !== 'all') ||
       (filters.district && filters.district !== 'all') ||
+      (filters.division && filters.division !== 'all') ||
+      (filters.upazila && filters.upazila !== 'all') ||
       (filters.affectedPersonAgeGroup && filters.affectedPersonAgeGroup !== 'all') ||
       (filters.allegedAbuserRelationship && filters.allegedAbuserRelationship !== 'all') ||
       (filters.reportingFor && filters.reportingFor !== 'all') ||
@@ -100,7 +113,16 @@ export const MapFilters: React.FC<MapFiltersProps> = ({
   };
 
   const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    onChange({ ...filters, district: e.target.value });
+    onChange({ ...filters, district: e.target.value, upazila: 'all' });
+  };
+
+  const handleDivisionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    onChange({
+      ...filters,
+      division: e.target.value,
+      district: 'all',
+      upazila: 'all',
+    });
   };
 
   const handleDateRangeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -249,20 +271,49 @@ export const MapFilters: React.FC<MapFiltersProps> = ({
           </>
         )}
 
-        {/* District */}
+        {/* Division, District, Upazila/Thana: all choices come from the existing
+            SQL-controlled location taxonomy, including zero-report locations. */}
         <div>
-          <Select
-            id="map-district-select"
-            value={filters.district}
-            onChange={handleDistrictChange}
-            className="h-9 text-xs"
-          >
-            <option value="all">{isBn ? 'সকল জেলা' : 'All Districts'}</option>
-            {districts.map((d) => (
-              <option key={d} value={d}>
-                {d}
+          <Select id="map-division-select" value={filters.division}
+            onChange={handleDivisionChange} disabled={!locationTaxonomy}
+            aria-label={isBn ? 'বিভাগ নির্বাচন' : 'Select division'} className="h-9 text-xs">
+            <option value="all">{isBn ? 'সকল বিভাগ (৮)' : 'All Divisions (8)'}</option>
+            {locationTaxonomy?.divisions.map(division => (
+              <option key={division.id} value={division.id}>
+                {isBn ? division.nameBn : division.nameEn}
               </option>
             ))}
+          </Select>
+        </div>
+        <div>
+          <Select id="map-district-select" value={filters.district}
+            onChange={handleDistrictChange}
+            aria-label={isBn ? 'জেলা নির্বাচন' : 'Select district'} className="h-9 text-xs">
+            <option value="all">{isBn ? 'সকল জেলা (৬৪)' : 'All Districts (64)'}</option>
+            {locationTaxonomy
+              ? filteredDistricts.map(item => (
+                <option key={item.id} value={item.nameEn}>
+                  {isBn ? item.nameBn : item.nameEn}
+                </option>
+              ))
+              : districts.map(name => <option key={name} value={name}>{name}</option>)}
+          </Select>
+        </div>
+        <div>
+          <Select id="map-upazila-select" value={filters.upazila}
+            onChange={event => onChange({ ...filters, upazila: event.target.value })}
+            disabled={!locationTaxonomy || !selectedDistrict}
+            aria-label={isBn ? 'উপজেলা বা থানা নির্বাচন' : 'Select upazila or thana'}
+            className="h-9 text-xs">
+            <option value="all">{isBn ? 'সকল উপজেলা / থানা' : 'All Upazilas / Thanas'}</option>
+            {[...canonicalUpazilas]
+              .sort((a, b) => (isBn ? a.nameBn : a.nameEn)
+                .localeCompare(isBn ? b.nameBn : b.nameEn))
+              .map(item => (
+                <option key={item.id} value={item.id}>
+                  {isBn ? item.nameBn : item.nameEn}
+                </option>
+              ))}
           </Select>
         </div>
       </div>
@@ -368,14 +419,34 @@ export const MapFilters: React.FC<MapFiltersProps> = ({
                 </FilterChip>
               )}
 
+              {filters.division && filters.division !== 'all' && (
+                <FilterChip icon={<MapPin />} tone="warning"
+                  onRemove={() => onChange({ ...filters, division: 'all', district: 'all', upazila: 'all' })}
+                  removeLabel={isBn ? 'বিভাগ ফিল্টার মুছুন' : 'Remove division filter'}>
+                  {(() => {
+                    const value = locationTaxonomy?.divisions.find(item => item.id === filters.division);
+                    return value ? (isBn ? value.nameBn : value.nameEn) : filters.division;
+                  })()}
+                </FilterChip>
+              )}
               {filters.district && filters.district !== 'all' && (
-                <FilterChip
-                  tone="warning"
-                  icon={<MapPin />}
-                  onRemove={() => onChange({ ...filters, district: 'all' })}
-                  removeLabel="Remove district filter"
-                >
-                  {filters.district}
+                <FilterChip tone="warning" icon={<MapPin />}
+                  onRemove={() => onChange({ ...filters, district: 'all', upazila: 'all' })}
+                  removeLabel={isBn ? 'জেলা ফিল্টার মুছুন' : 'Remove district filter'}>
+                  {(() => {
+                    const value = locationTaxonomy?.districts.find(item => item.nameEn === filters.district);
+                    return value && isBn ? value.nameBn : filters.district;
+                  })()}
+                </FilterChip>
+              )}
+              {filters.upazila && filters.upazila !== 'all' && (
+                <FilterChip tone="warning" icon={<MapPin />}
+                  onRemove={() => onChange({ ...filters, upazila: 'all' })}
+                  removeLabel={isBn ? 'উপজেলা ফিল্টার মুছুন' : 'Remove upazila filter'}>
+                  {(() => {
+                    const value = locationTaxonomy?.upazilas.find(item => item.id === filters.upazila);
+                    return value ? (isBn ? value.nameBn : value.nameEn) : filters.upazila;
+                  })()}
                 </FilterChip>
               )}
 

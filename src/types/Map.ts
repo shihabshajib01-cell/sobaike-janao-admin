@@ -41,6 +41,8 @@ export interface MapFilterState {
   subcategory: string;
   status: ComplaintLifecycleStatus | 'all';
   district: string;
+  division: string;
+  upazila: string;
   affectedPersonAgeGroup: string;
   allegedAbuserRelationship: string;
   reportingFor: string;
@@ -77,3 +79,12 @@ export interface MapDataset {
   districts: string[];
 }
 
+
+/** Existing permission-guarded admin_get_location_taxonomy() RPC contract.
+ * The project's 601 rows combine rural upazilas and metropolitan police thanas.
+ */
+export interface MapLocationTaxonomy {
+  divisions: Array<{ id: string; nameEn: string; nameBn: string }>;
+  districts: Array<{ id: string; divisionId: string; nameEn: string; nameBn: string }>;
+  upazilas: Array<{ id: string; districtId: string; nameEn: string; nameBn: string }>;
+}

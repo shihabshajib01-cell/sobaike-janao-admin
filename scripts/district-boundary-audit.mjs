@@ -49,3 +49,29 @@ if (existsSync(adminMapSource)) {
   assert.match(map, /MapCountryBounds geometry=\{districtGeometry\}/, 'Admin map bounds must follow actual country geometry');
   assert.match(css, /\.admin-bangladesh-map\.leaflet-container/, 'Admin map must honor existing light and dark surface tones');
 }
+
+const taxonomyApi = readFileSync('src/services/api/mapApi.ts', 'utf8');
+const mapFilters = readFileSync('src/components/map/MapFilters.tsx', 'utf8');
+const mapPage = readFileSync('src/pages/Map/MapPage.tsx', 'utf8');
+const mapTypes = readFileSync('src/types/Map.ts', 'utf8');
+assert(taxonomyApi.includes("rpc('admin_get_location_taxonomy')"),
+  'All location choices must use the existing permission-guarded SQL taxonomy RPC');
+for (const [name, count] of [['divisions', 8], ['districts', 64], ['upazilas', 601]]) {
+  assert(taxonomyApi.includes(`validArray(taxonomy.${name}, ${count})`),
+    `Admin must fail closed on partial ${name} coverage`);
+}
+assert(taxonomyApi.includes("rpc('admin_get_map_dataset')"),
+  'Existing protected map dataset API must remain unchanged');
+assert(mapPage.includes('getLocationTaxonomy()') && mapPage.includes('setLocationTaxonomy(result)'),
+  'Map must load canonical geography without touching existing complaint RPC');
+for (const name of ['division', 'district', 'upazila']) {
+  assert(mapTypes.includes(name + ': string'), `Missing admin map ${name} filter state`);
+  assert(mapFilters.includes('map-' + name + '-select'), `Missing admin map ${name} selector`);
+}
+assert(mapPage.includes('item.location.upazilaOrThana') &&
+       mapPage.includes('item.location.district') &&
+       mapPage.includes('item.location.division'),
+  'Geographic filters must scope real authenticated complaint locations');
+assert(mapFilters.includes("upazila: 'all'"),
+  'Dependent location filters must clear upazila when district/division changes');
+console.log('PASS: Permission-guarded admin 8/64/601 taxonomy and dependent map filters');
