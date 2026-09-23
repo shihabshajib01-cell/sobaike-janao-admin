@@ -11,11 +11,43 @@ import {
   MapDataset,
   MapSegmentOption,
   MapSubcategoryOption,
+  MapLocationTaxonomy,
 } from '@/types/Map';
 import { ComplaintLifecycleStatus } from '@/types/Complaint';
 
 
 export class MapApi {
+  /** Source the complete 8/64/601 admin navigation directly from the
+   * existing authenticated SQL taxonomy contract; never scrape the map's
+   * coordinate-only complaint subset for available location choices.
+   */
+  async getLocationTaxonomy(): Promise<MapLocationTaxonomy> {
+    if (!isSupabaseConfigured) {
+      throw new Error('Admin location taxonomy requires the configured Supabase connection.');
+    }
+    const { data, error } = await supabase.rpc('admin_get_location_taxonomy');
+    if (error || !data) {
+      throw new Error('Admin location taxonomy unavailable: ' + (error?.message || 'empty response'));
+    }
+    const taxonomy = data as unknown as MapLocationTaxonomy;
+    const validArray = (items: unknown, count: number) =>
+      Array.isArray(items) && items.length === count &&
+      items.every(item => item && typeof item.id === 'string' && item.id.length > 0) &&
+      new Set(items.map(item => item.id)).size === count;
+    if (!validArray(taxonomy.divisions, 8) ||
+        !validArray(taxonomy.districts, 64) ||
+        !validArray(taxonomy.upazilas, 601)) {
+      throw new Error('Incomplete admin location registry; refusing to show partial choices.');
+    }
+    const divisions = new Set(taxonomy.divisions.map(item => item.id));
+    const districts = new Set(taxonomy.districts.map(item => item.id));
+    if (!taxonomy.districts.every(item => divisions.has(item.divisionId)) ||
+        !taxonomy.upazilas.every(item => districts.has(item.districtId))) {
+      throw new Error('Admin location taxonomy has orphaned division/district/upazila references.');
+    }
+    return taxonomy;
+  }
+
   /**
    * Fetch complete geospatial dataset with controlled RPC and taxonomy resolution
    */
