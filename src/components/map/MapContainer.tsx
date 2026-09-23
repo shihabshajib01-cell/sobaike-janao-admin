@@ -289,8 +289,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         {districtGeometry && (
           <GeoJSON
             data={districtGeometry as any}
-            interactive={false}
             style={() => ({
+              interactive: false,
               color: '#64748b',
               weight: 0.85,
               opacity: 0.6,
