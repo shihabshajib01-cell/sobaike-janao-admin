@@ -18,6 +18,7 @@ import {
   MapDataset,
   MapFilterState,
   MapSummary,
+  MapLocationTaxonomy,
 } from '@/types/Map';
 import { ComplaintLifecycleStatus } from '@/types/Complaint';
 import { mapApi } from '@/services/api/mapApi';
@@ -36,6 +37,8 @@ const INITIAL_FILTERS: MapFilterState = {
   subcategory: 'all',
   status: 'all',
   district: 'all',
+  division: 'all',
+  upazila: 'all',
   affectedPersonAgeGroup: 'all',
   allegedAbuserRelationship: 'all',
   reportingFor: 'all',
@@ -50,6 +53,8 @@ export const MapPage: React.FC = () => {
 
   // Data & State
   const [dataset, setDataset] = useState<MapDataset | null>(null);
+  const [locationTaxonomy, setLocationTaxonomy] = useState<MapLocationTaxonomy | null>(null);
+  const [locationTaxonomyError, setLocationTaxonomyError] = useState(false);
   const datasetRef = useRef<MapDataset | null>(null);
   datasetRef.current = dataset;
 
@@ -81,6 +86,16 @@ export const MapPage: React.FC = () => {
       datasetRef.current = data;
       setError(null);
       setRefreshError(null);
+      // The existing admin-only RPC supplies all 601 canonical locations,
+      // including locations with no geocoded complaints and no known polygon.
+      try {
+        const result = await mapApi.getLocationTaxonomy();
+        setLocationTaxonomy(result);
+        setLocationTaxonomyError(false);
+      } catch (taxonomyError) {
+        console.warn('[Admin Map] Retaining current map after location taxonomy failure:', taxonomyError);
+        setLocationTaxonomyError(true);
+      }
     } catch (err: any) {
       console.error('Failed to load map dataset:', err);
       if (isRefresh && datasetRef.current) {
@@ -153,6 +168,15 @@ export const MapPage: React.FC = () => {
         if (item.status !== filters.status) return false;
       }
 
+      // 6. Canonical division filter: retain existing complaint permissions.
+      if (filters.division && filters.division !== 'all') {
+        const division = locationTaxonomy?.divisions.find(item => item.id === filters.division);
+        if (!division || ![division.nameEn, division.nameBn].some(name =>
+          item.location.division.trim().toLowerCase() === name.toLowerCase())) {
+          return false;
+        }
+      }
+
       // 6. District
       if (filters.district && filters.district !== 'all') {
         if (
@@ -163,7 +187,21 @@ export const MapPage: React.FC = () => {
         }
       }
 
-      // 7. Date Range
+      // 7. Upazila/thana selection is scoped to the canonical district.
+      // Never infer a match solely from similar names in different districts.
+      if (filters.upazila && filters.upazila !== 'all') {
+        const upazila = locationTaxonomy?.upazilas.find(item => item.id === filters.upazila);
+        const district = locationTaxonomy?.districts.find(item => item.id === upazila?.districtId);
+        if (!upazila || !district ||
+            ![district.nameEn, district.nameBn].some(name =>
+              item.location.district.trim().toLowerCase() === name.toLowerCase()) ||
+            ![upazila.nameEn, upazila.nameBn].some(name =>
+              item.location.upazilaOrThana.trim().toLowerCase() === name.toLowerCase())) {
+          return false;
+        }
+      }
+
+      // 8. Date Range
       if (filters.dateRange && filters.dateRange !== 'all') {
         const itemTime = new Date(item.createdAt).getTime();
         const now = Date.now();
@@ -183,7 +221,7 @@ export const MapPage: React.FC = () => {
 
       return true;
     });
-  }, [dataset, filters]);
+  }, [dataset, filters, locationTaxonomy]);
 
   // Clear selected complaint if filters remove it from filteredComplaints
   useEffect(() => {
@@ -391,6 +429,14 @@ export const MapPage: React.FC = () => {
             {/* Summary KPI Cards */}
             <LocationSummary summary={summary} loading={refreshing} />
 
+            {locationTaxonomyError && (
+              <p role="status" className="text-xs text-amber-800 dark:text-amber-200">
+                {isBn
+                  ? 'সম্পূর্ণ বিভাগ, জেলা ও উপজেলা/থানা তালিকা লোড হয়নি। আগের মানচিত্র ও বিদ্যমান ফিল্টার চালু রয়েছে।'
+                  : 'Complete location choices could not load; the existing map and filters remain available.'}
+              </p>
+            )}
+
             {/* Filters Toolbar */}
             <MapFilters
               filters={filters}
@@ -399,6 +445,7 @@ export const MapPage: React.FC = () => {
               segments={dataset.segments}
               subcategories={dataset.subcategories}
               districts={dataset.districts}
+              locationTaxonomy={locationTaxonomy}
               totalResultsCount={filteredComplaints.length}
             />
 
