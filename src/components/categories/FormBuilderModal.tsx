@@ -57,6 +57,15 @@ const FIELD_TYPES: Array<{ value: ReportingFieldType; label: string }> = [
   { value: 'url', label: 'URL' },
 ];
 
+const SYSTEM_FIELD_TYPES: Array<{ value: ReportingFieldType; label: string }> = [
+  ...FIELD_TYPES,
+  { value: 'location', label: 'Location' },
+  { value: 'subject_party', label: 'Subject / party' },
+  { value: 'evidence', label: 'Evidence' },
+  { value: 'privacy', label: 'Privacy' },
+  { value: 'mob_justice_details', label: 'Mob justice details' },
+];
+
 const CORE_TEXT_TYPES = FIELD_TYPES.filter(
   (option) => option.value === 'text' || option.value === 'textarea'
 );
@@ -643,6 +652,8 @@ export const FormBuilderPanel: React.FC<FormBuilderPanelProps> = ({
         <div className="space-y-3">
           {fields.map((field, index) => {
             const systemBlock = field.storageMode === 'system_block';
+            const privacySystemBlock =
+              systemBlock && field.fieldType === 'privacy';
             const protectedCore = isProtectedCoreField(field);
             const cannotRemove =
               systemBlock || protectedCore || Boolean(field.config?.locked);
@@ -650,7 +661,11 @@ export const FormBuilderPanel: React.FC<FormBuilderPanelProps> = ({
               field.fieldType
             );
             const publicVisible = field.config?.publicVisible !== false;
-            const typeOptions = protectedCore ? CORE_TEXT_TYPES : FIELD_TYPES;
+            const typeOptions = systemBlock
+              ? SYSTEM_FIELD_TYPES
+              : protectedCore
+                ? CORE_TEXT_TYPES
+                : FIELD_TYPES;
             const platformMax = platformMaxFor(field);
 
             return (
@@ -953,8 +968,20 @@ export const FormBuilderPanel: React.FC<FormBuilderPanelProps> = ({
                     onChange={(checked) =>
                       updateField(index, { active: checked })
                     }
-                    disabled={systemBlock || protectedCore || busy}
-                    label={isBn ? 'ফর্মে দেখান' : 'Show in form'}
+                    disabled={
+                      (systemBlock && !privacySystemBlock) ||
+                      protectedCore ||
+                      busy
+                    }
+                    label={
+                      privacySystemBlock
+                        ? isBn
+                          ? 'গোপনীয়তার অপশন দেখান'
+                          : 'Show privacy options'
+                        : isBn
+                          ? 'ফর্মে দেখান'
+                          : 'Show in form'
+                    }
                   />
                   {field.storageMode === 'custom_json' && (
                     <Switch
@@ -980,6 +1007,14 @@ export const FormBuilderPanel: React.FC<FormBuilderPanelProps> = ({
                     />
                   )}
                 </div>
+
+                {privacySystemBlock && (
+                  <p className="mt-3 type-helper text-slate-500 dark:text-slate-400">
+                    {isBn
+                      ? 'এই অপশন চালু করলে নাগরিক প্রয়োজনে অজ্ঞাতনামা থাকতে, শুধু অ্যাডমিনের জন্য যোগাযোগের তথ্য দিতে, অথবা অনুমোদিত হলে পরিচয় প্রকাশের অনুরোধ করতে পারবেন। সংবাদ-উৎস থেকে তৈরি প্রতিবেদন অজ্ঞাতনামাই থাকে।'
+                      : 'Enable this only when the subcategory should offer anonymous, admin-only contact, or approved public-identity choices. Reports created from news sources remain anonymous.'}
+                  </p>
+                )}
               </section>
             );
           })}
