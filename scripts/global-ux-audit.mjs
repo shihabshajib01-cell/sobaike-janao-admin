@@ -139,7 +139,7 @@ requireMarkers('src/utils/dropdownOptions.ts', [
 requireMarkers('src/components/categories/FormBuilderModal.tsx', [
   'privacySystemBlock',
   "'Show privacy options'",
-  "'Reports created from news sources remain anonymous.'",
+  "Reports created from news sources remain anonymous.",
 ]);
 
 requireMarkers('src/pages/Complaints/ComplaintDetailPage.tsx', [
