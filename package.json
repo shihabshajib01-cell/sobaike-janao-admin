@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
-    "build": "node scripts/build-production.mjs",
+    "build": "npm run audit:district-boundaries && node scripts/build-production.mjs",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
@@ -23,7 +23,8 @@
     "audit:news-intake-behavior": "tsx scripts/news-intake-behavior-audit.ts",
     "audit:news-intake-publisher-fixtures": "tsx scripts/news-intake-publisher-fixture-audit.ts",
     "audit:news-intake-preview-parity": "node scripts/news-intake-preview-parity-audit.mjs",
-    "audit:dead-code": "node scripts/dead-code-audit.mjs"
+    "audit:dead-code": "node scripts/dead-code-audit.mjs",
+    "audit:district-boundaries": "node scripts/district-boundary-audit.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
