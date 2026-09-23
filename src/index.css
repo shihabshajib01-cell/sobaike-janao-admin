@@ -21,3 +21,8 @@
 }
 
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* The admin map reuses the current Slate surfaces, rendering Bangladesh only.
+   No OpenStreetMap or surrounding-country tiles are requested. */
+.admin-bangladesh-map.leaflet-container { background: #f1f5f9; }
+.dark .admin-bangladesh-map.leaflet-container { background: #0f172a; }

@@ -37,3 +37,15 @@ if (existsSync('src/data/districts.ts')) {
   assert.deepEqual([...ids].sort(), [...canonical].sort(), 'Boundary/SQL canonical district identity drift');
 }
 console.log('PASS: 64 mapped districts, unique P-codes, closed polygon rings, lazy gzip budget');
+
+const adminMapSource = 'src/components/map/MapContainer.tsx';
+if (existsSync(adminMapSource)) {
+  const map = readFileSync(adminMapSource, 'utf8');
+  const css = readFileSync('src/index.css', 'utf8');
+  assert.doesNotMatch(map, /<TileLayer/, 'Admin map must contain Bangladesh only, without world tiles');
+  assert.match(map, /<GeoJSON/, 'Admin map must keep Bangladesh polygons');
+  assert.match(map, /<CircleMarker/, 'Admin map must preserve existing complaint selection markers');
+  assert.match(map, /maxBounds=\{BANGLADESH_BOUNDS\}/, 'Admin map must constrain panning to Bangladesh');
+  assert.match(map, /MapCountryBounds geometry=\{districtGeometry\}/, 'Admin map bounds must follow actual country geometry');
+  assert.match(css, /\.admin-bangladesh-map\.leaflet-container/, 'Admin map must honor existing light and dark surface tones');
+}

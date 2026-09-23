@@ -3,7 +3,6 @@ import React, { useEffect, useRef, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   MapContainer as LeafletMapContainer,
-  TileLayer,
   CircleMarker,
   GeoJSON,
   Popup,
@@ -38,7 +37,26 @@ export interface MapContainerProps {
 
 // Default center of Bangladesh for neutral viewport
 const BANGLADESH_CENTER: [number, number] = [23.685, 90.3563];
-const DEFAULT_ZOOM = 7;
+const DEFAULT_ZOOM = 6;
+const BANGLADESH_BOUNDS: L.LatLngBoundsExpression = [[20.3, 87.75], [26.85, 92.85]];
+const BOUNDARY_ATTRIBUTION =
+  'Districts: BBS/OCHA 2020, adapted (<a href="https://creativecommons.org/licenses/by/3.0/igo/" target="_blank" rel="noopener noreferrer">CC BY 3.0 IGO</a>)';
+
+// Restrict panning to the actual geographic silhouette after the data arrives.
+const MapCountryBounds: React.FC<{ geometry: any }> = ({ geometry }) => {
+  const map = useMap();
+  useEffect(() => {
+    const bounds = geometry ? L.geoJSON(geometry).getBounds() : L.latLngBounds(BANGLADESH_BOUNDS);
+    if (!bounds.isValid()) return;
+    map.setMaxBounds(bounds.pad(0.05));
+    map.setMinZoom(Math.max(4, map.getBoundsZoom(bounds, false, L.point(20, 20)) - 0.15));
+    if (geometry) map.attributionControl?.addAttribution(BOUNDARY_ATTRIBUTION);
+    return () => {
+      if (geometry) map.attributionControl?.removeAttribution(BOUNDARY_ATTRIBUTION);
+    };
+  }, [map, geometry]);
+  return null;
+};
 
 /**
  * Internal Map Controller to manage flyTo, fitBounds, and selected complaint synchronization
@@ -184,6 +202,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   const navigate = useNavigate();
   // The same local geography is used by public and admin; no public/admin complaint data is shared.
   const [districtGeometry, setDistrictGeometry] = useState<any | null>(null);
+  const [geometryFailed, setGeometryFailed] = useState(false);
   useEffect(() => {
     const controller = new AbortController();
     const load = async () => {
@@ -199,7 +218,10 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         }
         if (!controller.signal.aborted) setDistrictGeometry(result);
       } catch (error) {
-        if (!controller.signal.aborted) console.warn('[Admin Map] Retaining original map without district boundaries:', error);
+        if (!controller.signal.aborted) {
+          setGeometryFailed(true);
+          console.warn('[Admin Map] Boundary asset unavailable; retaining complaint markers:', error);
+        }
       }
     };
     void load();
@@ -272,19 +294,26 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         </span>
       </div>
 
-      {/* Leaflet Map */}
+      {geometryFailed && (
+        <div role="status" className="absolute left-3 top-14 z-[1000] rounded-lg border border-slate-200 bg-white/95 px-3 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-200">
+          {isBn ? 'জেলা সীমানা লোড হয়নি; অভিযোগের পয়েন্ট দেখানো হচ্ছে।' : 'District boundaries unavailable; complaint points remain visible.'}
+        </div>
+      )}
+
+      {/* Geography only: no world raster tiles or out-of-country landmarks. */}
       <LeafletMapContainer
         center={BANGLADESH_CENTER}
         zoom={DEFAULT_ZOOM}
+        minZoom={5}
+        maxZoom={12}
+        maxBounds={BANGLADESH_BOUNDS}
+        maxBoundsViscosity={1}
+        scrollWheelZoom={false}
         zoomControl={false}
-        className="w-full h-full z-0 outline-none"
+        className="admin-bangladesh-map w-full h-full z-0 outline-none"
         style={{ width: '100%', height: '100%' }}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors | Boundaries: BBS/OCHA 2020, adapted (<a href="https://creativecommons.org/licenses/by/3.0/igo/" target="_blank" rel="noopener noreferrer">CC BY 3.0 IGO</a>)'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          maxZoom={19}
-        />
+        <MapCountryBounds geometry={districtGeometry} />
 
         {districtGeometry && (
           <GeoJSON
@@ -292,10 +321,10 @@ export const MapContainer: React.FC<MapContainerProps> = ({
             style={() => ({
               interactive: false,
               color: '#64748b',
-              weight: 0.85,
-              opacity: 0.6,
+              weight: 1.1,
+              opacity: 0.85,
               fillColor: '#94a3b8',
-              fillOpacity: 0.045,
+              fillOpacity: 0.58,
             })}
           />
         )}
