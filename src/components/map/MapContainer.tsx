@@ -281,7 +281,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         style={{ width: '100%', height: '100%' }}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors | Boundaries: BBS/OCHA 2020, adapted (CC BY 3.0 IGO)'
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors | Boundaries: BBS/OCHA 2020, adapted (<a href="https://creativecommons.org/licenses/by/3.0/igo/" target="_blank" rel="noopener noreferrer">CC BY 3.0 IGO</a>)'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           maxZoom={19}
         />
