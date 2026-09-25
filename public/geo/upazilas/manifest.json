@@ -1,0 +1,29 @@
+{
+  "type": "UpazilaBoundaryManifest",
+  "generated_at": "2026-09-25",
+  "canonical_registry_count": 601,
+  "division_count": 8,
+  "district_count": 64,
+  "published_verified_polygon_count": 544,
+  "registry_without_verified_polygon_count": 57,
+  "geoBoundaries_source_feature_count": 544,
+  "geoBoundaries_canonical_matches": 542,
+  "retained_uploaded_verified_polygon_count": 2,
+  "boundary_reference_year": "2020",
+  "boundary_source": "geoBoundaries gbOpen BGD ADM3; Bangladesh Bureau of Statistics (BBS), OCHA ROAP",
+  "boundary_license": "Creative Commons Attribution 3.0 Intergovernmental Organisations (CC BY 3.0 IGO)",
+  "boundary_source_data_update": "2023-01-19",
+  "current_hierarchy_crosswalk_source": "Bangladesh Locations Dataset v1.5.0",
+  "current_hierarchy_crosswalk_updated": "2026-08-09",
+  "note": "The 601 project records combine rural upazilas and metropolitan police thanas. Missing polygons are explicit and are never fabricated.",
+  "division_files": {
+    "barisal": "geo/upazilas/barisal-2020.geojson",
+    "chittagong": "geo/upazilas/chittagong-2020.geojson",
+    "dhaka": "geo/upazilas/dhaka-2020.geojson",
+    "khulna": "geo/upazilas/khulna-2020.geojson",
+    "mymensingh": "geo/upazilas/mymensingh-2020.geojson",
+    "rajshahi": "geo/upazilas/rajshahi-2020.geojson",
+    "rangpur": "geo/upazilas/rangpur-2020.geojson",
+    "sylhet": "geo/upazilas/sylhet-2020.geojson"
+  }
+}
