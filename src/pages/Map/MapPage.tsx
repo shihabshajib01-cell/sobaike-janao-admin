@@ -69,6 +69,8 @@ export const MapPage: React.FC = () => {
 
   // Mobile View Switcher: 'map' | 'list'
   const [mobileView, setMobileView] = useState<'map' | 'list'>('map');
+  const hasLocationMapSelection =
+    filters.district !== 'all' || filters.upazila !== 'all';
 
   // Load Geospatial Data - stable callback without dataset or language dependencies
   const loadData = useCallback(async (isRefresh = false) => {
@@ -490,7 +492,7 @@ export const MapPage: React.FC = () => {
                 type="no-coords"
                 unmappedCount={dataset.unmappedCount}
               />
-            ) : filteredComplaints.length === 0 ? (
+            ) : filteredComplaints.length === 0 && !hasLocationMapSelection ? (
               <MapEmptyState
                 type="no-match"
                 onResetFilters={handleResetFilters}
@@ -508,6 +510,10 @@ export const MapPage: React.FC = () => {
                     complaints={filteredComplaints}
                     selectedComplaint={selectedComplaint}
                     onSelectComplaint={setSelectedComplaint}
+                    selectedDivision={filters.division}
+                    selectedDistrict={filters.district}
+                    selectedUpazila={filters.upazila}
+                    locationTaxonomy={locationTaxonomy}
                   />
 
                   <MapLegend
