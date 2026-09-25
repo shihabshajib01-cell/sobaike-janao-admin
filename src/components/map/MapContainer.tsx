@@ -468,10 +468,10 @@ export const MapContainer: React.FC<MapContainerProps> = ({
               const selected = feature?.properties?.district_id === selectedDistrictRecord?.id;
               return {
                 interactive: false,
-                color: selected ? '#0f766e' : '#64748b',
+                color: selected ? '#0ea5e9' : '#64748b',
                 weight: selected ? 2 : 1.1,
                 opacity: 0.9,
-                fillColor: selected ? '#14b8a6' : '#94a3b8',
+                fillColor: selected ? '#0ea5e9' : '#94a3b8',
                 fillOpacity: selected ? 0.34 : 0.45,
               };
             }}
@@ -486,10 +486,10 @@ export const MapContainer: React.FC<MapContainerProps> = ({
               const selected = feature?.properties?.canonical_id === selectedUpazila;
               return {
                 interactive: false,
-                color: selected ? '#0f766e' : '#475569',
+                color: selected ? '#0ea5e9' : '#475569',
                 weight: selected ? 2.4 : 1,
                 opacity: selected ? 1 : 0.8,
-                fillColor: selected ? '#14b8a6' : '#cbd5e1',
+                fillColor: selected ? '#0ea5e9' : '#cbd5e1',
                 fillOpacity: selected ? 0.46 : 0.16,
               };
             }}
