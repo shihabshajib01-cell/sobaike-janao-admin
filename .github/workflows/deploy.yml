@@ -150,6 +150,21 @@ jobs:
         run: |
           ls -la dist
           test -f dist/geo/bangladesh-districts-2020.geojson
+          test -f dist/geo/upazilas/manifest.json
+          for division in barisal chittagong dhaka khulna mymensingh rajshahi rangpur sylhet; do
+            test -f "dist/geo/upazilas/${division}-2020.geojson"
+          done
+          node - <<'NODE'
+          const fs = require('fs');
+          const manifest = JSON.parse(fs.readFileSync('dist/geo/upazilas/manifest.json', 'utf8'));
+          if (manifest.canonical_registry_count !== 601 ||
+              manifest.division_count !== 8 ||
+              manifest.district_count !== 64 ||
+              manifest.published_verified_polygon_count !== 544 ||
+              manifest.registry_without_verified_polygon_count !== 57) {
+            throw new Error('Admin deployed map geography contract is incomplete');
+          }
+          NODE
           cat dist/index.html
           if grep -Eq 'src/(main\.tsx|entry\.js)' dist/index.html; then
             echo "ERROR: dist/index.html still references source entry files. Aborting deployment."
