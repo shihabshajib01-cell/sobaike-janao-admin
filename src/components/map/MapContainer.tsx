@@ -11,7 +11,7 @@ import {
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-import { MapComplaint } from '@/types/Map';
+import { MapComplaint, MapLocationTaxonomy } from '@/types/Map';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { Badge, BadgeStatus } from '@/components/ui/Badge';
@@ -32,6 +32,10 @@ export interface MapContainerProps {
   complaints: MapComplaint[];
   selectedComplaint: MapComplaint | null;
   onSelectComplaint: (complaint: MapComplaint | null) => void;
+  selectedDivision: string;
+  selectedDistrict: string;
+  selectedUpazila: string;
+  locationTaxonomy: MapLocationTaxonomy | null;
   className?: string;
 }
 
@@ -40,7 +44,18 @@ const BANGLADESH_CENTER: [number, number] = [23.685, 90.3563];
 const DEFAULT_ZOOM = 6;
 const BANGLADESH_BOUNDS: L.LatLngBoundsExpression = [[20.3, 87.75], [26.85, 92.85]];
 const BOUNDARY_ATTRIBUTION =
-  'Districts: BBS/OCHA 2020, adapted (<a href="https://creativecommons.org/licenses/by/3.0/igo/" target="_blank" rel="noopener noreferrer">CC BY 3.0 IGO</a>)';
+  'Districts / verified subdistricts: BBS/OCHA/geoBoundaries 2020, adapted (<a href="https://creativecommons.org/licenses/by/3.0/igo/" target="_blank" rel="noopener noreferrer">CC BY 3.0 IGO</a>)';
+
+const UPAZILA_DIVISION_ASSETS: Record<string, string> = {
+  barisal: 'barisal',
+  chittagong: 'chittagong',
+  dhaka: 'dhaka',
+  khulna: 'khulna',
+  mymensingh: 'mymensingh',
+  rajshahi: 'rajshahi',
+  rangpur: 'rangpur',
+  sylhet: 'sylhet',
+};
 
 // Restrict panning to the actual geographic silhouette after the data arrives.
 const MapCountryBounds: React.FC<{ geometry: any }> = ({ geometry }) => {
@@ -55,6 +70,27 @@ const MapCountryBounds: React.FC<{ geometry: any }> = ({ geometry }) => {
       if (geometry) map.attributionControl?.removeAttribution(BOUNDARY_ATTRIBUTION);
     };
   }, [map, geometry]);
+  return null;
+};
+
+const MapAreaController: React.FC<{ geometry: any | null }> = ({ geometry }) => {
+  const map = useMap();
+  const signatureRef = useRef<string>('');
+
+  useEffect(() => {
+    if (!geometry) {
+      signatureRef.current = '';
+      return;
+    }
+    const signature = JSON.stringify(geometry);
+    if (signature === signatureRef.current) return;
+    signatureRef.current = signature;
+    const bounds = L.geoJSON({ type: 'Feature', properties: {}, geometry } as any).getBounds();
+    if (bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [35, 35], maxZoom: 13 });
+    }
+  }, [geometry, map]);
+
   return null;
 };
 
@@ -193,6 +229,10 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   complaints,
   selectedComplaint,
   onSelectComplaint,
+  selectedDivision,
+  selectedDistrict,
+  selectedUpazila,
+  locationTaxonomy,
   className,
 }) => {
   const { language } = useLanguage();
@@ -203,6 +243,28 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   // The same local geography is used by public and admin; no public/admin complaint data is shared.
   const [districtGeometry, setDistrictGeometry] = useState<any | null>(null);
   const [geometryFailed, setGeometryFailed] = useState(false);
+  const [upazilaGeometry, setUpazilaGeometry] = useState<any | null>(null);
+  const [upazilaGeometryFailed, setUpazilaGeometryFailed] = useState(false);
+
+  const selectedDistrictRecord = useMemo(
+    () => locationTaxonomy?.districts.find((item) =>
+      item.id === selectedDistrict ||
+      item.nameEn.toLowerCase() === selectedDistrict.toLowerCase() ||
+      item.nameBn === selectedDistrict
+    ) || null,
+    [locationTaxonomy, selectedDistrict]
+  );
+  const selectedUpazilaRecord = useMemo(
+    () => locationTaxonomy?.upazilas.find((item) => item.id === selectedUpazila) || null,
+    [locationTaxonomy, selectedUpazila]
+  );
+  const selectedDivisionRecord = useMemo(
+    () => locationTaxonomy?.divisions.find((item) =>
+      item.id === selectedDivision ||
+      item.id === locationTaxonomy?.districts.find((district) => district.id === selectedDistrictRecord?.id)?.divisionId
+    ) || null,
+    [locationTaxonomy, selectedDivision, selectedDistrictRecord]
+  );
   useEffect(() => {
     const controller = new AbortController();
     const load = async () => {
@@ -227,6 +289,70 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     void load();
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    setUpazilaGeometry(null);
+    setUpazilaGeometryFailed(false);
+    if (!selectedDistrictRecord || !selectedDivisionRecord) return;
+
+    const asset = UPAZILA_DIVISION_ASSETS[selectedDivisionRecord.id];
+    if (!asset) {
+      setUpazilaGeometryFailed(true);
+      return;
+    }
+
+    const controller = new AbortController();
+    const load = async () => {
+      try {
+        const response = await fetch(
+          `${import.meta.env.BASE_URL}geo/upazilas/${asset}-2020.geojson`,
+          { signal: controller.signal }
+        );
+        if (!response.ok) throw new Error('Upazila boundary HTTP ' + response.status);
+        const result = await response.json();
+        if (result?.type !== 'FeatureCollection' || !Array.isArray(result.features)) {
+          throw new Error('Invalid upazila boundary collection');
+        }
+        const features = result.features.filter((feature: any) =>
+          feature?.properties?.district_id === selectedDistrictRecord.id &&
+          typeof feature?.properties?.canonical_id === 'string' &&
+          feature?.geometry
+        );
+        if (!features.length ||
+            new Set(features.map((feature: any) => feature.properties.canonical_id)).size !== features.length) {
+          throw new Error('Verified upazila boundaries failed canonical validation');
+        }
+        if (!controller.signal.aborted) {
+          setUpazilaGeometry({ type: 'FeatureCollection', features });
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setUpazilaGeometryFailed(true);
+          console.warn('[Admin Map] Verified upazila boundaries unavailable:', error);
+        }
+      }
+    };
+    void load();
+    return () => controller.abort();
+  }, [selectedDistrictRecord, selectedDivisionRecord]);
+
+  const selectedUpazilaFeature = useMemo(
+    () => upazilaGeometry?.features?.find(
+      (feature: any) => feature?.properties?.canonical_id === selectedUpazila
+    ) || null,
+    [upazilaGeometry, selectedUpazila]
+  );
+
+  const selectedDistrictFeature = useMemo(
+    () => districtGeometry?.features?.find(
+      (feature: any) => feature?.properties?.district_id === selectedDistrictRecord?.id
+    ) || null,
+    [districtGeometry, selectedDistrictRecord]
+  );
+
+  const selectedAreaGeometry = selectedUpazila !== 'all'
+    ? (selectedUpazilaFeature?.geometry || selectedDistrictFeature?.geometry || null)
+    : (selectedDistrictFeature?.geometry || null);
 
   // Status Color Helper
   const getStatusColor = (status: MapComplaint['status']) => {
@@ -300,6 +426,25 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         </div>
       )}
 
+      {!geometryFailed && selectedUpazilaRecord && (
+        <div role="status" className="absolute left-3 top-14 z-[1000] max-w-[calc(100%-1.5rem)] rounded-lg border border-slate-200 bg-white/95 px-3 py-2 text-xs text-slate-700 shadow-md dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-200">
+          <p className="font-medium">
+            {isBn ? selectedUpazilaRecord.nameBn : selectedUpazilaRecord.nameEn}
+          </p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            {selectedUpazilaFeature
+              ? (isBn ? 'যাচাইকৃত সীমানা' : 'Verified boundary')
+              : (isBn ? 'সীমানা যাচাই করা যায়নি — জেলা প্রসঙ্গ দেখানো হচ্ছে' : 'Boundary not verified — showing district context')}
+          </p>
+        </div>
+      )}
+
+      {!geometryFailed && selectedDistrictRecord && selectedUpazila === 'all' && upazilaGeometryFailed && (
+        <div role="status" className="absolute left-3 top-14 z-[1000] rounded-lg border border-slate-200 bg-white/95 px-3 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-200">
+          {isBn ? 'উপজেলা/থানা সীমানা লোড হয়নি; জেলা সীমানা দেখানো হচ্ছে।' : 'Upazila/thana boundaries unavailable; district context remains visible.'}
+        </div>
+      )}
+
       {/* Geography only: no world raster tiles or out-of-country landmarks. */}
       <LeafletMapContainer
         center={BANGLADESH_CENTER}
@@ -314,18 +459,40 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         style={{ width: '100%', height: '100%' }}
       >
         <MapCountryBounds geometry={districtGeometry} />
+        <MapAreaController geometry={selectedAreaGeometry} />
 
         {districtGeometry && (
           <GeoJSON
             data={districtGeometry as any}
-            style={() => ({
-              interactive: false,
-              color: '#64748b',
-              weight: 1.1,
-              opacity: 0.85,
-              fillColor: '#94a3b8',
-              fillOpacity: 0.58,
-            })}
+            style={(feature) => {
+              const selected = feature?.properties?.district_id === selectedDistrictRecord?.id;
+              return {
+                interactive: false,
+                color: selected ? '#0f766e' : '#64748b',
+                weight: selected ? 2 : 1.1,
+                opacity: 0.9,
+                fillColor: selected ? '#14b8a6' : '#94a3b8',
+                fillOpacity: selected ? 0.34 : 0.45,
+              };
+            }}
+          />
+        )}
+
+        {upazilaGeometry && (
+          <GeoJSON
+            key={selectedDistrictRecord?.id || 'upazilas'}
+            data={upazilaGeometry as any}
+            style={(feature) => {
+              const selected = feature?.properties?.canonical_id === selectedUpazila;
+              return {
+                interactive: false,
+                color: selected ? '#0f766e' : '#475569',
+                weight: selected ? 2.4 : 1,
+                opacity: selected ? 1 : 0.8,
+                fillColor: selected ? '#14b8a6' : '#cbd5e1',
+                fillOpacity: selected ? 0.46 : 0.16,
+              };
+            }}
           />
         )}
 
