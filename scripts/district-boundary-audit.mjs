@@ -46,6 +46,7 @@ if (existsSync(adminMapSource)) {
   assert.match(map, /<GeoJSON/, 'Admin map must keep Bangladesh polygons');
   assert.match(map, /<CircleMarker/, 'Admin map must preserve existing complaint selection markers');
   assert.match(map, /maxBounds=\{BANGLADESH_BOUNDS\}/, 'Admin map must constrain panning to Bangladesh');
+  assert.match(map, /zoomSnap=\{0\.1\}/, 'Admin country fit must use fractional zoom');
   assert.match(map, /MapCountryBounds geometry=\{districtGeometry\}/, 'Admin map bounds must follow actual country geometry');
   assert.match(css, /\.admin-bangladesh-map\.leaflet-container/, 'Admin map must honor existing light and dark surface tones');
 }

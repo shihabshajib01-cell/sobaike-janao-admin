@@ -449,6 +449,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       <LeafletMapContainer
         center={BANGLADESH_CENTER}
         zoom={DEFAULT_ZOOM}
+        zoomSnap={0.1}
+        zoomDelta={0.5}
         minZoom={5}
         maxZoom={12}
         maxBounds={BANGLADESH_BOUNDS}
